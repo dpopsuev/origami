@@ -30,10 +30,11 @@ type ZoneDef struct {
 // P7: Extractor is optional (progressive disclosure). When set, BuildGraph
 // creates an extractorNode that delegates to the named Extractor.
 type NodeDef struct {
-	Name      string `yaml:"name"`
-	Element   string `yaml:"element,omitempty"`
-	Family    string `yaml:"family,omitempty"`
-	Extractor string `yaml:"extractor,omitempty"`
+	Name      string          `yaml:"name"`
+	Element   string          `yaml:"element,omitempty"`
+	Family    string          `yaml:"family,omitempty"`
+	Extractor string          `yaml:"extractor,omitempty"`
+	Schema    *ArtifactSchema `yaml:"schema,omitempty"`
 }
 
 // EdgeDef declares a conditional edge between two nodes.
