@@ -21,7 +21,7 @@ const (
 	AlignmentShadow Alignment = "shadow"
 )
 
-// Position represents an agent's court position (structural role).
+// Position represents an agent's dialectic position (structural role).
 type Position string
 
 const (

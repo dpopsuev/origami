@@ -73,20 +73,20 @@ func TestGapBriefThreshold_ShouldProduceGapBrief(t *testing.T) {
 	}
 }
 
-func TestCourtEvidenceGap_EmbedsEvidenceGap(t *testing.T) {
-	gap := CourtEvidenceGap{
+func TestDialecticEvidenceGap_EmbedsEvidenceGap(t *testing.T) {
+	gap := DialecticEvidenceGap{
 		EvidenceGap: EvidenceGap{
-			Description:     "prosecution evidence was circumstantial",
-			Source:          "court_hearing",
+			Description:     "thesis evidence was circumstantial",
+			Source:          "dialectic_hearing",
 			Severity:        GapSeverityHigh,
 			SuggestedAction: "gather direct evidence",
 		},
-		CourtPhase: "D3",
+		DialecticPhase: "D3",
 	}
-	if gap.Description != "prosecution evidence was circumstantial" {
+	if gap.Description != "thesis evidence was circumstantial" {
 		t.Errorf("embedded Description not accessible: %q", gap.Description)
 	}
-	if gap.CourtPhase != "D3" {
-		t.Errorf("CourtPhase = %q, want D3", gap.CourtPhase)
+	if gap.DialecticPhase != "D3" {
+		t.Errorf("DialecticPhase = %q, want D3", gap.DialecticPhase)
 	}
 }

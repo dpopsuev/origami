@@ -1,11 +1,11 @@
-# D0-D4 Defect Court adversarial pipeline.
+# D0-D4 Adversarial Dialectic pipeline.
 # Shadow path activates when Light F5 confidence is in the uncertain range.
-# Edge evaluation logic is registered via BuildCourtEdgeFactory in Go.
-pipeline: defect-court
-description: "D0-D4 adversarial review pipeline"
+# Edge evaluation logic is registered via BuildDialecticEdgeFactory in Go.
+pipeline: defect-dialectic
+description: "D0-D4 adversarial dialectic review pipeline"
 
 zones:
-  prosecution:
+  thesis:
     nodes: [indict]
     element: fire
     stickiness: 0
@@ -13,7 +13,7 @@ zones:
     nodes: [discover, defend]
     element: water
     stickiness: 2
-  bench:
+  synthesis:
     nodes: [hearing, verdict]
     element: diamond
     stickiness: 3
@@ -41,29 +41,29 @@ edges:
     from: indict
     to: defend
     shortcut: true
-    condition: "prosecution confidence >= 0.95"
+    condition: "thesis confidence >= 0.95"
 
   - id: HD2
-    name: plea-deal
+    name: concession
     from: defend
     to: verdict
     shortcut: true
-    condition: "defense concedes"
+    condition: "antithesis-holder concedes"
 
   - id: HD3
-    name: motion-to-dismiss
+    name: partial-negation
     from: defend
     to: hearing
-    condition: "defense has motion to dismiss"
+    condition: "antithesis-holder has partial negation"
 
   - id: HD4
     name: alternative-hypothesis
     from: defend
     to: hearing
-    condition: "defense has alternative hypothesis"
+    condition: "antithesis-holder has alternative hypothesis"
 
   - id: HD5
-    name: hearing-complete
+    name: dialectic-complete
     from: hearing
     to: verdict
     condition: "max rounds reached OR convergence"
@@ -72,32 +72,32 @@ edges:
     name: affirm
     from: verdict
     to: _done
-    condition: "verdict == affirm"
+    condition: "synthesis == affirm"
 
   - id: HD7
     name: amend
     from: verdict
     to: _done
-    condition: "verdict == amend"
+    condition: "synthesis == amend"
 
   - id: HD8
     name: remand
     from: verdict
     to: indict
     loop: true
-    condition: "verdict == remand AND remands < max_remands"
+    condition: "synthesis == remand AND negations < max_negations"
 
   - id: HD9
     name: acquit
     from: verdict
     to: _done
-    condition: "verdict == acquit (evidence gap brief)"
+    condition: "synthesis == acquit (evidence gap brief)"
 
   - id: HD12
-    name: judge-mistrial
+    name: unresolved-contradiction
     from: verdict
     to: _done
-    condition: "verdict == mistrial"
+    condition: "synthesis == unresolved"
 
 start: indict
 done: _done
