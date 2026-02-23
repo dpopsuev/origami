@@ -12,6 +12,7 @@ import (
 type PipelineDef struct {
 	Pipeline    string             `yaml:"pipeline"`
 	Description string             `yaml:"description,omitempty"`
+	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Zones       map[string]ZoneDef `yaml:"zones,omitempty"`
 	Nodes       []NodeDef          `yaml:"nodes"`
 	Edges       []EdgeDef          `yaml:"edges"`
@@ -39,6 +40,8 @@ type NodeDef struct {
 
 // EdgeDef declares a conditional edge between two nodes.
 // P5: both id (machine) and name (human) are present.
+// When is an expression evaluated by expr-lang/expr against {output, state, config}.
+// Condition is a human-readable comment (not evaluated).
 type EdgeDef struct {
 	ID        string `yaml:"id"`
 	Name      string `yaml:"name"`
@@ -47,6 +50,7 @@ type EdgeDef struct {
 	Shortcut  bool   `yaml:"shortcut,omitempty"`
 	Loop      bool   `yaml:"loop,omitempty"`
 	Condition string `yaml:"condition,omitempty"`
+	When      string `yaml:"when,omitempty"`
 }
 
 // NodeRegistry maps node family names to Node factory functions.
@@ -180,7 +184,13 @@ func (def *PipelineDef) BuildGraph(nodes NodeRegistry, edges EdgeFactory, extrac
 
 	fwEdges := make([]Edge, 0, len(def.Edges))
 	for _, ed := range def.Edges {
-		if factory, ok := edges[ed.ID]; ok {
+		if ed.When != "" {
+			exprEdge, err := CompileExpressionEdge(ed, def.Vars)
+			if err != nil {
+				return nil, fmt.Errorf("edge %s: %w", ed.ID, err)
+			}
+			fwEdges = append(fwEdges, exprEdge)
+		} else if factory, ok := edges[ed.ID]; ok {
 			fwEdges = append(fwEdges, factory(ed))
 		} else {
 			fwEdges = append(fwEdges, &dslEdge{def: ed})

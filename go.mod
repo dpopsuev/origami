@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/expr-lang/expr v1.17.8 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
