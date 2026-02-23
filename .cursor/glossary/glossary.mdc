@@ -16,7 +16,7 @@ description: Shared domain definitions for Origami
 - **Iron** — Derived element from Earth, adjusted by calibration accuracy. Represents a tuned-but-brittle system.
 - **Persona** — A named, pre-configured agent identity combining Color, Element, Position, and Alignment. 4 Light (Herald, Seeker, Sentinel, Weaver) + 4 Shadow (Challenger, Abyss, Bulwark, Specter).
 - **Mask** — Detachable middleware that grants capabilities at specific pipeline nodes. Wraps `Process` without changing node identity.
-- **Adversarial Dialectic** — Adversarial pipeline (D0-D4) that subjects uncertain Light conclusions to structured thesis-antithesis-synthesis debate. Activates when confidence falls below a contradiction threshold. Uses the same graph walk engine. Replaces the earlier "Shadow Court" terminology.
+- **Adversarial Dialectic** — Adversarial pipeline (D0-D4) that subjects uncertain Light conclusions to structured thesis-antithesis-synthesis debate. Activates when confidence falls below a contradiction threshold. Uses the same graph walk engine. Replaces the earlier adversarial pipeline terminology.
 - **Thesis** — The Light path's initial analysis in graph stratification. Represents the 80% of workloads handled by direct analysis.
 - **Antithesis** — The adversarial path that challenges the thesis, identifies evidence gaps, and proposes counter-explanations.
 - **Synthesis** — The reconciled conclusion produced after thesis and antithesis interact. Hegel's *Aufheben*: preserved and transcended.

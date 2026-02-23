@@ -19,3 +19,7 @@
 - `meta-calibration.md` — completed contract
 - `metacal-run-1.md` — completed contract
 - `origami-agentic-network-framework.md` — Origami identity + Extractor[In, Out] as Tome V
+- `origami-adversarial-dialectic.md` — Rename Court -> Dialectic terminology in code and FSC
+- `origami-green-border-integrity.md` — Wire ResolveInput + RenderPrompt into Walk loop; CLI integration test
+- `origami-poc-batteries.md` — PoC-ready implementations for every BYO interface
+- `origami-walkteam-run-api.md` — WithTeam() RunOption for multi-walker execution via Run()

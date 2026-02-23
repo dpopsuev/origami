@@ -5,13 +5,8 @@
 - `completed/` — finished contracts grouped by phase
 - `draft/` — planned contracts not yet being executed
 
-## Active (Gate)
-- `active/origami-green-border-integrity.md` — Wire ResolveInput + RenderPrompt into Walk loop; CLI integration test.
-- `active/origami-adversarial-dialectic.md` — Rename Court -> Dialectic terminology in code and FSC.
-
-## Draft (Quick-win)
-- `draft/origami-poc-batteries.md` — PoC-ready implementations for every BYO interface.
-- `draft/origami-walkteam-run-api.md` — WithTeam() RunOption for multi-walker execution via Run().
+## Active
+(No active contracts)
 
 ## Draft (Next-milestone)
 - `draft/origami-fan-out-fan-in.md` — Parallel node execution at fan-out points.

@@ -1,6 +1,6 @@
 # Contract — origami-adversarial-dialectic
 
-**Status:** active  
+**Status:** complete  
 **Goal:** All "Court" terminology is replaced with "Dialectic" terminology in code and FSC, codifying the thesis-antithesis-synthesis model for adversarial graph execution.  
 **Serves:** Framework Maturity (current goal)
 

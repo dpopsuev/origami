@@ -1,6 +1,6 @@
 # Contract — origami-green-border-integrity
 
-**Status:** active  
+**Status:** complete  
 **Goal:** `${node.output}` input resolution and prompt template rendering work end-to-end in `transformerNode.Process()`, and `origami run` has a CLI integration test.  
 **Serves:** Framework Maturity (current goal)
 

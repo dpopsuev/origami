@@ -1,6 +1,6 @@
 # Contract — origami-walkteam-run-api
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** `Run()` supports multi-walker team execution via `WithTeam(team)` RunOption, so consumers don't need to build graphs manually for team walks.  
 **Serves:** Framework Maturity (current goal)
 
