@@ -114,3 +114,52 @@ func TestCLI_UnknownCommand(t *testing.T) {
 		t.Fatal("expected error for unknown command")
 	}
 }
+
+func TestCLI_Run(t *testing.T) {
+	bin := buildBinary(t)
+	dir := t.TempDir()
+
+	dataPath := filepath.Join(dir, "data.json")
+	if err := os.WriteFile(dataPath, []byte(`{"result":"hello"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	pipelineYAML := `
+pipeline: cli-run-integration
+vars:
+  mode: fast
+nodes:
+  - name: load
+    element: fire
+    transformer: file
+    prompt: data.json
+  - name: classify
+    element: water
+    transformer: file
+    input: "${load.output}"
+    prompt: data.json
+edges:
+  - id: E1
+    name: load-to-classify
+    from: load
+    to: classify
+    when: "true"
+  - id: E2
+    name: done
+    from: classify
+    to: _done
+    when: "true"
+start: load
+done: _done
+`
+	pipelinePath := filepath.Join(dir, "pipeline.yaml")
+	if err := os.WriteFile(pipelinePath, []byte(pipelineYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(bin, "run", pipelinePath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("origami run failed: %v\n%s", err, out)
+	}
+}

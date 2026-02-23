@@ -7,9 +7,11 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/transformers"
 )
 
 func main() {
@@ -80,8 +82,13 @@ func runCmd(args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
+	builtins := framework.TransformerRegistry{
+		"file": transformers.NewFile(transformers.WithRootDir(filepath.Dir(pipelinePath))),
+	}
+
 	opts := []framework.RunOption{
 		framework.WithLogger(logger),
+		framework.WithTransformers(builtins),
 	}
 	if len(sets) > 0 {
 		opts = append(opts, framework.WithOverrides(map[string]any(sets)))

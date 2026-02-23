@@ -226,6 +226,115 @@ done: _done
 	}
 }
 
+func TestRun_WithTeam_TwoWalkers(t *testing.T) {
+	yaml := `
+pipeline: test-team
+nodes:
+  - name: classify
+    element: fire
+    transformer: echo
+  - name: investigate
+    element: water
+    transformer: echo
+edges:
+  - id: E1
+    from: classify
+    to: investigate
+    when: "true"
+  - id: E2
+    from: investigate
+    to: _done
+    when: "true"
+start: classify
+done: _done
+`
+	path := writeTempPipeline(t, yaml)
+
+	herald := &stubWalker{
+		identity: AgentIdentity{
+			PersonaName:  "Herald",
+			Element:      ElementFire,
+			StepAffinity: map[string]float64{"classify": 0.9, "investigate": 0.1},
+		},
+		state: NewWalkerState("herald-1"),
+	}
+	seeker := &stubWalker{
+		identity: AgentIdentity{
+			PersonaName:  "Seeker",
+			Element:      ElementWater,
+			StepAffinity: map[string]float64{"classify": 0.1, "investigate": 0.9},
+		},
+		state: NewWalkerState("seeker-1"),
+	}
+
+	team := &Team{
+		Walkers:   []Walker{herald, seeker},
+		Scheduler: &AffinityScheduler{},
+		MaxSteps:  20,
+	}
+
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithTeam(team),
+	)
+	if err != nil {
+		t.Fatalf("Run with team: %v", err)
+	}
+
+	if len(herald.visited) == 0 && len(seeker.visited) == 0 {
+		t.Fatal("neither walker visited any nodes")
+	}
+
+	allVisited := append(herald.visited, seeker.visited...)
+	hasClassify, hasInvestigate := false, false
+	for _, v := range allVisited {
+		if v == "classify" {
+			hasClassify = true
+		}
+		if v == "investigate" {
+			hasInvestigate = true
+		}
+	}
+	if !hasClassify || !hasInvestigate {
+		t.Errorf("both nodes should be visited: classify=%v investigate=%v (herald=%v seeker=%v)",
+			hasClassify, hasInvestigate, herald.visited, seeker.visited)
+	}
+}
+
+func TestRun_WithTeam_InputPropagated(t *testing.T) {
+	path := writeTempPipeline(t, testPipelineYAML)
+
+	w := &stubWalker{
+		identity: AgentIdentity{PersonaName: "Solo"},
+		state:    NewWalkerState("solo-1"),
+	}
+
+	team := &Team{
+		Walkers:   []Walker{w},
+		Scheduler: &SingleScheduler{Walker: w},
+	}
+
+	err := Run(context.Background(), path, map[string]any{"hello": "world"},
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithTeam(team),
+	)
+	if err != nil {
+		t.Fatalf("Run with team + input: %v", err)
+	}
+
+	got, ok := w.State().Context["input"]
+	if !ok {
+		t.Fatal("expected input in walker context")
+	}
+	m, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("input type = %T, want map[string]any", got)
+	}
+	if m["hello"] != "world" {
+		t.Errorf("input = %v, want {hello: world}", m)
+	}
+}
+
 func TestValidate_MissingTransformer(t *testing.T) {
 	path := writeTempPipeline(t, testPipelineYAML)
 	err := Validate(path, WithTransformers(TransformerRegistry{}))
