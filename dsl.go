@@ -37,6 +37,8 @@ type NodeDef struct {
 	Extractor   string          `yaml:"extractor,omitempty"`
 	Transformer string          `yaml:"transformer,omitempty"`
 	Prompt      string          `yaml:"prompt,omitempty"`
+	Input       string          `yaml:"input,omitempty"`
+	After       []string        `yaml:"after,omitempty"`
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
 }
 
@@ -150,6 +152,7 @@ type GraphRegistries struct {
 	Edges        EdgeFactory
 	Extractors   ExtractorRegistry
 	Transformers TransformerRegistry
+	Hooks        HookRegistry
 }
 
 // BuildGraph constructs a Graph from a PipelineDef using the provided registries.
