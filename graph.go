@@ -149,7 +149,13 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 			Meta:          make(map[string]any),
 		}
 
-		artifact, err := walker.Handle(ctx, node, nc)
+		var artifact Artifact
+		var err error
+		if IsTransformerNode(node) {
+			artifact, err = node.Process(ctx, nc)
+		} else {
+			artifact, err = walker.Handle(ctx, node, nc)
+		}
 		nodeElapsed := time.Since(nodeStart)
 
 		if err != nil {
@@ -276,7 +282,13 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 			Meta:          make(map[string]any),
 		}
 
-		artifact, err := walker.Handle(ctx, node, nc)
+		var artifact Artifact
+		var err error
+		if IsTransformerNode(node) {
+			artifact, err = node.Process(ctx, nc)
+		} else {
+			artifact, err = walker.Handle(ctx, node, nc)
+		}
 		nodeElapsed := time.Since(nodeStart)
 
 		if err != nil {
