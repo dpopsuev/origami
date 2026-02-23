@@ -1,0 +1,12 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `dispatcher-protocol.mdc` — Signal file protocol for FileDispatcher — how external agents interact via signal.json
+- `framework-maturity-assessment.md` — Framework maturity assessment — green border gaps, proven capabilities, trajectory reference
+- `mux-dispatcher-architecture.md` — MuxDispatcher architecture — current vs desired state
+- `parallel-subagent-test-results.md` — Parallel subagent platform test results
+- `wet-ouroboros-results.md` — Wet Ouroboros run results
+- `wet-run-2026-02-21.md` — 10-iteration wet discovery run — 2026-02-21

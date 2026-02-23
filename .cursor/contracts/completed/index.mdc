@@ -1,0 +1,12 @@
+# Index
+
+## Directories
+- `dsl/` — completed DSL-phase contracts (C1-C5)
+- `framework/` — completed framework-phase contracts
+- `mcp/` — completed MCP-phase contracts
+- `multi-subagent/` — completed multi-subagent-phase contracts
+- `pipeline/` — completed pipeline-phase contracts
+- `poc-v2/` — completed PoC v2-phase contracts
+
+## Files
+(No files)

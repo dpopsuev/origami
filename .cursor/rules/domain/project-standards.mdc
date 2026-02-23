@@ -1,0 +1,39 @@
+---
+description: Project standards for the Origami agentic pipeline framework
+alwaysApply: true
+---
+
+# Project Standards
+
+## Product definition
+
+- Origami is a **Go library** (`github.com/dpopsuev/origami`) providing graph-based agentic pipeline orchestration.
+- Purpose: enable domain-specific tools to define, walk, and observe pipelines via a YAML DSL, typed Node/Edge/Graph interfaces, and AI-powered Extractors.
+- Core primitives: Node, Edge, Graph, Walker, Extractor, Element, Persona, Mask, Adversarial Dialectic, Metacalibration (Ouroboros).
+- Design philosophy: low floor, high ceiling, wide walls (Papert Paradigm).
+
+## Development methodology
+
+- Start every story with Gherkin acceptance criteria (Given / When / Then).
+- Follow the **Red-Orange-Green-Yellow-Blue** cycle (see `rules/universal/testing-methodology.mdc`).
+- Run `go build ./...` and `go test ./...` after every change.
+- Prefer deterministic outputs for identical inputs; seed ordering where needed.
+- Zero domain imports: Origami must never import from consumer tools (Asterisk, Achilles, etc.).
+
+## Scope
+
+- Framework-only code. Domain-specific logic belongs in consumer repositories.
+- The framework provides batteries-included extractors for common formats (JSON, YAML, structured text) but domain-specific extractors are built by consumers.
+
+## Reference implementations
+
+| Tool | Repository | Domain |
+|------|-----------|--------|
+| Asterisk | `github.com/dpopsuev/asterisk` (private) | Test CI root-cause analysis |
+| Achilles | `github.com/dpopsuev/achilles` | AI-driven vulnerability discovery via meta-pattern recognition (initial targets: RHEL, OCP) |
+
+## Data handling
+
+- Treat external data as partial and potentially absent. Return partial results with clear errors.
+- Redact secrets and PII in all outputs by default.
+- All external calls require timeouts and retry with exponential backoff.

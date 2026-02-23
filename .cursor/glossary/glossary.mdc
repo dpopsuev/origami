@@ -1,0 +1,70 @@
+---
+description: Shared domain definitions for Origami
+---
+
+# Glossary
+
+- **Origami** — The agentic pipeline framework (product name). Provides first-class primitives: Nodes, Edges, Walkers, Graph, Pipeline DSL (Tome I); Elements, Cycles (Tome II); Personae, Masks, Shadow (Tome III); Ouroboros / Meta-calibration (Tome IV); Extractors (Tome V). Follows Papert/Resnick: low floor, high ceilings, wide walls. Lives at `github.com/dpopsuev/origami`.
+- **Three CLIs** — Framework-level pattern: every Origami-based tool ships three CLI surfaces. (1) **Dataset Developer** (`<tool> dataset`) — builds ground truth. (2) **Pipeline Developer** (`<tool> calibrate`) — measures pipeline accuracy against ground truth. (3) **End-User** (`<tool> run`) — executes the domain pipeline. Dependency chain: dataset → calibrate → run.
+- **Ouroboros** — The recursive meta-calibration pipeline (Tome IV). Named for the self-consuming serpent: the system measures model behavior via task-based probes to produce empirical ModelProfiles. Lives in `github.com/dpopsuev/origami/metacal/`.
+- **Node** — A processing stage in a pipeline graph. Implements `Node` interface: `Name()`, `ElementAffinity()`, `Process(ctx, nc) (Artifact, error)`.
+- **Edge** — A conditional transition between nodes. Implements `Edge` interface: `ID()`, `From()`, `To()`, `Evaluate(artifact, state) *Transition`.
+- **Graph** — An executable pipeline built from nodes and edges. Provides `Walk` (single walker) and `WalkTeam` (multi-walker with scheduler).
+- **Walker** — An agent traversing a graph. Carries `AgentIdentity` and `WalkerState`.
+- **Artifact** — The output of a node's `Process` function. Has `Type()`, `Confidence()`, `Raw()`. Drives edge evaluation.
+- **Element** — A behavioral archetype (Fire, Lightning, Earth, Diamond, Water, Air). Quantified traits: speed, max loops, convergence threshold, shortcut affinity, evidence depth, failure mode.
+- **Iron** — Derived element from Earth, adjusted by calibration accuracy. Represents a tuned-but-brittle system.
+- **Persona** — A named, pre-configured agent identity combining Color, Element, Position, and Alignment. 4 Light (Herald, Seeker, Sentinel, Weaver) + 4 Shadow (Challenger, Abyss, Bulwark, Specter).
+- **Mask** — Detachable middleware that grants capabilities at specific pipeline nodes. Wraps `Process` without changing node identity.
+- **Adversarial Dialectic** — Adversarial pipeline (D0-D4) that subjects uncertain Light conclusions to structured thesis-antithesis-synthesis debate. Activates when confidence falls below a contradiction threshold. Uses the same graph walk engine. Replaces the earlier "Shadow Court" terminology.
+- **Thesis** — The Light path's initial analysis in graph stratification. Represents the 80% of workloads handled by direct analysis.
+- **Antithesis** — The adversarial path that challenges the thesis, identifies evidence gaps, and proposes counter-explanations.
+- **Synthesis** — The reconciled conclusion produced after thesis and antithesis interact. Hegel's *Aufheben*: preserved and transcended.
+- **DialecticConfig** — Configuration struct for adversarial dialectic behavior (replaces `CourtConfig`).
+- **NeedsAntithesis()** — Activation check: returns true when confidence is below the contradiction threshold (replaces `ShouldActivate`).
+- **MaxTurns** — Thesis-antithesis exchange limit (replaces `MaxHandoffs`).
+- **MaxNegations** — Antithesis rejection limit (replaces `MaxRemands`).
+- **Cycle** — Element interaction pattern. Generative (sheng): strengthens the next element. Destructive (ke): challenges across the circle.
+- **Extractor** — Converts unstructured input (agent text, raw JSON, log output) into structured data. Implements `Extractor` interface: `Name()`, `Extract(ctx, input) (any, error)`.
+- **ExtractorRegistry** — Maps extractor names to implementations for DSL integration.
+- **Pipeline DSL** — YAML-based language for declaring pipeline graphs. Compiled to executable graphs via `BuildGraph`.
+- **Zone** — A meta-phase grouping of nodes (e.g., Backcourt, Frontcourt, Paint). Carries element affinity and stickiness.
+- **Stickiness** — How reluctant a walker is to leave its home zone. 0 = free movement, 3 = heavy anchor.
+- **Vocabulary** — Code-to-name translation interface. Implementations: `MapVocabulary`, `VocabularyFunc`, `ChainVocabulary`.
+- **NarrationObserver** — Walk observer that translates raw events into human-readable narration lines.
+- **WalkObserver** — Interface for observing graph walk events. Implementations: `LogObserver`, `TraceCollector`, `NarrationObserver`.
+- **Scheduler** — Decides which walker handles each node in a team walk. Implementations: `SingleScheduler`, `AffinityScheduler`.
+- **Signal Bus** — MCP-based message bus for agent/subagent coordination. Emits and receives structured events.
+- **MCP** — Model Context Protocol; standardized tool interface for AI to access external systems.
+- **Metacalibration** — Recursive model profiling via task-based probes. Produces `ModelProfile` with dimension scores.
+- **Probe** — A behavioral assessment task used in metacalibration (refactor, summarize, debug, ambiguity, persistence).
+
+## BYO Architecture
+
+- **BYO Architecture** — Seven named principles governing the boundary between framework and consumer. The invariant: the framework owns contract shapes, never implementations.
+- **BYOB** (Bring Your Own Bots) — LLM/agent backends are external. The framework provides `Dispatcher`; consumers wire to their provider.
+- **BYOA** (Bring Your Own Auth) — Credentials never touch the framework. Clean injection points; consumers bring Vault, OIDC, etc.
+- **BYOS** (Bring Your Own Storage) — Persistence is an interface (`curate.Store`, `Hook`, `WalkerState`), not a dependency.
+- **BYOD** (Bring Your Own Domain) — Domain logic lives entirely in consumers' nodes, walkers, hooks, and YAML.
+- **BYOR** (Bring Your Own Rules) — Routing logic, edge conditions, and decision thresholds are consumer-defined. The framework provides the expression engine and config surface; consumers declare all rules.
+- **BYO-Data** (Bring Your Own Datasets) — Calibration datasets, ground truth, and training data are consumer-curated. The framework provides the `curate` package and Three CLIs pattern; consumers define what "correct" means.
+- **BYOI** (Bring Your Own Infrastructure) — Topology-agnostic. Same pipeline works in Cursor, Linux CLI, Docker, or Kubernetes.
+- **Batteries for PoC** — Every BYO interface ships a trivial stub so new users can prototype immediately.
+
+## DSL primitives
+
+- **Transformer** — A processing unit declared via `transformer:` in YAML. Implements `Transformer` interface: `Name() string`, `Transform(ctx, tc) (any, error)`. Built-in: llm, http, jq, file.
+- **TransformerRegistry** — Maps transformer names to `Transformer` implementations for DSL integration.
+- **Hook** — A side-effect function invoked after a node completes. Implements `Hook` interface: `Name() string`, `Execute(ctx, nodeName string, art Artifact) error`. Declared via `after:` in YAML.
+- **HookRegistry** — Maps hook names to `Hook` implementations for DSL integration.
+- **ProcessWalker** — Default `Walker` implementation that calls `node.Process()` directly. Used for transformer-only pipelines.
+- **Run()** — Primary Go API for executing pipelines. Accepts `RunOption` functional options.
+- **Validate()** — Go API for dry-run pipeline validation (structure, schema, references).
+- **MergeVars** — Utility to merge base pipeline variables with override values.
+- **ResolveInput** — Utility to resolve `${node.output}` references from `WalkerState.Outputs`.
+- **RenderPrompt** — Utility to render Go `text/template` prompts with pipeline context (vars, inputs, outputs).
+
+## Reference implementations
+
+- **Asterisk** — Test CI root-cause analysis tool built on Origami. Full reference (all three CLIs). `github.com/dpopsuev/asterisk`.
+- **Achilles** — AI-driven vulnerability discovery tool built on Origami. Goes beyond known-CVE detection to find novel vulnerabilities through meta-pattern recognition across codebases, dependencies, and historical vulnerability data. Initial targets: RHEL, OCP. Demonstrates a different domain using the same framework primitives. `github.com/dpopsuev/achilles`.

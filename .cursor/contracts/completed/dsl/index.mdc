@@ -1,0 +1,11 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `origami-dsl-expression-engine.md` — C1/5: Real `when:` expression evaluation on edges
+- `origami-dsl-transformers.md` — C2/5: `transformer:` in YAML, built-in: llm, http, jq, file
+- `origami-dsl-pipeline-vars.md` — C3/5: `vars:`, `input:`, prompt templates
+- `origami-dsl-hooks.md` — C4/5: Side effects as `after:` hooks
+- `origami-dsl-runner.md` — C5/5: `origami run pipeline.yaml`

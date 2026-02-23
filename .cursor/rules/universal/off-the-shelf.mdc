@@ -1,0 +1,48 @@
+---
+description: "Use off-the-shelf solutions if they are mature and have community support; otherwise remain bespoke."
+globs: "**/*.go"
+alwaysApply: false
+---
+# Off-the-Shelf Module Policy
+
+**Rule: Prefer mature, community-backed Go modules over bespoke implementations — but only when the trade-off is justified.**
+
+## Maturity gate (all must pass to adopt)
+
+| Criterion | Threshold |
+|-----------|-----------|
+| **Stars** | >= 1,000 GitHub stars (community validation) |
+| **Maintenance** | Commit in last 12 months (not abandoned) |
+| **API stability** | Semantic versioning; no breaking changes in last 2 major releases |
+| **License** | MIT, Apache-2.0, or BSD (project-compatible) |
+| **Dependency weight** | Transitive dep count proportional to LOC replaced (don't pull 50 deps to save 30 LOC) |
+
+## Decision matrix
+
+| Decision | Criteria |
+|----------|----------|
+| **Adopt** | Module passes maturity gate AND replaces >= 100 LOC of bespoke code (or eliminates a known bug class) |
+| **Keep bespoke** | Module fails maturity gate, OR replaces < 100 LOC, OR domain logic is too specific for any generic library |
+| **Watch** | Module is promising but immature; document in architecture notes for future re-evaluation |
+
+## Current decisions
+
+### Adopted
+
+| Module | Purpose |
+|--------|---------|
+| `gopkg.in/yaml.v3` | YAML parsing for pipeline DSL |
+| `modelcontextprotocol/go-sdk` | MCP server and transport |
+
+### Kept bespoke (with justification)
+
+| Component | Why bespoke wins |
+|-----------|------------------|
+| Graph walk engine | Core framework primitive; no generic library matches the Node/Edge/Walker pattern |
+| Element/Persona system | Unique to Origami's agentic identity model |
+| Metacalibration (Ouroboros) | Domain-specific LLM model profiling; no existing library |
+
+## Agent behavior
+
+- Before writing > 100 LOC of utility code, check if a module passes the maturity gate.
+- When adding a dependency, document the decision (adopt/bespoke/watch) in architecture docs.

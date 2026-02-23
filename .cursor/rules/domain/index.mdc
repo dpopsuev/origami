@@ -1,0 +1,9 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `agent-bus.mdc` — Agent message bus — mandatory signaling protocol for agent/subagent coordination during MCP calibration
+- `dsl-design-principles.mdc` — DSL design principles for the Origami pipeline language
+- `project-standards.mdc` — Project standards for the Origami agentic pipeline framework

@@ -1,0 +1,13 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `origami-poc-batteries.md` — Quick-win: PoC-ready implementations for every BYO interface
+- `origami-walkteam-run-api.md` — Quick-win: WithTeam() RunOption for multi-walker execution via Run()
+- `origami-fan-out-fan-in.md` — Next-milestone: parallel node execution at fan-out points
+- `origami-network-dispatch.md` — Next-milestone: MuxDispatcher over gRPC/HTTP
+- `origami-k8s-pipeline-operator.md` — Vision: PipelineDef as K8s CRD, nodes as Jobs/Pods
+- `origami-pipeline-studio.md` — Vision: web UI product for pipeline visualization and run history
+- `prompt-calibration.md` — Framework-level calibration-driven prompt tuning infrastructure (deferred)

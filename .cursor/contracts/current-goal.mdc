@@ -1,0 +1,63 @@
+---
+description: Active goal manifest — single-read orientation for agents to know what matters now
+---
+
+# Current Goal
+
+**Goal:** Framework Maturity — close green border gaps and codify extension boundaries  
+**Summary:** The DSL is complete (C1-C5). Now close the remaining green border gaps (input resolution, prompt rendering, dialectic rename), ship PoC batteries for every BYO interface, and lay the architectural groundwork for parallel execution and network dispatch. Vision: codify the full origami-vision.mdc trajectory.
+
+## Urgency Map
+
+| Tier | Contract | Status | Notes |
+|------|----------|--------|-------|
+| **gate** | `origami-green-border-integrity` | active | Wire `ResolveInput` + `RenderPrompt` into Walk loop; CLI integration test. |
+| **gate** | `origami-adversarial-dialectic` | active | Rename Court -> Dialectic terminology in code and FSC. |
+| **quick-win** | `origami-poc-batteries` | draft | HTTPDispatcher, StaticTokenAuth, JSONCheckpointer, MemoryStore. |
+| **quick-win** | `origami-walkteam-run-api` | draft | `WithTeam()` RunOption for multi-walker execution via `Run()`. |
+| **next-milestone** | `origami-fan-out-fan-in` | draft | `parallel:` edge type, goroutine fan-out, merge node fan-in. |
+| **next-milestone** | `origami-network-dispatch` | draft | MuxDispatcher over gRPC/HTTP. |
+| **vision** | `origami-k8s-pipeline-operator` | draft | PipelineDef as K8s CRD. Nodes as Jobs/Pods. Architectural sketch. |
+| **vision** | `origami-pipeline-studio` | draft | Web UI product for pipeline visualization and run history. Architectural sketch. |
+
+## Other Draft
+
+| Contract | Notes |
+|----------|-------|
+| `prompt-calibration` | Framework-level prompt tuning loop. Per-step accuracy. Deferred. |
+
+## Completed
+
+| Contract | Phase | Notes |
+|----------|-------|-------|
+| `origami-dsl-expression-engine` | dsl | C1/5. Real `when:` expression evaluation on edges. |
+| `origami-dsl-transformers` | dsl | C2/5. `transformer:` in YAML. Built-in: llm, http, jq, file. |
+| `origami-dsl-pipeline-vars` | dsl | C3/5. `vars:`, `input:`, prompt templates. |
+| `origami-dsl-hooks` | dsl | C4/5. Side effects as `after:` hooks. |
+| `origami-dsl-runner` | dsl | C5/5. `origami run pipeline.yaml`. |
+| `origami-agentic-network-framework` | framework | Origami identity + Extractor[In, Out] as Tome V. |
+| `distillation-endgame` (cross-repo) | framework | Migrate 6 packages; artifact schemas, exec engine, generic dispatch. |
+| `agentic-framework-I.1-ontology` | framework | Node/Edge/Walker/Graph interfaces |
+| `agentic-framework-I.2-characteristica` | framework | Pipeline DSL (YAML/Go) |
+| `agentic-framework-II.1-elements` | framework | 6 elements with quantified behavioral traits |
+| `agentic-framework-II.2-cycles` | framework | Generative/destructive interaction cycles |
+| `agentic-framework-III.1-personae` | framework | AgentIdentity, 8 personas (4L+4S) |
+| `agentic-framework-III.2-masks` | framework | Detachable middleware masks |
+| `agentic-framework-III.3-shadow` | framework | Adversarial Dialectic (D0-D4) |
+| `meta-calibration` | framework | Ouroboros: 5 probes, runner, normalization |
+| `metacal-run-1` | framework | First empirical meta-calibration dataset |
+| `discovery-tuning` | framework | Discovery identity prompt, compliance scoring |
+| `deterministic-agent-identity` | framework | Session.SubmitResponse rejects wrapper identities |
+| `mcp-server-foundation` | mcp | MCP server over stdio with Cobra |
+| `mcp-pipeline-tools` | mcp | MCP tools driving pipeline |
+| `mcp-calibration-mode` | mcp | Calibration-specific MCP tools |
+| `mcp-underload-decouple` | mcp | Framework-level MCP decoupling |
+| `metacal-mcp-server` | mcp | MCP server for meta-calibration |
+| `adaptive-subagent-scheduler` | multi-subagent | Quality-driven batch sizing |
+| `batch-dispatch-protocol` | multi-subagent | Batch signal protocol |
+| `batch-file-dispatcher` | multi-subagent | Go implementation of batch dispatch |
+| `multi-subagent-skill` | multi-subagent | Parent-child skill for Task spawning |
+| `fs-dispatcher` | pipeline | Dispatcher interface, FileDispatcher |
+| `cleanup-lifecycle` | pipeline | Automated pre-run cleanup |
+| `concurrent-subagents-determinism` | poc-v2 | 4-subagent MCP pipeline drain |
+| `subagent-testing-framework` | poc-v2 | RoutingLog, RoutingRecorder, replay |

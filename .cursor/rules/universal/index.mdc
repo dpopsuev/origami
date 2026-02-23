@@ -1,0 +1,13 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `abstraction-boundaries.mdc` — Abstraction boundaries — separate generic framework models from scenario-specific implementations
+- `go-test-conventions.mdc` — Go test conventions — Ginkgo + stdlib hybrid; framework selection, naming, and fixture management
+- `off-the-shelf.mdc` — Use off-the-shelf solutions if mature and community-supported; otherwise remain bespoke
+- `papert-paradigm.mdc` — Papert Paradigm — low floor, high ceiling, wide walls for framework components
+- `reviewability-first.mdc` — Reviewability-first design principle — prefer observable, git-diffable formats over opaque binary stores
+- `security-analysis.mdc` — Security analysis — OWASP Top 10 checklist applied to every feature and trust-boundary change
+- `testing-methodology.mdc` — Testing methodology — coverage matrix, ROGYB cycle, BDD/Gherkin, security-as-test
