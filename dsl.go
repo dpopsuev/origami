@@ -233,6 +233,7 @@ func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, erro
 			element: elem,
 			trans:   t,
 			prompt:  nd.Prompt,
+			input:   nd.Input,
 			config:  def.Vars,
 		}, nil
 	}

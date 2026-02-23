@@ -166,10 +166,78 @@ done: _done
 	}
 }
 
+func TestRun_InputResolutionAndPromptRendering(t *testing.T) {
+	yaml := `
+pipeline: test-input-resolve
+vars:
+  threshold: 0.85
+nodes:
+  - name: recall
+    element: fire
+    transformer: echo
+  - name: triage
+    element: water
+    transformer: capture
+    input: "${recall.output}"
+    prompt: "Node {{.Node}} sees threshold {{.Config.threshold}}"
+edges:
+  - id: E1
+    from: recall
+    to: triage
+    when: "true"
+  - id: E2
+    from: triage
+    to: _done
+    when: "true"
+start: recall
+done: _done
+`
+	path := writeTempPipeline(t, yaml)
+
+	var capturedPrompt string
+	var capturedInput any
+
+	capture := TransformerFunc("capture", func(_ context.Context, tc *TransformerContext) (any, error) {
+		capturedPrompt = tc.Prompt
+		capturedInput = tc.Input
+		return map[string]any{"captured": true}, nil
+	})
+
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{
+			"echo":    &echoTransformer{},
+			"capture": capture,
+		}),
+	)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if capturedPrompt != "Node triage sees threshold 0.85" {
+		t.Errorf("rendered prompt = %q", capturedPrompt)
+	}
+
+	inputMap, ok := capturedInput.(map[string]any)
+	if !ok {
+		t.Fatalf("input type = %T, want map from recall echo", capturedInput)
+	}
+	if inputMap["node"] != "recall" {
+		t.Errorf("input should come from recall node, got node=%v", inputMap["node"])
+	}
+}
+
 func TestValidate_MissingTransformer(t *testing.T) {
 	path := writeTempPipeline(t, testPipelineYAML)
-	err := Validate(path)
+	err := Validate(path, WithTransformers(TransformerRegistry{}))
 	if err == nil {
-		t.Fatal("expected error for missing transformer")
+		t.Fatal("expected error for missing transformer when registry is provided but empty")
+	}
+}
+
+func TestValidate_NoRegistries_StructuralOnly(t *testing.T) {
+	path := writeTempPipeline(t, testPipelineYAML)
+	err := Validate(path)
+	if err != nil {
+		t.Fatalf("structural validation without registries should pass: %v", err)
 	}
 }

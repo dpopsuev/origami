@@ -284,10 +284,10 @@ func TestLoadPipeline_RealF0F6(t *testing.T) {
 	}
 }
 
-func TestLoadPipeline_RealDefectCourt(t *testing.T) {
-	data, err := os.ReadFile("testdata/defect-court.yaml")
+func TestLoadPipeline_RealDefectDialectic(t *testing.T) {
+	data, err := os.ReadFile("testdata/defect-dialectic.yaml")
 	if err != nil {
-		t.Fatalf("read defect-court.yaml: %v", err)
+		t.Fatalf("read defect-dialectic.yaml: %v", err)
 	}
 	def, err := LoadPipeline(data)
 	if err != nil {
@@ -296,8 +296,8 @@ func TestLoadPipeline_RealDefectCourt(t *testing.T) {
 	if err := def.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if def.Pipeline != "defect-court" {
-		t.Errorf("Pipeline = %q, want %q", def.Pipeline, "defect-court")
+	if def.Pipeline != "defect-dialectic" {
+		t.Errorf("Pipeline = %q, want %q", def.Pipeline, "defect-dialectic")
 	}
 	if len(def.Nodes) != 5 {
 		t.Errorf("len(Nodes) = %d, want 5", len(def.Nodes))

@@ -18,6 +18,7 @@ type runConfig struct {
 	edges        EdgeFactory
 	overrides    map[string]any
 	walker       Walker
+	team         *Team
 	observer     WalkObserver
 	logger       *slog.Logger
 }
@@ -55,6 +56,13 @@ func WithOverrides(overrides map[string]any) RunOption {
 // WithWalker sets a custom Walker. If nil, ProcessWalker is used.
 func WithWalker(w Walker) RunOption {
 	return func(c *runConfig) { c.walker = w }
+}
+
+// WithTeam enables multi-walker team execution. When set, Run() dispatches
+// to graph.WalkTeam instead of graph.Walk. WithWalker is ignored when
+// WithTeam is set.
+func WithTeam(team *Team) RunOption {
+	return func(c *runConfig) { c.team = team }
 }
 
 // WithRunObserver attaches a walk observer for the run.
@@ -115,6 +123,15 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 		}
 	}
 
+	if cfg.team != nil {
+		for _, w := range cfg.team.Walkers {
+			if input != nil {
+				w.State().Context["input"] = input
+			}
+		}
+		return runner.Graph.WalkTeam(ctx, cfg.team, def.Start)
+	}
+
 	walker := cfg.walker
 	if walker == nil {
 		walker = NewProcessWalker("run")
@@ -158,15 +175,17 @@ func Validate(pipelinePath string, opts ...RunOption) error {
 		Hooks:        cfg.hooks,
 	}
 
-	if _, err := def.BuildGraphWith(reg); err != nil {
-		return fmt.Errorf("build graph (dry run): %w", err)
-	}
-
-	for _, nd := range def.Nodes {
-		for _, hookName := range nd.After {
-			if reg.Hooks != nil {
-				if _, hErr := reg.Hooks.Get(hookName); hErr != nil {
-					return fmt.Errorf("node %q: hook %q: %w", nd.Name, hookName, hErr)
+	hasRegistries := reg.Nodes != nil || reg.Edges != nil || reg.Extractors != nil || reg.Transformers != nil || reg.Hooks != nil
+	if hasRegistries {
+		if _, err := def.BuildGraphWith(reg); err != nil {
+			return fmt.Errorf("build graph (dry run): %w", err)
+		}
+		for _, nd := range def.Nodes {
+			for _, hookName := range nd.After {
+				if reg.Hooks != nil {
+					if _, hErr := reg.Hooks.Get(hookName); hErr != nil {
+						return fmt.Errorf("node %q: hook %q: %w", nd.Name, hookName, hErr)
+					}
 				}
 			}
 		}

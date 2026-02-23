@@ -146,6 +146,100 @@ func (n *testNode) Process(ctx context.Context, nc NodeContext) (Artifact, error
 	return &testArtifact{typeName: n.name, confidence: 1.0, raw: map[string]any{"processed": true}}, nil
 }
 
+func TestTransformerNode_ResolveInput(t *testing.T) {
+	trans := &echoTransformer{}
+	node := &transformerNode{
+		name:    "triage",
+		element: ElementFire,
+		trans:   trans,
+		input:   "${recall.output}",
+		config:  map[string]any{"key": "val"},
+	}
+
+	recallArtifact := &testArtifact{
+		typeName:   "recall",
+		confidence: 0.9,
+		raw:        map[string]any{"match": true, "data": "recall-data"},
+	}
+
+	state := NewWalkerState("test")
+	state.Outputs["recall"] = recallArtifact
+
+	nc := NodeContext{
+		WalkerState:   state,
+		PriorArtifact: &testArtifact{raw: map[string]any{"prior": "should-be-ignored"}},
+	}
+
+	artifact, err := node.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+
+	m := artifact.Raw().(map[string]any)
+	echoed, ok := m["echoed"].(map[string]any)
+	if !ok {
+		t.Fatalf("echoed type = %T, want map[string]any", m["echoed"])
+	}
+	if echoed["match"] != true {
+		t.Errorf("expected recall data, got %v", echoed)
+	}
+}
+
+func TestTransformerNode_RenderPrompt(t *testing.T) {
+	captureNode := &transformerNode{
+		name:    "triage",
+		element: ElementFire,
+		trans: TransformerFunc("capture", func(_ context.Context, tc *TransformerContext) (any, error) {
+			return map[string]any{"prompt": tc.Prompt}, nil
+		}),
+		prompt: "Analyze {{.Node}} with threshold {{.Config.threshold}}",
+		config: map[string]any{"threshold": 0.85},
+	}
+
+	state := NewWalkerState("test")
+	nc := NodeContext{WalkerState: state}
+
+	artifact, err := captureNode.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+
+	m := artifact.Raw().(map[string]any)
+	prompt := m["prompt"].(string)
+	expected := "Analyze triage with threshold 0.85"
+	if prompt != expected {
+		t.Errorf("rendered prompt = %q, want %q", prompt, expected)
+	}
+}
+
+func TestTransformerNode_EmptyInput_FallsBackToPrior(t *testing.T) {
+	trans := &echoTransformer{}
+	node := &transformerNode{
+		name:  "test",
+		trans: trans,
+	}
+
+	state := NewWalkerState("test")
+	nc := NodeContext{
+		WalkerState:   state,
+		PriorArtifact: &testArtifact{raw: map[string]any{"prior": true}},
+	}
+
+	artifact, err := node.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+
+	m := artifact.Raw().(map[string]any)
+	echoed, ok := m["echoed"].(map[string]any)
+	if !ok {
+		t.Fatalf("echoed type = %T, want map[string]any", m["echoed"])
+	}
+	if echoed["prior"] != true {
+		t.Errorf("expected prior artifact data, got %v", echoed)
+	}
+}
+
 func TestIsTransformerNode(t *testing.T) {
 	trans := &transformerNode{name: "t", trans: &echoTransformer{}}
 	plain := &testNode{name: "p"}
