@@ -14,12 +14,13 @@ type Walker interface {
 // It mirrors orchestrate.CaseState with string-based node names
 // instead of typed PipelineStep.
 type WalkerState struct {
-	ID          string         `json:"id"`
-	CurrentNode string         `json:"current_node"`
-	LoopCounts  map[string]int `json:"loop_counts"`
-	Status      string         `json:"status"` // running, paused, done, error
-	History     []StepRecord   `json:"history"`
-	Context     map[string]any `json:"context"`
+	ID          string              `json:"id"`
+	CurrentNode string              `json:"current_node"`
+	LoopCounts  map[string]int      `json:"loop_counts"`
+	Status      string              `json:"status"` // running, paused, done, error
+	History     []StepRecord        `json:"history"`
+	Context     map[string]any      `json:"context"`
+	Outputs     map[string]Artifact `json:"-"` // node name -> last artifact, populated during Walk
 }
 
 // NewWalkerState creates a WalkerState with initialized maps.
@@ -29,6 +30,7 @@ func NewWalkerState(id string) *WalkerState {
 		Status:     "running",
 		LoopCounts: make(map[string]int),
 		Context:    make(map[string]any),
+		Outputs:    make(map[string]Artifact),
 	}
 }
 
