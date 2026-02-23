@@ -167,7 +167,7 @@ done: _done
 	}
 }
 
-func TestMetacal_Analyze_Stdin(t *testing.T) {
+func TestOuroboros_Analyze_Stdin(t *testing.T) {
 	goldenResponse := `{"model_name": "claude-sonnet-4-20250514", "provider": "Anthropic", "version": "20250514", "wrapper": "Cursor"}
 
 ` + "```go\n" + `func sumAbsolute(numbers []int, label string, verbose bool) (int, string, error) {
@@ -200,7 +200,7 @@ func TestMetacal_Analyze_Stdin(t *testing.T) {
 	os.Stdout = outW
 	defer func() { os.Stdout = oldStdout }()
 
-	analyzeErr := metacalAnalyze([]string{"--response-file", "-"})
+	analyzeErr := ouroborosAnalyze([]string{"--response-file", "-"})
 
 	outW.Close()
 	var buf bytes.Buffer
@@ -208,7 +208,7 @@ func TestMetacal_Analyze_Stdin(t *testing.T) {
 	os.Stdout = oldStdout
 
 	if analyzeErr != nil {
-		t.Fatalf("metacalAnalyze with stdin failed: %v", analyzeErr)
+		t.Fatalf("ouroborosAnalyze with stdin failed: %v", analyzeErr)
 	}
 
 	var result analyzeResult
@@ -233,7 +233,7 @@ func TestMetacal_Analyze_Stdin(t *testing.T) {
 	}
 }
 
-func TestMetacal_Save_Stdin(t *testing.T) {
+func TestOuroboros_Save_Stdin(t *testing.T) {
 	report := `{
   "run_id": "test-stdin-save",
   "start_time": "2026-02-21T12:00:00Z",
@@ -258,9 +258,9 @@ func TestMetacal_Save_Stdin(t *testing.T) {
 	}()
 	defer func() { os.Stdin = oldStdin }()
 
-	saveErr := metacalSave([]string{"--report-file", "-", "--runs-dir", runsDir})
+	saveErr := ouroborosSave([]string{"--report-file", "-", "--runs-dir", runsDir})
 	if saveErr != nil {
-		t.Fatalf("metacalSave with stdin failed: %v", saveErr)
+		t.Fatalf("ouroborosSave with stdin failed: %v", saveErr)
 	}
 
 	entries, err := os.ReadDir(runsDir)

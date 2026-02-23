@@ -11,7 +11,7 @@ Teach newcomers the repo purpose, architecture, build/test flow, and safe change
 
 ## Outputs
 - Summary of Origami as an agentic pipeline framework.
-- Architecture overview: Node/Edge/Graph, DSL, Extractors, Elements, Personas, Masks, Adversarial Dialectic, Metacalibration.
+- Architecture overview: Node/Edge/Graph, DSL, Extractors, Elements, Personas, Masks, Adversarial Dialectic, Ouroboros (metacalibration).
 - Build/test/run commands (`go build ./...`, `go test ./...`, `go run ./examples/playground/`).
 - Safe vs risky areas to modify.
 - Links to relevant `.cursor/notes` and `.cursor/docs`.

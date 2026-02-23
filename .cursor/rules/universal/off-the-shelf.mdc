@@ -40,7 +40,7 @@ alwaysApply: false
 |-----------|------------------|
 | Graph walk engine | Core framework primitive; no generic library matches the Node/Edge/Walker pattern |
 | Element/Persona system | Unique to Origami's agentic identity model |
-| Metacalibration (Ouroboros) | Domain-specific LLM model profiling; no existing library |
+| Ouroboros (metacalibration) | Domain-specific LLM model profiling; no existing library |
 
 ## Agent behavior
 

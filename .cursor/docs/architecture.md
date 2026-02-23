@@ -25,13 +25,13 @@ flowchart TD
         MCPServer["Server, SignalBus\nWatchStdin"]
     end
 
-    subgraph metacal_pkg ["github.com/dpopsuev/origami/metacal"]
+    subgraph ouroboros_pkg ["github.com/dpopsuev/origami/ouroboros"]
         Discovery["Discovery loop"]
         Profiles["Profile store"]
         Probes["5 probes\n(refactor, summarize, debug, ambiguity, persistence)"]
     end
 
-    metacal_pkg --> origami
+    ouroboros_pkg --> origami
     mcp_pkg --> origami
 ```
 
@@ -41,8 +41,8 @@ flowchart TD
 |---------|-----------|-----------|---------|
 | `github.com/dpopsuev/origami` | 2660 | 3797 | Core: Node, Edge, Graph, Walker, DSL, Extractors, Elements, Personas, Masks, Dialectic, Cycles |
 | `origami/mcp/` | 124 | 123 | MCP server, signal bus, stdin watcher |
-| `origami/metacal/` | 1103 | 1780 | Metacalibration (Ouroboros): discovery, normalization, profiling |
-| `origami/metacal/probes/` | 602 | 445 | 5 behavioral probes for LLM model fingerprinting |
+| `origami/ouroboros/` | 1103 | 1780 | Ouroboros (metacalibration): discovery, normalization, profiling |
+| `origami/ouroboros/probes/` | 602 | 445 | 5 behavioral probes for LLM model fingerprinting |
 | **Total** | **4489** | **6145** | |
 
 ## Key design invariants
@@ -57,7 +57,7 @@ flowchart TD
 
 | Tool | Repository | Domain | Uses |
 |------|-----------|--------|------|
-| Asterisk | `github.com/dpopsuev/asterisk` | Test CI root-cause analysis | Full framework: DSL, Graph, Extractors, Elements, Personas, Masks, Dialectic, Metacal, MCP |
+| Asterisk | `github.com/dpopsuev/asterisk` | Test CI root-cause analysis | Full framework: DSL, Graph, Extractors, Elements, Personas, Masks, Dialectic, Ouroboros, MCP |
 | Achilles | `github.com/dpopsuev/achilles` | AI-driven vulnerability discovery via meta-pattern recognition (initial targets: RHEL, OCP) | Core: DSL, Graph, Extractors, Elements, Observer |
 
 ## What Origami does NOT do

@@ -87,9 +87,9 @@ Type-erased for registry and DSL integration (same pattern as `Node`). Typed saf
 
 | Extractor | Domain | In | Out |
 |-----------|--------|----|-----|
-| `IdentityExtractor` | Metacal | `string` | `ModelIdentity` |
-| `ProbeTextExtractor` | Metacal | `string` | `string` (probe output) |
-| `CodeBlockProbeExtractor` | Metacal | `string` | `string` (extracted code) |
+| `IdentityExtractor` | Ouroboros | `string` | `ModelIdentity` |
+| `ProbeTextExtractor` | Ouroboros | `string` | `string` (probe output) |
+| `CodeBlockProbeExtractor` | Ouroboros | `string` | `string` (extracted code) |
 | `StepExtractor[T]` | Asterisk RCA | `json.RawMessage` | `*T` (typed pipeline artifact) |
 
 ### DSL integration
@@ -107,7 +107,7 @@ The `ExtractorRegistry` maps names to implementations:
 
 ```go
 reg := make(framework.ExtractorRegistry)
-reg.Register(&metacal.IdentityExtractor{})
+reg.Register(&ouroboros.IdentityExtractor{})
 graph, _ := def.BuildGraph(nodeReg, edgeFactory, reg)
 ```
 

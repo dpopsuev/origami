@@ -14,8 +14,8 @@ import (
 
 	framework "github.com/dpopsuev/origami"
 	fwmcp "github.com/dpopsuev/origami/mcp"
-	"github.com/dpopsuev/origami/metacal"
-	"github.com/dpopsuev/origami/metacalmcp"
+	"github.com/dpopsuev/origami/ouroboros"
+	"github.com/dpopsuev/origami/ouroborosmcp"
 	"github.com/dpopsuev/origami/transformers"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -33,8 +33,8 @@ func main() {
 		err = runCmd(os.Args[2:])
 	case "validate":
 		err = validateCmd(os.Args[2:])
-	case "metacal":
-		err = metacalCmd(os.Args[2:])
+	case "ouroboros":
+		err = ouroborosCmd(os.Args[2:])
 	case "version":
 		fmt.Println("origami v1.0.0")
 	default:
@@ -55,7 +55,7 @@ func printUsage() {
 Commands:
   run        Execute a pipeline YAML
   validate   Validate a pipeline YAML without executing
-  metacal    Meta-calibration discovery tools (prompt, analyze, save, serve)
+  ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
   version    Print version`)
 }
 
@@ -128,28 +128,28 @@ func validateCmd(args []string) error {
 	return nil
 }
 
-// --- metacal subcommand group ---
+// --- ouroboros subcommand group ---
 
-func metacalCmd(args []string) error {
+func ouroborosCmd(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: origami metacal <prompt|analyze|save|serve> [flags]")
+		return fmt.Errorf("usage: origami ouroboros <prompt|analyze|save|serve> [flags]")
 	}
 	switch args[0] {
 	case "prompt":
-		return metacalPrompt(args[1:])
+		return ouroborosPrompt(args[1:])
 	case "analyze":
-		return metacalAnalyze(args[1:])
+		return ouroborosAnalyze(args[1:])
 	case "save":
-		return metacalSave(args[1:])
+		return ouroborosSave(args[1:])
 	case "serve":
-		return metacalServe(args[1:])
+		return ouroborosServe(args[1:])
 	default:
-		return fmt.Errorf("unknown metacal subcommand: %s", args[0])
+		return fmt.Errorf("unknown ouroboros subcommand: %s", args[0])
 	}
 }
 
-func metacalPrompt(args []string) error {
-	fs := flag.NewFlagSet("metacal prompt", flag.ContinueOnError)
+func ouroborosPrompt(args []string) error {
+	fs := flag.NewFlagSet("ouroboros prompt", flag.ContinueOnError)
 	excludeFile := fs.String("exclude-file", "", "JSON file with array of ModelIdentity to exclude")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -166,7 +166,7 @@ func metacalPrompt(args []string) error {
 		}
 	}
 
-	fmt.Print(metacal.BuildFullPrompt(exclude))
+	fmt.Print(ouroboros.BuildFullPrompt(exclude))
 	return nil
 }
 
@@ -174,13 +174,13 @@ type analyzeResult struct {
 	Identity framework.ModelIdentity `json:"identity"`
 	Key      string                  `json:"key"`
 	Code     string                  `json:"code"`
-	Score    metacal.ProbeScore      `json:"score"`
+	Score    ouroboros.ProbeScore      `json:"score"`
 	Known    bool                    `json:"known"`
 	Wrapper  bool                    `json:"wrapper"`
 }
 
-func metacalAnalyze(args []string) error {
-	fs := flag.NewFlagSet("metacal analyze", flag.ContinueOnError)
+func ouroborosAnalyze(args []string) error {
+	fs := flag.NewFlagSet("ouroboros analyze", flag.ContinueOnError)
 	responseFile := fs.String("response-file", "", "text file with raw subagent response (- for stdin)")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -202,21 +202,21 @@ func metacalAnalyze(args []string) error {
 	}
 	raw := string(data)
 
-	mi, err := metacal.ParseIdentityResponse(raw)
+	mi, err := ouroboros.ParseIdentityResponse(raw)
 	if err != nil {
 		return fmt.Errorf("parse identity: %w", err)
 	}
 
-	code, err := metacal.ParseProbeResponse(raw)
+	code, err := ouroboros.ParseProbeResponse(raw)
 	if err != nil {
 		return fmt.Errorf("parse code: %w", err)
 	}
 
-	score := metacal.ScoreRefactorOutput(code)
+	score := ouroboros.ScoreRefactorOutput(code)
 
 	result := analyzeResult{
 		Identity: mi,
-		Key:      metacal.ModelKey(mi),
+		Key:      ouroboros.ModelKey(mi),
 		Code:     code,
 		Score:    score,
 		Known:    framework.IsKnownModel(mi),
@@ -231,10 +231,10 @@ func metacalAnalyze(args []string) error {
 	return nil
 }
 
-const defaultRunsDir = "metacal/runs"
+const defaultRunsDir = "ouroboros/runs"
 
-func metacalSave(args []string) error {
-	fs := flag.NewFlagSet("metacal save", flag.ContinueOnError)
+func ouroborosSave(args []string) error {
+	fs := flag.NewFlagSet("ouroboros save", flag.ContinueOnError)
 	reportFile := fs.String("report-file", "", "JSON file containing the RunReport (- for stdin)")
 	runsDir := fs.String("runs-dir", defaultRunsDir, "directory to save run reports")
 	if err := fs.Parse(args); err != nil {
@@ -256,12 +256,12 @@ func metacalSave(args []string) error {
 		return fmt.Errorf("read report: %w", err)
 	}
 
-	var report metacal.RunReport
+	var report ouroboros.RunReport
 	if err := json.Unmarshal(data, &report); err != nil {
 		return fmt.Errorf("parse report: %w", err)
 	}
 
-	store, err := metacal.NewFileRunStore(*runsDir)
+	store, err := ouroboros.NewFileRunStore(*runsDir)
 	if err != nil {
 		return fmt.Errorf("create store: %w", err)
 	}
@@ -274,14 +274,14 @@ func metacalSave(args []string) error {
 	return nil
 }
 
-func metacalServe(args []string) error {
-	fs := flag.NewFlagSet("metacal serve", flag.ContinueOnError)
+func ouroborosServe(args []string) error {
+	fs := flag.NewFlagSet("ouroboros serve", flag.ContinueOnError)
 	runsDir := fs.String("runs-dir", defaultRunsDir, "directory to save discovery run reports")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	srv := metacalmcp.NewServer(*runsDir)
+	srv := ouroborosmcp.NewServer(*runsDir)
 	defer srv.Shutdown()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -289,6 +289,6 @@ func metacalServe(args []string) error {
 
 	fwmcp.WatchStdin(ctx, nil, cancel)
 
-	slog.Info("starting metacal MCP server over stdio", "runs_dir", *runsDir)
+	slog.Info("starting ouroboros MCP server over stdio", "runs_dir", *runsDir)
 	return srv.MCPServer.Run(ctx, &sdkmcp.StdioTransport{})
 }

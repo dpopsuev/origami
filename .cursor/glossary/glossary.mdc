@@ -6,7 +6,7 @@ description: Shared domain definitions for Origami
 
 - **Origami** — The agentic pipeline framework (product name). Provides first-class primitives: Nodes, Edges, Walkers, Graph, Pipeline DSL (Tome I); Elements, Cycles (Tome II); Perennial Personae, Masks, Shadow (Tome III); Ouroboros / Meta-calibration (Tome IV); Extractors (Tome V). Follows Papert/Resnick: low floor, high ceilings, wide walls. Lives at `github.com/dpopsuev/origami`.
 - **Three CLIs** — Framework-level pattern: every Origami-based tool ships three CLI surfaces. (1) **Dataset Developer** (`<tool> dataset`) — builds ground truth. (2) **Pipeline Developer** (`<tool> calibrate`) — measures pipeline accuracy against ground truth. (3) **End-User** (`<tool> run`) — executes the domain pipeline. Dependency chain: dataset → calibrate → run.
-- **Ouroboros** — The recursive meta-calibration pipeline (Tome IV). Named for the self-consuming serpent: the system measures model behavior via task-based probes to produce empirical ModelProfiles. Lives in `github.com/dpopsuev/origami/metacal/`.
+- **Ouroboros** — The recursive meta-calibration pipeline (Tome IV). Named for the self-consuming serpent: the system measures model behavior via task-based probes to produce empirical ModelProfiles. Lives in `github.com/dpopsuev/origami/ouroboros/`.
 - **Node** — A processing stage in a pipeline graph. Implements `Node` interface: `Name()`, `ElementAffinity()`, `Process(ctx, nc) (Artifact, error)`.
 - **Edge** — A conditional transition between nodes. Implements `Edge` interface: `ID()`, `From()`, `To()`, `Evaluate(artifact, state) *Transition`.
 - **Graph** — An executable pipeline built from nodes and edges. Provides `Walk` (single walker) and `WalkTeam` (multi-walker with scheduler).

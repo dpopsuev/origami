@@ -9,7 +9,7 @@ alwaysApply: true
 
 - Origami is a **Go library** (`github.com/dpopsuev/origami`) providing graph-based agentic pipeline orchestration.
 - Purpose: enable domain-specific tools to define, walk, and observe pipelines via a YAML DSL, typed Node/Edge/Graph interfaces, and AI-powered Extractors.
-- Core primitives: Node, Edge, Graph, Walker, Extractor, Element, Persona, Mask, Adversarial Dialectic, Metacalibration (Ouroboros).
+- Core primitives: Node, Edge, Graph, Walker, Extractor, Element, Persona, Mask, Adversarial Dialectic, Ouroboros (metacalibration).
 - Design philosophy: low floor, high ceiling, wide walls (Papert Paradigm).
 
 ## Development methodology
