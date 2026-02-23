@@ -42,6 +42,7 @@ type DispatchContext struct {
 	Step         string // pipeline step name, e.g. "F0_RECALL"
 	PromptPath   string // absolute path to the filled prompt file
 	ArtifactPath string // absolute path where artifact JSON should appear
+	Provider     string // optional LLM provider name for routing (e.g. "cursor", "codex")
 }
 
 // ExternalDispatcher is the agent-facing side of a mux dispatcher.

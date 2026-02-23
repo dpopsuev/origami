@@ -33,6 +33,8 @@ func main() {
 		err = runCmd(os.Args[2:])
 	case "validate":
 		err = validateCmd(os.Args[2:])
+	case "skill":
+		err = skillCmd(os.Args[2:])
 	case "ouroboros":
 		err = ouroborosCmd(os.Args[2:])
 	case "version":
@@ -55,6 +57,7 @@ func printUsage() {
 Commands:
   run        Execute a pipeline YAML
   validate   Validate a pipeline YAML without executing
+  skill      Skill scaffolding (scaffold SKILL.md from pipeline YAML)
   ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
   version    Print version`)
 }

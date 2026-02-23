@@ -50,12 +50,13 @@ func (r TransformerRegistry) Register(t Transformer) {
 // transformerNode is a Node that delegates to a Transformer.
 // Created by BuildGraph when NodeDef.Transformer is set.
 type transformerNode struct {
-	name    string
-	element Element
-	trans   Transformer
-	prompt  string         // from NodeDef.Prompt
-	input   string         // from NodeDef.Input (e.g. "${recall.output}")
-	config  map[string]any // pipeline vars (from PipelineDef.Vars)
+	name     string
+	element  Element
+	trans    Transformer
+	prompt   string         // from NodeDef.Prompt
+	input    string         // from NodeDef.Input (e.g. "${recall.output}")
+	provider string         // from NodeDef.Provider (e.g. "cursor", "codex")
+	config   map[string]any // pipeline vars (from PipelineDef.Vars)
 }
 
 func (n *transformerNode) Name() string            { return n.name }
@@ -98,12 +99,20 @@ func (n *transformerNode) Process(ctx context.Context, nc NodeContext) (Artifact
 		prompt = rendered
 	}
 
+	meta := nc.Meta
+	if n.provider != "" {
+		if meta == nil {
+			meta = make(map[string]any)
+		}
+		meta["provider"] = n.provider
+	}
+
 	tc := &TransformerContext{
 		Input:    input,
 		Config:   n.config,
 		Prompt:   prompt,
 		NodeName: n.name,
-		Meta:     nc.Meta,
+		Meta:     meta,
 	}
 
 	result, err := n.trans.Transform(ctx, tc)

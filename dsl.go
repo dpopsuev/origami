@@ -36,6 +36,7 @@ type NodeDef struct {
 	Family      string          `yaml:"family,omitempty"`
 	Extractor   string          `yaml:"extractor,omitempty"`
 	Transformer string          `yaml:"transformer,omitempty"`
+	Provider    string          `yaml:"provider,omitempty"`
 	Prompt      string          `yaml:"prompt,omitempty"`
 	Input       string          `yaml:"input,omitempty"`
 	After       []string        `yaml:"after,omitempty"`
@@ -230,12 +231,13 @@ func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, erro
 			return nil, fmt.Errorf("node %q: %w", nd.Name, err)
 		}
 		return &transformerNode{
-			name:    nd.Name,
-			element: elem,
-			trans:   t,
-			prompt:  nd.Prompt,
-			input:   nd.Input,
-			config:  def.Vars,
+			name:     nd.Name,
+			element:  elem,
+			trans:    t,
+			prompt:   nd.Prompt,
+			input:    nd.Input,
+			provider: nd.Provider,
+			config:   def.Vars,
 		}, nil
 	}
 

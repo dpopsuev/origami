@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -230,6 +231,105 @@ func TestOuroboros_Analyze_Stdin(t *testing.T) {
 	}
 	if result.Code == "" {
 		t.Error("code should not be empty")
+	}
+}
+
+func TestCLI_Skill_Scaffold(t *testing.T) {
+	bin := buildBinary(t)
+	dir := t.TempDir()
+
+	pipelineYAML := `
+pipeline: test-scaffold
+nodes:
+  - name: scan
+    element: fire
+    transformer: llm
+    prompt: "Scan for vulnerabilities"
+  - name: classify
+    element: water
+    transformer: http
+edges:
+  - id: E1
+    name: scan-to-classify
+    from: scan
+    to: classify
+    when: "true"
+  - id: E2
+    name: done
+    from: classify
+    to: _done
+    when: "true"
+start: scan
+done: _done
+`
+	pipelinePath := filepath.Join(dir, "pipeline.yaml")
+	if err := os.WriteFile(pipelinePath, []byte(pipelineYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	outDir := filepath.Join(dir, "skill-out")
+	cmd := exec.Command(bin, "skill", "scaffold", "--tool", "mytest", "--out", outDir, pipelinePath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("origami skill scaffold failed: %v\n%s", err, out)
+	}
+
+	skillPath := filepath.Join(outDir, "SKILL.md")
+	content, err := os.ReadFile(skillPath)
+	if err != nil {
+		t.Fatalf("read generated SKILL.md: %v", err)
+	}
+
+	checks := []string{
+		"mytest-calibrate",
+		"test-scaffold",
+		"scan",
+		"classify",
+		"scan-to-classify",
+		"start_calibration",
+		"get_next_step",
+		"submit_artifact",
+		"get_report",
+	}
+	for _, check := range checks {
+		if !strings.Contains(string(content), check) {
+			t.Errorf("SKILL.md missing %q", check)
+		}
+	}
+}
+
+func TestCLI_Skill_Scaffold_DefaultOut(t *testing.T) {
+	bin := buildBinary(t)
+	dir := t.TempDir()
+
+	pipelineYAML := `
+pipeline: myapp
+nodes:
+  - name: start
+    element: fire
+    transformer: echo
+edges:
+  - id: E1
+    name: done
+    from: start
+    to: _done
+    when: "true"
+start: start
+done: _done
+`
+	pipelinePath := filepath.Join(dir, "pipeline.yaml")
+	os.WriteFile(pipelinePath, []byte(pipelineYAML), 0644)
+
+	cmd := exec.Command(bin, "skill", "scaffold", pipelinePath)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("origami skill scaffold failed: %v\n%s", err, out)
+	}
+
+	skillPath := filepath.Join(dir, ".cursor", "skills", "myapp-calibrate", "SKILL.md")
+	if _, err := os.Stat(skillPath); err != nil {
+		t.Fatalf("expected SKILL.md at %s: %v", skillPath, err)
 	}
 }
 
