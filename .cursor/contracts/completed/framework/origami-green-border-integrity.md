@@ -66,12 +66,12 @@ Phase 1: Wire `ResolveInput` into the Walk loop so `transformerNode` receives re
 
 ## Tasks
 
-- [ ] Wire `ResolveInput` into Walk loop: before calling `transformerNode.Process()`, resolve `NodeDef.Input` against `WalkerState.Outputs`
-- [ ] Wire `RenderPrompt` into `transformerNode.Process()`: assemble `TemplateContext` from pipeline vars, resolved input, and outputs; render prompt template before passing to transformer
-- [ ] Add CLI integration test: `origami run` with a multi-node YAML pipeline that uses `input:`, `prompt:`, `when:`, and `after:`
-- [ ] Validate (green) — all tests pass, acceptance criteria met
-- [ ] Tune (blue) — refactor for quality, no behavior changes
-- [ ] Validate (green) — all tests still pass after tuning
+- [x] Wire `ResolveInput` into Walk loop: before calling `transformerNode.Process()`, resolve `NodeDef.Input` against `WalkerState.Outputs`
+- [x] Wire `RenderPrompt` into `transformerNode.Process()`: assemble `TemplateContext` from pipeline vars, resolved input, and outputs; render prompt template before passing to transformer
+- [x] Add CLI integration test: `origami run` with a multi-node YAML pipeline that uses `input:`, `prompt:`, `when:`, and `after:`
+- [x] Validate (green) — all tests pass, acceptance criteria met
+- [x] Tune (blue) — refactor for quality, no behavior changes
+- [x] Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 

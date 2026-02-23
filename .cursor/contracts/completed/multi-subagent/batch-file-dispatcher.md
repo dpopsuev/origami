@@ -91,19 +91,19 @@ Four phases. Phase 1 builds the manifest and briefing writers. Phase 2 implement
 
 ### Phase 1 — Manifest and briefing (Red-Green)
 
-- [ ] **P1.1** Define `BatchManifest` struct in `internal/calibrate/batch_manifest.go`. Fields match the schema in `batch-dispatch-protocol.md`.
-- [ ] **P1.2** Implement `WriteManifest` and `ReadManifest` — atomic JSON write/read with temp+rename.
-- [ ] **P1.3** Write tests: `TestWriteManifest_RoundTrip`, `TestWriteManifest_Atomic`.
-- [ ] **P1.4** Implement `GenerateBriefing` in `internal/calibrate/briefing.go`. Read from `MemStore`, produce markdown string.
-- [ ] **P1.5** Write tests: `TestGenerateBriefing_TriagePhase`, `TestGenerateBriefing_InvestigationPhase` (with cluster data), `TestGenerateBriefing_Empty` (no prior data).
+- [x] **P1.1** Define `BatchManifest` struct in `internal/calibrate/batch_manifest.go`. Fields match the schema in `batch-dispatch-protocol.md`.
+- [x] **P1.2** Implement `WriteManifest` and `ReadManifest` — atomic JSON write/read with temp+rename.
+- [x] **P1.3** Write tests: `TestWriteManifest_RoundTrip`, `TestWriteManifest_Atomic`.
+- [x] **P1.4** Implement `GenerateBriefing` in `internal/calibrate/briefing.go`. Read from `MemStore`, produce markdown string.
+- [x] **P1.5** Write tests: `TestGenerateBriefing_TriagePhase`, `TestGenerateBriefing_InvestigationPhase` (with cluster data), `TestGenerateBriefing_Empty` (no prior data).
 
 ### Phase 2 — BatchFileDispatcher (Red-Green)
 
-- [ ] **P2.1** Implement `BatchFileDispatcher` in `internal/calibrate/batch_dispatcher.go`.
-- [ ] **P2.2** `DispatchBatch`: write all signals, write manifest, write briefing, then poll all artifact paths concurrently using one goroutine per signal (bounded by batch size). Collect results via channel.
-- [ ] **P2.3** Error handling: if a signal errors (timeout, invalid JSON), record the error for that slot and continue polling others. Return partial results with per-slot errors.
-- [ ] **P2.4** Manifest lifecycle: update manifest status to `in_progress` when polling starts, update per-signal status as artifacts arrive, set to `done` when all complete.
-- [ ] **P2.5** Write tests with `-race`:
+- [x] **P2.1** Implement `BatchFileDispatcher` in `internal/calibrate/batch_dispatcher.go`.
+- [x] **P2.2** `DispatchBatch`: write all signals, write manifest, write briefing, then poll all artifact paths concurrently using one goroutine per signal (bounded by batch size). Collect results via channel.
+- [x] **P2.3** Error handling: if a signal errors (timeout, invalid JSON), record the error for that slot and continue polling others. Return partial results with per-slot errors.
+- [x] **P2.4** Manifest lifecycle: update manifest status to `in_progress` when polling starts, update per-signal status as artifacts arrive, set to `done` when all complete.
+- [x] **P2.5** Write tests with `-race`:
   - `TestBatchDispatch_AllComplete`: 4 signals, mock artifacts written by test goroutines, all 4 collected.
   - `TestBatchDispatch_PartialFailure`: 4 signals, 1 times out, other 3 succeed. Verify partial results.
   - `TestBatchDispatch_ManifestLifecycle`: verify manifest transitions from `pending` -> `in_progress` -> `done`.
@@ -111,21 +111,21 @@ Four phases. Phase 1 builds the manifest and briefing writers. Phase 2 implement
 
 ### Phase 3 — Wire into parallel runner (Green)
 
-- [ ] **P3.1** Add `--dispatch=batch-file` and `--batch-size=N` flags to CLI.
-- [ ] **P3.2** Refactor `runParallelCalibration` to detect `BatchFileDispatcher`:
+- [x] **P3.1** Add `--dispatch=batch-file` and `--batch-size=N` flags to CLI.
+- [x] **P3.2** Refactor `runParallelCalibration` to detect `BatchFileDispatcher`:
   - Triage phase: collect `DispatchContext`s in batches of `batch-size`, call `DispatchBatch` per batch.
   - Investigation phase: same pattern for cluster representatives.
-- [ ] **P3.3** Ensure `TokenTrackingDispatcher` can wrap per-slot dispatches within `BatchFileDispatcher` (record tokens per signal, not per batch).
-- [ ] **P3.4** Add `just calibrate-batch` recipe: `asterisk calibrate --scenario=ptp-mock --adapter=stub --dispatch=batch-file --parallel=4 --batch-size=4`.
-- [ ] **P3.5** Write integration test: `TestParallelCalibration_BatchDispatch` — 12 cases, batch-size=4, stub adapter, verify same results as serial.
+- [x] **P3.3** Ensure `TokenTrackingDispatcher` can wrap per-slot dispatches within `BatchFileDispatcher` (record tokens per signal, not per batch).
+- [x] **P3.4** Add `just calibrate-batch` recipe: `asterisk calibrate --scenario=ptp-mock --adapter=stub --dispatch=batch-file --parallel=4 --batch-size=4`.
+- [x] **P3.5** Write integration test: `TestParallelCalibration_BatchDispatch` — 12 cases, batch-size=4, stub adapter, verify same results as serial.
 
 ### Phase 4 — Validate and tune (Blue)
 
-- [ ] **P4.1** Backward compatibility: `--dispatch=file --parallel=4` produces same results as before (no regressions).
-- [ ] **P4.2** `--dispatch=batch-file --parallel=4 --batch-size=4` with stub adapter on ptp-mock: 20/20 metrics, race detector clean.
-- [ ] **P4.3** Verify manifest and briefing files are generated correctly by inspecting `.asterisk/calibrate/` after a run.
-- [ ] **P4.4** Tune (blue) — refactor for clarity, document batch dispatcher in `docs/parallel-architecture.mdc`.
-- [ ] **P4.5** Validate (green) — all tests pass, race detector clean.
+- [x] **P4.1** Backward compatibility: `--dispatch=file --parallel=4` produces same results as before (no regressions).
+- [x] **P4.2** `--dispatch=batch-file --parallel=4 --batch-size=4` with stub adapter on ptp-mock: 20/20 metrics, race detector clean.
+- [x] **P4.3** Verify manifest and briefing files are generated correctly by inspecting `.asterisk/calibrate/` after a run.
+- [x] **P4.4** Tune (blue) — refactor for clarity, document batch dispatcher in `docs/parallel-architecture.mdc`.
+- [x] **P4.5** Validate (green) — all tests pass, race detector clean.
 
 ## Acceptance criteria
 

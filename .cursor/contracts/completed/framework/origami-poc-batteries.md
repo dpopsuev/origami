@@ -51,15 +51,15 @@ Implement each battery independently. Each has its own unit test. Order: HTTPDis
 
 ## Tasks
 
-- [ ] Implement `HTTPDispatcher` in `dispatch/http.go` — POST to OpenAI-compatible API, parse response
-- [ ] Implement `StaticTokenAuth` in `dispatch/auth.go` — middleware injecting bearer token from env var
-- [ ] Implement `JSONCheckpointer` in `checkpoint.go` — serialize/deserialize `WalkerState` to JSON file
-- [ ] Implement `MemoryStore` in `curate/memory.go` — in-memory `curate.Store`
-- [ ] Unit tests for all four batteries
-- [ ] Integration test: HTTPDispatcher with httptest.Server
-- [ ] Validate (green) — all tests pass
-- [ ] Tune (blue) — refactor for quality
-- [ ] Validate (green) — all tests still pass after tuning
+- [x] Implement `HTTPDispatcher` in `dispatch/http.go` — POST to OpenAI-compatible API, parse response
+- [x] Implement `StaticTokenAuth` in `dispatch/auth.go` — middleware injecting bearer token from env var
+- [x] Implement `JSONCheckpointer` in `checkpoint.go` — serialize/deserialize `WalkerState` to JSON file
+- [x] Implement `MemoryStore` in `curate/memory.go` — in-memory `curate.Store`
+- [x] Unit tests for all four batteries
+- [x] Integration test: HTTPDispatcher with httptest.Server
+- [x] Validate (green) — all tests pass
+- [x] Tune (blue) — refactor for quality
+- [x] Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 

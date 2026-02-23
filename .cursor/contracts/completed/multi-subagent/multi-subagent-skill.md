@@ -135,37 +135,37 @@ Three phases. Phase 1 designs the subagent prompt template. Phase 2 rewrites the
 
 ### Phase 1 — Subagent prompt template (Red)
 
-- [ ] **P1.1** Draft the subagent prompt template for each pipeline step (F0-F6). Include: briefing path, signal path, schema summary, calibration rules. Save as `.cursor/skills/asterisk-investigate/subagent-template.md`.
-- [ ] **P1.2** Test the template manually: create a mock `signal.json` and `briefing.md`, paste the filled template into a Cursor Task, verify the subagent can read files and produce valid artifact JSON.
-- [ ] **P1.3** Iterate on template until subagent reliably produces correct-schema artifacts for at least 3 different pipeline steps.
+- [x] **P1.1** Draft the subagent prompt template for each pipeline step (F0-F6). Include: briefing path, signal path, schema summary, calibration rules. Save as `.cursor/skills/asterisk-investigate/subagent-template.md`.
+- [x] **P1.2** Test the template manually: create a mock `signal.json` and `briefing.md`, paste the filled template into a Cursor Task, verify the subagent can read files and produce valid artifact JSON.
+- [x] **P1.3** Iterate on template until subagent reliably produces correct-schema artifacts for at least 3 different pipeline steps.
 
 ### Phase 2 — Skill rewrite (Green)
 
-- [ ] **P2.1** Update `SKILL.md`:
+- [x] **P2.1** Update `SKILL.md`:
   - Add "Batch mode" section with parent loop pseudocode
   - Add "Spawning subagents" section explaining Task tool usage
   - Add "Subagent prompt template" reference
   - Keep existing "Single-signal mode" section as fallback
   - Keep under 500 lines
-- [ ] **P2.2** Update `signal-protocol.md`:
+- [x] **P2.2** Update `signal-protocol.md`:
   - Add "Batch manifest schema" section (from batch-dispatch-protocol)
   - Add "Briefing file" section
   - Add "Multi-subagent flow" sequence
   - Keep existing single-signal protocol sections
-- [ ] **P2.3** Update `examples.md`:
+- [x] **P2.3** Update `examples.md`:
   - Add "Batch mode walkthrough" — 4-case batch, parent spawns 4 Tasks, collects artifacts
   - Add "Subagent prompt and response" — worked example of what Task sees and writes
   - Keep existing single-signal examples
-- [ ] **P2.4** Create `subagent-template.md` — the parameterized prompt template that the parent fills per case.
-- [ ] **P2.5** Review all 5 files for consistency: skill references match protocol, schemas match artifact-schemas.md, examples use correct manifest format.
+- [x] **P2.4** Create `subagent-template.md` — the parameterized prompt template that the parent fills per case.
+- [x] **P2.5** Review all 5 files for consistency: skill references match protocol, schemas match artifact-schemas.md, examples use correct manifest format.
 
 ### Phase 3 — Validate end-to-end (Blue)
 
-- [ ] **P3.1** Run `asterisk calibrate --scenario=ptp-mock --adapter=cursor --dispatch=batch-file --parallel=4 --batch-size=4` with the updated skill active in Cursor. Verify the parent agent discovers batches, spawns subagents, and all 12 cases complete.
-- [ ] **P3.2** Verify calibration metrics: stub results should match (20/20) since subagents produce the same artifacts as single-agent mode.
-- [ ] **P3.3** Test fallback: run `--dispatch=file` (no batch mode) and confirm the skill falls back to sequential single-signal processing.
-- [ ] **P3.4** Tune (blue) — refine parent loop timing, subagent prompt clarity based on observed behavior.
-- [ ] **P3.5** Validate (green) — re-run calibration, all cases complete, metrics unchanged.
+- [x] **P3.1** Run `asterisk calibrate --scenario=ptp-mock --adapter=cursor --dispatch=batch-file --parallel=4 --batch-size=4` with the updated skill active in Cursor. Verify the parent agent discovers batches, spawns subagents, and all 12 cases complete.
+- [x] **P3.2** Verify calibration metrics: stub results should match (20/20) since subagents produce the same artifacts as single-agent mode.
+- [x] **P3.3** Test fallback: run `--dispatch=file` (no batch mode) and confirm the skill falls back to sequential single-signal processing.
+- [x] **P3.4** Tune (blue) — refine parent loop timing, subagent prompt clarity based on observed behavior.
+- [x] **P3.5** Validate (green) — re-run calibration, all cases complete, metrics unchanged.
 
 ## Acceptance criteria
 

@@ -62,14 +62,14 @@ Phase 1: Add `WithTeam(*Team) RunOption`. Phase 2: Update `Run()` to dispatch to
 
 ## Tasks
 
-- [ ] Add `WithTeam(*Team) RunOption` to `run.go`
-- [ ] Update `Run()`: if team is set, call `graph.WalkTeam(ctx, team, obs)` instead of `graph.Walk(ctx, walker, obs)`
-- [ ] Unit test: `Run()` with `WithTeam()` uses WalkTeam
-- [ ] Integration test: 2-walker team walk via `Run()` with AffinityScheduler
-- [ ] Verify backward compatibility: `Run()` without `WithTeam()` still uses single-walker Walk
-- [ ] Validate (green) — all tests pass with `-race`
-- [ ] Tune (blue) — refactor for quality
-- [ ] Validate (green) — all tests still pass after tuning
+- [x] Add `WithTeam(*Team) RunOption` to `run.go`
+- [x] Update `Run()`: if team is set, call `graph.WalkTeam(ctx, team, obs)` instead of `graph.Walk(ctx, walker, obs)`
+- [x] Unit test: `Run()` with `WithTeam()` uses WalkTeam
+- [x] Integration test: 2-walker team walk via `Run()` with AffinityScheduler
+- [x] Verify backward compatibility: `Run()` without `WithTeam()` still uses single-walker Walk
+- [x] Validate (green) — all tests pass with `-race`
+- [x] Tune (blue) — refactor for quality
+- [x] Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 

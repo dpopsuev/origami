@@ -60,18 +60,18 @@ Phase 1: Add `parallel: true` to `EdgeDef` DSL. Phase 2: Walk detects fan-out no
 
 ## Tasks
 
-- [ ] Add `Parallel bool` field to `EdgeDef` (YAML tag: `parallel`)
-- [ ] Detect fan-out nodes in Walk: nodes with 2+ outgoing `parallel: true` edges
-- [ ] Spawn goroutines for parallel successor nodes; each gets its own `NodeContext`
-- [ ] Implement fan-in merge: node with 2+ incoming parallel edges waits for all predecessors
-- [ ] Synchronize `WalkerState.Outputs` with `sync.Mutex` for concurrent writes
-- [ ] Add timeout for fan-out group (context deadline)
-- [ ] Error propagation: if any parallel node fails, cancel siblings and propagate error
-- [ ] Unit tests: fan-out detection, merge collection, timeout, error propagation
-- [ ] Integration test: pipeline with parallel segment followed by sequential segment
-- [ ] Validate (green) — all tests pass with `-race`
-- [ ] Tune (blue) — refactor for quality
-- [ ] Validate (green) — all tests still pass after tuning
+- [x] Add `Parallel bool` field to `EdgeDef` (YAML tag: `parallel`)
+- [x] Detect fan-out nodes in Walk: nodes with 2+ outgoing `parallel: true` edges
+- [x] Spawn goroutines for parallel successor nodes; each gets its own `NodeContext`
+- [x] Implement fan-in merge: node with 2+ incoming parallel edges waits for all predecessors
+- [x] Synchronize `WalkerState.Outputs` with `sync.Mutex` for concurrent writes
+- [x] Add timeout for fan-out group (context deadline)
+- [x] Error propagation: if any parallel node fails, cancel siblings and propagate error
+- [x] Unit tests: fan-out detection, merge collection, timeout, error propagation
+- [x] Integration test: pipeline with parallel segment followed by sequential segment
+- [x] Validate (green) — all tests pass with `-race`
+- [x] Tune (blue) — refactor for quality
+- [x] Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 

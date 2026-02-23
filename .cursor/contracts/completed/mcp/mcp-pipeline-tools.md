@@ -89,17 +89,17 @@ Creates a new investigation session:
 
 ## Tasks
 
-- [ ] **Create `internal/mcp/investigation.go`** — `InvestigationSession` struct with store, case states, scenario, suite ID, base path. Constructor and lifecycle methods.
-- [ ] **Implement `start_investigation` tool** — Creates session, loads scenario, initializes pipeline.
-- [ ] **Implement `get_prompt` tool** — Template filling via orchestrate, disk write, return Markdown.
-- [ ] **Implement `submit_artifact` tool** — Artifact parse, heuristic eval, state advance, disk write.
-- [ ] **Implement `get_status` tool** — Read in-memory state, return per-case status.
-- [ ] **Implement `get_report` tool** — Compute metrics, format report, return Markdown.
-- [ ] **Register tools in server** — Update `internal/mcp/server.go` to register all 5 tools.
-- [ ] **Integration test** — `internal/mcp/tools_test.go`; start investigation, advance one case through F0–F6, verify report metrics.
-- [ ] Validate (green) — `go build ./...`, `go test ./...`, `go vet ./...` all pass.
-- [ ] Tune (blue) — error messages, edge cases (unknown case_id, wrong step), timeouts. No behavior changes.
-- [ ] Validate (green) — all tests still pass after tuning.
+- [x] **Create `internal/mcp/investigation.go`** — `InvestigationSession` struct with store, case states, scenario, suite ID, base path. Constructor and lifecycle methods.
+- [x] **Implement `start_investigation` tool** — Creates session, loads scenario, initializes pipeline.
+- [x] **Implement `get_prompt` tool** — Template filling via orchestrate, disk write, return Markdown.
+- [x] **Implement `submit_artifact` tool** — Artifact parse, heuristic eval, state advance, disk write.
+- [x] **Implement `get_status` tool** — Read in-memory state, return per-case status.
+- [x] **Implement `get_report` tool** — Compute metrics, format report, return Markdown.
+- [x] **Register tools in server** — Update `internal/mcp/server.go` to register all 5 tools.
+- [x] **Integration test** — `internal/mcp/tools_test.go`; start investigation, advance one case through F0–F6, verify report metrics.
+- [x] Validate (green) — `go build ./...`, `go test ./...`, `go vet ./...` all pass.
+- [x] Tune (blue) — error messages, edge cases (unknown case_id, wrong step), timeouts. No behavior changes.
+- [x] Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 

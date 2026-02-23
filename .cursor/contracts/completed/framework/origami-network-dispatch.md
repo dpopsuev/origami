@@ -77,16 +77,16 @@ Phase 1: Define `NetworkDispatcher` interface wrapping MuxDispatcher over gRPC o
 
 ## Tasks
 
-- [ ] Define `NetworkTransport` interface: `Serve(addr)`, `Dial(addr)` for server/client
-- [ ] Implement gRPC transport: proto definition for `GetNextStep` / `SubmitArtifact` RPCs
-- [ ] Implement HTTP transport: REST endpoints for the same protocol (alternative to gRPC)
-- [ ] Implement `DispatchClient` that wraps transport for remote agents
-- [ ] Wire `NetworkDispatcher` into MuxDispatcher as optional transport layer
-- [ ] Backward compatibility: default to in-process channels; opt-in to network via config
-- [ ] Integration test: orchestrator + 2 remote agents over localhost
-- [ ] Validate (green) — all tests pass with `-race`
-- [ ] Tune (blue) — refactor for quality
-- [ ] Validate (green) — all tests still pass after tuning
+- [x] Define `NetworkTransport` interface: `Serve(addr)`, `Dial(addr)` for server/client
+- [x] Implement gRPC transport: proto definition for `GetNextStep` / `SubmitArtifact` RPCs
+- [x] Implement HTTP transport: REST endpoints for the same protocol (alternative to gRPC)
+- [x] Implement `DispatchClient` that wraps transport for remote agents
+- [x] Wire `NetworkDispatcher` into MuxDispatcher as optional transport layer
+- [x] Backward compatibility: default to in-process channels; opt-in to network via config
+- [x] Integration test: orchestrator + 2 remote agents over localhost
+- [x] Validate (green) — all tests pass with `-race`
+- [x] Tune (blue) — refactor for quality
+- [x] Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 

@@ -179,16 +179,16 @@ This means the protocol is opt-in: `--dispatch=batch-file` enables it; `--dispat
 
 ## Tasks
 
-- [ ] **T1** Write `batch-manifest.json` schema documentation — fields, types, lifecycle states, example.
-- [ ] **T2** Write briefing file content specification — sections, what each contains, how it grows across batches.
-- [ ] **T3** Document concurrent signal semantics — step-by-step flow for Go CLI + skill + subagents.
-- [ ] **T4** Document subagent response contract — what each Task subagent receives and must produce.
-- [ ] **T5** Document backward compatibility — fallback behavior when manifest is absent.
-- [ ] **T6** Add protocol to `notes/dispatcher-protocol.mdc` as a new "Batch dispatch" section.
-- [ ] **T7** Add protocol to `.cursor/skills/asterisk-investigate/signal-protocol.md` as a new "Batch mode" section.
-- [ ] Validate (green) — all schemas are internally consistent; manifest lifecycle covers all transitions; subagent contract matches existing artifact wrapper; backward compatibility is explicit.
-- [ ] Tune (blue) — refine wording, add edge cases (partial batch failure, subagent timeout, stale manifest).
-- [ ] Validate (green) — protocol review complete.
+- [x] **T1** Write `batch-manifest.json` schema documentation — fields, types, lifecycle states, example.
+- [x] **T2** Write briefing file content specification — sections, what each contains, how it grows across batches.
+- [x] **T3** Document concurrent signal semantics — step-by-step flow for Go CLI + skill + subagents.
+- [x] **T4** Document subagent response contract — what each Task subagent receives and must produce.
+- [x] **T5** Document backward compatibility — fallback behavior when manifest is absent.
+- [x] **T6** Add protocol to `notes/dispatcher-protocol.mdc` as a new "Batch dispatch" section.
+- [x] **T7** Add protocol to `.cursor/skills/asterisk-investigate/signal-protocol.md` as a new "Batch mode" section.
+- [x] Validate (green) — all schemas are internally consistent; manifest lifecycle covers all transitions; subagent contract matches existing artifact wrapper; backward compatibility is explicit.
+- [x] Tune (blue) — refine wording, add edge cases (partial batch failure, subagent timeout, stale manifest).
+- [x] Validate (green) — protocol review complete.
 
 ## Acceptance criteria
 

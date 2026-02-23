@@ -93,13 +93,13 @@ This contract is design-only. Implementation begins after `origami-network-dispa
 
 ## Tasks
 
-- [ ] Draft CRD schema (`Pipeline`, `PipelineRun` resources)
-- [ ] Design controller architecture (reconciliation loop, Job management)
-- [ ] Design artifact transport mechanism (evaluate S3, PVC, gRPC options)
-- [ ] Design edge evaluation (central vs distributed)
-- [ ] Design state management (ConfigMap vs status subresource)
-- [ ] Write design document with trade-offs and recommendations
-- [ ] Peer review of design
+- [x] Draft CRD schema (`Pipeline`, `PipelineRun` resources)
+- [x] Design controller architecture (reconciliation loop, Job management)
+- [x] Design artifact transport mechanism (evaluate S3, PVC, gRPC options)
+- [x] Design edge evaluation (central vs distributed)
+- [x] Design state management (ConfigMap vs status subresource)
+- [x] Write design document with trade-offs and recommendations
+- [x] Peer review of design
 
 ## Acceptance criteria
 

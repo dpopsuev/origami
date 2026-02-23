@@ -192,48 +192,48 @@ Use accumulated calibration metrics to build a routing model.
 
 ### Phase 1 — AdapterPool + Affinity Scheduler
 
-- [ ] Define `AdapterTraits` struct: color, display name, hex, **position, home zone, stickiness level**, speed class, step affinity map, cost profile, personality tags, prompt preamble
-- [ ] Define `Position` and `MetaPhase` types with constants (PG/SG/PF/C and Backcourt/Frontcourt/Paint)
-- [ ] Define `Task` struct: case ID, step, context (artifact history, convergence score, case metadata)
-- [ ] Define `Scheduler` interface: `Route(ctx context.Context, task Task) (ModelAdapter, error)`
-- [ ] Implement `AdapterPool`: register adapters with traits, lookup by name, iterate
-- [ ] Implement `AffinityScheduler`: static step-to-adapter map from config
-- [ ] Implement `PassthroughScheduler`: wraps a single adapter (backward compat for `--adapter`)
-- [ ] Wire into `runner.go`: replace `cfg.Adapter.SendPrompt()` with `cfg.Scheduler.Route(task).SendPrompt()`
-- [ ] Wire into `cmd_calibrate.go`: `--adapters` flag, `--strategy` flag, pool construction
-- [ ] Add `AdapterTraits` to existing adapters: stub (no color, no position), basic (Crimson/PG, sticky 0), cursor (Cerulean/C, sticky 3). For single-adapter mode, position defaults to PG (anti-sticky).
-- [ ] Add Cobalt/PF (sticky 2) and Amber/SG (sticky 1) trait profiles for future adapters
-- [ ] Implement color-tagged log output: `[crimson] F1 triage: ...`, `[cerulean] F3 investigate: ...`
-- [ ] Validate (green) — all existing tests pass, single-adapter mode unchanged
-- [ ] Tune (blue) — refactor for quality, no behavior changes
-- [ ] Validate (green) — all tests still pass after tuning
+- [x] Define `AdapterTraits` struct: color, display name, hex, **position, home zone, stickiness level**, speed class, step affinity map, cost profile, personality tags, prompt preamble
+- [x] Define `Position` and `MetaPhase` types with constants (PG/SG/PF/C and Backcourt/Frontcourt/Paint)
+- [x] Define `Task` struct: case ID, step, context (artifact history, convergence score, case metadata)
+- [x] Define `Scheduler` interface: `Route(ctx context.Context, task Task) (ModelAdapter, error)`
+- [x] Implement `AdapterPool`: register adapters with traits, lookup by name, iterate
+- [x] Implement `AffinityScheduler`: static step-to-adapter map from config
+- [x] Implement `PassthroughScheduler`: wraps a single adapter (backward compat for `--adapter`)
+- [x] Wire into `runner.go`: replace `cfg.Adapter.SendPrompt()` with `cfg.Scheduler.Route(task).SendPrompt()`
+- [x] Wire into `cmd_calibrate.go`: `--adapters` flag, `--strategy` flag, pool construction
+- [x] Add `AdapterTraits` to existing adapters: stub (no color, no position), basic (Crimson/PG, sticky 0), cursor (Cerulean/C, sticky 3). For single-adapter mode, position defaults to PG (anti-sticky).
+- [x] Add Cobalt/PF (sticky 2) and Amber/SG (sticky 1) trait profiles for future adapters
+- [x] Implement color-tagged log output: `[crimson] F1 triage: ...`, `[cerulean] F3 investigate: ...`
+- [x] Validate (green) — all existing tests pass, single-adapter mode unchanged
+- [x] Tune (blue) — refactor for quality, no behavior changes
+- [x] Validate (green) — all tests still pass after tuning
 
 ### Phase 2 — Confidence Escalation
 
-- [ ] Add `EscalationScheduler`: wraps an inner scheduler, checks artifact convergence, re-routes if below threshold
-- [ ] Define escalation chain ordering via `AdapterTraits.SpeedClass`
-- [ ] Budget-aware gate: skip escalation when token budget is above threshold
-- [ ] Log escalation events with original adapter, score, threshold, target adapter
-- [ ] Validate (green) — escalation triggers correctly in stub calibration
-- [ ] Tune (blue) — refactor
-- [ ] Validate (green) — all tests pass
+- [x] Add `EscalationScheduler`: wraps an inner scheduler, checks artifact convergence, re-routes if below threshold
+- [x] Define escalation chain ordering via `AdapterTraits.SpeedClass`
+- [x] Budget-aware gate: skip escalation when token budget is above threshold
+- [x] Log escalation events with original adapter, score, threshold, target adapter
+- [x] Validate (green) — escalation triggers correctly in stub calibration
+- [x] Tune (blue) — refactor
+- [x] Validate (green) — all tests pass
 
 ### Phase 3 — Tournament + Ensemble
 
-- [ ] Implement `ResultCollector` interface: `Select(artifacts []ScoredArtifact) (json.RawMessage, error)`
-- [ ] Implement `BestScoreCollector`: pick highest convergence score
-- [ ] Implement `TournamentScheduler`: fan-out to N adapters, collect via `ResultCollector`
-- [ ] Wire concurrent fan-out using errgroup + token semaphore
-- [ ] Validate (green) — tournament produces correct winner in stub scenario
-- [ ] Tune (blue) — refactor
-- [ ] Validate (green) — all tests pass
+- [x] Implement `ResultCollector` interface: `Select(artifacts []ScoredArtifact) (json.RawMessage, error)`
+- [x] Implement `BestScoreCollector`: pick highest convergence score
+- [x] Implement `TournamentScheduler`: fan-out to N adapters, collect via `ResultCollector`
+- [x] Wire concurrent fan-out using errgroup + token semaphore
+- [x] Validate (green) — tournament produces correct winner in stub scenario
+- [x] Tune (blue) — refactor
+- [x] Validate (green) — all tests pass
 
 ### Phase 4 — Learned Routing (future)
 
-- [ ] Design routing model schema: per-step accuracy profiles, update rules
-- [ ] Implement `LearnedScheduler`: load profiles, route by predicted accuracy
-- [ ] Online update: record routing decisions and outcomes per calibration run
-- [ ] Validate + Tune cycle
+- [x] Design routing model schema: per-step accuracy profiles, update rules
+- [x] Implement `LearnedScheduler`: load profiles, route by predicted accuracy
+- [x] Online update: record routing decisions and outcomes per calibration run
+- [x] Validate + Tune cycle
 
 ## Acceptance criteria
 

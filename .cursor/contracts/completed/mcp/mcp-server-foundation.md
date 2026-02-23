@@ -31,14 +31,14 @@
 
 ## Tasks
 
-- [ ] **Add go-sdk dependency** — `go get github.com/modelcontextprotocol/go-sdk@latest`; verify `go.mod` updated.
-- [ ] **Create `internal/mcp/server.go`** — `NewServer(version string)` function returning `*mcp.Server`; register `ping` and `list_scenarios` tools.
-- [ ] **Create `cmd/asterisk/cmd_serve.go`** — Cobra `serve` command; stdio transport via `mcp.StdioTransport{}`; register in `root.go`.
-- [ ] **Create `.cursor/mcp.json`** — Cursor workspace config pointing to `go run ./cmd/asterisk serve`.
-- [ ] **Integration test** — `internal/mcp/server_test.go`; start server in-process, call `ping` tool, verify "pong" response.
-- [ ] Validate (green) — `go build ./...`, `go test ./...`, `go vet ./...` all pass.
-- [ ] Tune (blue) — refine error handling, logging, shutdown. No behavior changes.
-- [ ] Validate (green) — all tests still pass after tuning.
+- [x] **Add go-sdk dependency** — `go get github.com/modelcontextprotocol/go-sdk@latest`; verify `go.mod` updated.
+- [x] **Create `internal/mcp/server.go`** — `NewServer(version string)` function returning `*mcp.Server`; register `ping` and `list_scenarios` tools.
+- [x] **Create `cmd/asterisk/cmd_serve.go`** — Cobra `serve` command; stdio transport via `mcp.StdioTransport{}`; register in `root.go`.
+- [x] **Create `.cursor/mcp.json`** — Cursor workspace config pointing to `go run ./cmd/asterisk serve`.
+- [x] **Integration test** — `internal/mcp/server_test.go`; start server in-process, call `ping` tool, verify "pong" response.
+- [x] Validate (green) — `go build ./...`, `go test ./...`, `go vet ./...` all pass.
+- [x] Tune (blue) — refine error handling, logging, shutdown. No behavior changes.
+- [x] Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 

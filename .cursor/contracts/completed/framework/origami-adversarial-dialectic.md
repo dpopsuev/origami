@@ -60,14 +60,14 @@ Phase 1: Rename Go source files (`court.go` -> `dialectic.go`, etc.). Phase 2: R
 
 ## Tasks
 
-- [ ] Rename `court.go` -> `dialectic.go`, `court_test.go` -> `dialectic_test.go`
-- [ ] Rename `CourtConfig` -> `DialecticConfig`, `ShouldActivate` -> `NeedsAntithesis`, `MaxHandoffs` -> `MaxTurns`, `MaxRemands` -> `MaxNegations`
-- [ ] Update all code comments referencing "court", "verdict", "prosecution", "defense", "mistrial"
-- [ ] Update consumer code (Asterisk, Achilles) if they reference Court types
-- [ ] Verify glossary already updated (done in prior housekeeping)
-- [ ] Validate (green) — `go build ./...` and `go test ./...` pass in Origami, Asterisk, Achilles
-- [ ] Tune (blue) — review all renames for consistency
-- [ ] Validate (green) — all tests still pass after tuning
+- [x] Rename `court.go` -> `dialectic.go`, `court_test.go` -> `dialectic_test.go`
+- [x] Rename `CourtConfig` -> `DialecticConfig`, `ShouldActivate` -> `NeedsAntithesis`, `MaxHandoffs` -> `MaxTurns`, `MaxRemands` -> `MaxNegations`
+- [x] Update all code comments referencing "court", "verdict", "prosecution", "defense", "mistrial"
+- [x] Update consumer code (Asterisk, Achilles) if they reference Court types
+- [x] Verify glossary already updated (done in prior housekeeping)
+- [x] Validate (green) — `go build ./...` and `go test ./...` pass in Origami, Asterisk, Achilles
+- [x] Tune (blue) — review all renames for consistency
+- [x] Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 

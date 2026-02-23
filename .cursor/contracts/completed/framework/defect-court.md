@@ -199,25 +199,25 @@ Estimated impact:
 ## Implementation phases
 
 ### Phase 1 — Data structures and plumbing
-- [ ] Add D0-D4 step constants and artifact types (including `Mistrial`) to `internal/orchestrate/types.go`
-- [ ] Add court heuristic rules (HD1-HD12) to `internal/orchestrate/heuristics.go`
-- [ ] Extend state machine for D0-D4 transitions, remand paths, and mistrial exits
-- [ ] Add `CourtConfig` (with `TTL`, `MaxHandoffs`, `MaxRemands`) to `internal/calibrate/types.go`
-- [ ] Share `EvidenceGap` type with `evidence-gap-brief.md` — court extends it as `CourtEvidenceGap`
+- [x] Add D0-D4 step constants and artifact types (including `Mistrial`) to `internal/orchestrate/types.go`
+- [x] Add court heuristic rules (HD1-HD12) to `internal/orchestrate/heuristics.go`
+- [x] Extend state machine for D0-D4 transitions, remand paths, and mistrial exits
+- [x] Add `CourtConfig` (with `TTL`, `MaxHandoffs`, `MaxRemands`) to `internal/calibrate/types.go`
+- [x] Share `EvidenceGap` type with `evidence-gap-brief.md` — court extends it as `CourtEvidenceGap`
 
 ### Phase 2 — BasicAdapter court roles (heuristic baseline)
-- [ ] Implement `BasicDefenseAdapter` (skeptical keyword rules)
-- [ ] Implement `BasicJudgeAdapter` (confidence comparison)
-- [ ] Wire into calibrate runner as post-F6 phase
+- [x] Implement `BasicDefenseAdapter` (skeptical keyword rules)
+- [x] Implement `BasicJudgeAdapter` (confidence comparison)
+- [x] Wire into calibrate runner as post-F6 phase
 
 ### Phase 3 — Calibration metrics for court
-- [ ] New metrics: verdict flip rate, defense challenge accuracy, remand effectiveness
-- [ ] Ground truth extension: `ExpectedVerdict` on `GroundTruthCase`
+- [x] New metrics: verdict flip rate, defense challenge accuracy, remand effectiveness
+- [x] Ground truth extension: `ExpectedVerdict` on `GroundTruthCase`
 
 ### Phase 4 — LLM-based court (requires MCP)
-- [ ] Prosecution, defense, and judge system prompts
-- [ ] Multi-round hearing with structured JSON exchange
-- [ ] Remand feedback integration with F2/F3
+- [x] Prosecution, defense, and judge system prompts
+- [x] Multi-round hearing with structured JSON exchange
+- [x] Remand feedback integration with F2/F3
 
 ## Acceptance criteria
 

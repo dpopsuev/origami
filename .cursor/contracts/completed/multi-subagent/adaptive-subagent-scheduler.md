@@ -120,28 +120,28 @@ Three phases. Phase 1 adds adaptive batch sizing. Phase 2 adds cluster-aware rou
 
 ### Phase 1 — Adaptive batch sizing (Red-Green)
 
-- [ ] **P1.1** Add quality tracking to the parent loop: after each batch, evaluate subagent success rate and artifact quality indicators.
-- [ ] **P1.2** Implement batch size adjustment logic: increase/decrease based on the decision matrix above.
-- [ ] **P1.3** Add logging: parent prints batch size decision and reasoning to conversation (e.g., "Batch 3: size=3 (reduced from 4, 1 failure in previous batch)").
-- [ ] **P1.4** Test: run 30-case scenario, observe batch sizes across rounds. Verify the parent adapts to failures.
+- [x] **P1.1** Add quality tracking to the parent loop: after each batch, evaluate subagent success rate and artifact quality indicators.
+- [x] **P1.2** Implement batch size adjustment logic: increase/decrease based on the decision matrix above.
+- [x] **P1.3** Add logging: parent prints batch size decision and reasoning to conversation (e.g., "Batch 3: size=3 (reduced from 4, 1 failure in previous batch)").
+- [x] **P1.4** Test: run 30-case scenario, observe batch sizes across rounds. Verify the parent adapts to failures.
 
 ### Phase 2 — Cluster-aware routing (Green)
 
-- [ ] **P2.1** Parse cluster assignments from `briefing.md` in the parent loop.
-- [ ] **P2.2** Implement routing: group pending signals by cluster, prioritize representatives.
-- [ ] **P2.3** Skip member-only batches when the representative's artifact is already written (Go CLI propagates results).
-- [ ] **P2.4** Test: run a scenario with known clusters, verify representatives are processed first and members are skipped or batched efficiently.
+- [x] **P2.1** Parse cluster assignments from `briefing.md` in the parent loop.
+- [x] **P2.2** Implement routing: group pending signals by cluster, prioritize representatives.
+- [x] **P2.3** Skip member-only batches when the representative's artifact is already written (Go CLI propagates results).
+- [x] **P2.4** Test: run a scenario with known clusters, verify representatives are processed first and members are skipped or batched efficiently.
 
 ### Phase 3 — Budget enforcement and cost model (Blue)
 
-- [ ] **P3.1** Implement `budget-status.json` writer in Go CLI (in `BatchFileDispatcher`, after each batch completes). Read token-report.json, compute remaining budget.
-- [ ] **P3.2** Parent reads `budget-status.json` between batches; applies the budget rules from the decision matrix.
-- [ ] **P3.3** Implement briefing enrichment: parent appends batch findings to briefing.md after each round.
-- [ ] **P3.4** Run cost comparison: same scenario in serial, batch, and batch+clustering modes. Record `token-report.json` for each. Compute real USD estimates.
-- [ ] **P3.5** Write `.cursor/docs/subagent-cost-model.mdc` with the comparison table and analysis.
-- [ ] Validate (green) — adaptive scheduling works across modes; budget enforcement stops the run cleanly; cost model populated with real data.
-- [ ] Tune (blue) — refine decision thresholds based on observed behavior across multiple scenarios.
-- [ ] Validate (green) — all modes pass, cost model accurate.
+- [x] **P3.1** Implement `budget-status.json` writer in Go CLI (in `BatchFileDispatcher`, after each batch completes). Read token-report.json, compute remaining budget.
+- [x] **P3.2** Parent reads `budget-status.json` between batches; applies the budget rules from the decision matrix.
+- [x] **P3.3** Implement briefing enrichment: parent appends batch findings to briefing.md after each round.
+- [x] **P3.4** Run cost comparison: same scenario in serial, batch, and batch+clustering modes. Record `token-report.json` for each. Compute real USD estimates.
+- [x] **P3.5** Write `.cursor/docs/subagent-cost-model.mdc` with the comparison table and analysis.
+- [x] Validate (green) — adaptive scheduling works across modes; budget enforcement stops the run cleanly; cost model populated with real data.
+- [x] Tune (blue) — refine decision thresholds based on observed behavior across multiple scenarios.
+- [x] Validate (green) — all modes pass, cost model accurate.
 
 ## Acceptance criteria
 

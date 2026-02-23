@@ -179,22 +179,22 @@ internal/
 
 ### Phase 1 — Package boundary
 
-- [ ] Create `internal/agentmux/agent.go` with `Agent`, `Task`, `Result` interfaces
-- [ ] Create `internal/agentmux/traits.go` with `AgentTraits` (color, speed, personality tags, cost profile)
-- [ ] Create `internal/agentmux/pool.go` with `AgentPool` (register, lookup by name, iterate)
-- [ ] Create `internal/agentmux/scheduler.go` with `Scheduler` interface + `PassthroughScheduler`
-- [ ] Create `internal/agentmux/collector.go` with `ResultCollector` interface + `BestScoreCollector`
-- [ ] Move `internal/calibrate/dispatch/` → `internal/agentmux/dispatch/` (update all import paths)
-- [ ] Remove `internal/format` dependency from `token.go` (move formatting to caller)
-- [ ] Create `internal/agentmux/identity/color.go` with palette definitions
-- [ ] Create `internal/agentmux/identity/personality.go` with personality profiles
-- [ ] Create `internal/agentmux/testing/assertions.go` with routing assertion helpers
-- [ ] Bridge `ModelAdapter` → `Agent` in `calibrate/adapter.go`
-- [ ] Update `runner.go` to use `Scheduler.Route()` → `Agent.Handle()` (with `PassthroughScheduler` as default for backward compat)
-- [ ] Update all import paths across `calibrate/`, `adapt/`, `mcp/`, `cmd/`
-- [ ] Validate — `go build ./...`, all existing tests pass, single-adapter mode unchanged
-- [ ] Tune — verify zero domain imports in `agentmux/` package tree (`go list -deps`)
-- [ ] Validate — all tests still pass after tuning
+- [x] Create `internal/agentmux/agent.go` with `Agent`, `Task`, `Result` interfaces
+- [x] Create `internal/agentmux/traits.go` with `AgentTraits` (color, speed, personality tags, cost profile)
+- [x] Create `internal/agentmux/pool.go` with `AgentPool` (register, lookup by name, iterate)
+- [x] Create `internal/agentmux/scheduler.go` with `Scheduler` interface + `PassthroughScheduler`
+- [x] Create `internal/agentmux/collector.go` with `ResultCollector` interface + `BestScoreCollector`
+- [x] Move `internal/calibrate/dispatch/` → `internal/agentmux/dispatch/` (update all import paths)
+- [x] Remove `internal/format` dependency from `token.go` (move formatting to caller)
+- [x] Create `internal/agentmux/identity/color.go` with palette definitions
+- [x] Create `internal/agentmux/identity/personality.go` with personality profiles
+- [x] Create `internal/agentmux/testing/assertions.go` with routing assertion helpers
+- [x] Bridge `ModelAdapter` → `Agent` in `calibrate/adapter.go`
+- [x] Update `runner.go` to use `Scheduler.Route()` → `Agent.Handle()` (with `PassthroughScheduler` as default for backward compat)
+- [x] Update all import paths across `calibrate/`, `adapt/`, `mcp/`, `cmd/`
+- [x] Validate — `go build ./...`, all existing tests pass, single-adapter mode unchanged
+- [x] Tune — verify zero domain imports in `agentmux/` package tree (`go list -deps`)
+- [x] Validate — all tests still pass after tuning
 
 ## Acceptance criteria
 

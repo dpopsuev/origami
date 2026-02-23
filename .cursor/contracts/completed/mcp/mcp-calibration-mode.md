@@ -77,17 +77,17 @@ Like `start_investigation` but additionally:
 
 ## Tasks
 
-- [ ] **Extend `InvestigationSession`** — Add `groundTruth`, `scoringMode`, `preambleInjection` fields.
-- [ ] **Implement `start_calibration` tool** — Load ground truth, set scoring flags, delegate to investigation session init.
-- [ ] **Inject preamble in `get_prompt`** — When `preambleInjection` is true, prepend `calibrationPreamble` to filled template.
-- [ ] **Implement `get_calibration_report` tool** — Score per-case, compute M1–M20, format report.
-- [ ] **Implement `get_transcripts` tool** — Weave transcripts, render per-RCA Markdown, return structured response.
-- [ ] **Implement `get_cost_report` tool** — Build TokiMeter bill, format, return.
-- [ ] **Register calibration tools in server** — Update `internal/mcp/server.go`.
-- [ ] **Integration test** — `internal/mcp/calibration_test.go`; start calibration with ptp-mock, advance cases with stub responses, verify M1–M20 report, verify transcripts, verify cost report.
-- [ ] Validate (green) — `go build ./...`, `go test ./...`, `go vet ./...` all pass.
-- [ ] Tune (blue) — error handling for partial completion, edge cases. No behavior changes.
-- [ ] Validate (green) — all tests still pass after tuning.
+- [x] **Extend `InvestigationSession`** — Add `groundTruth`, `scoringMode`, `preambleInjection` fields.
+- [x] **Implement `start_calibration` tool** — Load ground truth, set scoring flags, delegate to investigation session init.
+- [x] **Inject preamble in `get_prompt`** — When `preambleInjection` is true, prepend `calibrationPreamble` to filled template.
+- [x] **Implement `get_calibration_report` tool** — Score per-case, compute M1–M20, format report.
+- [x] **Implement `get_transcripts` tool** — Weave transcripts, render per-RCA Markdown, return structured response.
+- [x] **Implement `get_cost_report` tool** — Build TokiMeter bill, format, return.
+- [x] **Register calibration tools in server** — Update `internal/mcp/server.go`.
+- [x] **Integration test** — `internal/mcp/calibration_test.go`; start calibration with ptp-mock, advance cases with stub responses, verify M1–M20 report, verify transcripts, verify cost report.
+- [x] Validate (green) — `go build ./...`, `go test ./...`, `go vet ./...` all pass.
+- [x] Tune (blue) — error handling for partial completion, edge cases. No behavior changes.
+- [x] Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 

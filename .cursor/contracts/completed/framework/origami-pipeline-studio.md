@@ -88,13 +88,13 @@ Design-only. Define the product boundary, API contract, data model, and technolo
 
 ## Tasks
 
-- [ ] Define `StudioObserver` adapter: `WalkObserver` implementation that sends events to Studio API
-- [ ] Define Studio API contract (REST or GraphQL schema)
-- [ ] Design event store schema (runs, events, artifacts)
-- [ ] Design UI wireframes (pipeline view, run timeline, artifact inspector)
-- [ ] Evaluate technology choices (UI framework, event store, transport)
-- [ ] Write product spec with scope, non-goals, and MVP definition
-- [ ] Peer review of design
+- [x] Define `StudioObserver` adapter: `WalkObserver` implementation that sends events to Studio API
+- [x] Define Studio API contract (REST or GraphQL schema)
+- [x] Design event store schema (runs, events, artifacts)
+- [x] Design UI wireframes (pipeline view, run timeline, artifact inspector)
+- [x] Evaluate technology choices (UI framework, event store, transport)
+- [x] Write product spec with scope, non-goals, and MVP definition
+- [x] Peer review of design
 
 ## Acceptance criteria
 

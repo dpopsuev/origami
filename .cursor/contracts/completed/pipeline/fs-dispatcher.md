@@ -187,16 +187,16 @@ Implement in order. Each step must pass tests before proceeding.
 
 ## Tasks
 
-- [ ] **Dispatcher interface** — Define `Dispatcher`, `DispatchContext` in `internal/calibrate/dispatcher.go`. Minimal: one method, one context struct.
-- [ ] **StdinDispatcher** — Extract current stdin logic from `CursorAdapter.SendPrompt` into `StdinDispatcher.Dispatch()`. Must produce identical stdout output and stdin blocking.
-- [ ] **FileDispatcher** — Implement `FileDispatcher` with signal.json write, artifact polling, timeout, and JSON validation. Configurable poll interval and timeout via `FileDispatcherConfig`.
-- [ ] **CursorAdapter refactor** — Add `dispatcher` field, `CursorAdapterOption` type, `WithDispatcher` option. Replace inline transport in `SendPrompt` with `a.dispatcher.Dispatch(...)`. Default to `StdinDispatcher`.
-- [ ] **CLI wiring** — Add `--dispatch` flag to `calibrate` subcommand. Map `stdin` → `StdinDispatcher`, `file` → `FileDispatcher`. Only active when `--adapter=cursor`.
-- [ ] **FileDispatcher tests** — Unit tests: happy path (artifact appears), timeout (no artifact), invalid JSON (artifact exists but not valid JSON), signal file lifecycle (waiting → processing → done).
-- [ ] **Agent-side documentation** — Document the signal file protocol in `.cursor/notes/dispatcher-protocol.mdc`: signal.json schema, polling contract, example agent-side watcher script.
-- [ ] Validate (green) — all tests pass, `calibrate --adapter=cursor --dispatch=stdin` works identically to current behavior, `calibrate --adapter=cursor --dispatch=file` creates signal.json and polls.
-- [ ] Tune (blue) — refactor for quality. No behavior changes.
-- [ ] Validate (green) — all tests still pass after tuning.
+- [x] **Dispatcher interface** — Define `Dispatcher`, `DispatchContext` in `internal/calibrate/dispatcher.go`. Minimal: one method, one context struct.
+- [x] **StdinDispatcher** — Extract current stdin logic from `CursorAdapter.SendPrompt` into `StdinDispatcher.Dispatch()`. Must produce identical stdout output and stdin blocking.
+- [x] **FileDispatcher** — Implement `FileDispatcher` with signal.json write, artifact polling, timeout, and JSON validation. Configurable poll interval and timeout via `FileDispatcherConfig`.
+- [x] **CursorAdapter refactor** — Add `dispatcher` field, `CursorAdapterOption` type, `WithDispatcher` option. Replace inline transport in `SendPrompt` with `a.dispatcher.Dispatch(...)`. Default to `StdinDispatcher`.
+- [x] **CLI wiring** — Add `--dispatch` flag to `calibrate` subcommand. Map `stdin` → `StdinDispatcher`, `file` → `FileDispatcher`. Only active when `--adapter=cursor`.
+- [x] **FileDispatcher tests** — Unit tests: happy path (artifact appears), timeout (no artifact), invalid JSON (artifact exists but not valid JSON), signal file lifecycle (waiting → processing → done).
+- [x] **Agent-side documentation** — Document the signal file protocol in `.cursor/notes/dispatcher-protocol.mdc`: signal.json schema, polling contract, example agent-side watcher script.
+- [x] Validate (green) — all tests pass, `calibrate --adapter=cursor --dispatch=stdin` works identically to current behavior, `calibrate --adapter=cursor --dispatch=file` creates signal.json and polls.
+- [x] Tune (blue) — refactor for quality. No behavior changes.
+- [x] Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 

@@ -100,7 +100,7 @@ Build types first (Phase 1), then implement probes (Phase 2), then the runner an
 - [x] Implement `RunSingleProbe(ctx, dispatcher, spec) ProbeResult`
 - [x] Implement percentile normalization: recompute all dimension scores as percentiles across stored profiles
 - [x] Implement staleness detection: flag profiles where battery version changed, model version updated, or TTL exceeded
-- [ ] Implement model popularity tracking: provider availability, deprecation status
+- [x] Implement model popularity tracking: provider availability, deprecation status
 - [x] Historical evolution view: compare same model across versions
 - [x] Integration tests with stub dispatcher
 
