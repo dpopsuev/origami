@@ -35,6 +35,7 @@ type stubEdge struct {
 	id, from, to string
 	shortcut     bool
 	loop         bool
+	parallel     bool
 	evalFn       func(Artifact, *WalkerState) *Transition
 }
 
@@ -43,6 +44,7 @@ func (e *stubEdge) From() string     { return e.from }
 func (e *stubEdge) To() string       { return e.to }
 func (e *stubEdge) IsShortcut() bool { return e.shortcut }
 func (e *stubEdge) IsLoop() bool     { return e.loop }
+func (e *stubEdge) IsParallel() bool { return e.parallel }
 func (e *stubEdge) Evaluate(a Artifact, s *WalkerState) *Transition {
 	if e.evalFn != nil {
 		return e.evalFn(a, s)

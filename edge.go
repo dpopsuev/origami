@@ -12,6 +12,13 @@ type Edge interface {
 	Evaluate(artifact Artifact, state *WalkerState) *Transition
 }
 
+// ParallelEdge is an optional interface for edges that support fan-out.
+// Edges returning true are eligible for concurrent execution when
+// multiple parallel edges match from the same source node.
+type ParallelEdge interface {
+	IsParallel() bool
+}
+
 // Transition is the result of evaluating an Edge. It maps to
 // orchestrate.HeuristicAction: the next node to visit plus any
 // context additions to carry forward.

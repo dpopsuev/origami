@@ -53,6 +53,7 @@ type EdgeDef struct {
 	To        string `yaml:"to"`
 	Shortcut  bool   `yaml:"shortcut,omitempty"`
 	Loop      bool   `yaml:"loop,omitempty"`
+	Parallel  bool   `yaml:"parallel,omitempty"`
 	Condition string `yaml:"condition,omitempty"`
 	When      string `yaml:"when,omitempty"`
 }
@@ -274,6 +275,7 @@ func (e *dslEdge) From() string       { return e.def.From }
 func (e *dslEdge) To() string         { return e.def.To }
 func (e *dslEdge) IsShortcut() bool   { return e.def.Shortcut }
 func (e *dslEdge) IsLoop() bool       { return e.def.Loop }
+func (e *dslEdge) IsParallel() bool   { return e.def.Parallel }
 func (e *dslEdge) Evaluate(_ Artifact, _ *WalkerState) *Transition {
 	return &Transition{
 		NextNode:    e.def.To,

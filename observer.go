@@ -15,6 +15,8 @@ const (
 	EventEdgeEvaluate WalkEventType = "edge_evaluate"
 	EventTransition   WalkEventType = "transition"
 	EventWalkerSwitch WalkEventType = "walker_switch"
+	EventFanOutStart  WalkEventType = "fan_out_start"
+	EventFanOutEnd    WalkEventType = "fan_out_end"
 	EventWalkComplete WalkEventType = "walk_complete"
 	EventWalkError    WalkEventType = "walk_error"
 )

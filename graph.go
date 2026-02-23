@@ -173,16 +173,54 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 			return nil
 		}
 
-		var matched *Transition
-		var matchedEdge Edge
+		// Evaluate all edges, separating parallel from sequential matches.
+		// If 2+ parallel edges match, fan-out to concurrent execution.
+		var parallelMatches []parallelMatch
+		var seqMatch *Transition
+		var seqEdge Edge
 		for _, e := range edges {
 			emitEvent(obs, WalkEvent{Type: EventEdgeEvaluate, Node: node.Name(), Edge: e.ID()})
 			t := e.Evaluate(artifact, state)
-			if t != nil {
-				matched = t
-				matchedEdge = e
-				break
+			if t == nil {
+				continue
 			}
+			if isParallelEdge(e) {
+				parallelMatches = append(parallelMatches, parallelMatch{edge: e, transition: t})
+			} else if seqMatch == nil {
+				seqMatch = t
+				seqEdge = e
+			}
+		}
+
+		if len(parallelMatches) >= 2 {
+			mergeNodeName, err := g.walkFanOut(ctx, walker, obs, node, artifact, parallelMatches)
+			if err != nil {
+				return err
+			}
+			if mergeNodeName == g.doneNode {
+				state.Status = "done"
+				emitEvent(obs, WalkEvent{Type: EventWalkComplete, Walker: walkerName})
+				return nil
+			}
+			nextNode, ok := g.nodeIndex[mergeNodeName]
+			if !ok {
+				state.Status = "error"
+				err := fmt.Errorf("%w: merge target %q", ErrNodeNotFound, mergeNodeName)
+				emitEvent(obs, WalkEvent{Type: EventWalkError, Error: err})
+				return err
+			}
+			priorArtifact = artifact
+			node = nextNode
+			state.CurrentNode = mergeNodeName
+			continue
+		}
+
+		// Sequential: use first sequential match, or single parallel edge
+		matched := seqMatch
+		matchedEdge := seqEdge
+		if matched == nil && len(parallelMatches) == 1 {
+			matched = parallelMatches[0].transition
+			matchedEdge = parallelMatches[0].edge
 		}
 
 		if matched == nil {

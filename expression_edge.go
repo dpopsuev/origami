@@ -59,6 +59,7 @@ func (e *expressionEdge) From() string     { return e.def.From }
 func (e *expressionEdge) To() string       { return e.def.To }
 func (e *expressionEdge) IsShortcut() bool { return e.def.Shortcut }
 func (e *expressionEdge) IsLoop() bool     { return e.def.Loop }
+func (e *expressionEdge) IsParallel() bool { return e.def.Parallel }
 
 func (e *expressionEdge) Evaluate(artifact Artifact, state *WalkerState) *Transition {
 	ctx := buildExprContext(artifact, state, e.config)

@@ -12,4 +12,7 @@ var (
 
 	// ErrMaxLoops is returned when a loop edge's counter exceeds the configured maximum.
 	ErrMaxLoops = errors.New("framework: max loop iterations exceeded")
+
+	// ErrFanOutMerge is returned when parallel branches disagree on merge target or no merge is found.
+	ErrFanOutMerge = errors.New("framework: fan-out merge error")
 )
