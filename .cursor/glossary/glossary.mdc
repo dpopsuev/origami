@@ -4,7 +4,7 @@ description: Shared domain definitions for Origami
 
 # Glossary
 
-- **Origami** — The agentic pipeline framework (product name). Provides first-class primitives: Nodes, Edges, Walkers, Graph, Pipeline DSL (Tome I); Elements, Cycles (Tome II); Personae, Masks, Shadow (Tome III); Ouroboros / Meta-calibration (Tome IV); Extractors (Tome V). Follows Papert/Resnick: low floor, high ceilings, wide walls. Lives at `github.com/dpopsuev/origami`.
+- **Origami** — The agentic pipeline framework (product name). Provides first-class primitives: Nodes, Edges, Walkers, Graph, Pipeline DSL (Tome I); Elements, Cycles (Tome II); Perennial Personae, Masks, Shadow (Tome III); Ouroboros / Meta-calibration (Tome IV); Extractors (Tome V). Follows Papert/Resnick: low floor, high ceilings, wide walls. Lives at `github.com/dpopsuev/origami`.
 - **Three CLIs** — Framework-level pattern: every Origami-based tool ships three CLI surfaces. (1) **Dataset Developer** (`<tool> dataset`) — builds ground truth. (2) **Pipeline Developer** (`<tool> calibrate`) — measures pipeline accuracy against ground truth. (3) **End-User** (`<tool> run`) — executes the domain pipeline. Dependency chain: dataset → calibrate → run.
 - **Ouroboros** — The recursive meta-calibration pipeline (Tome IV). Named for the self-consuming serpent: the system measures model behavior via task-based probes to produce empirical ModelProfiles. Lives in `github.com/dpopsuev/origami/metacal/`.
 - **Node** — A processing stage in a pipeline graph. Implements `Node` interface: `Name()`, `ElementAffinity()`, `Process(ctx, nc) (Artifact, error)`.
@@ -14,7 +14,7 @@ description: Shared domain definitions for Origami
 - **Artifact** — The output of a node's `Process` function. Has `Type()`, `Confidence()`, `Raw()`. Drives edge evaluation.
 - **Element** — A behavioral archetype (Fire, Lightning, Earth, Diamond, Water, Air). Quantified traits: speed, max loops, convergence threshold, shortcut affinity, evidence depth, failure mode.
 - **Iron** — Derived element from Earth, adjusted by calibration accuracy. Represents a tuned-but-brittle system.
-- **Persona** — A named, pre-configured agent identity combining Color, Element, Position, and Alignment. 4 Light (Herald, Seeker, Sentinel, Weaver) + 4 Shadow (Challenger, Abyss, Bulwark, Specter).
+- **Persona (Perennial)** — A perennial agent identity template combining Color, Element, Position, and Alignment. "Perennial" because personas are stable across model releases while the transient models behind them shift — Ouroboros measures the model; Personas provide the enduring role. 4 Light (Herald, Seeker, Sentinel, Weaver) + 4 Shadow (Challenger, Abyss, Bulwark, Specter).
 - **Mask** — Detachable middleware that grants capabilities at specific pipeline nodes. Wraps `Process` without changing node identity.
 - **Adversarial Dialectic** — Adversarial pipeline (D0-D4) that subjects uncertain Light conclusions to structured thesis-antithesis-synthesis debate. Activates when confidence falls below a contradiction threshold. Uses the same graph walk engine. Replaces the earlier adversarial pipeline terminology.
 - **Thesis** — The Light path's initial analysis in graph stratification. Represents the 80% of workloads handled by direct analysis.

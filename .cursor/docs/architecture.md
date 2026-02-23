@@ -13,7 +13,7 @@ flowchart TD
         DSL["Pipeline DSL\n(YAML → Graph)"]
         Extractors["Extractors\n(JSON, Regex, CodeBlock, LineSplit)"]
         Elements["Elements + Traits"]
-        Personas["Personas (8)"]
+        Personas["Perennial Personas (8)"]
         Dialectic["Dialectic types\n(ThesisChallenge, Synthesis...)"]
         Cycles["Generative/Destructive\nCycles"]
         Obs["Observer\n(WalkEvent, TraceCollector)"]

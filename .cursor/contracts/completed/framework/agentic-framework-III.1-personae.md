@@ -127,7 +127,7 @@ type CostProfile struct {
     CostPerToken  float64 `json:"cost_per_token"`
 }
 
-// Persona is a named, pre-configured agent identity template.
+// Persona is a perennial agent identity template.
 type Persona struct {
     Identity    AgentIdentity
     Description string

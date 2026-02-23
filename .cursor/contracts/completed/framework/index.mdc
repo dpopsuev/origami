@@ -27,3 +27,4 @@
 - `origami-network-dispatch.md` — MuxDispatcher over HTTP for remote agent dispatch
 - `origami-k8s-pipeline-operator.md` — Design document: PipelineDef as K8s CRD, nodes as Jobs/Pods
 - `origami-pipeline-studio.md` — Product spec: web UI for pipeline visualization and run history
+- `code-housekeeping.md` — Cross-repo cleanup of stale distillation references, dead code, CLI consolidation

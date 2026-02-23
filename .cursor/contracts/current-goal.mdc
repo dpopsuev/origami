@@ -11,7 +11,7 @@ description: Active goal manifest — single-read orientation for agents to know
 
 | Tier | Contract | Status | Notes |
 |------|----------|--------|-------|
-| (all contracts completed — see Completed table) | | | |
+| (none) | — | — | Gate cleared. |
 
 ## Other Draft
 
@@ -62,3 +62,4 @@ description: Active goal manifest — single-read orientation for agents to know
 | `origami-network-dispatch` | framework | MuxDispatcher over HTTP for remote agent dispatch. |
 | `origami-k8s-pipeline-operator` | framework | Design: PipelineDef as K8s CRD, nodes as Jobs/Pods. |
 | `origami-pipeline-studio` | framework | Product spec: web UI for pipeline visualization. |
+| `code-housekeeping` | framework | Cross-repo stale reference cleanup, CLI consolidation. |

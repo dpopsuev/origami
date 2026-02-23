@@ -6,7 +6,7 @@
 - `draft/` — planned contracts not yet being executed
 
 ## Active
-(No active contracts)
+(None)
 
 ## Draft (Other)
 - `draft/prompt-calibration.md` — Framework-level prompt tuning loop (deferred).
