@@ -1,6 +1,6 @@
 # Contract — origami-fan-out-fan-in
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Graph walk supports parallel node execution at declared fan-out points, with artifact collection at fan-in merge nodes.  
 **Serves:** Framework Maturity (current goal)
 

@@ -1,6 +1,6 @@
 # Contract — origami-network-dispatch
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** MuxDispatcher works over gRPC or HTTP, enabling nodes to be processed by remote agents while preserving the same `GetNextStep` / `SubmitArtifact` protocol.  
 **Serves:** Framework Maturity (current goal)
 

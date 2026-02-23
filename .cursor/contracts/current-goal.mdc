@@ -11,10 +11,7 @@ description: Active goal manifest — single-read orientation for agents to know
 
 | Tier | Contract | Status | Notes |
 |------|----------|--------|-------|
-| **next-milestone** | `origami-fan-out-fan-in` | draft | `parallel:` edge type, goroutine fan-out, merge node fan-in. |
-| **next-milestone** | `origami-network-dispatch` | draft | MuxDispatcher over gRPC/HTTP. |
-| **vision** | `origami-k8s-pipeline-operator` | draft | PipelineDef as K8s CRD. Nodes as Jobs/Pods. Architectural sketch. |
-| **vision** | `origami-pipeline-studio` | draft | Web UI product for pipeline visualization and run history. Architectural sketch. |
+| (all contracts completed — see Completed table) | | | |
 
 ## Other Draft
 
@@ -61,3 +58,7 @@ description: Active goal manifest — single-read orientation for agents to know
 | `origami-green-border-integrity` | framework | Wire ResolveInput + RenderPrompt into Walk loop; CLI integration test. |
 | `origami-poc-batteries` | framework | HTTPDispatcher, StaticTokenAuth, JSONCheckpointer, MemoryStore. |
 | `origami-walkteam-run-api` | framework | WithTeam() RunOption for multi-walker execution via Run(). |
+| `origami-fan-out-fan-in` | framework | `parallel:` edge type, goroutine fan-out, fan-in merge. |
+| `origami-network-dispatch` | framework | MuxDispatcher over HTTP for remote agent dispatch. |
+| `origami-k8s-pipeline-operator` | framework | Design: PipelineDef as K8s CRD, nodes as Jobs/Pods. |
+| `origami-pipeline-studio` | framework | Product spec: web UI for pipeline visualization. |

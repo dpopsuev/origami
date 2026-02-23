@@ -1,6 +1,6 @@
 # Contract — origami-pipeline-studio
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Separate web product for pipeline visualization, run history, and artifact inspection — like Ansible Tower/AWX for the Origami ecosystem.  
 **Serves:** Framework Maturity (current goal)
 

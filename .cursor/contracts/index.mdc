@@ -8,14 +8,6 @@
 ## Active
 (No active contracts)
 
-## Draft (Next-milestone)
-- `draft/origami-fan-out-fan-in.md` — Parallel node execution at fan-out points.
-- `draft/origami-network-dispatch.md` — MuxDispatcher over gRPC/HTTP.
-
-## Draft (Vision)
-- `draft/origami-k8s-pipeline-operator.md` — PipelineDef as K8s CRD, nodes as Jobs/Pods.
-- `draft/origami-pipeline-studio.md` — Web UI product for pipeline visualization and run history.
-
 ## Draft (Other)
 - `draft/prompt-calibration.md` — Framework-level prompt tuning loop (deferred).
 

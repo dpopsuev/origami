@@ -1,6 +1,6 @@
 # Contract — origami-k8s-pipeline-operator
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Pipeline YAML runs as a Kubernetes Custom Resource Definition (CRD); nodes execute as Jobs or Pods, edges trigger as events.  
 **Serves:** Framework Maturity (current goal)
 
