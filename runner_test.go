@@ -257,6 +257,56 @@ func TestNewRunner_InvalidPipeline(t *testing.T) {
 	}
 }
 
+func TestRunner_Walk_NilWalker(t *testing.T) {
+	def := &PipelineDef{
+		Pipeline: "nil-walker",
+		Nodes: []NodeDef{
+			{Name: "a", Element: "fire", Transformer: "echo"},
+			{Name: "b", Element: "water", Transformer: "echo"},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "b", Name: "a-b", When: "true"},
+			{ID: "E2", From: "b", To: "_done", Name: "b-done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{"echo": &echoTransformer{}},
+	}
+	runner, err := NewRunnerWith(def, reg)
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	if err := runner.Walk(context.Background(), nil, "a"); err != nil {
+		t.Fatalf("Walk with nil walker: %v", err)
+	}
+}
+
+func TestProcessWalker(t *testing.T) {
+	pw := NewProcessWalker("test-id")
+	if pw.Identity().PersonaName != "process" {
+		t.Errorf("PersonaName = %q, want process", pw.Identity().PersonaName)
+	}
+	if pw.State().ID != "test-id" {
+		t.Errorf("State.ID = %q, want test-id", pw.State().ID)
+	}
+
+	node := &runnerTestNode{
+		name: "n",
+		out:  &runnerTestArtifact{typ: "t", conf: 1.0, raw: "data"},
+	}
+	art, err := pw.Handle(context.Background(), node, NodeContext{})
+	if err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+	if art.Raw() != "data" {
+		t.Errorf("Raw() = %v, want data", art.Raw())
+	}
+}
+
 func TestRunner_SchemasExtracted(t *testing.T) {
 	schema := &ArtifactSchema{Type: "object", Required: []string{"id"}}
 	def := &PipelineDef{

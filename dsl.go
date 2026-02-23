@@ -28,14 +28,16 @@ type ZoneDef struct {
 }
 
 // NodeDef declares a node in the pipeline.
-// P7: Extractor is optional (progressive disclosure). When set, BuildGraph
-// creates an extractorNode that delegates to the named Extractor.
+// Resolution priority: Transformer > Extractor > NodeRegistry (Family/Name).
+// Transformer is the DSL-first path; Extractor and NodeRegistry are escape hatches.
 type NodeDef struct {
-	Name      string          `yaml:"name"`
-	Element   string          `yaml:"element,omitempty"`
-	Family    string          `yaml:"family,omitempty"`
-	Extractor string          `yaml:"extractor,omitempty"`
-	Schema    *ArtifactSchema `yaml:"schema,omitempty"`
+	Name        string          `yaml:"name"`
+	Element     string          `yaml:"element,omitempty"`
+	Family      string          `yaml:"family,omitempty"`
+	Extractor   string          `yaml:"extractor,omitempty"`
+	Transformer string          `yaml:"transformer,omitempty"`
+	Prompt      string          `yaml:"prompt,omitempty"`
+	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
 }
 
 // EdgeDef declares a conditional edge between two nodes.
@@ -140,46 +142,45 @@ func (def *PipelineDef) Validate() error {
 	return nil
 }
 
-// BuildGraph constructs a Graph from a PipelineDef using the provided registries.
-// NodeRegistry maps node families to Node implementations.
-// EdgeFactory maps edge IDs to Edge implementations.
-// If an edge ID is not found in the factory, a passthrough edge is created
-// from the EdgeDef metadata (shortcut/loop flags, always-match evaluation).
-// Optional extractors: when a NodeDef has an Extractor field set, BuildGraph
-// looks up the extractor in the registry and creates an extractorNode.
-func (def *PipelineDef) BuildGraph(nodes NodeRegistry, edges EdgeFactory, extractors ...ExtractorRegistry) (Graph, error) {
-	if err := def.Validate(); err != nil {
-		return nil, fmt.Errorf("validate: %w", err)
-	}
+// GraphRegistries bundles all optional registries for BuildGraph.
+// Fields are optional; BuildGraph resolves nodes by priority:
+// Transformer > Extractor > NodeRegistry (Family/Name).
+type GraphRegistries struct {
+	Nodes        NodeRegistry
+	Edges        EdgeFactory
+	Extractors   ExtractorRegistry
+	Transformers TransformerRegistry
+}
 
+// BuildGraph constructs a Graph from a PipelineDef using the provided registries.
+// Node resolution priority: Transformer > Extractor > NodeRegistry (Family/Name).
+// Edge resolution priority: expressionEdge (When) > EdgeFactory > dslEdge.
+// For backward compatibility, also accepts (NodeRegistry, EdgeFactory, ...ExtractorRegistry).
+func (def *PipelineDef) BuildGraph(nodes NodeRegistry, edges EdgeFactory, extractors ...ExtractorRegistry) (Graph, error) {
 	var extReg ExtractorRegistry
 	if len(extractors) > 0 && extractors[0] != nil {
 		extReg = extractors[0]
 	}
+	return def.BuildGraphWith(GraphRegistries{
+		Nodes:      nodes,
+		Edges:      edges,
+		Extractors: extReg,
+	})
+}
+
+// BuildGraphWith constructs a Graph using the full registries bundle.
+func (def *PipelineDef) BuildGraphWith(reg GraphRegistries) (Graph, error) {
+	if err := def.Validate(); err != nil {
+		return nil, fmt.Errorf("validate: %w", err)
+	}
 
 	fwNodes := make([]Node, 0, len(def.Nodes))
 	for _, nd := range def.Nodes {
-		if nd.Extractor != "" && extReg != nil {
-			ext, err := extReg.Get(nd.Extractor)
-			if err != nil {
-				return nil, fmt.Errorf("node %q: %w", nd.Name, err)
-			}
-			fwNodes = append(fwNodes, &extractorNode{
-				name:    nd.Name,
-				element: Element(strings.ToLower(nd.Element)),
-				ext:     ext,
-			})
-			continue
+		node, err := def.resolveNode(nd, reg)
+		if err != nil {
+			return nil, err
 		}
-
-		factory, ok := nodes[nd.Family]
-		if !ok {
-			factory = nodes[nd.Name]
-		}
-		if factory == nil {
-			return nil, fmt.Errorf("no node factory for family %q (node %q)", nd.Family, nd.Name)
-		}
-		fwNodes = append(fwNodes, factory(nd))
+		fwNodes = append(fwNodes, node)
 	}
 
 	fwEdges := make([]Edge, 0, len(def.Edges))
@@ -190,8 +191,12 @@ func (def *PipelineDef) BuildGraph(nodes NodeRegistry, edges EdgeFactory, extrac
 				return nil, fmt.Errorf("edge %s: %w", ed.ID, err)
 			}
 			fwEdges = append(fwEdges, exprEdge)
-		} else if factory, ok := edges[ed.ID]; ok {
-			fwEdges = append(fwEdges, factory(ed))
+		} else if reg.Edges != nil {
+			if factory, ok := reg.Edges[ed.ID]; ok {
+				fwEdges = append(fwEdges, factory(ed))
+			} else {
+				fwEdges = append(fwEdges, &dslEdge{def: ed})
+			}
 		} else {
 			fwEdges = append(fwEdges, &dslEdge{def: ed})
 		}
@@ -208,6 +213,50 @@ func (def *PipelineDef) BuildGraph(nodes NodeRegistry, edges EdgeFactory, extrac
 	}
 
 	return NewGraph(def.Pipeline, fwNodes, fwEdges, fwZones, WithDoneNode(def.Done))
+}
+
+// resolveNode creates a Node from a NodeDef using the priority chain:
+// Transformer > Extractor > NodeRegistry (Family/Name).
+func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error) {
+	elem := Element(strings.ToLower(nd.Element))
+
+	if nd.Transformer != "" && reg.Transformers != nil {
+		t, err := reg.Transformers.Get(nd.Transformer)
+		if err != nil {
+			return nil, fmt.Errorf("node %q: %w", nd.Name, err)
+		}
+		return &transformerNode{
+			name:    nd.Name,
+			element: elem,
+			trans:   t,
+			prompt:  nd.Prompt,
+			config:  def.Vars,
+		}, nil
+	}
+
+	if nd.Extractor != "" && reg.Extractors != nil {
+		ext, err := reg.Extractors.Get(nd.Extractor)
+		if err != nil {
+			return nil, fmt.Errorf("node %q: %w", nd.Name, err)
+		}
+		return &extractorNode{
+			name:    nd.Name,
+			element: elem,
+			ext:     ext,
+		}, nil
+	}
+
+	if reg.Nodes == nil {
+		return nil, fmt.Errorf("no node factory for family %q (node %q): node registry is nil", nd.Family, nd.Name)
+	}
+	factory, ok := reg.Nodes[nd.Family]
+	if !ok {
+		factory = reg.Nodes[nd.Name]
+	}
+	if factory == nil {
+		return nil, fmt.Errorf("no node factory for family %q (node %q)", nd.Family, nd.Name)
+	}
+	return factory(nd), nil
 }
 
 // dslEdge is a default Edge implementation created from an EdgeDef when

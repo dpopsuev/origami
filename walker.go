@@ -66,3 +66,25 @@ type StepRecord struct {
 	EdgeID    string `json:"edge_id"`
 	Timestamp string `json:"timestamp"`
 }
+
+// ProcessWalker is a default Walker that delegates Handle to node.Process().
+// Use when all nodes are transformer-backed and no custom walker logic is needed.
+type ProcessWalker struct {
+	identity AgentIdentity
+	state    *WalkerState
+}
+
+// NewProcessWalker creates a Walker that delegates to node.Process().
+func NewProcessWalker(id string) *ProcessWalker {
+	return &ProcessWalker{
+		identity: AgentIdentity{PersonaName: "process"},
+		state:    NewWalkerState(id),
+	}
+}
+
+func (w *ProcessWalker) Identity() AgentIdentity { return w.identity }
+func (w *ProcessWalker) State() *WalkerState     { return w.state }
+
+func (w *ProcessWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
+	return node.Process(ctx, nc)
+}

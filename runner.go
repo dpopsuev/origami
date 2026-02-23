@@ -18,9 +18,22 @@ type Runner struct {
 }
 
 // NewRunner constructs a Runner from a pipeline definition and registries.
-// It builds the graph and extracts per-node schemas from the DSL.
+// Backward-compatible: accepts (NodeRegistry, EdgeFactory, ...ExtractorRegistry).
 func NewRunner(def *PipelineDef, nodes NodeRegistry, edges EdgeFactory, extractors ...ExtractorRegistry) (*Runner, error) {
-	graph, err := def.BuildGraph(nodes, edges, extractors...)
+	var extReg ExtractorRegistry
+	if len(extractors) > 0 {
+		extReg = extractors[0]
+	}
+	return NewRunnerWith(def, GraphRegistries{
+		Nodes:      nodes,
+		Edges:      edges,
+		Extractors: extReg,
+	})
+}
+
+// NewRunnerWith constructs a Runner using the full registries bundle.
+func NewRunnerWith(def *PipelineDef, reg GraphRegistries) (*Runner, error) {
+	graph, err := def.BuildGraphWith(reg)
 	if err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
 	}
@@ -42,7 +55,11 @@ func NewRunner(def *PipelineDef, nodes NodeRegistry, edges EdgeFactory, extracto
 // Walk traverses the graph with the given walker, validating artifacts
 // against declared schemas. It wraps the walker with a validating layer
 // and delegates to the graph's Walk method.
+// If walker is nil, a ProcessWalker is used (delegates to node.Process()).
 func (r *Runner) Walk(ctx context.Context, walker Walker, startNode string) error {
+	if walker == nil {
+		walker = NewProcessWalker("default")
+	}
 	vw := &validatingWalker{
 		inner:   walker,
 		schemas: r.Schemas,
