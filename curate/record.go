@@ -2,10 +2,9 @@
 // curation pipelines: consuming unstructured data from heterogeneous
 // sources and producing structured, validated, promotable records.
 //
-// This package has zero imports from Asterisk domain packages.
-// Domain-specific bindings (e.g. Asterisk's GroundTruthCase) are
-// provided by adapter packages that map between curate.Record and
-// their own types.
+// This package has zero consumer-domain imports.
+// Domain-specific bindings are provided by adapter packages that
+// map between curate.Record and their own types.
 package curate
 
 // Field is a single named value extracted from a source.

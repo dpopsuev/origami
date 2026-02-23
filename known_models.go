@@ -10,8 +10,8 @@ import "strings"
 // wrappers (Cursor, Copilot, Azure) go in KnownWrappers.
 var KnownModels = map[string]ModelIdentity{
 	// Local adapters (no LLM)
-	"stub":            {ModelName: "stub", Provider: "asterisk"},
-	"basic-heuristic": {ModelName: "basic-heuristic", Provider: "asterisk"},
+	"stub":            {ModelName: "stub", Provider: "origami"},
+	"basic-heuristic": {ModelName: "basic-heuristic", Provider: "origami"},
 
 	// Foundation models discovered via live probes
 	// First seen: 2026-02-20, wet probe via 3 parallel Cursor subagents (2/3 hit).

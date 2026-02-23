@@ -149,7 +149,7 @@ func elementColor(e fw.Element) string {
 // ---------------------------------------------------------------------------
 
 func showPersonas() {
-	fmt.Printf("Personas are pre-configured agent identities. Each has a %scolor%s,\n", bold, reset)
+	fmt.Printf("Personas are perennial agent identities — stable across model releases. Each has a %scolor%s,\n", bold, reset)
 	fmt.Printf("an %selement%s, a dialectic %sposition%s, and either %sLight%s or %sShadow%s alignment.\n\n", bold, reset, bold, reset, green, reset, red, reset)
 
 	fmt.Printf("  %sLight (Cadai) — the investigation team:%s\n", green, reset)

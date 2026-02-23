@@ -184,7 +184,7 @@ Iron represents a system that has been tuned — it's more efficient than Earth 
 
 ## Personas
 
-Personas are named, pre-configured agent identities. Each combines a **color** (personality), an **element** (behavioral archetype), a **position** (structural role), and an **alignment** (Light or Shadow).
+Personas are perennial agent identities — stable across model releases while the transient models behind them shift. Each combines a **color** (personality), an **element** (behavioral archetype), a **position** (structural role), and an **alignment** (Light or Shadow). Ouroboros measures the model; Personas provide the enduring role.
 
 ### Light Personas (Cadai) — The Investigation Team
 

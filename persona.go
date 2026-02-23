@@ -2,7 +2,9 @@ package framework
 
 import "strings"
 
-// Persona is a named, pre-configured agent identity template.
+// Persona is a perennial agent identity template — stable across model
+// releases while the models behind them shift. Ouroboros measures the
+// transient model; Personas provide the enduring role.
 type Persona struct {
 	Identity    AgentIdentity
 	Description string
@@ -21,7 +23,7 @@ var (
 	ColorIron     = Color{Name: "Iron", DisplayName: "Iron", Hex: "#48494B", Family: "Neutrals"}
 )
 
-// LightPersonas returns the 4 Light (Cadai) personas.
+// LightPersonas returns the 4 perennial Light (Cadai) personas.
 func LightPersonas() []Persona {
 	return []Persona{
 		{
@@ -103,7 +105,7 @@ func LightPersonas() []Persona {
 	}
 }
 
-// ShadowPersonas returns the 4 Shadow (Cytharai) personas.
+// ShadowPersonas returns the 4 perennial Shadow (Cytharai) personas.
 func ShadowPersonas() []Persona {
 	return []Persona{
 		{
@@ -181,7 +183,7 @@ func ShadowPersonas() []Persona {
 	}
 }
 
-// AllPersonas returns all 8 personas (4 Light + 4 Shadow).
+// AllPersonas returns all 8 perennial personas (4 Light + 4 Shadow).
 func AllPersonas() []Persona {
 	return append(LightPersonas(), ShadowPersonas()...)
 }

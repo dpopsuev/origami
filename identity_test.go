@@ -30,7 +30,7 @@ func TestModelIdentity_String_Conciseness(t *testing.T) {
 		{ModelIdentity{ModelName: "claude-4-sonnet", Provider: "Anthropic"}, 40},
 		{ModelIdentity{ModelName: "claude-4-sonnet", Provider: "Anthropic", Version: "20250514"}, 50},
 		{ModelIdentity{ModelName: "gpt-4o", Provider: "OpenAI", Version: "2024-08-06"}, 40},
-		{ModelIdentity{ModelName: "stub", Provider: "asterisk"}, 30},
+		{ModelIdentity{ModelName: "stub", Provider: "origami"}, 30},
 		{ModelIdentity{ModelName: "claude-sonnet-4", Provider: "Anthropic", Wrapper: "Cursor"}, 60},
 	}
 	for _, tc := range cases {
