@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-func startTestServer(t *testing.T, mux *MuxDispatcher) (string, context.CancelFunc) {
+func startTestServer(t *testing.T, mux *MuxDispatcher, opts ...NetworkServerOption) (string, context.CancelFunc) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	srv := NewNetworkServer(mux, "127.0.0.1:0")
+	srv := NewNetworkServer(mux, "127.0.0.1:0", opts...)
 	ready := make(chan string, 1)
 
 	go func() {
@@ -230,5 +230,88 @@ func TestNetworkClient_SubmitBadID(t *testing.T) {
 	err := client.SubmitArtifact(ctx, 999, []byte(`{}`))
 	if err == nil {
 		t.Fatal("expected error for unknown dispatch ID")
+	}
+}
+
+func TestNetworkSignal_EmitAndGet(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	mux := NewMuxDispatcher(ctx)
+	bus := NewSignalBus()
+	addr, stopServer := startTestServer(t, mux, WithSignalBus(bus))
+	defer stopServer()
+
+	client := NewNetworkClient("http://" + addr)
+
+	if err := client.EmitSignal(ctx, "worker_started", "worker", "", "", map[string]string{"worker_id": "w0"}); err != nil {
+		t.Fatalf("EmitSignal: %v", err)
+	}
+	if err := client.EmitSignal(ctx, "start", "worker", "C1", "F0", nil); err != nil {
+		t.Fatalf("EmitSignal: %v", err)
+	}
+
+	sigs, err := client.GetSignals(ctx, 0)
+	if err != nil {
+		t.Fatalf("GetSignals: %v", err)
+	}
+	if len(sigs) != 2 {
+		t.Fatalf("GetSignals: got %d signals, want 2", len(sigs))
+	}
+	if sigs[0].Event != "worker_started" {
+		t.Errorf("signal[0].Event = %q, want worker_started", sigs[0].Event)
+	}
+	if sigs[0].Meta["worker_id"] != "w0" {
+		t.Errorf("signal[0].Meta[worker_id] = %q, want w0", sigs[0].Meta["worker_id"])
+	}
+	if sigs[1].CaseID != "C1" || sigs[1].Step != "F0" {
+		t.Errorf("signal[1]: case=%q step=%q, want C1/F0", sigs[1].CaseID, sigs[1].Step)
+	}
+
+	// Since filtering
+	sigs2, err := client.GetSignals(ctx, 1)
+	if err != nil {
+		t.Fatalf("GetSignals(since=1): %v", err)
+	}
+	if len(sigs2) != 1 {
+		t.Fatalf("GetSignals(since=1): got %d, want 1", len(sigs2))
+	}
+}
+
+func TestNetworkSignal_NoBusReturns404(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	mux := NewMuxDispatcher(ctx)
+	addr, stopServer := startTestServer(t, mux) // no WithSignalBus
+	defer stopServer()
+
+	client := NewNetworkClient("http://" + addr)
+
+	err := client.EmitSignal(ctx, "test", "agent", "", "", nil)
+	if err == nil {
+		t.Fatal("expected error when signal bus not configured")
+	}
+
+	_, err = client.GetSignals(ctx, 0)
+	if err == nil {
+		t.Fatal("expected error when signal bus not configured")
+	}
+}
+
+func TestNetworkSignal_EmptyEventRejected(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	mux := NewMuxDispatcher(ctx)
+	bus := NewSignalBus()
+	addr, stopServer := startTestServer(t, mux, WithSignalBus(bus))
+	defer stopServer()
+
+	client := NewNetworkClient("http://" + addr)
+
+	err := client.EmitSignal(ctx, "", "agent", "", "", nil)
+	if err == nil {
+		t.Fatal("expected error for empty event")
 	}
 }

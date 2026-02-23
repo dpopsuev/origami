@@ -34,8 +34,16 @@ description: Shared domain definitions for Origami
 - **NarrationObserver** — Walk observer that translates raw events into human-readable narration lines.
 - **WalkObserver** — Interface for observing graph walk events. Implementations: `LogObserver`, `TraceCollector`, `NarrationObserver`.
 - **Scheduler** — Decides which walker handles each node in a team walk. Implementations: `SingleScheduler`, `AffinityScheduler`.
-- **Signal Bus** — MCP-based message bus for agent/subagent coordination. Emits and receives structured events.
+- **Signal Bus** — Transport-agnostic message bus for agent/subagent coordination. Emits and receives structured events. Accessible via MCP tools, HTTP endpoints, or direct Go API.
 - **MCP** — Model Context Protocol; standardized tool interface for AI to access external systems.
+- **Papercup** — The agent-bus protocol governing how agents coordinate during MCP calibration. Named for the children's paper-cup telephone: data flows through a narrow channel between participants. Defined in `rules/domain/agent-bus.mdc`.
+- **Papercup v1 (Orchestration)** — Original protocol where the parent agent owns `get_next_step` and `submit_artifact`. Subagents return artifacts via Task tool return value. Suffers from batch barrier and queue starvation.
+- **Papercup v2 (Choreography)** — Evolved protocol where worker subagents own the full `get_next_step -> process -> submit_artifact` loop independently. Parent becomes a supervisor. Based on the Competing Consumers pattern.
+- **Competing Consumers** — AMQP pattern where N independent workers pull from a shared work queue. Each worker processes at its own pace; no waiting for siblings. The `MuxDispatcher.PromptCh()` channel is the shared queue.
+- **Choreography** — Distributed coordination pattern (from microservices Saga) where each participant knows the protocol and drives itself, versus orchestration where a central coordinator directs every step.
+- **Supervisor** — Parent agent role in Papercup v2. Launches worker subagents, monitors health via signals, replaces failed workers, calls `get_report` when done. Does not touch `get_next_step` or `submit_artifact`.
+- **Worker Loop** — The independent pull-process-submit cycle run by each worker subagent: `get_next_step -> read prompt -> produce artifact -> submit_artifact -> repeat`. Workers self-terminate when `get_next_step` returns `done=true`.
+- **CLIWorkerDispatcher** — Planned `ExternalDispatcher` implementation combining `MuxDispatcher` pull/submit with `CLIDispatcher` exec. Runs the worker loop in Go, piping prompts to a CLI tool's stdin per step. Gives CLI agents full Papercup bus power.
 - **Metacalibration** — Recursive model profiling via task-based probes. Produces `ModelProfile` with dimension scores.
 - **Probe** — A behavioral assessment task used in metacalibration (refactor, summarize, debug, ambiguity, persistence).
 
@@ -50,6 +58,14 @@ description: Shared domain definitions for Origami
 - **BYO-Data** (Bring Your Own Datasets) — Calibration datasets, ground truth, and training data are consumer-curated. The framework provides the `curate` package and Three CLIs pattern; consumers define what "correct" means.
 - **BYOI** (Bring Your Own Infrastructure) — Topology-agnostic. Same pipeline works in Cursor, Linux CLI, Docker, or Kubernetes.
 - **Batteries for PoC** — Every BYO interface ships a trivial stub so new users can prototype immediately.
+
+## Cursor-First Architecture
+
+- **Three Skills** — Extension of the Three CLIs pattern to Cursor. Every Origami-based tool should ship three Cursor Skills: `<tool>-run`, `<tool>-calibrate`, `<tool>-dataset`. Each skill wraps the corresponding CLI via MCP tool calls, enabling the Cursor agent to orchestrate pipeline execution with zero approval gates.
+- **Agent Overloading** — Mechanism for dynamically routing pipeline steps to different LLM providers. A node's `provider:` field selects the backend (Cursor agent via MuxDispatcher, Codex via CLIDispatcher, OpenAI via HTTPDispatcher). Enables plugging multiple providers together regardless of execution environment; running from Cursor gives wide but non-deterministic access to all LLMs via Auto Mode.
+- **CLIDispatcher** — Dispatcher implementation that shells out to an external CLI-based LLM tool (Codex, Claude CLI, etc.). Reads the prompt file, pipes it to the CLI's stdin, captures stdout as the artifact. Uses `exec.CommandContext` for timeout and cancellation safety.
+- **Provider** — An optional field on `NodeDef` (`provider:` in YAML) that names which LLM backend should process the node. The `ProviderRouter` dispatcher selects the concrete `Dispatcher` implementation based on this name. Nodes without a provider use the default dispatcher.
+- **ProviderRouter** — A `Dispatcher` implementation that delegates to child dispatchers based on the `Provider` field in `DispatchContext`. Enables per-step LLM routing within a single pipeline.
 
 ## DSL primitives
 

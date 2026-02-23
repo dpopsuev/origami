@@ -11,7 +11,8 @@ description: Active goal manifest — single-read orientation for agents to know
 
 | Tier | Contract | Status | Notes |
 |------|----------|--------|-------|
-| (none) | — | — | Gate cleared. |
+| **gate** | `papercup-protocol-maturity` | active | Evolve Papercup from orchestration to choreography. Eliminate batch barrier, decouple signal bus from MCP. |
+| **next-milestone** | `origami-cursor-first-architecture` | active | CLIDispatcher + skill scaffold + provider routing. Cursor-first agentic architecture. |
 
 ## Other Draft
 

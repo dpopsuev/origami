@@ -6,7 +6,8 @@
 - `draft/` — planned contracts not yet being executed
 
 ## Active
-(None)
+- `active/origami-cursor-first-architecture.md` — CLIDispatcher, skill scaffold, provider routing. Cursor as first-class citizen.
+- `active/papercup-protocol-maturity.md` — Evolve Papercup from orchestration to choreography. Eliminate batch barrier, decouple signal bus from MCP.
 
 ## Draft (Other)
 - `draft/prompt-calibration.md` — Framework-level prompt tuning loop (deferred).

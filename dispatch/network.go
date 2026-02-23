@@ -16,8 +16,11 @@ import (
 
 // NetworkServer wraps an ExternalDispatcher and exposes it over HTTP.
 // Agents connect and poll for work via GET /next, then submit results via POST /submit.
+// Optionally exposes signal bus endpoints (POST /signal, GET /signals) when a
+// SignalBus is provided via WithSignalBus.
 type NetworkServer struct {
 	dispatcher ExternalDispatcher
+	bus        *SignalBus
 	server     *http.Server
 	log        *slog.Logger
 	addr       string
@@ -40,6 +43,12 @@ func WithServerLogger(l *slog.Logger) NetworkServerOption {
 	return func(s *NetworkServer) { s.log = l }
 }
 
+// WithSignalBus enables signal bus endpoints (POST /signal, GET /signals).
+// When nil, signal endpoints return 404.
+func WithSignalBus(bus *SignalBus) NetworkServerOption {
+	return func(s *NetworkServer) { s.bus = bus }
+}
+
 // NewNetworkServer creates an HTTP server that exposes an ExternalDispatcher.
 func NewNetworkServer(dispatcher ExternalDispatcher, addr string, opts ...NetworkServerOption) *NetworkServer {
 	s := &NetworkServer{
@@ -55,6 +64,8 @@ func NewNetworkServer(dispatcher ExternalDispatcher, addr string, opts ...Networ
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /next", s.handleGetNext)
 	mux.HandleFunc("POST /submit", s.handleSubmit)
+	mux.HandleFunc("POST /signal", s.handleEmitSignal)
+	mux.HandleFunc("GET /signals", s.handleGetSignals)
 	s.server.Handler = mux
 
 	return s
@@ -146,6 +157,55 @@ func (s *NetworkServer) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type emitSignalRequest struct {
+	Event  string            `json:"event"`
+	Agent  string            `json:"agent"`
+	CaseID string            `json:"case_id,omitempty"`
+	Step   string            `json:"step,omitempty"`
+	Meta   map[string]string `json:"meta,omitempty"`
+}
+
+func (s *NetworkServer) handleEmitSignal(w http.ResponseWriter, r *http.Request) {
+	if s.bus == nil {
+		http.Error(w, "signal bus not configured", http.StatusNotFound)
+		return
+	}
+
+	var req emitSignalRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Event == "" {
+		http.Error(w, "event is required", http.StatusBadRequest)
+		return
+	}
+
+	s.bus.Emit(req.Event, req.Agent, req.CaseID, req.Step, req.Meta)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *NetworkServer) handleGetSignals(w http.ResponseWriter, r *http.Request) {
+	if s.bus == nil {
+		http.Error(w, "signal bus not configured", http.StatusNotFound)
+		return
+	}
+
+	since := 0
+	if v := r.URL.Query().Get("since"); v != "" {
+		fmt.Sscanf(v, "%d", &since)
+	}
+
+	sigs := s.bus.Since(since)
+	if sigs == nil {
+		sigs = []Signal{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sigs)
 }
 
 // NetworkClient implements ExternalDispatcher by calling a remote NetworkServer
@@ -243,6 +303,69 @@ func (c *NetworkClient) SubmitArtifact(ctx context.Context, dispatchID int64, da
 	}
 
 	return nil
+}
+
+// EmitSignal sends a signal to the server's signal bus.
+func (c *NetworkClient) EmitSignal(ctx context.Context, event, agent, caseID, step string, meta map[string]string) error {
+	body, err := json.Marshal(emitSignalRequest{
+		Event:  event,
+		Agent:  agent,
+		CaseID: caseID,
+		Step:   step,
+		Meta:   meta,
+	})
+	if err != nil {
+		return fmt.Errorf("network client: marshal signal: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/signal",
+		bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("network client: create signal request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("network client: POST /signal: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("network client: POST /signal: status %d: %s",
+			resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+// GetSignals retrieves signals from the server's signal bus starting at the given index.
+func (c *NetworkClient) GetSignals(ctx context.Context, since int) ([]Signal, error) {
+	url := fmt.Sprintf("%s/signals?since=%d", c.baseURL, since)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("network client: create signals request: %w", err)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("network client: GET /signals: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("network client: GET /signals: status %d: %s",
+			resp.StatusCode, string(body))
+	}
+
+	var sigs []Signal
+	if err := json.NewDecoder(resp.Body).Decode(&sigs); err != nil {
+		return nil, fmt.Errorf("network client: decode signals: %w", err)
+	}
+
+	return sigs, nil
 }
 
 var _ ExternalDispatcher = (*NetworkClient)(nil)
