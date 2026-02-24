@@ -284,7 +284,9 @@ func ouroborosServe(args []string) error {
 		return err
 	}
 
-	srv := ouroborosmcp.NewServer(*runsDir)
+	cfg := ouroborosmcp.NewOuroborosConfig(*runsDir)
+	srv := fwmcp.NewPipelineServer(cfg)
+	ouroborosmcp.RegisterExtraTools(srv, *runsDir)
 	defer srv.Shutdown()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)

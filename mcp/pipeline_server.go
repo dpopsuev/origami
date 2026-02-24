@@ -208,7 +208,7 @@ func (s *PipelineServer) handleStartPipeline(ctx context.Context, _ *sdkmcp.Call
 	disp := dispatch.NewMuxDispatcher(runCtx)
 	bus := dispatch.NewSignalBus()
 
-	runFn, meta, err := s.Config.CreateSession(ctx, params, disp)
+	runFn, meta, err := s.Config.CreateSession(ctx, params, disp, bus)
 	if err != nil {
 		runCancel()
 		return nil, startPipelineOutput{}, fmt.Errorf("create session: %w", err)
@@ -295,7 +295,9 @@ func (s *PipelineServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallTo
 		DesiredCapacity:  desired,
 	}
 
-	if dc.PromptPath != "" {
+	if dc.PromptContent != "" {
+		out.PromptContent = dc.PromptContent
+	} else if dc.PromptPath != "" {
 		if content, err := os.ReadFile(dc.PromptPath); err == nil {
 			out.PromptContent = string(content)
 		}

@@ -12,6 +12,7 @@ description: Active goal manifest — single-read orientation for agents to know
 | Tier | Contract | Status | Notes |
 |------|----------|--------|-------|
 | **gate** | `papercup-protocol-maturity` | active | Phase 1 (choreography) + Phase 5 (transport decoupling) complete. Phases 2-4 (stickiness, work stealing, adaptive lifecycle) remaining. |
+| **gate** | `migrate-ouroboros-to-marshaller` | active | Delete standalone Ouroboros MCP server; serve discovery via PipelineServer hooks + CLI entry point. |
 | ~~next-milestone~~ | ~~`origami-cursor-first-architecture`~~ | **complete** | CLIDispatcher, skill scaffold (v2 worker-loop), ProviderRouter. Moved to `completed/framework/`. |
 
 ## Other Draft

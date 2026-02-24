@@ -7,6 +7,7 @@
 
 ## Active
 - `active/papercup-protocol-maturity.md` — Evolve Papercup from orchestration to choreography. Phase 1 (choreography) + Phase 5 (transport decoupling) complete. Phases 2-4 remaining.
+- `active/migrate-ouroboros-to-marshaller.md` — Delete standalone Ouroboros MCP server; serve all discovery tools via PipelineServer with domain hooks.
 
 ## Completed (recent)
 - `completed/framework/origami-cursor-first-architecture.md` — CLIDispatcher, skill scaffold, provider routing. Cursor as first-class citizen.

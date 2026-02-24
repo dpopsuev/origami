@@ -123,7 +123,7 @@ func newTestConfig(nCases, nSteps int, promptDir string) mcp.PipelineConfig {
 		WorkerPreamble: "You are a test pipeline worker.",
 		DefaultGetNextStepTimeout: 1000,
 		DefaultSessionTTL:         300000,
-		CreateSession: func(ctx context.Context, params mcp.StartParams, disp *dispatch.MuxDispatcher) (mcp.RunFunc, mcp.SessionMeta, error) {
+		CreateSession: func(ctx context.Context, params mcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (mcp.RunFunc, mcp.SessionMeta, error) {
 			parallel := params.Parallel
 			if parallel < 1 {
 				parallel = 1
@@ -149,7 +149,7 @@ func newTestConfigStub(nCases int) mcp.PipelineConfig {
 		StepSchemas: testStepSchemas,
 		DefaultGetNextStepTimeout: 1000,
 		DefaultSessionTTL:         300000,
-		CreateSession: func(ctx context.Context, params mcp.StartParams, disp *dispatch.MuxDispatcher) (mcp.RunFunc, mcp.SessionMeta, error) {
+		CreateSession: func(ctx context.Context, params mcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (mcp.RunFunc, mcp.SessionMeta, error) {
 			return stubRunFuncInstant(nCases),
 				mcp.SessionMeta{TotalCases: nCases, Scenario: "test-stub"},
 				nil

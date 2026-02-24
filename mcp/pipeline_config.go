@@ -30,10 +30,11 @@ type PipelineConfig struct {
 	WorkerPreamble string
 
 	// CreateSession wires up a domain-specific pipeline run. It receives
-	// the parsed start parameters and a pre-created MuxDispatcher.
+	// the parsed start parameters, a pre-created MuxDispatcher, and the
+	// session's SignalBus for domain-specific observability signals.
 	// Returns a RunFunc (executed in a goroutine), initial metadata
 	// (total_cases, scenario name), and an error.
-	CreateSession func(ctx context.Context, params StartParams, disp *dispatch.MuxDispatcher) (RunFunc, SessionMeta, error)
+	CreateSession func(ctx context.Context, params StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (RunFunc, SessionMeta, error)
 
 	// FormatReport converts domain-specific run result into human-readable
 	// text and optional structured data. Called by get_report.
