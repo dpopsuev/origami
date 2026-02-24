@@ -10,6 +10,7 @@
 
 ## Completed (recent)
 - `completed/framework/origami-cursor-first-architecture.md` — CLIDispatcher, skill scaffold, provider routing. Cursor as first-class citizen.
+- `completed/framework/origami-papercup-v2-hardening.md` — Align Cursor Skill guide with Papercup v2 choreography. Companion: `asterisk-papercup-v2-hardening`.
 
 See `current-goal.mdc` for the full completed contracts list.
 

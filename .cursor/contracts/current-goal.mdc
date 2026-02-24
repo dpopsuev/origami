@@ -65,3 +65,4 @@ description: Active goal manifest — single-read orientation for agents to know
 | `origami-pipeline-studio` | framework | Product spec: web UI for pipeline visualization. |
 | `code-housekeeping` | framework | Cross-repo stale reference cleanup, CLI consolidation. |
 | `origami-cursor-first-architecture` | framework | CLIDispatcher, skill scaffold (v2), ProviderRouter. Cursor as first-class citizen. |
+| `origami-papercup-v2-hardening` | framework | Cursor Skill guide aligned to Papercup v2. Companion: `asterisk-papercup-v2-hardening`. |
