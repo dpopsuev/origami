@@ -14,6 +14,9 @@ description: Active goal manifest — single-read orientation for agents to know
 | **gate** | `papercup-protocol-maturity` | active | Phase 1 (choreography) + Phase 5 (transport decoupling) complete. Phases 2-4 (stickiness, work stealing, adaptive lifecycle) remaining. |
 | **gate** | `migrate-ouroboros-to-marshaller` | active | Delete standalone Ouroboros MCP server; serve discovery via PipelineServer hooks + CLI entry point. |
 | ~~next-milestone~~ | ~~`origami-cursor-first-architecture`~~ | **complete** | CLIDispatcher, skill scaffold (v2 worker-loop), ProviderRouter. Moved to `completed/framework/`. |
+| ~~gate~~ | ~~`marshaller-step-schema-factory`~~ | **complete** | Schema-validated `submit_step` replaces freeform `submit_artifact`. Moved to `completed/framework/`. |
+| **gate** | `knowledge-source-catalog` | active | Rename Workspace -> KnowledgeSourceCatalog, Repo -> Source, add KnowledgeSourceRouter. Unblocks Asterisk M9/M10 long-term fix. |
+| ~~next-milestone~~ | ~~`calibration-primitives`~~ | **complete** | Generic calibration types, interfaces, aggregation, report formatting (`calibrate/` package). Companion: Asterisk `calibration-primitives-consumer`. Moved to `completed/framework/`. |
 
 ## Other Draft
 
@@ -67,3 +70,4 @@ description: Active goal manifest — single-read orientation for agents to know
 | `code-housekeeping` | framework | Cross-repo stale reference cleanup, CLI consolidation. |
 | `origami-cursor-first-architecture` | framework | CLIDispatcher, skill scaffold (v2), ProviderRouter. Cursor as first-class citizen. |
 | `origami-papercup-v2-hardening` | framework | Cursor Skill guide aligned to Papercup v2. Companion: `asterisk-papercup-v2-hardening`. |
+| `marshaller-step-schema-factory` | framework | Schema-validated `submit_step` replaces freeform `submit_artifact`. Companion: Asterisk `marshaller-step-schema-factory`. |

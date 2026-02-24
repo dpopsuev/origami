@@ -28,3 +28,5 @@
 - `origami-k8s-pipeline-operator.md` — Design document: PipelineDef as K8s CRD, nodes as Jobs/Pods
 - `origami-pipeline-studio.md` — Product spec: web UI for pipeline visualization and run history
 - `code-housekeeping.md` — Cross-repo cleanup of stale distillation references, dead code, CLI consolidation
+- `marshaller-step-schema-factory.md` — Schema-validated `submit_step` replaces freeform `submit_artifact`. Companion: Asterisk `marshaller-step-schema-factory`.
+- `calibration-primitives.md` — Generic calibration types, interfaces, aggregation, report formatting (`calibrate/` package). Companion: Asterisk `calibration-primitives-consumer`.
