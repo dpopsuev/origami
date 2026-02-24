@@ -11,8 +11,8 @@ description: Active goal manifest — single-read orientation for agents to know
 
 | Tier | Contract | Status | Notes |
 |------|----------|--------|-------|
-| **gate** | `papercup-protocol-maturity` | active | Evolve Papercup from orchestration to choreography. Eliminate batch barrier, decouple signal bus from MCP. |
-| **next-milestone** | `origami-cursor-first-architecture` | active | CLIDispatcher + skill scaffold + provider routing. Cursor-first agentic architecture. |
+| **gate** | `papercup-protocol-maturity` | active | Phase 1 (choreography) + Phase 5 (transport decoupling) complete. Phases 2-4 (stickiness, work stealing, adaptive lifecycle) remaining. |
+| ~~next-milestone~~ | ~~`origami-cursor-first-architecture`~~ | **complete** | CLIDispatcher, skill scaffold (v2 worker-loop), ProviderRouter. Moved to `completed/framework/`. |
 
 ## Other Draft
 
@@ -64,3 +64,4 @@ description: Active goal manifest — single-read orientation for agents to know
 | `origami-k8s-pipeline-operator` | framework | Design: PipelineDef as K8s CRD, nodes as Jobs/Pods. |
 | `origami-pipeline-studio` | framework | Product spec: web UI for pipeline visualization. |
 | `code-housekeeping` | framework | Cross-repo stale reference cleanup, CLI consolidation. |
+| `origami-cursor-first-architecture` | framework | CLIDispatcher, skill scaffold (v2), ProviderRouter. Cursor as first-class citizen. |

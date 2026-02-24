@@ -1,6 +1,6 @@
 # Contract — origami-cursor-first-architecture
 
-**Status:** active  
+**Status:** complete  
 **Goal:** Make Origami treat Cursor as a first-class citizen: CLIDispatcher for external LLM providers, `origami skill scaffold` for automatic SKILL.md generation, and `provider:` routing for per-step LLM selection.  
 **Serves:** Framework Maturity
 

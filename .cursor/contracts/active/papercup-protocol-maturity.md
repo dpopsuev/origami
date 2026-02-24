@@ -274,12 +274,12 @@ Decouple the signal bus from MCP so CLI and HTTP agents get full Papercup power.
 
 ### Phase 1 — Choreography Migration
 
-- [ ] **P1.1** Update `rules/domain/agent-bus.mdc`: flip responsibility table, add worker lifecycle signals (`worker_started`, `worker_stopped`), document supervisor role
-- [ ] **P1.2** Update skill scaffold template in `cmd/origami/cmd_skill.go`: generate worker-loop pattern (subagent calls `get_next_step`/`submit_artifact`) instead of orchestration pattern
-- [ ] **P1.3** Add `worker_started` and `worker_stopped` as auto-recognized signal events in `SignalBus`
-- [ ] **P1.4** Validate (green) — run existing `MuxDispatcher` concurrency tests, verify `peakPullers` detects worker pattern
-- [ ] **P1.5** Tune (blue) — refactor protocol documentation for clarity
-- [ ] **P1.6** Validate (green) — all tests pass
+- [x] **P1.1** Update `rules/domain/agent-bus.mdc`: flip responsibility table, add worker lifecycle signals (`worker_started`, `worker_stopped`), document supervisor role
+- [x] **P1.2** Update skill scaffold template in `cmd/origami/cmd_skill.go`: generate worker-loop pattern (subagent calls `get_next_step`/`submit_artifact`) instead of orchestration pattern
+- [x] **P1.3** Add `worker_started` and `worker_stopped` as auto-recognized signal events in `SignalBus`
+- [x] **P1.4** Validate (green) — run existing `MuxDispatcher` concurrency tests, verify `peakPullers` detects worker pattern
+- [x] **P1.5** Tune (blue) — refactor protocol documentation for clarity
+- [x] **P1.6** Validate (green) — all tests pass
 
 ### Phase 2 — Zone-Aware Stickiness
 
@@ -310,13 +310,13 @@ Decouple the signal bus from MCP so CLI and HTTP agents get full Papercup power.
 
 ### Phase 5 — Transport Decoupling
 
-- [ ] **P5.1** Move `SignalBus` from `mcp/` to `dispatch/` (or `bus/`). Update all imports. MCP tools become wrappers.
-- [ ] **P5.2** Add `POST /signal` and `GET /signals?since=N` endpoints to `NetworkServer`
-- [ ] **P5.3** Implement `CLIWorkerDispatcher`: `ExternalDispatcher` that runs worker loop internally, piping to CLI tool per step
-- [ ] **P5.4** Extend `NetworkClient` with `EmitSignal` and `GetSignals` methods
-- [ ] **P5.5** Validate (green) — `CLIWorkerDispatcher` processes steps via a stub CLI tool; `NetworkClient` emits and reads signals
-- [ ] **P5.6** Tune (blue) — refactor
-- [ ] **P5.7** Validate (green) — all tests pass
+- [x] **P5.1** Move `SignalBus` from `mcp/` to `dispatch/` (or `bus/`). Update all imports. MCP tools become wrappers.
+- [x] **P5.2** Add `POST /signal` and `GET /signals?since=N` endpoints to `NetworkServer`
+- [x] **P5.3** Implement `CLIWorkerDispatcher`: `ExternalDispatcher` that runs worker loop internally, piping to CLI tool per step
+- [x] **P5.4** Extend `NetworkClient` with `EmitSignal` and `GetSignals` methods
+- [x] **P5.5** Validate (green) — `CLIWorkerDispatcher` processes steps via a stub CLI tool; `NetworkClient` emits and reads signals
+- [x] **P5.6** Tune (blue) — refactor
+- [x] **P5.7** Validate (green) — all tests pass
 
 ## Acceptance criteria
 
