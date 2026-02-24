@@ -380,6 +380,362 @@ func TestMux_GetNextStep_Cancelled(t *testing.T) {
 	}
 }
 
+func TestMux_GetNextStepWithHints_ExactCaseMatch(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C2", Step: "F0", Provider: "zone-b"})
+	}()
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C3", Step: "F0", Provider: "zone-a"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Worker wants C3 specifically
+	dc, err := d.GetNextStepWithHints(ctx, dispatch.PullHints{PreferredCaseID: "C3"})
+	if err != nil {
+		t.Fatalf("GetNextStepWithHints error: %v", err)
+	}
+	if dc.CaseID != "C3" {
+		t.Errorf("expected C3, got %s", dc.CaseID)
+	}
+
+	// Clean up remaining dispatches
+	for i := 0; i < 2; i++ {
+		dc, _ := d.GetNextStep(ctx)
+		d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+	}
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+}
+
+func TestMux_GetNextStepWithHints_ZoneMatch(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C2", Step: "F0", Provider: "zone-b"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Worker prefers zone-b
+	dc, err := d.GetNextStepWithHints(ctx, dispatch.PullHints{PreferredZone: "zone-b"})
+	if err != nil {
+		t.Fatalf("GetNextStepWithHints error: %v", err)
+	}
+	if dc.Provider != "zone-b" {
+		t.Errorf("expected zone-b, got provider=%s case=%s", dc.Provider, dc.CaseID)
+	}
+
+	// Clean up
+	dc2, _ := d.GetNextStep(ctx)
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+	d.SubmitArtifact(ctx, dc2.DispatchID, []byte("{}"))
+}
+
+func TestMux_GetNextStepWithHints_Stickiness0_FallbackImmediate(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Worker wants zone-b but stickiness=0 means take anything
+	dc, err := d.GetNextStepWithHints(ctx, dispatch.PullHints{
+		PreferredZone: "zone-b",
+		Stickiness:    0,
+	})
+	if err != nil {
+		t.Fatalf("GetNextStepWithHints error: %v", err)
+	}
+	if dc.CaseID != "C1" {
+		t.Errorf("expected C1 as fallback, got %s", dc.CaseID)
+	}
+
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+}
+
+func TestMux_GetNextStepWithHints_Stickiness3_WaitsForMatch(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	// Worker wants zone-b with stickiness=3 (exclusive) — should time out since only zone-a is available
+	_, err := d.GetNextStepWithHints(ctx, dispatch.PullHints{
+		PreferredZone: "zone-b",
+		Stickiness:    3,
+	})
+	if err == nil {
+		t.Fatal("expected timeout error for stickiness=3 with no matching zone")
+	}
+
+	// Clean up: the non-matching item was put back in queue; drain it
+	d.Abort(fmt.Errorf("cleanup"))
+}
+
+func TestMux_GetNextStepWithHints_Stickiness3_MatchArrives(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+
+	// First dispatch zone-a (non-matching)
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+
+	// After 100ms, dispatch zone-b (matching)
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C2", Step: "F0", Provider: "zone-b"})
+	}()
+
+	// Worker wants zone-b with stickiness=3 — should skip C1 and wait for C2
+	dc, err := d.GetNextStepWithHints(ctx, dispatch.PullHints{
+		PreferredZone: "zone-b",
+		Stickiness:    3,
+	})
+	if err != nil {
+		t.Fatalf("GetNextStepWithHints error: %v", err)
+	}
+	if dc.CaseID != "C2" {
+		t.Errorf("expected C2 (zone-b), got %s (provider=%s)", dc.CaseID, dc.Provider)
+	}
+
+	// Clean up C1 still in queue
+	dc2, _ := d.GetNextStep(ctx)
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+	d.SubmitArtifact(ctx, dc2.DispatchID, []byte("{}"))
+}
+
+func TestMux_GetNextStepWithHints_BackwardCompat(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// GetNextStep (no hints) should work exactly as before
+	dc, err := d.GetNextStep(ctx)
+	if err != nil {
+		t.Fatalf("GetNextStep error: %v", err)
+	}
+	if dc.CaseID != "C1" {
+		t.Errorf("expected C1, got %s", dc.CaseID)
+	}
+
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+}
+
+func TestMux_GetNextStepWithHints_QueueDrain(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+
+	// Dispatch 3 items
+	for _, cid := range []string{"C1", "C2", "C3"} {
+		cid := cid
+		go func() {
+			d.Dispatch(dispatch.DispatchContext{CaseID: cid, Step: "F0", Provider: "zone-a"})
+		}()
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	// Worker with stickiness=3 wants zone-b — will drain all 3 into queue without matching
+	timeoutCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+	defer cancel()
+	_, err := d.GetNextStepWithHints(timeoutCtx, dispatch.PullHints{
+		PreferredZone: "zone-b",
+		Stickiness:    3,
+	})
+	if err == nil {
+		t.Fatal("expected timeout")
+	}
+
+	// Now a FIFO worker should get items from the queue
+	dc, err := d.GetNextStep(ctx)
+	if err != nil {
+		t.Fatalf("GetNextStep after queue drain: %v", err)
+	}
+	// Should be the first enqueued item (C1)
+	t.Logf("got %s from queue (expected one of C1/C2/C3)", dc.CaseID)
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+
+	// Clean up remaining
+	for i := 0; i < 2; i++ {
+		dc, _ := d.GetNextStep(ctx)
+		d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+	}
+}
+
+func TestMux_WorkStealing_Stickiness1_StealsAfterOneMiss(t *testing.T) {
+	bus := dispatch.NewSignalBus()
+	d := dispatch.NewMuxDispatcher(context.Background(), dispatch.WithMuxSignalBus(bus))
+	ctx := context.Background()
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// stickiness=1, ConsecutiveMisses=0 → should NOT steal (need >= 1 miss)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 150*time.Millisecond)
+	defer cancel()
+	_, err := d.GetNextStepWithHints(timeoutCtx, dispatch.PullHints{
+		PreferredZone:     "zone-b",
+		Stickiness:        1,
+		ConsecutiveMisses: 0,
+	})
+	if err == nil {
+		t.Fatal("stickiness=1 with 0 misses should not steal")
+	}
+
+	// stickiness=1, ConsecutiveMisses=1 → should steal
+	dc, err := d.GetNextStepWithHints(ctx, dispatch.PullHints{
+		PreferredZone:     "zone-b",
+		Stickiness:        1,
+		ConsecutiveMisses: 1,
+	})
+	if err != nil {
+		t.Fatalf("GetNextStepWithHints error: %v", err)
+	}
+	if dc.CaseID != "C1" {
+		t.Errorf("expected C1 from steal, got %s", dc.CaseID)
+	}
+
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+
+	// Verify zone_shift signal was emitted
+	sigs := bus.Since(0)
+	var found bool
+	for _, s := range sigs {
+		if s.Event == "zone_shift" {
+			found = true
+			if s.Meta["from_zone"] != "zone-b" || s.Meta["to_zone"] != "zone-a" {
+				t.Errorf("zone_shift meta: from=%s to=%s, want from=zone-b to=zone-a",
+					s.Meta["from_zone"], s.Meta["to_zone"])
+			}
+		}
+	}
+	if !found {
+		t.Error("zone_shift signal not emitted")
+	}
+}
+
+func TestMux_WorkStealing_Stickiness2_StealsAfterThreeMisses(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// stickiness=2, ConsecutiveMisses=2 → should NOT steal (need >= 3)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 150*time.Millisecond)
+	defer cancel()
+	_, err := d.GetNextStepWithHints(timeoutCtx, dispatch.PullHints{
+		PreferredZone:     "zone-b",
+		Stickiness:        2,
+		ConsecutiveMisses: 2,
+	})
+	if err == nil {
+		t.Fatal("stickiness=2 with 2 misses should not steal")
+	}
+
+	// stickiness=2, ConsecutiveMisses=3 → should steal
+	dc, err := d.GetNextStepWithHints(ctx, dispatch.PullHints{
+		PreferredZone:     "zone-b",
+		Stickiness:        2,
+		ConsecutiveMisses: 3,
+	})
+	if err != nil {
+		t.Fatalf("GetNextStepWithHints error: %v", err)
+	}
+	if dc.CaseID != "C1" {
+		t.Errorf("expected C1 from steal, got %s", dc.CaseID)
+	}
+
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+}
+
+func TestMux_WorkStealing_Stickiness3_NeverSteals(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// stickiness=3 with high misses → should never steal
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_, err := d.GetNextStepWithHints(timeoutCtx, dispatch.PullHints{
+		PreferredZone:     "zone-b",
+		Stickiness:        3,
+		ConsecutiveMisses: 100,
+	})
+	if err == nil {
+		t.Fatal("stickiness=3 should never steal regardless of miss count")
+	}
+
+	d.Abort(fmt.Errorf("cleanup"))
+}
+
+func TestMux_WorkStealing_ZoneShiftSignal_NotEmittedOnMatch(t *testing.T) {
+	bus := dispatch.NewSignalBus()
+	d := dispatch.NewMuxDispatcher(context.Background(), dispatch.WithMuxSignalBus(bus))
+	ctx := context.Background()
+
+	go func() {
+		d.Dispatch(dispatch.DispatchContext{CaseID: "C1", Step: "F0", Provider: "zone-a"})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Worker matches zone-a → no steal, no zone_shift
+	dc, err := d.GetNextStepWithHints(ctx, dispatch.PullHints{PreferredZone: "zone-a"})
+	if err != nil {
+		t.Fatalf("GetNextStepWithHints error: %v", err)
+	}
+	if dc.CaseID != "C1" {
+		t.Errorf("expected C1, got %s", dc.CaseID)
+	}
+
+	d.SubmitArtifact(ctx, dc.DispatchID, []byte("{}"))
+
+	sigs := bus.Since(0)
+	for _, s := range sigs {
+		if s.Event == "zone_shift" {
+			t.Error("zone_shift should not be emitted on exact match")
+		}
+	}
+}
+
 func TestMux_MultipleSequentialRoundTrips(t *testing.T) {
 	d := dispatch.NewMuxDispatcher(context.Background())
 	ctx := context.Background()

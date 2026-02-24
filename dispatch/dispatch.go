@@ -46,11 +46,21 @@ type DispatchContext struct {
 	Provider      string // optional LLM provider name for routing (e.g. "cursor", "codex")
 }
 
+// PullHints allows workers to declare preferences when pulling steps.
+// The dispatcher tries to match hints against available DispatchContexts.
+type PullHints struct {
+	PreferredCaseID   string // prefer steps for this case (e.g. "C3")
+	PreferredZone     string // prefer steps from this zone (matched against DispatchContext.Provider)
+	Stickiness        int    // 0=any, 1=slight preference, 2=strong, 3=exclusive (never steal)
+	ConsecutiveMisses int    // caller-tracked: how many polls returned no match (enables work stealing)
+}
+
 // ExternalDispatcher is the agent-facing side of a mux dispatcher.
 // Any external agent (MCP server, CLI AI, HTTP API) uses this interface
 // to pull pipeline steps and submit artifacts with correct routing.
 type ExternalDispatcher interface {
 	GetNextStep(ctx context.Context) (DispatchContext, error)
+	GetNextStepWithHints(ctx context.Context, hints PullHints) (DispatchContext, error)
 	SubmitArtifact(ctx context.Context, dispatchID int64, data []byte) error
 }
 

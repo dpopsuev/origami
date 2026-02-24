@@ -126,7 +126,19 @@ type submitRequest struct {
 }
 
 func (s *NetworkServer) handleGetNext(w http.ResponseWriter, r *http.Request) {
-	dc, err := s.dispatcher.GetNextStep(r.Context())
+	q := r.URL.Query()
+	hints := PullHints{
+		PreferredCaseID: q.Get("preferred_case_id"),
+		PreferredZone:   q.Get("preferred_zone"),
+	}
+	if v := q.Get("stickiness"); v != "" {
+		fmt.Sscanf(v, "%d", &hints.Stickiness)
+	}
+	if v := q.Get("consecutive_misses"); v != "" {
+		fmt.Sscanf(v, "%d", &hints.ConsecutiveMisses)
+	}
+
+	dc, err := s.dispatcher.GetNextStepWithHints(r.Context(), hints)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
@@ -243,9 +255,33 @@ func NewNetworkClient(baseURL string, opts ...NetworkClientOption) *NetworkClien
 	return nc
 }
 
-// GetNextStep polls the server for the next dispatch context.
+// GetNextStep polls the server for the next dispatch context (no hints).
 func (c *NetworkClient) GetNextStep(ctx context.Context) (DispatchContext, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/next", nil)
+	return c.GetNextStepWithHints(ctx, PullHints{})
+}
+
+// GetNextStepWithHints polls the server for the next dispatch context,
+// passing pull hints as query parameters for server-side matching.
+func (c *NetworkClient) GetNextStepWithHints(ctx context.Context, hints PullHints) (DispatchContext, error) {
+	url := c.baseURL + "/next"
+	sep := "?"
+	if hints.PreferredCaseID != "" {
+		url += sep + "preferred_case_id=" + hints.PreferredCaseID
+		sep = "&"
+	}
+	if hints.PreferredZone != "" {
+		url += sep + "preferred_zone=" + hints.PreferredZone
+		sep = "&"
+	}
+	if hints.Stickiness > 0 {
+		url += sep + fmt.Sprintf("stickiness=%d", hints.Stickiness)
+		sep = "&"
+	}
+	if hints.ConsecutiveMisses > 0 {
+		url += fmt.Sprintf("%sconsecutive_misses=%d", sep, hints.ConsecutiveMisses)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return DispatchContext{}, fmt.Errorf("network client: create request: %w", err)
 	}
