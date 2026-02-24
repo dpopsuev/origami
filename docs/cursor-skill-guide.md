@@ -86,37 +86,68 @@ Add the MCP server to `.cursor/mcp.json`:
 }
 ```
 
-## Agent Bus Protocol
+## Agent Bus Protocol (Papercup v2)
 
-Every pipeline step MUST be delegated to a Task subagent. The main agent
-acts as a dispatcher, not an executor.
+The agent bus follows the **Papercup v2 choreography** protocol. The parent
+agent is a **supervisor** — it never calls `get_next_step` or `submit_artifact`.
+Workers own the full pipeline loop independently.
 
 | Responsibility | Owner |
 |----------------|-------|
-| `get_next_step`, `submit_artifact` | Main agent |
-| Read prompt, generate artifact | Subagent |
-| `emit_signal` (dispatch) | Main agent |
-| `emit_signal` (start, done, error) | Subagent |
+| `start_calibration`, `get_report` | Supervisor (parent) |
+| Launch worker Tasks with `worker_prompt` | Supervisor (parent) |
+| Monitor via `get_signals` | Supervisor (parent) |
+| `get_next_step`, `submit_artifact` | Worker (subagent) |
+| Read `prompt_content`, generate artifact | Worker (subagent) |
+| `emit_signal` (worker_started, worker_stopped) | Worker (subagent) |
+
+### Supervisor workflow
+
+1. Call `start_calibration(parallel=N)` — returns `session_id`, `worker_prompt`, `worker_count`.
+2. Launch `worker_count` Task subagents with the server-generated `worker_prompt` (verbatim).
+3. Monitor via `get_signals(since=N)` — observe `worker_started`, `artifact_submitted`, `worker_stopped`.
+4. When all workers stop or `session_done` appears, call `get_report`.
+
+### Worker protocol
+
+Each worker (launched as a Task subagent) follows this sequence:
+
+1. Emit `worker_started` signal with `meta.mode = "stream"` and `meta.worker_id`.
+2. Loop: `get_next_step` → read `prompt_content` (inline) → `submit_artifact` → repeat.
+3. Exit when `get_next_step` returns `done=true`.
+4. Emit `worker_stopped` signal.
+
+Workers MUST NOT wait for siblings. Each worker processes steps independently
+as they become available (competing consumers pattern). The MCP server routes
+`submit_artifact` to the correct dispatch via `dispatch_id`.
 
 ### Signal protocol
 
 | Event | Emitter | When |
 |-------|---------|------|
-| `dispatch` | Main agent | Before launching subagent |
-| `start` | Subagent | First action |
-| `done` | Subagent | Artifact ready |
-| `error` | Subagent | On failure |
+| `worker_started` | Worker | First action; includes `meta.mode` and `meta.worker_id` |
+| `start` | Worker | Before processing a step |
+| `done` | Worker | After submitting artifact for a step |
+| `worker_stopped` | Worker | After loop exits (pipeline drained) |
+| `error` | Worker or Supervisor | On failure |
 
-### Parallel mode
+### Server-generated worker prompt
 
-Cursor supports up to 4 concurrent Task subagents in a single message.
-For parallel calibration:
+The `worker_prompt` field in the `start_calibration` response contains
+complete instructions for the worker loop, including:
+- The `session_id` (embedded, not a placeholder)
+- Step schemas (F0-F6 with required fields)
+- Signal emission protocol
+- Calibration rules (blind evaluation constraints)
 
-1. Pull N steps via `get_next_step`
-2. Launch N Task subagents in one message
-3. Collect results and call `submit_artifact` for each
+Workers receive `prompt_content` inline in each `get_next_step` response —
+no file I/O needed. This eliminates file read latency and permission issues.
 
-The MCP server tracks capacity and warns if you under-pull.
+### Capacity detection
+
+The MCP server detects the v2 pattern via `peakPullers` — when N workers call
+`get_next_step` concurrently, the server knows N independent workers exist.
+The capacity gate uses this to verify the system has enough workers.
 
 ## Dispatchers
 
