@@ -53,6 +53,8 @@ type PipelineSession struct {
 
 	registeredWorkers map[string]string
 
+	Supervisor *dispatch.SupervisorTracker
+
 	mu sync.Mutex
 }
 
@@ -80,6 +82,7 @@ func NewPipelineSession(
 		dispatcher:      disp,
 		doneCh:          make(chan struct{}),
 		cancel:          cancel,
+		Supervisor:      dispatch.NewSupervisorTracker(bus),
 	}
 
 	go sess.run(ctx, runFn)
@@ -362,35 +365,56 @@ func (s *PipelineSession) run(ctx context.Context, runFn RunFunc) {
 
 // GetNextStep blocks until the runner produces the next prompt, the run
 // completes, or the timeout expires.
+// GetNextStep pulls the next step with no hints (FIFO).
 func (s *PipelineSession) GetNextStep(ctx context.Context, timeout time.Duration) (dc dispatch.DispatchContext, done bool, available bool, err error) {
+	return s.GetNextStepWithHints(ctx, timeout, dispatch.PullHints{})
+}
+
+// GetNextStepWithHints pulls the next step matching the given hints.
+// Falls back based on stickiness. Blocks up to timeout.
+func (s *PipelineSession) GetNextStepWithHints(ctx context.Context, timeout time.Duration, hints dispatch.PullHints) (dc dispatch.DispatchContext, done bool, available bool, err error) {
 	select {
 	case <-s.doneCh:
 		return dispatch.DispatchContext{}, true, false, nil
 	default:
 	}
 
-	var timer <-chan time.Time
+	pullCtx := ctx
+	var cancel context.CancelFunc
 	if timeout > 0 {
-		timer = time.After(timeout)
+		pullCtx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
+
+	type pullResult struct {
+		dc  dispatch.DispatchContext
+		err error
+	}
+	ch := make(chan pullResult, 1)
+	go func() {
+		dc, err := s.dispatcher.GetNextStepWithHints(pullCtx, hints)
+		ch <- pullResult{dc, err}
+	}()
 
 	start := time.Now()
 
 	select {
-	case <-ctx.Done():
-		return dispatch.DispatchContext{}, false, false, ctx.Err()
 	case <-s.doneCh:
+		if cancel != nil {
+			cancel()
+		}
 		return dispatch.DispatchContext{}, true, false, nil
-	case dc, ok := <-s.dispatcher.PromptCh():
-		if !ok {
-			return dispatch.DispatchContext{}, true, false, nil
+	case r := <-ch:
+		if r.err != nil {
+			if pullCtx.Err() == context.DeadlineExceeded {
+				s.log.Debug("get_next_step timed out", "timeout", timeout)
+				return dispatch.DispatchContext{}, false, false, nil
+			}
+			return dispatch.DispatchContext{}, false, false, r.err
 		}
 		s.log.Debug("step delivered",
-			"case_id", dc.CaseID, "step", dc.Step, "dispatch_id", dc.DispatchID, "wait", time.Since(start))
-		return dc, false, true, nil
-	case <-timer:
-		s.log.Debug("get_next_step timed out", "timeout", timeout)
-		return dispatch.DispatchContext{}, false, false, nil
+			"case_id", r.dc.CaseID, "step", r.dc.Step, "dispatch_id", r.dc.DispatchID, "wait", time.Since(start))
+		return r.dc, false, true, nil
 	}
 }
 

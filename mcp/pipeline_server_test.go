@@ -273,12 +273,13 @@ func TestPipelineServer_ToolDiscovery(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"start_pipeline":  false,
-		"get_next_step":   false,
-		"submit_artifact": false,
-		"get_report":      false,
-		"emit_signal":     false,
-		"get_signals":     false,
+		"start_pipeline":    false,
+		"get_next_step":     false,
+		"submit_artifact":   false,
+		"get_report":        false,
+		"emit_signal":       false,
+		"get_signals":       false,
+		"get_worker_health": false,
 	}
 	for _, tool := range tools.Tools {
 		if _, ok := want[tool.Name]; ok {
@@ -1048,4 +1049,63 @@ func TestCleanArtifactJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPipelineServer_GetWorkerHealth(t *testing.T) {
+	srv := newTestServer(t, newTestConfig(2, 1, ""))
+	ctx := context.Background()
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_pipeline", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	// Emit worker signals manually
+	callTool(t, ctx, session, "emit_signal", map[string]any{
+		"session_id": sessionID,
+		"event":      "worker_started",
+		"agent":      "worker",
+		"meta": map[string]any{
+			"worker_id": "test-w1",
+		},
+	})
+	callTool(t, ctx, session, "emit_signal", map[string]any{
+		"session_id": sessionID,
+		"event":      "error",
+		"agent":      "worker",
+		"case_id":    "C01",
+		"step":       "STEP_A",
+		"meta": map[string]any{
+			"worker_id": "test-w1",
+			"error":     "test error",
+		},
+	})
+
+	health := callTool(t, ctx, session, "get_worker_health", map[string]any{
+		"session_id": sessionID,
+	})
+
+	workers, ok := health["workers"]
+	if !ok {
+		t.Fatal("health response missing 'workers' field")
+	}
+	workerList, ok := workers.([]any)
+	if !ok || len(workerList) == 0 {
+		t.Fatal("expected at least one worker in health summary")
+	}
+
+	w := workerList[0].(map[string]any)
+	if w["worker_id"] != "test-w1" {
+		t.Errorf("expected worker_id=test-w1, got %v", w["worker_id"])
+	}
+	if w["error_count"].(float64) != 1 {
+		t.Errorf("expected error_count=1, got %v", w["error_count"])
+	}
+	if w["last_error"] != "test error" {
+		t.Errorf("expected last_error='test error', got %v", w["last_error"])
+	}
+
+	srv.Shutdown()
 }

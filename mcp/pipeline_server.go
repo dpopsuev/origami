@@ -73,8 +73,12 @@ type startPipelineOutput struct {
 }
 
 type getNextStepInput struct {
-	SessionID string `json:"session_id" jsonschema:"session ID from start_pipeline"`
-	TimeoutMS int    `json:"timeout_ms,omitempty" jsonschema:"max wait in milliseconds (0 = block forever)"`
+	SessionID       string `json:"session_id" jsonschema:"session ID from start_pipeline"`
+	TimeoutMS       int    `json:"timeout_ms,omitempty" jsonschema:"max wait in milliseconds (0 = block forever)"`
+	PreferredCaseID   string `json:"preferred_case_id,omitempty" jsonschema:"prefer steps for this case ID"`
+	PreferredZone     string `json:"preferred_zone,omitempty" jsonschema:"prefer steps from this zone/provider"`
+	Stickiness        int    `json:"stickiness,omitempty" jsonschema:"zone stickiness level: any(0) slight(1) strong(2) exclusive(3)"`
+	ConsecutiveMisses int    `json:"consecutive_misses,omitempty" jsonschema:"caller-tracked empty polls for work stealing"`
 }
 
 type getNextStepOutput struct {
@@ -89,6 +93,7 @@ type getNextStepOutput struct {
 	ActiveDispatches int    `json:"active_dispatches"`
 	DesiredCapacity  int    `json:"desired_capacity"`
 	CapacityWarning  string `json:"capacity_warning,omitempty"`
+	ShouldStop       bool   `json:"should_stop,omitempty"`
 }
 
 type submitArtifactInput struct {
@@ -136,6 +141,14 @@ type getSignalsOutput struct {
 	Total   int               `json:"total"`
 }
 
+type getWorkerHealthInput struct {
+	SessionID string `json:"session_id" jsonschema:"session ID from start_pipeline"`
+}
+
+type getWorkerHealthOutput struct {
+	dispatch.HealthSummary
+}
+
 // --- Tool registration ---
 
 func (s *PipelineServer) registerTools() {
@@ -168,6 +181,11 @@ func (s *PipelineServer) registerTools() {
 		Name:        "get_signals",
 		Description: "Read signals from the agent message bus. Returns all signals, or signals since a given index.",
 	}, s.handleGetSignals)
+
+	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
+		Name:        "get_worker_health",
+		Description: "Get worker health summary. Shows per-worker status, error counts, and replacement recommendations. The supervisor agent calls this to decide whether to replace or stop workers.",
+	}, s.handleGetWorkerHealth)
 }
 
 // --- Tool handlers ---
@@ -205,8 +223,8 @@ func (s *PipelineServer) handleStartPipeline(ctx context.Context, _ *sdkmcp.Call
 	}
 
 	runCtx, runCancel := context.WithCancel(context.Background())
-	disp := dispatch.NewMuxDispatcher(runCtx)
 	bus := dispatch.NewSignalBus()
+	disp := dispatch.NewMuxDispatcher(runCtx, dispatch.WithMuxSignalBus(bus))
 
 	runFn, meta, err := s.Config.CreateSession(ctx, params, disp, bus)
 	if err != nil {
@@ -258,8 +276,15 @@ func (s *PipelineServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallTo
 		timeout = s.defaultGetNextStepTimeout
 	}
 
+	hints := dispatch.PullHints{
+		PreferredCaseID:   input.PreferredCaseID,
+		PreferredZone:     input.PreferredZone,
+		Stickiness:        input.Stickiness,
+		ConsecutiveMisses: input.ConsecutiveMisses,
+	}
+
 	sess.PullerEnter()
-	dc, done, available, err := sess.GetNextStep(ctx, timeout)
+	dc, done, available, err := sess.GetNextStepWithHints(ctx, timeout, hints)
 	sess.PullerExit()
 
 	if err != nil {
@@ -281,6 +306,7 @@ func (s *PipelineServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallTo
 		"prompt_path": dc.PromptPath,
 	})
 
+	sess.Supervisor.Process()
 	inFlight := sess.AgentPull()
 	desired := sess.DesiredCapacity
 	out := getNextStepOutput{
@@ -293,6 +319,7 @@ func (s *PipelineServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallTo
 		DispatchID:       dc.DispatchID,
 		ActiveDispatches: inFlight,
 		DesiredCapacity:  desired,
+		ShouldStop:       sess.Supervisor.ShouldStop(),
 	}
 
 	if dc.PromptContent != "" {
@@ -442,6 +469,19 @@ func (s *PipelineServer) handleGetSignals(ctx context.Context, _ *sdkmcp.CallToo
 		Signals: signals,
 		Total:   sess.Bus.Len(),
 	}, nil
+}
+
+func (s *PipelineServer) handleGetWorkerHealth(_ context.Context, _ *sdkmcp.CallToolRequest, input getWorkerHealthInput) (*sdkmcp.CallToolResult, getWorkerHealthOutput, error) {
+	sess, err := s.getSession(input.SessionID)
+	if err != nil {
+		return nil, getWorkerHealthOutput{}, err
+	}
+
+	sess.Supervisor.Process()
+	health := sess.Supervisor.Health()
+	health.QueueDepth = sess.dispatcher.ActiveDispatches()
+
+	return nil, getWorkerHealthOutput{HealthSummary: health}, nil
 }
 
 // --- Session management helpers ---
