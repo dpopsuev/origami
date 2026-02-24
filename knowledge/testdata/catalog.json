@@ -1,0 +1,6 @@
+{
+  "sources": [
+    { "name": "backend", "kind": "repo", "uri": "/src/backend", "tags": { "team": "platform" } },
+    { "name": "frontend", "kind": "repo", "uri": "/src/frontend", "tags": { "team": "ui" } }
+  ]
+}

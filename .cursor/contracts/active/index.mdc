@@ -4,4 +4,6 @@
 (No directories)
 
 ## Files
-(No files)
+- `papercup-protocol-maturity.md` — Evolve Papercup from orchestration to choreography. Phases 2-4 remaining.
+- `migrate-ouroboros-to-marshaller.md` — Delete standalone Ouroboros MCP server; serve all discovery tools via PipelineServer with domain hooks.
+- `knowledge-source-catalog.md` — Rename Workspace to KnowledgeSourceCatalog, Repo to Source, introduce KnowledgeSourceRouter for tag-based routing.

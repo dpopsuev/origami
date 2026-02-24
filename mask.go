@@ -105,14 +105,14 @@ func NewRecallMask() Mask { return &recallMask{} }
 type forgeMask struct{}
 
 func (m *forgeMask) Name() string        { return "mask-of-the-forge" }
-func (m *forgeMask) Description() string  { return "Injects workspace repo context" }
+func (m *forgeMask) Description() string  { return "Injects knowledge source context" }
 func (m *forgeMask) ValidNodes() []string { return []string{"investigate"} }
 func (m *forgeMask) Wrap(next NodeProcessor) NodeProcessor {
 	return func(ctx context.Context, nc NodeContext) (Artifact, error) {
 		if nc.Meta == nil {
 			nc.Meta = make(map[string]any)
 		}
-		nc.Meta["workspace_repos_available"] = true
+		nc.Meta["knowledge_sources_available"] = true
 		return next(ctx, nc)
 	}
 }
