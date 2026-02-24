@@ -30,9 +30,9 @@ type PipelineServer struct {
 	defaultSessionTTL         time.Duration
 }
 
-// NewPipelineServer creates an MCP server with 6 auto-registered pipeline
-// tools. The config provides domain hooks (session factory, step schemas,
-// report formatter) while the server handles all protocol mechanics.
+// NewPipelineServer creates an MCP server with auto-registered pipeline tools.
+// The config provides domain hooks (session factory, step schemas, report
+// formatter) while the server handles all protocol mechanics.
 func NewPipelineServer(cfg PipelineConfig) *PipelineServer {
 	fw := NewServer(cfg.Name, cfg.Version)
 
@@ -96,6 +96,17 @@ type getNextStepOutput struct {
 	ShouldStop       bool   `json:"should_stop,omitempty"`
 }
 
+type submitStepInput struct {
+	SessionID  string         `json:"session_id" jsonschema:"session ID from start_pipeline"`
+	DispatchID int64          `json:"dispatch_id" jsonschema:"dispatch ID from get_next_step for artifact routing"`
+	Step       string         `json:"step" jsonschema:"pipeline step name (e.g. F0_RECALL, F1_TRIAGE)"`
+	Fields     map[string]any `json:"fields" jsonschema:"artifact fields matching the step schema"`
+}
+
+type submitStepOutput struct {
+	OK string `json:"ok"`
+}
+
 type submitArtifactInput struct {
 	SessionID    string `json:"session_id" jsonschema:"session ID from start_pipeline"`
 	ArtifactJSON string `json:"artifact_json" jsonschema:"JSON artifact string for this pipeline step"`
@@ -151,41 +162,57 @@ type getWorkerHealthOutput struct {
 
 // --- Tool registration ---
 
+// noOutputSchema wraps a typed handler so the MCP SDK's Out type parameter is
+// `any`, which suppresses outputSchema generation. Some MCP clients (including
+// Cursor) don't support outputSchema and fail to parse the tools list when it's
+// present.
+func noOutputSchema[In, Out any](h func(context.Context, *sdkmcp.CallToolRequest, In) (*sdkmcp.CallToolResult, Out, error)) sdkmcp.ToolHandlerFor[In, any] {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, input In) (*sdkmcp.CallToolResult, any, error) {
+		res, out, err := h(ctx, req, input)
+		return res, out, err
+	}
+}
+
 func (s *PipelineServer) registerTools() {
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "start_pipeline",
 		Description: "Start a pipeline run. Spawns the runner goroutine and returns a session ID.",
-	}, s.handleStartPipeline)
+	}, noOutputSchema(s.handleStartPipeline))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_next_step",
 		Description: "Get the next pipeline step prompt. Blocks until the runner is ready. Returns done=true when all cases are complete.",
-	}, s.handleGetNextStep)
+	}, noOutputSchema(s.handleGetNextStep))
+
+	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
+		Name:        "submit_step",
+		Description: "Submit a schema-validated artifact for a pipeline step. The step name selects the schema; fields are validated before routing.",
+	}, noOutputSchema(s.handleSubmitStep))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "submit_artifact",
-		Description: "Submit a JSON artifact for the current pipeline step. The runner scores it and advances.",
-	}, s.handleSubmitArtifact)
+		Description: "Deprecated: use submit_step instead. Submit a JSON artifact for the current pipeline step. The runner scores it and advances.",
+	}, noOutputSchema(s.handleSubmitArtifact))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_report",
 		Description: "Get the final pipeline report with metrics and per-case results.",
-	}, s.handleGetReport)
+	}, noOutputSchema(s.handleGetReport))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "emit_signal",
 		Description: "Emit a signal to the agent message bus for observability. Use to announce dispatch, start, done, error events.",
-	}, s.handleEmitSignal)
+	}, noOutputSchema(s.handleEmitSignal))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_signals",
 		Description: "Read signals from the agent message bus. Returns all signals, or signals since a given index.",
-	}, s.handleGetSignals)
+	}, noOutputSchema(s.handleGetSignals))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_worker_health",
 		Description: "Get worker health summary. Shows per-worker status, error counts, and replacement recommendations. The supervisor agent calls this to decide whether to replace or stop workers.",
-	}, s.handleGetWorkerHealth)
+	}, noOutputSchema(s.handleGetWorkerHealth))
 }
 
 // --- Tool handlers ---
@@ -342,14 +369,67 @@ func (s *PipelineServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallTo
 	return nil, out, nil
 }
 
+func (s *PipelineServer) handleSubmitStep(ctx context.Context, _ *sdkmcp.CallToolRequest, input submitStepInput) (*sdkmcp.CallToolResult, submitStepOutput, error) {
+	sess, err := s.getSession(input.SessionID)
+	if err != nil {
+		return nil, submitStepOutput{}, err
+	}
+
+	if gateErr := sess.CheckCapacityGate(); gateErr != nil {
+		logger := logging.New("pipeline-session")
+		logger.Warn("capacity gate advisory on submit_step",
+			"session_id", input.SessionID, "dispatch_id", input.DispatchID, "detail", gateErr.Error())
+	}
+
+	if input.DispatchID == 0 {
+		return nil, submitStepOutput{}, fmt.Errorf("dispatch_id is required (got 0); did you submit after available=false?")
+	}
+
+	if input.Step == "" {
+		return nil, submitStepOutput{}, fmt.Errorf("step is required")
+	}
+
+	schema, err := s.Config.FindSchema(input.Step)
+	if err != nil {
+		return nil, submitStepOutput{}, err
+	}
+
+	if err := schema.ValidateFields(input.Fields); err != nil {
+		return nil, submitStepOutput{}, err
+	}
+
+	data, err := json.Marshal(input.Fields)
+	if err != nil {
+		return nil, submitStepOutput{}, fmt.Errorf("marshal fields: %w", err)
+	}
+
+	if err := sess.SubmitArtifact(ctx, input.DispatchID, data); err != nil {
+		return nil, submitStepOutput{}, fmt.Errorf("submit_step: %w", err)
+	}
+
+	remaining := sess.AgentSubmit()
+	sess.Bus.Emit("artifact_submitted", "server", "", input.Step, map[string]string{
+		"bytes":     fmt.Sprintf("%d", len(data)),
+		"in_flight": fmt.Sprintf("%d", remaining),
+		"via":       "submit_step",
+	})
+
+	return nil, submitStepOutput{OK: "step accepted"}, nil
+}
+
+// handleSubmitArtifact is the deprecated freeform JSON submission path.
+// New workers should use submit_step instead.
 func (s *PipelineServer) handleSubmitArtifact(ctx context.Context, _ *sdkmcp.CallToolRequest, input submitArtifactInput) (*sdkmcp.CallToolResult, submitArtifactOutput, error) {
+	logger := logging.New("pipeline-session")
+	logger.Warn("submit_artifact is deprecated; use submit_step for schema-validated submissions",
+		"session_id", input.SessionID, "dispatch_id", input.DispatchID)
+
 	sess, err := s.getSession(input.SessionID)
 	if err != nil {
 		return nil, submitArtifactOutput{}, err
 	}
 
 	if gateErr := sess.CheckCapacityGate(); gateErr != nil {
-		logger := logging.New("pipeline-session")
 		logger.Warn("capacity gate advisory on submit",
 			"session_id", input.SessionID, "dispatch_id", input.DispatchID, "detail", gateErr.Error())
 	}
@@ -359,6 +439,7 @@ func (s *PipelineServer) handleSubmitArtifact(ctx context.Context, _ *sdkmcp.Cal
 	}
 
 	data := []byte(input.ArtifactJSON)
+	data = CleanArtifactJSON(data)
 	if !json.Valid(data) {
 		return nil, submitArtifactOutput{}, fmt.Errorf("artifact_json is not valid JSON")
 	}
@@ -371,6 +452,7 @@ func (s *PipelineServer) handleSubmitArtifact(ctx context.Context, _ *sdkmcp.Cal
 	sess.Bus.Emit("artifact_submitted", "server", "", "", map[string]string{
 		"bytes":     fmt.Sprintf("%d", len(data)),
 		"in_flight": fmt.Sprintf("%d", remaining),
+		"via":       "submit_artifact_deprecated",
 	})
 
 	return nil, submitArtifactOutput{OK: "artifact accepted"}, nil

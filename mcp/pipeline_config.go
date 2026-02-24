@@ -2,15 +2,44 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dpopsuev/origami/dispatch"
 )
 
+// FieldDef describes a single field in a step's artifact schema.
+type FieldDef struct {
+	Name     string // field name, e.g. "confidence"
+	Type     string // type hint: "string", "bool", "float", "object", "array"
+	Required bool   // if true, submit_step rejects artifacts missing this field
+	Desc     string // optional human-readable description
+}
+
 // StepSchema declares what a single pipeline step expects in its artifact.
-// Used to auto-generate worker prompt step-schema tables.
+// Used for runtime validation in submit_step and to auto-generate worker
+// prompt step-schema tables.
 type StepSchema struct {
 	Name   string            // e.g. "F0_RECALL", "scan"
-	Fields map[string]string // field name -> type/description
+	Fields map[string]string // field name -> type/description (legacy, used for prompt rendering)
+	Defs   []FieldDef        // structured field definitions for runtime validation
+}
+
+// ValidateFields checks that fields satisfies the schema's Defs.
+// Returns nil if Defs is empty (legacy schemas pass without validation).
+func (s StepSchema) ValidateFields(fields map[string]any) error {
+	if len(s.Defs) == 0 {
+		return nil
+	}
+	for _, def := range s.Defs {
+		v, ok := fields[def.Name]
+		if !ok && def.Required {
+			return fmt.Errorf("step %s: missing required field %q", s.Name, def.Name)
+		}
+		if ok && v == nil && def.Required {
+			return fmt.Errorf("step %s: field %q is null", s.Name, def.Name)
+		}
+	}
+	return nil
 }
 
 // PipelineConfig is the domain-injection entry point. Implementations register
@@ -45,9 +74,22 @@ type PipelineConfig struct {
 	DefaultGetNextStepTimeout int // milliseconds
 
 	// DefaultSessionTTL is the inactivity TTL for sessions. When no
-	// submit_artifact arrives for this duration, the session aborts.
+	// artifact submission arrives for this duration, the session aborts.
 	// Defaults to 300s (5min) if zero.
 	DefaultSessionTTL int // milliseconds
+}
+
+// FindSchema returns the StepSchema for the given step name, or an error
+// listing valid step names. Used by the submit_step handler.
+func (c *PipelineConfig) FindSchema(step string) (StepSchema, error) {
+	var names []string
+	for _, s := range c.StepSchemas {
+		if s.Name == step {
+			return s, nil
+		}
+		names = append(names, s.Name)
+	}
+	return StepSchema{}, fmt.Errorf("unknown step %q; valid steps: %v", step, names)
 }
 
 // RunFunc is the goroutine body that runs the domain pipeline. It receives

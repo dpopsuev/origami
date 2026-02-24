@@ -26,9 +26,28 @@ func TestMain(m *testing.M) {
 
 // testStepSchemas defines a simple 3-step pipeline for generic tests.
 var testStepSchemas = []mcp.StepSchema{
-	{Name: "STEP_A", Fields: map[string]string{"value": "string", "score": "float"}},
-	{Name: "STEP_B", Fields: map[string]string{"result": "bool"}},
-	{Name: "STEP_C", Fields: map[string]string{"summary": "string"}},
+	{
+		Name:   "STEP_A",
+		Fields: map[string]string{"value": "string", "score": "float"},
+		Defs: []mcp.FieldDef{
+			{Name: "value", Type: "string", Required: true},
+			{Name: "score", Type: "float", Required: true},
+		},
+	},
+	{
+		Name:   "STEP_B",
+		Fields: map[string]string{"result": "bool"},
+		Defs: []mcp.FieldDef{
+			{Name: "result", Type: "bool", Required: true},
+		},
+	},
+	{
+		Name:   "STEP_C",
+		Fields: map[string]string{"summary": "string"},
+		Defs: []mcp.FieldDef{
+			{Name: "summary", Type: "string", Required: true},
+		},
+	},
 }
 
 // testArtifact returns minimal valid JSON for a given step.
@@ -275,6 +294,7 @@ func TestPipelineServer_ToolDiscovery(t *testing.T) {
 	want := map[string]bool{
 		"start_pipeline":    false,
 		"get_next_step":     false,
+		"submit_step":       false,
 		"submit_artifact":   false,
 		"get_report":        false,
 		"emit_signal":       false,
@@ -415,7 +435,7 @@ func TestStartPipeline_WorkerPrompt(t *testing.T) {
 	if workerPrompt == "" {
 		t.Fatal("expected non-empty worker_prompt for parallel>1")
 	}
-	if !containsAll(workerPrompt, sessionID, "get_next_step", "submit_artifact",
+	if !containsAll(workerPrompt, sessionID, "get_next_step", "submit_step",
 		"worker_started", "worker_stopped", "mode", "stream") {
 		t.Errorf("worker_prompt missing required protocol keywords")
 	}
@@ -874,7 +894,7 @@ func TestWorkerPrompt_StepSchemas(t *testing.T) {
 		t.Error("worker prompt missing session_id")
 	}
 
-	keywords := []string{"get_next_step", "submit_artifact", "worker_started", "worker_stopped", "mode", "stream"}
+	keywords := []string{"get_next_step", "submit_step", "worker_started", "worker_stopped", "mode", "stream"}
 	for _, kw := range keywords {
 		if !containsCI(prompt, kw) {
 			t.Errorf("worker prompt missing keyword %q", kw)
@@ -1108,4 +1128,225 @@ func TestPipelineServer_GetWorkerHealth(t *testing.T) {
 	}
 
 	srv.Shutdown()
+}
+
+// --- submit_step tests ---
+
+func TestStepSchema_ValidateFields(t *testing.T) {
+	schema := mcp.StepSchema{
+		Name: "TEST_STEP",
+		Defs: []mcp.FieldDef{
+			{Name: "name", Type: "string", Required: true},
+			{Name: "score", Type: "float", Required: true},
+			{Name: "notes", Type: "string", Required: false},
+		},
+	}
+
+	t.Run("valid with all fields", func(t *testing.T) {
+		err := schema.ValidateFields(map[string]any{
+			"name": "foo", "score": 0.9, "notes": "ok",
+		})
+		if err != nil {
+			t.Errorf("expected nil, got %v", err)
+		}
+	})
+
+	t.Run("valid with optional missing", func(t *testing.T) {
+		err := schema.ValidateFields(map[string]any{
+			"name": "foo", "score": 0.9,
+		})
+		if err != nil {
+			t.Errorf("expected nil, got %v", err)
+		}
+	})
+
+	t.Run("missing required field", func(t *testing.T) {
+		err := schema.ValidateFields(map[string]any{"name": "foo"})
+		if err == nil {
+			t.Fatal("expected error for missing required field")
+		}
+		if !strings.Contains(err.Error(), "score") {
+			t.Errorf("error should mention 'score': %v", err)
+		}
+	})
+
+	t.Run("null required field", func(t *testing.T) {
+		err := schema.ValidateFields(map[string]any{
+			"name": "foo", "score": nil,
+		})
+		if err == nil {
+			t.Fatal("expected error for null required field")
+		}
+	})
+
+	t.Run("no defs passes anything", func(t *testing.T) {
+		legacy := mcp.StepSchema{Name: "LEGACY", Fields: map[string]string{"x": "any"}}
+		err := legacy.ValidateFields(map[string]any{"whatever": 42})
+		if err != nil {
+			t.Errorf("legacy schema with no defs should pass: %v", err)
+		}
+	})
+}
+
+func TestPipelineConfig_FindSchema(t *testing.T) {
+	cfg := mcp.PipelineConfig{
+		StepSchemas: testStepSchemas,
+	}
+
+	t.Run("found", func(t *testing.T) {
+		s, err := cfg.FindSchema("STEP_B")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if s.Name != "STEP_B" {
+			t.Errorf("expected STEP_B, got %s", s.Name)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		_, err := cfg.FindSchema("NO_SUCH_STEP")
+		if err == nil {
+			t.Fatal("expected error for unknown step")
+		}
+		if !strings.Contains(err.Error(), "STEP_A") {
+			t.Errorf("error should list valid steps: %v", err)
+		}
+	})
+}
+
+func TestSubmitStep_FullLoop(t *testing.T) {
+	srv := newTestServer(t, newTestConfig(1, 1, ""))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_pipeline", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	res := callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+		"timeout_ms": 2000,
+	})
+
+	if done, _ := res["done"].(bool); done {
+		t.Fatal("expected a step, got done=true")
+	}
+
+	step, _ := res["step"].(string)
+	dispatchID, _ := res["dispatch_id"].(float64)
+
+	result := callTool(t, ctx, session, "submit_step", map[string]any{
+		"session_id":  sessionID,
+		"dispatch_id": int64(dispatchID),
+		"step":        step,
+		"fields":      testFieldsForStep(step),
+	})
+
+	if ok, _ := result["ok"].(string); ok != "step accepted" {
+		t.Errorf("expected 'step accepted', got %q", ok)
+	}
+}
+
+func TestSubmitStep_UnknownStep(t *testing.T) {
+	srv := newTestServer(t, newTestConfig(1, 1, ""))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_pipeline", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	res := callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+		"timeout_ms": 2000,
+	})
+	dispatchID, _ := res["dispatch_id"].(float64)
+
+	_, err := callToolE(ctx, session, "submit_step", map[string]any{
+		"session_id":  sessionID,
+		"dispatch_id": int64(dispatchID),
+		"step":        "NONEXISTENT",
+		"fields":      map[string]any{"x": 1},
+	})
+	if err == nil {
+		t.Fatal("expected error for unknown step")
+	}
+	if !strings.Contains(err.Error(), "unknown step") {
+		t.Errorf("error should mention 'unknown step': %v", err)
+	}
+}
+
+func TestSubmitStep_MissingRequiredField(t *testing.T) {
+	srv := newTestServer(t, newTestConfig(1, 1, ""))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_pipeline", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	res := callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+		"timeout_ms": 2000,
+	})
+	dispatchID, _ := res["dispatch_id"].(float64)
+	step, _ := res["step"].(string)
+
+	_, err := callToolE(ctx, session, "submit_step", map[string]any{
+		"session_id":  sessionID,
+		"dispatch_id": int64(dispatchID),
+		"step":        step,
+		"fields":      map[string]any{},
+	})
+	if err == nil {
+		t.Fatal("expected error for missing required field")
+	}
+	if !strings.Contains(err.Error(), "missing required field") {
+		t.Errorf("error should mention 'missing required field': %v", err)
+	}
+}
+
+func TestSubmitStep_ZeroDispatchID(t *testing.T) {
+	srv := newTestServer(t, newTestConfig(1, 1, ""))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_pipeline", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	_, err := callToolE(ctx, session, "submit_step", map[string]any{
+		"session_id":  sessionID,
+		"dispatch_id": 0,
+		"step":        "STEP_A",
+		"fields":      map[string]any{"value": "x", "score": 1.0},
+	})
+	if err == nil {
+		t.Fatal("expected error for dispatch_id=0")
+	}
+}
+
+func testFieldsForStep(step string) map[string]any {
+	switch step {
+	case "STEP_A":
+		return map[string]any{"value": "test", "score": 0.95}
+	case "STEP_B":
+		return map[string]any{"result": true}
+	case "STEP_C":
+		return map[string]any{"summary": "done"}
+	default:
+		return map[string]any{"data": step}
+	}
 }

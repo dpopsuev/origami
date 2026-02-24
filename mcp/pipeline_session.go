@@ -3,7 +3,6 @@ package mcp
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -223,11 +222,13 @@ func (s *PipelineSession) WorkerPrompt(cfg *PipelineConfig) string {
    Read the prompt from response.prompt_content (full text inline).
    If prompt_content is empty, read from the file at response.prompt_path.
 
-   Analyze the data in the prompt and produce a JSON artifact
+   Analyze the data in the prompt and produce the artifact fields
    matching the step schema below.
 
-   submit_artifact(session_id="%[1]s", artifact_json=<your JSON>,
-                   dispatch_id=response.dispatch_id)
+   submit_step(session_id="%[1]s",
+               dispatch_id=response.dispatch_id,
+               step=response.step,
+               fields={<your artifact fields as a JSON object>})
 
 3. Emit stop signal:
    emit_signal(session_id="%[1]s", event="worker_stopped", agent="worker",
@@ -254,8 +255,8 @@ func (s *PipelineSession) WorkerPrompt(cfg *PipelineConfig) string {
 
 - Respond based ONLY on the prompt content provided.
 - Do NOT read scenario files, ground truth, test code, or prior artifacts.
-- Each artifact MUST be valid JSON. No markdown fences, no commentary.
-- You call get_next_step and submit_artifact DIRECTLY. The parent does NOT relay for you.
+- Use submit_step (NOT submit_artifact) to submit structured fields.
+- You call get_next_step and submit_step DIRECTLY. The parent does NOT relay for you.
 - If available=false, retry immediately — the pipeline may be between rounds.
 - Process each step independently based on the prompt content.
 `)
@@ -419,11 +420,9 @@ func (s *PipelineSession) GetNextStepWithHints(ctx context.Context, timeout time
 }
 
 // SubmitArtifact routes the agent's artifact to the correct Dispatch caller.
+// Callers are responsible for ensuring data is valid JSON before calling this
+// (submit_step validates via schema, submit_artifact validates via json.Valid).
 func (s *PipelineSession) SubmitArtifact(ctx context.Context, dispatchID int64, data []byte) error {
-	data = CleanArtifactJSON(data)
-	if !json.Valid(data) {
-		return fmt.Errorf("invalid JSON in artifact")
-	}
 	s.touchActivity()
 	return s.dispatcher.SubmitArtifact(ctx, dispatchID, data)
 }
