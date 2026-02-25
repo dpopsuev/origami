@@ -145,6 +145,8 @@ Phase 1 builds the EventBridge — the core primitive that unifies both event sy
 - [ ] **F8** `KamiOverlay` — debug mode overlay (breakpoints, pause state, AI annotations)
 - [ ] **F9** `go:embed frontend/dist/*` in `kami/embed.go`, verify `origami kami --port 3000` serves SPA
 - [ ] **F10** `Theme` interface: `Name()`, `AgentIntros() []AgentIntro`, `NodeDescriptions() map[string]string`, `CostumeAssets() map[string]string`, `CooperationDialogs() []Dialog`
+- [ ] **F11** `window.__origami` bridge — expose runtime API on `window` for Playwright E2E and Visual Editor integration: `snapshot()` (full graph state: nodes, edges, agents, zones, fold state), `nodeCount()`, `edgeCount()`, `selectedNode()`, `zoomLevel()`, `foldState()` (per-subgraph collapse state), `yamlContent()` (current YAML if editor is mounted). TypeScript types for all return shapes. This is the shared testing surface for both Kami and the Visual Editor (see `visual-editor` Phase 0). Pattern adopted from Hegemony's `window.__perf` bridge.
+- [ ] **F12** Orphan guard — listen for `stdin` close/end when Kami is spawned as MCP child process. Exit cleanly after 2s grace period to avoid orphan processes and port conflicts. Pattern from Hegemony's Demiurge `server.ts`.
 
 ### Phase 7 — Validate and tune
 
@@ -170,6 +172,10 @@ Phase 1 builds the EventBridge — the core primitive that unifies both event sy
 **When** the theme is passed to `KamiServer`,  
 **Then** the frontend displays domain-specific agent intros, node descriptions, and costume overlays without any framework code changes.
 
+**Given** Kami's React frontend running in a browser,  
+**When** Playwright calls `page.evaluate(() => window.__origami.snapshot())`,  
+**Then** the returned object contains the current graph state (node count, edge count, active agents, zone assignments, subgraph fold states). All fields match the live React Flow state. This bridge is the shared testing surface for Kami E2E tests and the Visual Editor's Phase 0 Playwright tests.
+
 ## Security assessment
 
 | OWASP | Finding | Mitigation |
@@ -181,3 +187,5 @@ Phase 1 builds the EventBridge — the core primitive that unifies both event sy
 ## Notes
 
 2026-02-25 — Contract created from plan `visual_live_demo_presentation_274f6eca.plan.md`. Kami follows the Demiurge pattern from Hegemony — triple-homed process bridging AI, browser, and pipeline. The name Kami (神) is from Shinto: divine spirits inhabiting nature. In Origami, agents walking the graph are the kami inhabiting the nodes. Element-to-shape mapping: Fire=Tetrahedron, Water=Icosahedron, Earth=Cube, Air=Octahedron, Diamond=Diamond, Lightning=Star polyhedron.
+
+2026-02-25 — Added `window.__origami` bridge (F11) and orphan guard (F12). The bridge is the shared testing surface for both Kami and the Visual Editor. Playwright E2E tests in the Visual Editor (Phase 0) use `window.__origami` to assert graph state without coupling to React internals. Pattern adopted from Hegemony's `window.__perf` in Demiurge. Orphan guard prevents port conflicts when Cursor restarts MCP processes.
