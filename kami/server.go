@@ -13,13 +13,14 @@ import (
 
 // Config controls the KamiServer behavior.
 type Config struct {
-	Port    int
-	Bind    string // default "127.0.0.1"
-	Debug   bool   // enable debug API endpoints
-	Logger  *slog.Logger
-	Bridge  *EventBridge
-	SPA     http.FileSystem // embedded frontend (nil = no SPA)
-	Theme   Theme           // consumer theme (nil = default)
+	Port         int
+	Bind         string // default "127.0.0.1"
+	Debug        bool   // enable debug API endpoints
+	Logger       *slog.Logger
+	Bridge       *EventBridge
+	SPA          http.FileSystem    // embedded frontend (nil = no SPA)
+	Theme        Theme              // consumer theme (nil = default)
+	Presentation PresentationConfig // presentation sections (nil = debugger-only mode)
 }
 
 func (c *Config) addr() string {
@@ -83,6 +84,9 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("POST /events/hover", s.handleBrowserEvent("hover"))
 	mux.HandleFunc("POST /events/selection", s.handleBrowserEvent("selection"))
 	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
+	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
+	mux.HandleFunc("GET /api/presentation", s.handlePresentationAPI)
 
 	if s.cfg.SPA != nil {
 		mux.Handle("GET /", http.FileServer(s.cfg.SPA))
@@ -226,6 +230,9 @@ func (s *Server) StartOnAvailablePort(ctx context.Context) (httpAddr, wsAddr str
 	mux.HandleFunc("POST /events/hover", s.handleBrowserEvent("hover"))
 	mux.HandleFunc("POST /events/selection", s.handleBrowserEvent("selection"))
 	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
+	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
+	mux.HandleFunc("GET /api/presentation", s.handlePresentationAPI)
 
 	if s.cfg.SPA != nil {
 		mux.Handle("GET /", http.FileServer(s.cfg.SPA))
