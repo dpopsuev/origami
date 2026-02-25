@@ -157,6 +157,7 @@ func kamiCmd(args []string) error {
 		Debug:  *debug,
 		Bridge: bridge,
 		Logger: logger,
+		SPA:    kami.FrontendFS(),
 	})
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
