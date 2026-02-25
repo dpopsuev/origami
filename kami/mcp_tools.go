@@ -54,6 +54,12 @@ func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
 		Description: "Clear a breakpoint from a node.",
 	}, noOut(handleClearBreakpoint(dc)))
 
+	// Selection tools
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_get_selection",
+		Description: "Get the current browser element selection. Returns the list of highlighted UI elements selected by the user via CTRL+click.",
+	}, noOut(handleGetSelection(srv)))
+
 	// Visualization tools
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
 		Name:        "kami_highlight_nodes",
@@ -196,6 +202,19 @@ func handleClearBreakpoint(dc *DebugController) func(context.Context, *sdkmcp.Ca
 		}
 		dc.ClearBreakpoint(input.Node)
 		return textResult(fmt.Sprintf("breakpoint cleared on %q", input.Node)), "ok", nil
+	}
+}
+
+// --- Selection tool handlers ---
+
+func handleGetSelection(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
+		sel := srv.GetSelection()
+		if sel == nil {
+			sel = map[string]any{"elements": []any{}}
+		}
+		res, err := jsonResult(sel)
+		return res, sel, err
 	}
 }
 

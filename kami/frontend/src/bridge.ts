@@ -1,9 +1,15 @@
 import type { KamiEvent } from './hooks/useSSE'
 
+interface KamiSelection {
+  elements: { type: string; id: string; kamiKey: string }[]
+  timestamp: string
+}
+
 interface OrigamiBridge {
   events: KamiEvent[]
   connected: boolean
   version: string
+  selection: KamiSelection | null
   getEvents: () => KamiEvent[]
   getLastEvent: () => KamiEvent | null
   getEventsByType: (type: string) => KamiEvent[]
@@ -16,9 +22,10 @@ declare global {
   }
 }
 
-let stateRef: { events: KamiEvent[]; connected: boolean } = {
+let stateRef: { events: KamiEvent[]; connected: boolean; selection: KamiSelection | null } = {
   events: [],
   connected: false,
+  selection: null,
 }
 
 export function initBridge() {
@@ -28,6 +35,12 @@ export function initBridge() {
     },
     get connected() {
       return stateRef.connected
+    },
+    get selection() {
+      return stateRef.selection
+    },
+    set selection(val: KamiSelection | null) {
+      stateRef.selection = val
     },
     version: '1.0.0',
     getEvents: () => [...stateRef.events],
@@ -43,5 +56,5 @@ export function initBridge() {
 }
 
 export function updateBridge(events: KamiEvent[], connected: boolean) {
-  stateRef = { events, connected }
+  stateRef = { events, connected, selection: stateRef.selection }
 }

@@ -129,6 +129,52 @@ func TestMCPTools_SetSpeedHandler(t *testing.T) {
 	}
 }
 
+func TestMCPTools_GetSelectionHandler(t *testing.T) {
+	_, srv := setupMCPTest()
+
+	// No selection yet
+	handler := handleGetSelection(srv)
+	res, _, err := handler(context.Background(), nil, emptyInput{})
+	if err != nil {
+		t.Fatalf("get_selection: %v", err)
+	}
+	tc := res.Content[0].(*sdkmcp.TextContent)
+	var empty map[string]any
+	if err := json.Unmarshal([]byte(tc.Text), &empty); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	elems, ok := empty["elements"]
+	if !ok {
+		t.Fatal("missing elements key")
+	}
+	if arr, ok := elems.([]any); !ok || len(arr) != 0 {
+		t.Errorf("expected empty elements, got %v", elems)
+	}
+
+	// Set selection and retrieve
+	srv.SetSelection(map[string]any{
+		"elements": []any{
+			map[string]any{"type": "node", "id": "recall"},
+		},
+		"timestamp": "2026-02-25T10:00:00Z",
+	})
+
+	res, _, err = handler(context.Background(), nil, emptyInput{})
+	if err != nil {
+		t.Fatalf("get_selection after set: %v", err)
+	}
+	tc = res.Content[0].(*sdkmcp.TextContent)
+	var sel map[string]any
+	if err := json.Unmarshal([]byte(tc.Text), &sel); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	elems = sel["elements"]
+	arr, ok := elems.([]any)
+	if !ok || len(arr) != 1 {
+		t.Errorf("expected 1 element, got %v", elems)
+	}
+}
+
 func TestMCPTools_RegistersAllTools(t *testing.T) {
 	bridge := NewEventBridge(nil)
 	dc := NewDebugController(bridge)

@@ -121,6 +121,108 @@ func TestServer_HealthEndpoint(t *testing.T) {
 	}
 }
 
+func TestServer_SelectionStoredAndRetrieved(t *testing.T) {
+	bridge := NewEventBridge(nil)
+	defer bridge.Close()
+
+	id, ch := bridge.Subscribe()
+	defer bridge.Unsubscribe(id)
+
+	srv := NewServer(Config{Bridge: bridge})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+
+	payload := `{"elements":[{"type":"node","id":"recall"},{"type":"agent","id":"Herald"}],"timestamp":"2026-02-25T10:00:00Z"}`
+	resp, err := http.Post(
+		fmt.Sprintf("http://%s/events/selection", httpAddr),
+		"application/json",
+		strings.NewReader(payload),
+	)
+	if err != nil {
+		t.Fatalf("POST /events/selection: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", resp.StatusCode)
+	}
+
+	// Verify event was emitted to bridge
+	select {
+	case evt := <-ch:
+		if evt.Type != "browser_selection" {
+			t.Errorf("Type = %q, want browser_selection", evt.Type)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for selection event")
+	}
+
+	// Verify selection is stored on the server
+	sel := srv.GetSelection()
+	if sel == nil {
+		t.Fatal("GetSelection() returned nil")
+	}
+	elems, ok := sel["elements"]
+	if !ok {
+		t.Fatal("selection missing 'elements' key")
+	}
+	arr, ok := elems.([]any)
+	if !ok {
+		t.Fatalf("elements is %T, want []any", elems)
+	}
+	if len(arr) != 2 {
+		t.Errorf("len(elements) = %d, want 2", len(arr))
+	}
+}
+
+func TestServer_SelectionClearedOnEmpty(t *testing.T) {
+	bridge := NewEventBridge(nil)
+	defer bridge.Close()
+
+	srv := NewServer(Config{Bridge: bridge})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+
+	// Set a selection
+	resp, _ := http.Post(
+		fmt.Sprintf("http://%s/events/selection", httpAddr),
+		"application/json",
+		strings.NewReader(`{"elements":[{"type":"node","id":"recall"}]}`),
+	)
+	resp.Body.Close()
+
+	if srv.GetSelection() == nil {
+		t.Fatal("expected selection to be set")
+	}
+
+	// Clear with empty elements
+	resp, _ = http.Post(
+		fmt.Sprintf("http://%s/events/selection", httpAddr),
+		"application/json",
+		strings.NewReader(`{"elements":[]}`),
+	)
+	resp.Body.Close()
+
+	sel := srv.GetSelection()
+	if sel == nil {
+		t.Fatal("GetSelection() returned nil after clear")
+	}
+	elems := sel["elements"].([]any)
+	if len(elems) != 0 {
+		t.Errorf("expected empty elements after clear, got %d", len(elems))
+	}
+}
+
 func TestServer_BrowserEventForwarded(t *testing.T) {
 	bridge := NewEventBridge(nil)
 	defer bridge.Close()

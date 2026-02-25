@@ -58,6 +58,9 @@ type Server struct {
 	mu      sync.Mutex
 	wsConns map[int]*wsConn
 	nextWS  int
+
+	selMu     sync.RWMutex
+	selection map[string]any
 }
 
 // NewServer creates a KamiServer. Call Start to begin serving.
@@ -170,6 +173,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 
 // handleBrowserEvent receives browser interaction events and emits them
 // to the bridge so MCP tools can observe user interaction.
+// Selection events are additionally stored for retrieval via GetSelection.
 func (s *Server) handleBrowserEvent(eventType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var payload map[string]any
@@ -177,12 +181,29 @@ func (s *Server) handleBrowserEvent(eventType string) http.HandlerFunc {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
+		if eventType == "selection" {
+			s.SetSelection(payload)
+		}
 		s.bridge.Emit(Event{
 			Type: EventType("browser_" + eventType),
 			Data: payload,
 		})
 		w.WriteHeader(http.StatusNoContent)
 	}
+}
+
+// GetSelection returns the most recent browser selection payload, or nil.
+func (s *Server) GetSelection() map[string]any {
+	s.selMu.RLock()
+	defer s.selMu.RUnlock()
+	return s.selection
+}
+
+// SetSelection stores a browser selection payload for MCP tool retrieval.
+func (s *Server) SetSelection(sel map[string]any) {
+	s.selMu.Lock()
+	defer s.selMu.Unlock()
+	s.selection = sel
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -202,6 +223,8 @@ func (s *Server) StartOnAvailablePort(ctx context.Context) (httpAddr, wsAddr str
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /events/stream", s.handleSSE)
 	mux.HandleFunc("POST /events/click", s.handleBrowserEvent("click"))
+	mux.HandleFunc("POST /events/hover", s.handleBrowserEvent("hover"))
+	mux.HandleFunc("POST /events/selection", s.handleBrowserEvent("selection"))
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 
 	if s.cfg.SPA != nil {
