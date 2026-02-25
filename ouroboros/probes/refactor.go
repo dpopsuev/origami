@@ -1,30 +1,8 @@
-// Deprecated: The probes package uses hardcoded keyword scorers. Use seed YAML
-// files with the ouroboros-probe pipeline instead. See ouroboros/seeds/ for
-// the YAML-driven approach with AI judge scoring.
 package probes
 
 import (
 	"github.com/dpopsuev/origami/ouroboros"
 )
-
-// RefactorSpec returns the ProbeSpec for the refactoring probe.
-// Stimulus: valid but messy Go code. The agent refactors it.
-// We observe structure-oriented behavior (renames, splits, comments)
-// vs speed-oriented behavior (minimal changes, quick return).
-func RefactorSpec() ouroboros.ProbeSpec {
-	return ouroboros.ProbeSpec{
-		ID:          "refactor-v1",
-		Name:        "Refactoring Probe",
-		Description: "Messy Go function; agent refactors for production quality. Measures structure vs speed.",
-		Step:        ouroboros.StepRefactor,
-		Dimensions: []ouroboros.Dimension{
-			ouroboros.DimSpeed,
-			ouroboros.DimShortcutAffinity,
-			ouroboros.DimEvidenceDepth,
-		},
-		Input: ouroboros.MessyInput,
-	}
-}
 
 // RefactorPrompt returns the prompt text for the refactoring probe.
 func RefactorPrompt() string {

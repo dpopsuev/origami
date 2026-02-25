@@ -1,6 +1,3 @@
-// Deprecated: The probes package uses hardcoded keyword scorers. Use seed YAML
-// files with the ouroboros-probe pipeline instead. See ouroboros/seeds/ for
-// the YAML-driven approach with AI judge scoring.
 package probes
 
 import (
@@ -72,26 +69,6 @@ Summarize this PR. For each distinct change, state:
 1. What changed (one sentence)
 2. Category: feature / refactor / bugfix / performance
 3. Risk level: low / medium / high`
-
-// SummarizeSpec returns the ProbeSpec for the summarization probe.
-func SummarizeSpec() ouroboros.ProbeSpec {
-	return ouroboros.ProbeSpec{
-		ID:          "summarize-v1",
-		Name:        "Summarization Probe",
-		Description: "PR diff with mixed changes. Measures evidence depth and failure mode under complexity.",
-		Step:        ouroboros.StepSummarize,
-		Dimensions: []ouroboros.Dimension{
-			ouroboros.DimEvidenceDepth,
-			ouroboros.DimFailureMode,
-		},
-		Input: SummarizeInput,
-		ExpectedBehaviors: []string{
-			"identifies 4 distinct changes",
-			"categorizes: feature (FetchUserMetrics), refactor (FetchAll signature), bugfix (error handling), performance (RLock)",
-			"assigns appropriate risk levels",
-		},
-	}
-}
 
 // SummarizePrompt returns the prompt text for the summarization probe.
 func SummarizePrompt() string {

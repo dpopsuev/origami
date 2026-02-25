@@ -1,7 +1,6 @@
 package ouroboros
 
 import (
-	"context"
 	"time"
 
 	"github.com/dpopsuev/origami"
@@ -32,31 +31,6 @@ func AllDimensions() []Dimension {
 	}
 }
 
-// ProbeStep identifies a step in the Ouroboros probe pipeline,
-// analogous to orchestrate.PipelineStep but framework-level.
-type ProbeStep string
-
-const (
-	StepRefactor    ProbeStep = "O0_REFACTOR"
-	StepDebug       ProbeStep = "O1_DEBUG"
-	StepSummarize   ProbeStep = "O2_SUMMARIZE"
-	StepAmbiguity   ProbeStep = "O3_AMBIGUITY"
-	StepPersistence ProbeStep = "O4_PERSISTENCE"
-)
-
-// ProbeSpec defines a behavioral probe: its identity, what it measures,
-// and the stimulus material. The agent does NOT know which dimensions
-// are being measured — it just does the task.
-type ProbeSpec struct {
-	ID                string      `json:"id"`
-	Name              string      `json:"name"`
-	Description       string      `json:"description"`
-	Step              ProbeStep   `json:"step"`
-	Dimensions        []Dimension `json:"dimensions"`
-	Input             string      `json:"input"`
-	ExpectedBehaviors []string    `json:"expected_behaviors,omitempty"`
-}
-
 // ModelProfile is the empirical output of one Ouroboros cycle for one model.
 // Append-only: historical profiles are never overwritten.
 type ModelProfile struct {
@@ -70,11 +44,6 @@ type ModelProfile struct {
 	CostProfile      framework.CostProfile          `json:"cost_profile"`
 	RawResults       []ProbeResult                  `json:"raw_results"`
 }
-
-// Dispatcher sends a probe prompt to a model and returns the raw text response.
-// The ProbeStep parameter gives routing context (which probe is running),
-// enabling per-probe model selection by domain adapters.
-type Dispatcher func(ctx context.Context, step ProbeStep, prompt string) (string, error)
 
 // DiscoveryConfig controls the recursive discovery loop.
 type DiscoveryConfig struct {

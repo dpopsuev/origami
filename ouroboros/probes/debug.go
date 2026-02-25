@@ -1,6 +1,3 @@
-// Deprecated: The probes package uses hardcoded keyword scorers. Use seed YAML
-// files with the ouroboros-probe pipeline instead. See ouroboros/seeds/ for
-// the YAML-driven approach with AI judge scoring.
 package probes
 
 import (
@@ -35,27 +32,6 @@ What is the root cause of the errors? Provide your analysis as structured text:
 2. Evidence (list the specific log lines)
 3. Red herrings you considered and rejected (with reasoning)
 4. Recommended fix`
-
-// DebugSpec returns the ProbeSpec for the debugging probe.
-func DebugSpec() ouroboros.ProbeSpec {
-	return ouroboros.ProbeSpec{
-		ID:          "debug-v1",
-		Name:        "Debugging Probe",
-		Description: "Log output with red herring and subtle root cause. Measures diagnostic speed and rigor.",
-		Step:        ouroboros.StepDebug,
-		Dimensions: []ouroboros.Dimension{
-			ouroboros.DimSpeed,
-			ouroboros.DimShortcutAffinity,
-			ouroboros.DimConvergenceThreshold,
-		},
-		Input: DebugInput,
-		ExpectedBehaviors: []string{
-			"identifies goroutine leak as root cause",
-			"links to v2.14.0 deployment / async notification worker",
-			"rejects memory as red herring (52-56% is not critical)",
-		},
-	}
-}
 
 // DebugPrompt returns the prompt text for the debugging probe.
 func DebugPrompt() string {

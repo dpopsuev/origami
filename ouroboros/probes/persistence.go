@@ -1,6 +1,3 @@
-// Deprecated: The probes package uses hardcoded keyword scorers. Use seed YAML
-// files with the ouroboros-probe pipeline instead. See ouroboros/seeds/ for
-// the YAML-driven approach with AI judge scoring.
 package probes
 
 import (
@@ -48,27 +45,6 @@ The function must handle ALL four formats:
 
 Note: A simple line-by-line split on "=" will NOT work because of the mixed formats.
 Start with whatever approach you think is best.`
-
-// PersistenceSpec returns the ProbeSpec for the persistence probe.
-func PersistenceSpec() ouroboros.ProbeSpec {
-	return ouroboros.ProbeSpec{
-		ID:          "persistence-v1",
-		Name:        "Persistence Probe",
-		Description: "Multi-format parser that defeats naive approaches. Measures retry behavior and approach variation.",
-		Step:        ouroboros.StepPersistence,
-		Dimensions: []ouroboros.Dimension{
-			ouroboros.DimPersistence,
-			ouroboros.DimConvergenceThreshold,
-		},
-		Input: PersistenceInput,
-		ExpectedBehaviors: []string{
-			"handles all 4 formats",
-			"does not rely solely on splitting on '='",
-			"handles base64 decoding",
-			"handles environment variable defaults",
-		},
-	}
-}
 
 // PersistencePrompt returns the prompt text for the persistence probe.
 func PersistencePrompt() string {

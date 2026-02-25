@@ -6,19 +6,6 @@ import (
 	"github.com/dpopsuev/origami/ouroboros"
 )
 
-func TestAmbiguitySpec(t *testing.T) {
-	spec := AmbiguitySpec()
-	if spec.ID != "ambiguity-v1" {
-		t.Errorf("ID = %q, want ambiguity-v1", spec.ID)
-	}
-	if spec.Step != ouroboros.StepAmbiguity {
-		t.Errorf("Step = %q, want %q", spec.Step, ouroboros.StepAmbiguity)
-	}
-	if len(spec.Dimensions) != 2 {
-		t.Errorf("Dimensions count = %d, want 2", len(spec.Dimensions))
-	}
-}
-
 func TestScoreAmbiguity_ThoroughResolution(t *testing.T) {
 	response := `The requirements contain two contradictions:
 

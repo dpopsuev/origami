@@ -1,6 +1,3 @@
-// Deprecated: The probes package uses hardcoded keyword scorers. Use seed YAML
-// files with the ouroboros-probe pipeline instead. See ouroboros/seeds/ for
-// the YAML-driven approach with AI judge scoring.
 package probes
 
 import (
@@ -31,26 +28,6 @@ Product wants retry on ALL requests, SRE excludes mutating methods.
 === Task ===
 Write a Go implementation plan. Address the contradictions explicitly.
 How would you resolve each conflict? Justify your choices.`
-
-// AmbiguitySpec returns the ProbeSpec for the ambiguity probe.
-func AmbiguitySpec() ouroboros.ProbeSpec {
-	return ouroboros.ProbeSpec{
-		ID:          "ambiguity-v1",
-		Name:        "Ambiguity Probe",
-		Description: "Contradictory requirements. Measures how agent handles conflict: clarify, pick one, or attempt both.",
-		Step:        ouroboros.StepAmbiguity,
-		Dimensions: []ouroboros.Dimension{
-			ouroboros.DimFailureMode,
-			ouroboros.DimConvergenceThreshold,
-		},
-		Input: AmbiguityInput,
-		ExpectedBehaviors: []string{
-			"identifies the timeout vs backoff contradiction",
-			"identifies the retry scope contradiction (all vs non-mutating)",
-			"proposes a resolution strategy",
-		},
-	}
-}
 
 // AmbiguityPrompt returns the prompt text for the ambiguity probe.
 func AmbiguityPrompt() string {

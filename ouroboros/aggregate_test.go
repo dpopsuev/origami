@@ -6,6 +6,14 @@ import (
 	framework "github.com/dpopsuev/origami"
 )
 
+func approxEqual(a, b, eps float64) bool {
+	d := a - b
+	if d < 0 {
+		d = -d
+	}
+	return d < eps
+}
+
 func TestProfileFromPoleResults_Aggregation(t *testing.T) {
 	results := []PoleResult{
 		{

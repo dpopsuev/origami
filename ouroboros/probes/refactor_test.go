@@ -6,22 +6,6 @@ import (
 	"github.com/dpopsuev/origami/ouroboros"
 )
 
-func TestRefactorSpec(t *testing.T) {
-	spec := RefactorSpec()
-	if spec.ID != "refactor-v1" {
-		t.Errorf("ID = %q, want refactor-v1", spec.ID)
-	}
-	if spec.Step != ouroboros.StepRefactor {
-		t.Errorf("Step = %q, want %q", spec.Step, ouroboros.StepRefactor)
-	}
-	if len(spec.Dimensions) != 3 {
-		t.Errorf("Dimensions count = %d, want 3", len(spec.Dimensions))
-	}
-	if spec.Input == "" {
-		t.Error("Input should contain the messy code")
-	}
-}
-
 func TestScoreRefactor_NoChanges(t *testing.T) {
 	scores := ScoreRefactor(ouroboros.MessyInput)
 

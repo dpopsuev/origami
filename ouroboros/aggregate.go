@@ -6,7 +6,28 @@ import (
 	framework "github.com/dpopsuev/origami"
 )
 
+const BatteryVersion = "ouroboros-v1"
 const SeedBatteryVersion = "ouroboros-seed-v1"
+
+// aggregateDimensions averages dimension scores across all probe results.
+// Each dimension's final score is the mean of all probes that measured it.
+func aggregateDimensions(profile *ModelProfile) {
+	sums := make(map[Dimension]float64)
+	counts := make(map[Dimension]int)
+
+	for _, result := range profile.RawResults {
+		for dim, score := range result.DimensionScores {
+			sums[dim] += score
+			counts[dim]++
+		}
+	}
+
+	for _, dim := range AllDimensions() {
+		if counts[dim] > 0 {
+			profile.Dimensions[dim] = sums[dim] / float64(counts[dim])
+		}
+	}
+}
 
 // PoleResultToProbeResult converts a judge-produced PoleResult into a
 // ProbeResult suitable for dimension aggregation. This bridges the seed

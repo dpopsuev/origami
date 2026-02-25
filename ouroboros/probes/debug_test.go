@@ -6,19 +6,6 @@ import (
 	"github.com/dpopsuev/origami/ouroboros"
 )
 
-func TestDebugSpec(t *testing.T) {
-	spec := DebugSpec()
-	if spec.ID != "debug-v1" {
-		t.Errorf("ID = %q, want debug-v1", spec.ID)
-	}
-	if spec.Step != ouroboros.StepDebug {
-		t.Errorf("Step = %q, want %q", spec.Step, ouroboros.StepDebug)
-	}
-	if len(spec.Dimensions) != 3 {
-		t.Errorf("Dimensions count = %d, want 3", len(spec.Dimensions))
-	}
-}
-
 func TestScoreDebug_PerfectDiagnosis(t *testing.T) {
 	response := `1. Root cause: Goroutine leak from the async notification worker (v2.14.0) exhausting the connection pool.
 2. Evidence:

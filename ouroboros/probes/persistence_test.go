@@ -6,19 +6,6 @@ import (
 	"github.com/dpopsuev/origami/ouroboros"
 )
 
-func TestPersistenceSpec(t *testing.T) {
-	spec := PersistenceSpec()
-	if spec.ID != "persistence-v1" {
-		t.Errorf("ID = %q, want persistence-v1", spec.ID)
-	}
-	if spec.Step != ouroboros.StepPersistence {
-		t.Errorf("Step = %q, want %q", spec.Step, ouroboros.StepPersistence)
-	}
-	if len(spec.Dimensions) != 2 {
-		t.Errorf("Dimensions count = %d, want 2", len(spec.Dimensions))
-	}
-}
-
 func TestScorePersistence_ComprehensiveParser(t *testing.T) {
 	response := `func ParseConfig(input string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})

@@ -6,19 +6,6 @@ import (
 	"github.com/dpopsuev/origami/ouroboros"
 )
 
-func TestSummarizeSpec(t *testing.T) {
-	spec := SummarizeSpec()
-	if spec.ID != "summarize-v1" {
-		t.Errorf("ID = %q, want summarize-v1", spec.ID)
-	}
-	if spec.Step != ouroboros.StepSummarize {
-		t.Errorf("Step = %q, want %q", spec.Step, ouroboros.StepSummarize)
-	}
-	if len(spec.Dimensions) != 2 {
-		t.Errorf("Dimensions count = %d, want 2", len(spec.Dimensions))
-	}
-}
-
 func TestScoreSummarize_CompleteSummary(t *testing.T) {
 	response := `1. **New FetchUserMetrics method** - Added a new function to retrieve aggregated user metrics.
    Category: feature | Risk: low
