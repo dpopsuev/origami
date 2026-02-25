@@ -1,0 +1,131 @@
+# Contract — Consumer Ergonomics
+
+**Status:** draft  
+**Goal:** Add three missing framework primitives (`ResolvePipelinePath`, `WithOutputCapture`, `DefaultWalker`) that eliminate boilerplate in consumers like Asterisk and Achilles.  
+**Serves:** Polishing & Presentation (nice)
+
+## Contract rules
+
+- Each primitive must be usable independently — no forced coupling between the three.
+- `DefaultWalker` must produce a deterministic identity for reproducible pipeline runs.
+- `WithOutputCapture` must not interfere with existing `WalkObserver` implementations — it stacks, not replaces.
+- All three are public API additions. They must be backward-compatible (no breaking changes to existing consumers).
+
+## Context
+
+- **Achilles audit:** Analysis of Achilles (second Origami consumer) revealed three API gaps that force consumers to write boilerplate code. Each gap is the same pattern: a generic need addressed with ad-hoc, consumer-specific code.
+- **ResolvePipelinePath gap:** Both Asterisk and Achilles hardcode relative paths to pipeline YAML files. When the binary runs from a different directory, paths break. Achilles uses `pipelines/achilles.yaml` directly; Asterisk uses `internal/orchestrate/pipeline_rca.yaml`. A framework helper to resolve pipeline paths from `go:embed` or the file system would eliminate this fragility.
+- **WithOutputCapture gap:** Both consumers need to collect artifacts produced at each node after a walk. Currently, each implements its own walk-and-collect pattern. A generic `RunOption` that captures artifacts per node would eliminate duplication.
+- **DefaultWalker gap:** Achilles doesn't use personas or elements — it just needs "a walker that works." Currently it must construct a full `Walker` with element and persona to call `graph.Walk()`. A factory that returns a sensible default would lower the entry barrier for simple consumers.
+
+### Current architecture
+
+```mermaid
+flowchart LR
+    subgraph consumer [Consumer boilerplate]
+        HP["Hardcoded paths\n(fragile)"]
+        AC["Ad-hoc artifact\ncollection"]
+        WB["Manual walker\nconstruction"]
+    end
+
+    HP --> Walk["graph.Walk()"]
+    AC --> Walk
+    WB --> Walk
+```
+
+### Desired architecture
+
+```mermaid
+flowchart LR
+    subgraph framework [Framework primitives]
+        RPP["ResolvePipelinePath\n(embed or fs)"]
+        WOC["WithOutputCapture\n(RunOption)"]
+        DW["DefaultWalker\n(sensible defaults)"]
+    end
+
+    RPP --> Walk["graph.Walk()"]
+    WOC --> Walk
+    DW --> Walk
+```
+
+## FSC artifacts
+
+Code only — no FSC artifacts. These are small API additions documented in Go package docs.
+
+## Execution strategy
+
+Phase 1-3 each deliver one primitive with unit tests. Phase 4 proves ergonomics by updating Achilles to use all three. Phase 5 validates.
+
+## Coverage matrix
+
+| Layer | Applies | Rationale |
+|-------|---------|-----------|
+| **Unit** | yes | Path resolution (embed vs fs fallback), output capture (artifact collection per node), DefaultWalker (deterministic identity) |
+| **Integration** | yes | Phase 4: Achilles walks a pipeline using all three primitives end-to-end |
+| **Contract** | yes | Public API additions — signatures must be stable |
+| **E2E** | no | Primitives are building blocks, not user-facing features |
+| **Concurrency** | yes | WithOutputCapture must be safe for parallel walks (fan-out) |
+| **Security** | no | No trust boundaries affected — local file resolution, in-memory artifact collection |
+
+## Tasks
+
+### Phase 1 — ResolvePipelinePath
+
+- [ ] **P1** Define `ResolvePipelinePath(name string, opts ...ResolveOption) (string, error)` in a new file (e.g. `resolve.go`)
+- [ ] **P2** Resolution strategy: (1) check `go:embed` registry, (2) check `$ORIGAMI_PIPELINES` env var, (3) check working directory, (4) return error with searched locations
+- [ ] **P3** `RegisterEmbeddedPipeline(name string, content []byte)` — consumers call this in `init()` to register `go:embed` pipelines
+- [ ] **P4** Unit tests: embedded pipeline found, fs fallback, env var override, not-found error message lists searched paths
+
+### Phase 2 — WithOutputCapture
+
+- [ ] **O1** Define `WithOutputCapture() RunOption` that returns a `RunOption` and an `*OutputCapture` handle
+- [ ] **O2** `OutputCapture` struct: `Artifacts() map[string]Artifact` (node name → artifact), `ArtifactAt(node string) (Artifact, bool)`
+- [ ] **O3** Implementation: `OutputCapture` implements `WalkObserver`, captures artifacts on `node_exit` events. Stacks with any existing observer via `CompositeObserver`.
+- [ ] **O4** Thread-safety: `OutputCapture` must be safe for concurrent reads during parallel fan-out walks
+- [ ] **O5** Unit tests: walk a 3-node graph, verify artifacts captured at each node, verify concurrent safety
+
+### Phase 3 — DefaultWalker
+
+- [ ] **W1** Define `DefaultWalker() Walker` factory in `walker.go` or `defaults.go`
+- [ ] **W2** Returns a Walker with: Earth element (stable, methodical — safest default), Sentinel persona (observant, reliable), deterministic seed for reproducibility
+- [ ] **W3** `DefaultWalkerWithElement(element Element) Walker` — override just the element, keep persona consistent
+- [ ] **W4** Unit tests: DefaultWalker produces deterministic identity across calls, element override works
+
+### Phase 4 — Prove ergonomics (Achilles)
+
+- [ ] **A1** Update Achilles `main.go` to use `ResolvePipelinePath("achilles")` instead of hardcoded path
+- [ ] **A2** Update Achilles to use `WithOutputCapture()` instead of ad-hoc artifact collection
+- [ ] **A3** Update Achilles to use `DefaultWalker()` instead of manual walker construction
+- [ ] **A4** Verify Achilles `go build ./...` and `go test ./...` pass with reduced boilerplate
+
+### Phase 5 — Validate and tune
+
+- [ ] **V1** Validate (green) — `go build ./...`, `go test ./...` in both Origami and Achilles. All three primitives work independently and together.
+- [ ] **V2** Tune (blue) — Review naming, godoc, error messages. Ensure discoverability.
+- [ ] **V3** Validate (green) — all tests still pass after tuning.
+
+## Acceptance criteria
+
+**Given** Achilles registers its pipeline via `RegisterEmbeddedPipeline("achilles", pipelineYAML)`,  
+**When** `ResolvePipelinePath("achilles")` is called from any working directory,  
+**Then** the embedded pipeline content is returned without path errors.
+
+**Given** a 3-node pipeline is walked with `WithOutputCapture()`,  
+**When** the walk completes,  
+**Then** `capture.Artifacts()` contains entries for all 3 nodes with their produced artifacts.
+
+**Given** `DefaultWalker()` is called twice in separate processes,  
+**When** the walker identities are compared,  
+**Then** they are identical (deterministic).
+
+**Given** Achilles uses all three primitives,  
+**When** the total boilerplate lines in `main.go` are compared before and after,  
+**Then** the reduction is measurable (target: 30%+ fewer lines in pipeline setup).
+
+## Security assessment
+
+No trust boundaries affected. `ResolvePipelinePath` reads local files and embedded content only. `WithOutputCapture` operates on in-memory artifacts. `DefaultWalker` produces a static identity with no external inputs.
+
+## Notes
+
+2026-02-25 — Contract created. Three primitives identified during Achilles audit (framework-implementation boundary analysis). Each addresses a pattern where both Asterisk and Achilles wrote ad-hoc code for a generic need. ResolvePipelinePath eliminates hardcoded paths, WithOutputCapture eliminates ad-hoc artifact collection, DefaultWalker lowers the entry barrier for simple consumers.

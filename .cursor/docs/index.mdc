@@ -1,7 +1,7 @@
 # Index
 
 ## Directories
-(No directories)
+- `case-studies/` — Competitive analysis and architectural case studies
 
 ## Files
 - `architecture.md` — Origami architecture overview and layer diagram

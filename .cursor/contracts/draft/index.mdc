@@ -5,3 +5,4 @@
 
 ## Files
 - `prompt-calibration.md` — Framework-level calibration-driven prompt tuning infrastructure (deferred)
+- `domain-calibration.md` — Scope calibration as per-domain; define `curate/eval/` types and runner for extraction quality measurement (moved from Asterisk)

@@ -6,11 +6,12 @@
 - `draft/` — planned contracts not yet being executed
 
 ## Active
-- `active/papercup-protocol-maturity.md` — Evolve Papercup from orchestration to choreography. Phase 1 (choreography) + Phase 5 (transport decoupling) complete. Phases 2-4 remaining.
-- `active/migrate-ouroboros-to-marshaller.md` — Delete standalone Ouroboros MCP server; serve all discovery tools via PipelineServer with domain hooks.
-- `active/knowledge-source-catalog.md` — Rename Workspace to KnowledgeSourceCatalog, Repo to Source, introduce KnowledgeSourceRouter for tag-based routing.
+(No active contracts)
 
 ## Completed (recent)
+- `completed/framework/papercup-protocol-maturity.md` — Papercup choreography, zone stickiness, work stealing, adaptive lifecycle, transport decoupling. Complete.
+- `completed/framework/migrate-ouroboros-to-marshaller.md` — Ouroboros discovery tools served via PipelineServer domain hooks. Complete.
+- `completed/framework/knowledge-source-catalog.md` — KnowledgeSourceCatalog + Source types, KnowledgeSourceRouter for tag-based routing. Complete.
 - `completed/framework/calibration-primitives.md` — Generic calibration types, interfaces, aggregation, report formatting (`calibrate/` package). Companion: Asterisk `calibration-primitives-consumer`. Complete.
 - `completed/framework/marshaller-step-schema-factory.md` — Replace freeform `submit_artifact` with schema-validated `submit_step` tool using StepSchemas as a step factory. Complete.
 - `completed/framework/origami-cursor-first-architecture.md` — CLIDispatcher, skill scaffold, provider routing. Cursor as first-class citizen.
@@ -19,7 +20,12 @@
 See `current-goal.mdc` for the full completed contracts list.
 
 ## Draft
+- `draft/kami-live-debugger.md` — Kami live agentic debugger (Demiurge pattern: MCP + HTTP/SSE + WS). EventBridge, debug API, MCP tools, recorder/replayer, React frontend. Presentation-critical.
+- `draft/ouroboros-seed-pipeline.md` — Replace Ouroboros v1 (custom runner + keyword scorers) with a 3-node pipeline (Generator/Subject/Judge) driven by YAML seed definitions with dichotomous pole scoring. Includes Persona Sheet output and calibrate/curate integration.
+- `draft/consumer-ergonomics.md` — Three missing framework primitives: ResolvePipelinePath, WithOutputCapture, DefaultWalker. API polish for consumers.
 - `draft/prompt-calibration.md` — Framework-level prompt tuning loop (deferred).
+- `draft/domain-calibration.md` — Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality.
+- `draft/case-study-omo-agentic-arms-race.md` — Competitive analysis of Oh My OpenCode. Concept mapping, auto-routing gap, provider fallback, entry classifier pattern.
 
 ## Files
 - `_TEMPLATE.md` — contract template (copy to create new contracts)
