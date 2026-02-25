@@ -47,7 +47,7 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 |---|----------|------|-------|
 | 5 | `ouroboros-seed-pipeline` | should | Largest contract. Seeds, 3-node pipeline, PersonaSheet, auto-routing. Depends on #4. |
 
-**CHECKPOINT C** — Most critical checkpoint. Ouroboros touches the deepest framework layer. Verify: `go get`, build, test, stub calibration, **wet calibration on 3 cases**. The deprecated runner must not break Asterisk's meta-calibration integration.
+**CHECKPOINT C** — Most critical checkpoint. Ouroboros touches the deepest framework layer. Verify: `go get`, build, test, stub calibration, **wet calibration on 3 cases**. The deprecated runner must not break Asterisk's meta-calibration integration. **E2E gate:** `go test -run TestE2E ./...` — all 4 scenario YAMLs + 3 real-YAML walks + ouroboros-probe walk (from `e2e-dsl-testing`).
 
 ### Sprint 4 — Kami debugger
 
@@ -55,7 +55,7 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 |---|----------|------|-------|
 | 6 | `kami-live-debugger` | should | Presentation-critical. Pipeline layer must be stable (#5). |
 
-**CHECKPOINT D** — Last checkpoint before demo integration. Verify Kami's EventBridge and new MCP tools don't break Asterisk's existing MCP server. SignalBus changes must be backward-compatible.
+**CHECKPOINT D** — Last checkpoint before demo integration. Verify Kami's EventBridge and new MCP tools don't break Asterisk's existing MCP server. SignalBus changes must be backward-compatible. **E2E gate:** same as C + Kami EventBridge integration (from `e2e-dsl-testing` task I2).
 
 ### Sprint 5 — Demo (Asterisk)
 
@@ -63,7 +63,15 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 |---|----------|------|-------|
 | — | *Asterisk: `demo-presentation`* | should | Depends on Kami (#6). Police Station theme, `asterisk demo` CLI, recorded replay. **This is the presentation.** |
 
-**CHECKPOINT E** — Final gate. Everything works. Demo replays cleanly. Calibration hasn't regressed. Ready to present.
+**CHECKPOINT E** — Final gate. Everything works. Demo replays cleanly. Calibration hasn't regressed. **E2E gate:** full sweep — all scenarios, all real-YAML walks, all injected walks. Ready to present.
+
+### Sprint 6 — LSP (post-demo, last goal)
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| — | `origami-lsp` | vision | Language Server for pipeline YAML. Color coding, virtual text hints, Kami live connection. Depends on stable DSL (all sprints). |
+
+**CHECKPOINT F** — LSP validates all E2E scenario YAMLs without false diagnostics. Completion, hover, and color coding work for all element/persona values.
 
 ### Post-presentation polish (no checkpoints)
 
@@ -72,6 +80,24 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 | 8 | `provider-resilience` | nice | Fallback chains + intent classifier. Polishes dispatch layer. |
 | 9 | `domain-calibration` | nice | Per-domain eval types. Not presentation-critical. |
 | 10 | `prompt-calibration` | nice | Deferred. Post-presentation tuning. |
+| 11 | `origami-collections` | vision | Package manager + collection format (FQCNs, MergeCollections, CLI, SubgraphNode). Prevents O(N) duplication. No timeline. |
+| 13 | `durable-execution` | should | Checkpointer interface + HITL Interrupt/Resume. Highest-priority infrastructure gap (LangGraph Gaps 1+2). Kami benefits from Interrupt/Resume. |
+| 14 | `memory-evolution` | nice | Namespaced, searchable, persistent MemoryStore. Extends walker-experience's InMemoryStore (LangGraph Gap 4). |
+| 15 | `pipeline-efficiency` | nice | Node caching + fan-in merge strategies. Runtime optimizations (LangGraph Gaps 5+6). |
+
+### Product — Visual Editor (post-LSP, post-collections)
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| 12 | `visual-editor` | vision | Separate product. Drag-and-drop pipeline builder, bidirectional YAML sync, run management dashboard. Community (open source, single-user) + Enterprise (RBAC, multi-tenancy, audit, SSO) editions. Ansible open-core model — the UI is the money maker. Depends on Kami (#6), LSP, Collections (#11). |
+
+**No checkpoint** — the Visual Editor is a standalone product, not a framework change. It consumes Origami's output but does not modify the framework.
+
+### Cross-cutting (no dedicated sprint)
+
+| Contract | Tier | Notes |
+|----------|------|-------|
+| `e2e-dsl-testing` | should | E2E walk tests injected as gates into CHECKPOINTs C-F. No dedicated sprint. |
 
 ### Analysis (complete)
 
@@ -79,6 +105,9 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 |----------|--------|-------|
 | `case-study-omo-agentic-arms-race` | done | Implementation extracted to `provider-resilience` + `ouroboros-seed-pipeline` Ph10. |
 | `case-study-crewai-crews-and-flows` | done | Implementation extracted to `walker-experience`. |
+| `case-study-ansible-collections` | done | Implementation extracted to `origami-collections` + `origami-lsp`. |
+| `case-study-visual-editor-landscape` | done | Excalidraw + Mermaid + Ansible Automation Controller business model analysis. Implementation extracted to `visual-editor`. |
+| `case-study-langgraph-graph-duality` | done | LangGraph (25.1k stars) state-centric vs walker-centric graph analysis. Implementation extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`, injected into `origami-collections`. |
 
 ## Framework Maturity (complete)
 

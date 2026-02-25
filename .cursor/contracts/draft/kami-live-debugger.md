@@ -11,6 +11,7 @@
 - The frontend is embedded via `go:embed` — single binary, zero runtime dependencies.
 - EventBridge unifies both `SignalBus` and `WalkObserver` into a single `KamiEvent` stream. No separate SSE endpoints.
 - Replay mode must be indistinguishable from live mode in the frontend — same event format, same rendering.
+- Frontend colors must use Red Hat Color Collection 1 (red + purple + teal) and the element-to-color mapping defined in `docs/rh-presentation-dna.md` Section 2. No arbitrary color choices.
 
 ## Context
 
@@ -73,6 +74,7 @@ flowchart TB
 | Kami architecture reference (Demiurge pattern mapping) | `docs/kami-architecture.md` | domain |
 | KamiEvent schema reference | `docs/kami-events.md` | domain |
 | Theme interface guide (for consumers) | `docs/kami-theme-guide.md` | domain |
+| RH presentation DNA (color system, element mapping) | `docs/rh-presentation-dna.md` | domain |
 
 ## Execution strategy
 
@@ -97,6 +99,7 @@ Phase 1 builds the EventBridge — the core primitive that unifies both event sy
 - [ ] **E2** Implement `EventBridge` — implements `WalkObserver`, polls `SignalBus`, normalizes both into `KamiEvent`
 - [ ] **E3** `EventBridge.Subscribe() <-chan KamiEvent` — fan-out to multiple consumers (SSE, WS, Recorder)
 - [ ] **E4** Unit tests: WalkEvent → KamiEvent mapping, Signal → KamiEvent mapping, fan-out to N subscribers
+- [ ] **E4b** *(Injected from `e2e-dsl-testing`)* Verify EventBridge receives WalkEvents from an E2E scenario walk -- walk `testdata/scenarios/kitchen-sink.yaml` with EventBridge as observer, verify KamiEvents emitted for each node enter/exit.
 
 ### Phase 2 — KamiServer (triple-homed)
 
@@ -131,7 +134,7 @@ Phase 1 builds the EventBridge — the core primitive that unifies both event sy
 
 ### Phase 6 — Frontend scaffold
 
-- [ ] **F1** Initialize React + Vite + TypeScript + Tailwind project in `kami/frontend/`
+- [ ] **F1** Initialize React + Vite + TypeScript + Tailwind project in `kami/frontend/`. Configure Tailwind theme with RH Color Collection 1 tokens: red-50 `#ee0000`, purple-50 `#5e40be`, teal-50 `#37a3a3`, plus neutrals. Element-to-color mapping per `docs/rh-presentation-dna.md` Section 2: Fire=red-50, Water=teal-50, Earth=gray-60, Air=purple-50, Diamond=yellow-20 `#ffe072`, Lightning=orange-50 `#f5921b`. Zone backgrounds use tint variants (red-10, teal-10, etc.).
 - [ ] **F2** `useSSE` hook — connects to `/events/stream`, parses `KamiEvent`, exposes reactive state
 - [ ] **F3** `useKamiWS` hook — connects to WS port, receives AI visualization commands
 - [ ] **F4** `ExpandablePanel` component — click-to-fullscreen wrapper for top/bottom panels

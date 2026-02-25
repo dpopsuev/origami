@@ -96,6 +96,7 @@ Phase 1 defines the seed data model. Phase 2 builds the pipeline YAML and node e
 - [ ] **P3** Implement Subject extractor (`ouroboros/extractor_subject.go`): receives only `GeneratorOutput.Question` (no rubric, no poles, no seed metadata). Passes it through as the prompt. Captures raw response.
 - [ ] **P4** Implement Judge extractor (`ouroboros/extractor_judge.go`): receives seed rubric + pole descriptions + subject's raw answer. Produces `PoleResult` by instructing the LLM to classify which pole the answer aligns with.
 - [ ] **P5** Integration test: walk the pipeline with a stub dispatcher, verify Generator→Subject→Judge artifact flow
+- [ ] **P5b** *(Injected from `e2e-dsl-testing`)* E2E walk test for `ouroboros-probe.yaml` -- load YAML, build with stub transformers, walk to _done. Verify 3-node path (generate→subject→judge). Add to `e2e_test.go` as `TestE2E_OuroborosProbe`.
 
 ### Phase 3 — Types and scoring
 
