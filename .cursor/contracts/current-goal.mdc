@@ -21,20 +21,64 @@ description: Active goal manifest — single-read orientation for agents to know
 
 Critical path: `consumer-ergonomics` → `walker-experience` → `ouroboros-seed-pipeline` → `kami-live-debugger` → `demo-presentation` (Asterisk).
 
-| # | Contract | Tier | Status | Notes |
-|---|----------|------|--------|-------|
-| 1 | `consumer-ergonomics` | nice | draft | Smallest scope. Stabilizes walker factory conventions before WalkerDef. Quick win. |
-| — | *Asterisk: `knowledge-source-migration`* | should | draft | *(parallel, different repo)* Removes stale imports. Prerequisite for clean Asterisk build. |
-| — | *Asterisk: `ground-truth-dataset` Ph7* | should | draft | *(parallel, different repo)* JSON export for presentation-ready dataset. |
-| 4 | `walker-experience` | should | draft | WalkerDef + MemoryStore. High demo impact — "define agents in YAML." Depends on #1. |
-| 5 | `ouroboros-seed-pipeline` | should | draft | Largest contract. YAML seeds, 3-node pipeline, PersonaSheet, auto-routing. Core of engine reveal. Depends on #4. |
-| 6 | `kami-live-debugger` | should | draft | Presentation-critical. Live graph visualization is the demo centerpiece. Best after pipeline layer is stable (#5). |
-| — | *Asterisk: `demo-presentation`* | should | draft | *(different repo)* Depends on Kami (#6). Police Station theme, `asterisk demo` CLI, recorded replay. This is the presentation. |
-| 8 | `provider-resilience` | nice | draft | Fallback chains + intent classifier. Polishes dispatch layer. Anytime after #5. |
-| 9 | `domain-calibration` | nice | draft | Per-domain eval types. Useful but not presentation-critical. |
-| 10 | `prompt-calibration` | nice | draft | Deferred. No urgency until post-presentation tuning. |
-| — | `case-study-omo-agentic-arms-race` | done | draft | Analysis complete. Implementation extracted to `provider-resilience` + `ouroboros-seed-pipeline` Ph10. |
-| — | `case-study-crewai-crews-and-flows` | done | draft | Analysis complete. Implementation extracted to `walker-experience`. |
+Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API changes. Asterisk imports Origami as a Go module — every Origami change can silently break the consumer. Each checkpoint bumps `go get` in Asterisk and runs the full pipeline.
+
+### Sprint 1 — Foundation
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| 1 | `consumer-ergonomics` | nice | Smallest scope. Stabilizes walker factory conventions. Quick win. |
+| — | *Asterisk: `knowledge-source-migration`* | should | *(parallel, different repo)* Removes stale imports. |
+| — | *Asterisk: `ground-truth-dataset` Ph7* | should | *(parallel, different repo)* JSON export. |
+
+**CHECKPOINT A** — `go get origami@latest` in Asterisk, `go build`, `go test`, `just calibrate-stub`. Verify no regressions.
+
+### Sprint 2 — Walker experience
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| 4 | `walker-experience` | should | WalkerDef + MemoryStore. High demo impact. Depends on #1. |
+
+**CHECKPOINT B** — Verify WalkerDef addition to PipelineDef doesn't break Asterisk's existing pipeline loading (no `walkers:` section in Asterisk YAML = no breakage).
+
+### Sprint 3 — Ouroboros redesign (largest)
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| 5 | `ouroboros-seed-pipeline` | should | Largest contract. Seeds, 3-node pipeline, PersonaSheet, auto-routing. Depends on #4. |
+
+**CHECKPOINT C** — Most critical checkpoint. Ouroboros touches the deepest framework layer. Verify: `go get`, build, test, stub calibration, **wet calibration on 3 cases**. The deprecated runner must not break Asterisk's meta-calibration integration.
+
+### Sprint 4 — Kami debugger
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| 6 | `kami-live-debugger` | should | Presentation-critical. Pipeline layer must be stable (#5). |
+
+**CHECKPOINT D** — Last checkpoint before demo integration. Verify Kami's EventBridge and new MCP tools don't break Asterisk's existing MCP server. SignalBus changes must be backward-compatible.
+
+### Sprint 5 — Demo (Asterisk)
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| — | *Asterisk: `demo-presentation`* | should | Depends on Kami (#6). Police Station theme, `asterisk demo` CLI, recorded replay. **This is the presentation.** |
+
+**CHECKPOINT E** — Final gate. Everything works. Demo replays cleanly. Calibration hasn't regressed. Ready to present.
+
+### Post-presentation polish (no checkpoints)
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| 8 | `provider-resilience` | nice | Fallback chains + intent classifier. Polishes dispatch layer. |
+| 9 | `domain-calibration` | nice | Per-domain eval types. Not presentation-critical. |
+| 10 | `prompt-calibration` | nice | Deferred. Post-presentation tuning. |
+
+### Analysis (complete)
+
+| Contract | Status | Notes |
+|----------|--------|-------|
+| `case-study-omo-agentic-arms-race` | done | Implementation extracted to `provider-resilience` + `ouroboros-seed-pipeline` Ph10. |
+| `case-study-crewai-crews-and-flows` | done | Implementation extracted to `walker-experience`. |
 
 ## Framework Maturity (complete)
 
