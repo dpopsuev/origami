@@ -17,19 +17,24 @@ description: Active goal manifest — single-read orientation for agents to know
 - [ ] README positions Origami as a standalone framework, not an Asterisk dependency
 - [ ] `testdata/` contains canonical pipeline YAMLs (triage, dialectic, court, curation)
 
-## Urgency Map
+## Execution Order
 
-| Tier | Contract | Status | Notes |
-|------|----------|--------|-------|
-| **should** | `kami-live-debugger` | draft | Kami live agentic debugger (Demiurge pattern). EventBridge, debug API, MCP tools, React frontend. Presentation-critical. |
-| **should** | `ouroboros-seed-pipeline` | draft | Replace Ouroboros v1 with 3-node pipeline (Generator/Subject/Judge) + YAML seed definitions. Dichotomous pole scoring. Persona Sheet output. |
-| **nice** | `consumer-ergonomics` | draft | ResolvePipelinePath, WithOutputCapture, DefaultWalker. API polish for consumers. |
-| **nice** | `prompt-calibration` | draft | Framework-level prompt tuning loop. Per-step accuracy. Deferred. |
-| **nice** | `domain-calibration` | draft | Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/`. |
-| **nice** | `case-study-omo-agentic-arms-race` | draft | Competitive analysis of OmO. Analysis complete; implementation extracted. |
-| **nice** | `case-study-crewai-crews-and-flows` | draft | Competitive analysis of CrewAI. Analysis complete; implementation extracted. |
-| **should** | `walker-experience` | draft | WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern. From CrewAI case study. |
-| **nice** | `provider-resilience` | draft | Provider fallback chains, entry classifier pattern. From OmO case study. |
+Critical path: `consumer-ergonomics` → `walker-experience` → `ouroboros-seed-pipeline` → `kami-live-debugger` → `demo-presentation` (Asterisk).
+
+| # | Contract | Tier | Status | Notes |
+|---|----------|------|--------|-------|
+| 1 | `consumer-ergonomics` | nice | draft | Smallest scope. Stabilizes walker factory conventions before WalkerDef. Quick win. |
+| — | *Asterisk: `knowledge-source-migration`* | should | draft | *(parallel, different repo)* Removes stale imports. Prerequisite for clean Asterisk build. |
+| — | *Asterisk: `ground-truth-dataset` Ph7* | should | draft | *(parallel, different repo)* JSON export for presentation-ready dataset. |
+| 4 | `walker-experience` | should | draft | WalkerDef + MemoryStore. High demo impact — "define agents in YAML." Depends on #1. |
+| 5 | `ouroboros-seed-pipeline` | should | draft | Largest contract. YAML seeds, 3-node pipeline, PersonaSheet, auto-routing. Core of engine reveal. Depends on #4. |
+| 6 | `kami-live-debugger` | should | draft | Presentation-critical. Live graph visualization is the demo centerpiece. Best after pipeline layer is stable (#5). |
+| — | *Asterisk: `demo-presentation`* | should | draft | *(different repo)* Depends on Kami (#6). Police Station theme, `asterisk demo` CLI, recorded replay. This is the presentation. |
+| 8 | `provider-resilience` | nice | draft | Fallback chains + intent classifier. Polishes dispatch layer. Anytime after #5. |
+| 9 | `domain-calibration` | nice | draft | Per-domain eval types. Useful but not presentation-critical. |
+| 10 | `prompt-calibration` | nice | draft | Deferred. No urgency until post-presentation tuning. |
+| — | `case-study-omo-agentic-arms-race` | done | draft | Analysis complete. Implementation extracted to `provider-resilience` + `ouroboros-seed-pipeline` Ph10. |
+| — | `case-study-crewai-crews-and-flows` | done | draft | Analysis complete. Implementation extracted to `walker-experience`. |
 
 ## Framework Maturity (complete)
 
