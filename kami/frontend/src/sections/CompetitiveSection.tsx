@@ -1,4 +1,4 @@
-import type { CompetitorData } from '../hooks/usePresentation'
+import type { CompetitorData } from '../hooks/useKabuki'
 
 interface Props {
   competitors: CompetitorData[]

@@ -20,7 +20,7 @@ type Config struct {
 	Bridge       *EventBridge
 	SPA          http.FileSystem    // embedded frontend (nil = no SPA)
 	Theme        Theme              // consumer theme (nil = default)
-	Presentation PresentationConfig // presentation sections (nil = debugger-only mode)
+	Kabuki KabukiConfig // Kabuki presentation sections (nil = debugger-only mode)
 }
 
 func (c *Config) addr() string {
@@ -86,7 +86,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
 	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
-	mux.HandleFunc("GET /api/presentation", s.handlePresentationAPI)
+	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
 
 	if s.cfg.SPA != nil {
 		mux.Handle("GET /", http.FileServer(s.cfg.SPA))
@@ -232,7 +232,7 @@ func (s *Server) StartOnAvailablePort(ctx context.Context) (httpAddr, wsAddr str
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
 	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
-	mux.HandleFunc("GET /api/presentation", s.handlePresentationAPI)
+	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
 
 	if s.cfg.SPA != nil {
 		mux.Handle("GET /", http.FileServer(s.cfg.SPA))

@@ -1,4 +1,4 @@
-import type { AgentIntro } from '../hooks/usePresentation'
+import type { AgentIntro } from '../hooks/useKabuki'
 
 interface Props {
   agents: AgentIntro[]

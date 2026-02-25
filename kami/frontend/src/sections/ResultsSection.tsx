@@ -1,4 +1,4 @@
-import type { ResultsData } from '../hooks/usePresentation'
+import type { ResultsData } from '../hooks/useKabuki'
 
 interface Props {
   data: ResultsData

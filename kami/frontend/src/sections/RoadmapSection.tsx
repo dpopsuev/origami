@@ -1,4 +1,4 @@
-import type { MilestoneData } from '../hooks/usePresentation'
+import type { MilestoneData } from '../hooks/useKabuki'
 
 interface Props {
   milestones: MilestoneData[]

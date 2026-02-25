@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSSE } from './hooks/useSSE'
 import { useKamiWS } from './hooks/useKamiWS'
 import { useKamiSelector } from './hooks/useKamiSelector'
-import { usePresentation } from './hooks/usePresentation'
+import { useKabuki } from './hooks/useKabuki'
 import { PipelineGraph } from './components/PipelineGraph'
 import { MonologuePanel } from './components/MonologuePanel'
 import { EvidencePanel } from './components/EvidencePanel'
@@ -28,7 +28,7 @@ const WS_URL = `ws://${window.location.hostname}:${parseInt(window.location.port
 function App() {
   const { events, connected } = useSSE({ url: SSE_URL })
   const { commands, connected: wsConnected } = useKamiWS({ url: WS_URL })
-  const { theme, pipeline, presentation, loading, mode } = usePresentation()
+  const { theme, pipeline, kabuki, loading, mode } = useKabuki()
   const [activeSection, setActiveSection] = useState('hero')
   useKamiSelector(true)
 
@@ -41,36 +41,36 @@ function App() {
   }, [events, connected])
 
   const sectionList = useMemo(() => {
-    if (mode !== 'presentation' || !presentation) return []
+    if (mode !== 'kabuki' || !kabuki) return []
     const list: { id: string; label: string }[] = []
-    if (presentation.hero) list.push({ id: 'hero', label: 'Introduction' })
+    if (kabuki.hero) list.push({ id: 'hero', label: 'Introduction' })
     list.push({ id: 'agenda', label: 'Agenda' })
-    if (presentation.problem) list.push({ id: 'problem', label: 'The Problem' })
+    if (kabuki.problem) list.push({ id: 'problem', label: 'The Problem' })
     if (pipeline?.nodes && Object.keys(pipeline.nodes).length > 0) {
       list.push({ id: 'solution', label: 'The Solution' })
     }
     if (theme?.agent_intros && theme.agent_intros.length > 0) {
       list.push({ id: 'agents', label: 'Meet the Agents' })
     }
-    if (presentation.transition_line) list.push({ id: 'transition', label: 'Transition' })
+    if (kabuki.transition_line) list.push({ id: 'transition', label: 'Transition' })
     list.push({ id: 'demo', label: 'Live Demo' })
-    if (presentation.results) list.push({ id: 'results', label: 'Results' })
-    if (presentation.competitive && presentation.competitive.length > 0) {
+    if (kabuki.results) list.push({ id: 'results', label: 'Results' })
+    if (kabuki.competitive && kabuki.competitive.length > 0) {
       list.push({ id: 'competitive', label: 'Competitive Landscape' })
     }
-    if (presentation.architecture) list.push({ id: 'architecture', label: 'Architecture' })
-    if (presentation.roadmap && presentation.roadmap.length > 0) {
+    if (kabuki.architecture) list.push({ id: 'architecture', label: 'Architecture' })
+    if (kabuki.roadmap && kabuki.roadmap.length > 0) {
       list.push({ id: 'roadmap', label: 'Roadmap' })
     }
-    if (presentation.closing) list.push({ id: 'closing', label: 'Closing' })
+    if (kabuki.closing) list.push({ id: 'closing', label: 'Closing' })
     return list
-  }, [mode, presentation, theme, pipeline])
+  }, [mode, kabuki, theme, pipeline])
 
   const sectionIds = useMemo(() => sectionList.map((s) => s.id), [sectionList])
 
   // IntersectionObserver for active section tracking
   useEffect(() => {
-    if (mode !== 'presentation' || sectionIds.length === 0) return
+    if (mode !== 'kabuki' || sectionIds.length === 0) return
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -90,7 +90,7 @@ function App() {
 
   // Keyboard navigation
   useEffect(() => {
-    if (mode !== 'presentation' || sectionIds.length === 0) return
+    if (mode !== 'kabuki' || sectionIds.length === 0) return
     const handleKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) return
       const idx = sectionIds.indexOf(activeSection)
@@ -116,23 +116,23 @@ function App() {
     )
   }
 
-  // Presentation mode: scroll-snap SPA
-  if (mode === 'presentation' && presentation) {
+  // Kabuki mode: scroll-snap presentation SPA
+  if (mode === 'kabuki' && kabuki) {
     return (
       <main>
-        {presentation.hero && <HeroSection data={presentation.hero} />}
+        {kabuki.hero && <HeroSection data={kabuki.hero} />}
         {sectionList.length > 0 && (
           <AgendaSection sections={sectionList} activeSection={activeSection} />
         )}
-        {presentation.problem && <ProblemSection data={presentation.problem} />}
+        {kabuki.problem && <ProblemSection data={kabuki.problem} />}
         {pipeline?.nodes && Object.keys(pipeline.nodes).length > 0 && (
           <SolutionSection nodes={pipeline.nodes} />
         )}
         {theme?.agent_intros && theme.agent_intros.length > 0 && (
           <AgentIntrosSection agents={theme.agent_intros} />
         )}
-        {presentation.transition_line && (
-          <TransitionSection line={presentation.transition_line} />
+        {kabuki.transition_line && (
+          <TransitionSection line={kabuki.transition_line} />
         )}
         <LiveDemoSection
           events={events}
@@ -140,17 +140,17 @@ function App() {
           connected={connected}
           wsConnected={wsConnected}
         />
-        {presentation.results && <ResultsSection data={presentation.results} />}
-        {presentation.competitive && presentation.competitive.length > 0 && (
-          <CompetitiveSection competitors={presentation.competitive} />
+        {kabuki.results && <ResultsSection data={kabuki.results} />}
+        {kabuki.competitive && kabuki.competitive.length > 0 && (
+          <CompetitiveSection competitors={kabuki.competitive} />
         )}
-        {presentation.architecture && (
-          <ArchitectureSection data={presentation.architecture} />
+        {kabuki.architecture && (
+          <ArchitectureSection data={kabuki.architecture} />
         )}
-        {presentation.roadmap && presentation.roadmap.length > 0 && (
-          <RoadmapSection milestones={presentation.roadmap} />
+        {kabuki.roadmap && kabuki.roadmap.length > 0 && (
+          <RoadmapSection milestones={kabuki.roadmap} />
         )}
-        {presentation.closing && <ClosingSection data={presentation.closing} />}
+        {kabuki.closing && <ClosingSection data={kabuki.closing} />}
       </main>
     )
   }

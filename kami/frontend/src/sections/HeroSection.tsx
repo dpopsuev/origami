@@ -1,4 +1,4 @@
-import type { HeroData } from '../hooks/usePresentation'
+import type { HeroData } from '../hooks/useKabuki'
 
 interface Props {
   data: HeroData

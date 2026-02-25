@@ -1,4 +1,4 @@
-import type { ProblemData } from '../hooks/usePresentation'
+import type { ProblemData } from '../hooks/useKabuki'
 
 interface Props {
   data: ProblemData

@@ -1,4 +1,4 @@
-import type { ClosingData } from '../hooks/usePresentation'
+import type { ClosingData } from '../hooks/useKabuki'
 
 interface Props {
   data: ClosingData

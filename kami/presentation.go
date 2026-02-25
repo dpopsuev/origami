@@ -5,12 +5,13 @@ import (
 	"net/http"
 )
 
-// PresentationConfig provides section data for the Kami presentation engine.
-// Consumers implement this interface to turn Kami into a branded, section-based
-// presentation SPA. Methods that return nil cause that section to be skipped.
+// KabukiConfig provides section data for the Kabuki presentation engine.
+// Consumers implement this interface to turn the Kami frontend into a branded,
+// section-based presentation SPA. Methods that return nil skip that section.
 //
-// Agent intros and pipeline nodes are derived from Theme (not duplicated here).
-type PresentationConfig interface {
+// Kabuki is the presentation layer; Kami is the debugger. Agent intros and
+// pipeline nodes are derived from Theme (not duplicated here).
+type KabukiConfig interface {
 	Hero() *HeroSection
 	Problem() *ProblemSection
 	Results() *ResultsSection
@@ -96,8 +97,8 @@ type ClosingSection struct {
 	Lines    []string `json:"lines,omitempty"`
 }
 
-// presentationPayload is the JSON envelope for /api/presentation.
-type presentationPayload struct {
+// kabukiPayload is the JSON envelope for /api/kabuki.
+type kabukiPayload struct {
 	Hero           *HeroSection         `json:"hero,omitempty"`
 	Problem        *ProblemSection      `json:"problem,omitempty"`
 	Results        *ResultsSection      `json:"results,omitempty"`
@@ -148,14 +149,14 @@ func (s *Server) handlePipelineAPI(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func (s *Server) handlePresentationAPI(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleKabukiAPI(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if s.cfg.Presentation == nil {
-		json.NewEncoder(w).Encode(presentationPayload{})
+	if s.cfg.Kabuki == nil {
+		json.NewEncoder(w).Encode(kabukiPayload{})
 		return
 	}
-	p := s.cfg.Presentation
-	json.NewEncoder(w).Encode(presentationPayload{
+	p := s.cfg.Kabuki
+	json.NewEncoder(w).Encode(kabukiPayload{
 		Hero:           p.Hero(),
 		Problem:        p.Problem(),
 		Results:        p.Results(),

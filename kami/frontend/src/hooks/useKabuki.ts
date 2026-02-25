@@ -90,7 +90,7 @@ export interface ClosingData {
   lines?: string[]
 }
 
-export interface PresentationData {
+export interface KabukiData {
   hero?: HeroData
   problem?: ProblemData
   results?: ResultsData
@@ -101,39 +101,39 @@ export interface PresentationData {
   transition_line?: string
 }
 
-export type AppMode = 'presentation' | 'debugger'
+export type AppMode = 'kabuki' | 'debugger'
 
-export interface UsePresentationResult {
+export interface UseKabukiResult {
   theme: ThemeData | null
   pipeline: PipelineData | null
-  presentation: PresentationData | null
+  kabuki: KabukiData | null
   loading: boolean
   mode: AppMode
 }
 
-export function usePresentation(): UsePresentationResult {
+export function useKabuki(): UseKabukiResult {
   const [theme, setTheme] = useState<ThemeData | null>(null)
   const [pipeline, setPipeline] = useState<PipelineData | null>(null)
-  const [presentation, setPresentation] = useState<PresentationData | null>(null)
+  const [kabuki, setKabuki] = useState<KabukiData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [themeRes, pipelineRes, presentationRes] = await Promise.all([
+        const [themeRes, pipelineRes, kabukiRes] = await Promise.all([
           fetch('/api/theme'),
           fetch('/api/pipeline'),
-          fetch('/api/presentation'),
+          fetch('/api/kabuki'),
         ])
         if (cancelled) return
         const themeJSON = await themeRes.json()
         const pipelineJSON = await pipelineRes.json()
-        const presentationJSON = await presentationRes.json()
+        const kabukiJSON = await kabukiRes.json()
         if (cancelled) return
         setTheme(themeJSON)
         setPipeline(pipelineJSON)
-        setPresentation(presentationJSON)
+        setKabuki(kabukiJSON)
       } catch {
         // API unavailable — fall back to debugger mode
       } finally {
@@ -144,15 +144,15 @@ export function usePresentation(): UsePresentationResult {
     return () => { cancelled = true }
   }, [])
 
-  const hasPresentation = presentation !== null &&
-    (presentation.hero != null || presentation.problem != null ||
-     presentation.results != null || presentation.closing != null)
+  const hasKabuki = kabuki !== null &&
+    (kabuki.hero != null || kabuki.problem != null ||
+     kabuki.results != null || kabuki.closing != null)
 
   return {
     theme,
     pipeline,
-    presentation,
+    kabuki,
     loading,
-    mode: hasPresentation ? 'presentation' : 'debugger',
+    mode: hasKabuki ? 'kabuki' : 'debugger',
   }
 }

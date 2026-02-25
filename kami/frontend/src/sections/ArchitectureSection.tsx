@@ -1,4 +1,4 @@
-import type { ArchitectureData } from '../hooks/usePresentation'
+import type { ArchitectureData } from '../hooks/useKabuki'
 
 interface Props {
   data: ArchitectureData

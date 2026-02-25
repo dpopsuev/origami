@@ -27,44 +27,44 @@ func (mockTheme) CooperationDialogs() []Dialog {
 	return []Dialog{{From: "Herald", To: "Seeker", Message: "I already solved it."}}
 }
 
-// mockPresentation is a PresentationConfig with all sections populated.
-type mockPresentation struct{}
+// mockKabuki is a KabukiConfig with all sections populated.
+type mockKabuki struct{}
 
-func (mockPresentation) Hero() *HeroSection {
+func (mockKabuki) Hero() *HeroSection {
 	return &HeroSection{Title: "Demo", Subtitle: "A test"}
 }
-func (mockPresentation) Problem() *ProblemSection {
+func (mockKabuki) Problem() *ProblemSection {
 	return &ProblemSection{Title: "The Problem", Narrative: "Things break."}
 }
-func (mockPresentation) Results() *ResultsSection {
+func (mockKabuki) Results() *ResultsSection {
 	return &ResultsSection{
 		Title:   "Results",
 		Metrics: []Metric{{Label: "M19", Value: 0.83}},
 	}
 }
-func (mockPresentation) Competitive() []Competitor {
+func (mockKabuki) Competitive() []Competitor {
 	return []Competitor{{Name: "Us", Fields: map[string]string{"model": "graph"}, Highlight: true}}
 }
-func (mockPresentation) Architecture() *ArchitectureSection {
+func (mockKabuki) Architecture() *ArchitectureSection {
 	return &ArchitectureSection{
 		Title:      "Architecture",
 		Components: []ArchComponent{{Name: "Core", Description: "The engine"}},
 	}
 }
-func (mockPresentation) Roadmap() []Milestone {
+func (mockKabuki) Roadmap() []Milestone {
 	return []Milestone{{ID: "S1", Label: "Foundation", Status: "done"}}
 }
-func (mockPresentation) Closing() *ClosingSection {
+func (mockKabuki) Closing() *ClosingSection {
 	return &ClosingSection{Headline: "Thank you."}
 }
-func (mockPresentation) TransitionLine() string { return "Time to investigate." }
+func (mockKabuki) TransitionLine() string { return "Time to investigate." }
 
-// partialPresentation returns nil for some sections.
-type partialPresentation struct{ mockPresentation }
+// partialKabuki returns nil for some sections.
+type partialKabuki struct{ mockKabuki }
 
-func (partialPresentation) Results() *ResultsSection       { return nil }
-func (partialPresentation) Architecture() *ArchitectureSection { return nil }
-func (partialPresentation) Competitive() []Competitor       { return nil }
+func (partialKabuki) Results() *ResultsSection       { return nil }
+func (partialKabuki) Architecture() *ArchitectureSection { return nil }
+func (partialKabuki) Competitive() []Competitor       { return nil }
 
 func startTestServer(t *testing.T, cfg Config) string {
 	t.Helper()
@@ -143,9 +143,9 @@ func TestAPI_PipelineWithTheme(t *testing.T) {
 	}
 }
 
-func TestAPI_PresentationAllSections(t *testing.T) {
-	addr := startTestServer(t, Config{Theme: mockTheme{}, Presentation: mockPresentation{}})
-	body := getJSON(t, fmt.Sprintf("http://%s/api/presentation", addr))
+func TestAPI_KabukiAllSections(t *testing.T) {
+	addr := startTestServer(t, Config{Theme: mockTheme{}, Kabuki: mockKabuki{}})
+	body := getJSON(t, fmt.Sprintf("http://%s/api/kabuki", addr))
 
 	hero := body["hero"].(map[string]any)
 	if hero["title"] != "Demo" {
@@ -165,18 +165,18 @@ func TestAPI_PresentationAllSections(t *testing.T) {
 	}
 }
 
-func TestAPI_PresentationNilConfig(t *testing.T) {
+func TestAPI_KabukiNilConfig(t *testing.T) {
 	addr := startTestServer(t, Config{})
-	body := getJSON(t, fmt.Sprintf("http://%s/api/presentation", addr))
+	body := getJSON(t, fmt.Sprintf("http://%s/api/kabuki", addr))
 
 	if body["hero"] != nil {
-		t.Errorf("hero should be nil when no PresentationConfig, got %v", body["hero"])
+		t.Errorf("hero should be nil when no KabukiConfig, got %v", body["hero"])
 	}
 }
 
-func TestAPI_PresentationPartialSections(t *testing.T) {
-	addr := startTestServer(t, Config{Theme: mockTheme{}, Presentation: partialPresentation{}})
-	body := getJSON(t, fmt.Sprintf("http://%s/api/presentation", addr))
+func TestAPI_KabukiPartialSections(t *testing.T) {
+	addr := startTestServer(t, Config{Theme: mockTheme{}, Kabuki: partialKabuki{}})
+	body := getJSON(t, fmt.Sprintf("http://%s/api/kabuki", addr))
 
 	if body["hero"] == nil {
 		t.Error("expected hero section from partial")
