@@ -142,21 +142,38 @@ func kamiCmd(args []string) error {
 	port := fs.Int("port", 3000, "HTTP port (WS on port+1)")
 	bind := fs.String("bind", "127.0.0.1", "bind address")
 	debug := fs.Bool("debug", false, "enable debug API")
+	replay := fs.String("replay", "", "replay a JSONL recording file")
+	speed := fs.Float64("speed", 1.0, "replay speed multiplier")
 	fs.Parse(args)
 
 	bridge := kami.NewEventBridge(nil)
 	defer bridge.Close()
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 	srv := kami.NewServer(kami.Config{
 		Port:   *port,
 		Bind:   *bind,
 		Debug:  *debug,
 		Bridge: bridge,
-		Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})),
+		Logger: logger,
 	})
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+	if *replay != "" {
+		rp, err := kami.NewReplayer(bridge, *replay, *speed)
+		if err != nil {
+			return err
+		}
+		go func() {
+			if err := rp.Play(ctx.Done()); err != nil {
+				logger.Error("replay error", "error", err)
+			}
+			logger.Info("replay complete")
+		}()
+	}
 
 	return srv.Start(ctx)
 }
