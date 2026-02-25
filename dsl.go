@@ -16,8 +16,19 @@ type PipelineDef struct {
 	Zones       map[string]ZoneDef `yaml:"zones,omitempty"`
 	Nodes       []NodeDef          `yaml:"nodes"`
 	Edges       []EdgeDef          `yaml:"edges"`
+	Walkers     []WalkerDef        `yaml:"walkers,omitempty"`
 	Start       string             `yaml:"start"`
 	Done        string             `yaml:"done"`
+}
+
+// WalkerDef declares a walker (agent) in the pipeline YAML.
+// This is the "care, but in YAML" counterpart to DefaultWalker.
+type WalkerDef struct {
+	Name         string             `yaml:"name"`
+	Element      string             `yaml:"element,omitempty"`
+	Persona      string             `yaml:"persona,omitempty"`
+	Preamble     string             `yaml:"preamble,omitempty"`
+	StepAffinity map[string]float64 `yaml:"step_affinity,omitempty"`
 }
 
 // ZoneDef declares a meta-phase zone (P7: optional, progressive disclosure).

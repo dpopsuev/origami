@@ -21,6 +21,7 @@ type runConfig struct {
 	team         *Team
 	observer     WalkObserver
 	logger       *slog.Logger
+	memory       MemoryStore
 }
 
 // WithTransformers registers transformers for the run.
@@ -73,6 +74,13 @@ func WithRunObserver(obs WalkObserver) RunOption {
 // WithLogger sets the logger for the run.
 func WithLogger(l *slog.Logger) RunOption {
 	return func(c *runConfig) { c.logger = l }
+}
+
+// WithMemory attaches a MemoryStore for cross-walk persistence.
+// The store is injected into each walker's context as "memory" so nodes
+// can read/write persistent state scoped by walker identity.
+func WithMemory(store MemoryStore) RunOption {
+	return func(c *runConfig) { c.memory = store }
 }
 
 // Run loads a pipeline YAML, builds a graph, and walks it.
@@ -128,6 +136,9 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 			if input != nil {
 				w.State().Context["input"] = input
 			}
+			if cfg.memory != nil {
+				w.State().Context["memory"] = cfg.memory
+			}
 		}
 		return runner.Graph.WalkTeam(ctx, cfg.team, def.Start)
 	}
@@ -139,6 +150,9 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 
 	if input != nil {
 		walker.State().Context["input"] = input
+	}
+	if cfg.memory != nil {
+		walker.State().Context["memory"] = cfg.memory
 	}
 
 	return runner.Walk(ctx, walker, def.Start)

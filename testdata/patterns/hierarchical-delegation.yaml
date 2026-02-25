@@ -1,0 +1,98 @@
+# Hierarchical Delegation Pattern
+#
+# Demonstrates how Origami's existing primitives (zones, parallel edges,
+# stickiness) model a coordinator-specialist hierarchy similar to CrewAI's
+# hierarchical process — without any special framework support.
+#
+# Pattern: A coordinator node fans out via parallel edges to specialist
+# nodes in separate zones, then merges results at a synthesis node.
+#
+# Key primitives used:
+#   - parallel: true   → fan-out from coordinator to specialists
+#   - zones + stickiness → specialist affinity to their domain
+#   - walkers          → named agents with element/persona assignments
+#   - merge node       → collects parallel results into final output
+pipeline: hierarchical-delegation
+description: "Coordinator fans out to specialists, merges results"
+
+zones:
+  coordination:
+    nodes: [plan, synthesize]
+    element: earth
+    stickiness: 0
+  research:
+    nodes: [research_code]
+    element: water
+    stickiness: 3
+  logs:
+    nodes: [research_logs]
+    element: fire
+    stickiness: 2
+
+walkers:
+  - name: coordinator
+    element: earth
+    persona: sentinel
+    preamble: "You coordinate the investigation. Delegate to specialists and synthesize their findings."
+  - name: code-analyst
+    element: water
+    persona: seeker
+    preamble: "You analyze source code for root causes."
+    step_affinity:
+      research_code: 0.95
+  - name: log-analyst
+    element: fire
+    persona: herald
+    preamble: "You analyze logs for failure patterns."
+    step_affinity:
+      research_logs: 0.95
+
+nodes:
+  - name: plan
+    element: earth
+    family: plan
+  - name: research_code
+    element: water
+    family: research
+  - name: research_logs
+    element: fire
+    family: research
+  - name: synthesize
+    element: earth
+    family: synthesize
+
+edges:
+  - id: fan-out-code
+    name: delegate to code analyst
+    from: plan
+    to: research_code
+    parallel: true
+    condition: "always (parallel fan-out)"
+
+  - id: fan-out-logs
+    name: delegate to log analyst
+    from: plan
+    to: research_logs
+    parallel: true
+    condition: "always (parallel fan-out)"
+
+  - id: code-done
+    name: code research complete
+    from: research_code
+    to: synthesize
+    condition: "research complete"
+
+  - id: logs-done
+    name: log research complete
+    from: research_logs
+    to: synthesize
+    condition: "research complete"
+
+  - id: report
+    name: final report
+    from: synthesize
+    to: _done
+    condition: "always (terminal)"
+
+start: plan
+done: _done
