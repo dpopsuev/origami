@@ -34,3 +34,15 @@ body {
   background: white;
   color: var(--color-rh-gray-80);
 }
+
+/* Presentation mode — full-viewport sections with scroll-snap */
+.section {
+  min-height: 100vh;
+  scroll-snap-align: start;
+}
+
+main {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: 100vh;
+}

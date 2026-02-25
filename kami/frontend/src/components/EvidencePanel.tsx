@@ -18,10 +18,11 @@ export function EvidencePanel({ events }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-2 p-3 overflow-y-auto max-h-64">
+    <div className="flex flex-col gap-2 p-3 overflow-y-auto max-h-64" data-kami="component:evidence">
       {artifacts.map((e, i) => (
         <div
           key={i}
+          data-kami={`artifact:${i}`}
           className="rounded border border-rh-gray-20 bg-white p-3"
         >
           <div className="flex items-center gap-2 mb-1">

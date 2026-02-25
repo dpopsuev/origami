@@ -113,7 +113,7 @@ export function PipelineGraph({ events }: Props) {
   )
 
   return (
-    <div className="h-full w-full" style={{ minHeight: 400 }}>
+    <div className="h-full w-full" data-kami="component:pipeline-graph" style={{ minHeight: 400 }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

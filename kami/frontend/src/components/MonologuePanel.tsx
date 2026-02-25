@@ -17,7 +17,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 export function MonologuePanel({ events }: Props) {
   return (
-    <div className="flex flex-col gap-1 p-3 overflow-y-auto max-h-96 font-mono text-sm">
+    <div className="flex flex-col gap-1 p-3 overflow-y-auto max-h-96 font-mono text-sm" data-kami="component:monologue">
       {events.length === 0 && (
         <div className="text-rh-gray-40 italic">Waiting for events...</div>
       )}
