@@ -11,6 +11,7 @@
 - Both poles in a dichotomous seed are valid answers — they measure element affinity, not correctness.
 - The Judge node is an AI agent, not a keyword matcher. It reads the rubric + both pole answers + the subject's answer and classifies.
 - `ModelProfile`, `ElementMatch`, `SuggestPersona`, `DeriveStepAffinity` input contracts are unchanged. Only the data source (judge scores vs keyword scores) changes.
+- **Breaking API allowed (PoC only).** Deprecated v1 types (`ProbeSpec`, `ProbeStep`, `Dispatcher`, `*Spec()`) are deleted, not preserved. Single consumer (Asterisk) does not use them. This policy flips when "PoC Done" is raised — see `goals/poc-done-flips.md`.
 
 ## Context
 

@@ -20,6 +20,14 @@ alwaysApply: true
 - Prefer deterministic outputs for identical inputs; seed ordering where needed.
 - Zero domain imports: Origami must never import from consumer tools (Asterisk, Achilles, etc.).
 
+## API stability
+
+> **Applies only while PoC is the current goal.** When the "PoC Done" flag is raised (see `goals/`), flip this section to require deprecation-then-removal with a migration window. See `goals/poc-done-flips.md` for the full checklist.
+
+- **Breaking changes are allowed.** Origami has exactly one consumer (Asterisk), owned and maintained by the same developer. There is no external API contract to preserve.
+- **Delete over deprecate.** Do not leave `// Deprecated:` markers or backward-compat wrappers. Remove the old API and update the sole consumer in the same commit or session.
+- **No shim layers.** If a type, function, or package is superseded, delete the original. Do not maintain parallel paths.
+
 ## Scope
 
 - Framework-only code. Domain-specific logic belongs in consumer repositories.
