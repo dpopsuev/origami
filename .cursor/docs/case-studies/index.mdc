@@ -2,3 +2,4 @@
 
 ## Files
 - `omo-agentic-arms-race.md` — Competitive analysis of Oh My OpenCode's multi-model agent orchestration vs Origami's formal graph framework. Concept mapping, gaps, advantages, actionable takeaways.
+- `crewai-crews-and-flows.md` — Competitive analysis of CrewAI (44.6k stars, market leader). Crews+Flows duality vs Origami's unified graph. Agent-in-YAML, cross-walk memory, hierarchical delegation gaps.

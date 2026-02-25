@@ -26,6 +26,7 @@ See `current-goal.mdc` for the full completed contracts list.
 - `draft/prompt-calibration.md` — Framework-level prompt tuning loop (deferred).
 - `draft/domain-calibration.md` — Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality.
 - `draft/case-study-omo-agentic-arms-race.md` — Competitive analysis of Oh My OpenCode. Concept mapping, auto-routing gap, provider fallback, entry classifier pattern.
+- `draft/case-study-crewai-crews-and-flows.md` — Competitive analysis of CrewAI (market leader). Crews+Flows duality vs unified graph. Agent-in-YAML, cross-walk memory, hierarchical delegation.
 
 ## Files
 - `_TEMPLATE.md` — contract template (copy to create new contracts)
