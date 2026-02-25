@@ -1,6 +1,6 @@
 # Contract — papercup-protocol-maturity
 
-**Status:** active  
+**Status:** complete  
 **Goal:** Evolve the Papercup agent-bus protocol from orchestration (parent-as-switchboard) to choreography (subagents-as-independent-workers), eliminating the batch barrier and queue starvation problems, and decouple the signal bus from MCP so any transport (CLI, HTTP, MCP) gets full bus power.  
 **Serves:** Framework Maturity
 
@@ -283,30 +283,30 @@ Decouple the signal bus from MCP so CLI and HTTP agents get full Papercup power.
 
 ### Phase 2 — Zone-Aware Stickiness
 
-- [ ] **P2.1** Add `PullHints` struct to `dispatch/dispatch.go`
-- [ ] **P2.2** Add `GetNextStepWithHints(ctx, PullHints)` to `ExternalDispatcher` interface (non-breaking addition)
-- [ ] **P2.3** Implement hint matching in `MuxDispatcher`: prefer matching `DispatchContext` from `promptCh`, fall back based on stickiness level
-- [ ] **P2.4** Extend `get_next_step` MCP tool and `NetworkServer` `GET /next` with hint params
-- [ ] **P2.5** Validate (green) — unit tests for hint matching: exact match, fallback, stickiness=0 vs stickiness=3
-- [ ] **P2.6** Tune (blue) — refactor
-- [ ] **P2.7** Validate (green) — all tests pass
+- [x] **P2.1** Add `PullHints` struct to `dispatch/dispatch.go`
+- [x] **P2.2** Add `GetNextStepWithHints(ctx, PullHints)` to `ExternalDispatcher` interface (non-breaking addition)
+- [x] **P2.3** Implement hint matching in `MuxDispatcher`: prefer matching `DispatchContext` from `promptCh`, fall back based on stickiness level
+- [x] **P2.4** Extend `get_next_step` MCP tool and `NetworkServer` `GET /next` with hint params
+- [x] **P2.5** Validate (green) — unit tests for hint matching: exact match, fallback, stickiness=0 vs stickiness=3
+- [x] **P2.6** Tune (blue) — refactor
+- [x] **P2.7** Validate (green) — all tests pass
 
 ### Phase 3 — Work Stealing
 
-- [ ] **P3.1** Implement stickiness-based stealing logic: empty-poll counter, zone-cross threshold per stickiness level
-- [ ] **P3.2** Add `zone_shift` signal event
-- [ ] **P3.3** Validate (green) — unit tests for stealing behavior at each stickiness level
-- [ ] **P3.4** Tune (blue) — refactor
-- [ ] **P3.5** Validate (green) — all tests pass
+- [x] **P3.1** Implement stickiness-based stealing logic: empty-poll counter, zone-cross threshold per stickiness level
+- [x] **P3.2** Add `zone_shift` signal event
+- [x] **P3.3** Validate (green) — unit tests for stealing behavior at each stickiness level
+- [x] **P3.4** Tune (blue) — refactor
+- [x] **P3.5** Validate (green) — all tests pass
 
 ### Phase 4 — Adaptive Worker Lifecycle
 
-- [ ] **P4.1** Implement supervisor health tracking: per-worker error rate, latency, last heartbeat (from signals)
-- [ ] **P4.2** Implement worker replacement: supervisor detects silent/errored worker, launches replacement Task
-- [ ] **P4.3** Implement budget-based worker scaling and graceful shutdown via `should_stop` signal
-- [ ] **P4.4** Validate (green) — integration test: worker failure triggers replacement
-- [ ] **P4.5** Tune (blue) — refactor
-- [ ] **P4.6** Validate (green) — all tests pass
+- [x] **P4.1** Implement supervisor health tracking: per-worker error rate, latency, last heartbeat (from signals)
+- [x] **P4.2** Implement worker replacement: supervisor detects silent/errored worker, launches replacement Task
+- [x] **P4.3** Implement budget-based worker scaling and graceful shutdown via `should_stop` signal
+- [x] **P4.4** Validate (green) — integration test: worker failure triggers replacement
+- [x] **P4.5** Tune (blue) — refactor
+- [x] **P4.6** Validate (green) — all tests pass
 
 ### Phase 5 — Transport Decoupling
 
@@ -358,3 +358,4 @@ Decouple the signal bus from MCP so CLI and HTTP agents get full Papercup power.
 - 2026-02-23 — Contract created. Motivated by two observed failures: (1) batch barrier causing 3 idle workers waiting for the slowest in wet calibration runs, (2) queue starvation between batch rounds. Root cause: Papercup v1 protocol assigns `get_next_step`/`submit_artifact` to main agent exclusively. Infrastructure (`MuxDispatcher`, `peakPullers`, `ExternalDispatcher`) already supports the worker pattern — only the protocol forbids it.
 - 2026-02-23 — Transport decoupling added as Phase 5 after analysis revealed `SignalBus` is MCP-only, `CLIDispatcher` implements wrong interface (`Dispatcher` not `ExternalDispatcher`), and `NetworkServer` has no signal endpoints. A CLI agent currently gets zero bus power.
 - 2026-02-23 — Design patterns incorporated: Competing Consumers (AMQP), Choreography Saga (microservices), Actor Model with Supervision (Erlang/OTP), Work Stealing (ForkJoinPool), Reactive Backpressure (consumer signals readiness via `get_next_step` calls).
+- 2026-02-24 — Contract complete. All 5 phases implemented and tested: choreography migration (P1), zone-aware stickiness with PullHints (P2), work stealing with consecutive-miss thresholds (P3), adaptive worker lifecycle with SupervisorTracker (P4), transport decoupling with CLIWorkerDispatcher and signal endpoints (P5). 26 dispatch tests pass including 11 hint/stickiness/stealing and 8 supervisor tests.

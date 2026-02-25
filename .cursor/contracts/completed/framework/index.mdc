@@ -30,3 +30,6 @@
 - `code-housekeeping.md` — Cross-repo cleanup of stale distillation references, dead code, CLI consolidation
 - `marshaller-step-schema-factory.md` — Schema-validated `submit_step` replaces freeform `submit_artifact`. Companion: Asterisk `marshaller-step-schema-factory`.
 - `calibration-primitives.md` — Generic calibration types, interfaces, aggregation, report formatting (`calibrate/` package). Companion: Asterisk `calibration-primitives-consumer`.
+- `knowledge-source-catalog.md` — KnowledgeSourceCatalog + Source types, KnowledgeSourceRouter for tag-based routing.
+- `migrate-ouroboros-to-marshaller.md` — Ouroboros discovery tools served via PipelineServer domain hooks.
+- `papercup-protocol-maturity.md` — Papercup choreography, zone stickiness, work stealing, adaptive lifecycle, transport decoupling.

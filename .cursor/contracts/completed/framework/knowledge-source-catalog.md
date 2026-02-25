@@ -1,6 +1,6 @@
 # Contract — KnowledgeSourceCatalog + KnowledgeSourceRouter
 
-**Status:** active  
+**Status:** complete  
 **Goal:** Rename `Workspace` to `KnowledgeSourceCatalog`, `Repo` to `Source` (with Kind/Tags fields), and introduce `KnowledgeSourceRouter` as a batteries-included routing struct for directing pipeline steps to relevant knowledge sources.  
 **Serves:** Framework Maturity
 
@@ -144,3 +144,4 @@ No trust boundaries affected.
 **Migration approach:** Replace `workspace.*` imports with `knowledge.*`, update struct field references (`Repos` → `Sources`, `Path`/`URL` → `URI`). `workspace_convert.go` becomes `catalog_convert.go` returning `*KnowledgeSourceCatalog`.
 
 2026-02-24 21:30 — Contract drafted. Motivated by Asterisk Phase 5a R11 analysis: `selectRepoByHypothesis` uses Purpose keyword matching that breaks across scenarios. The framework should provide structured routing via tags/metadata instead. `Workspace` renamed to `KnowledgeSourceCatalog` to remove Cursor IDE terminology from the framework. `KnowledgeSourceRouter` wraps the catalog with configurable routing rules. Asterisk has 11 files to migrate; Achilles has 0.
+2026-02-24 — Contract complete. All implementation tasks done: `KnowledgeSourceCatalog` and `Source` types implemented in `knowledge/` package, `KnowledgeSourceRouter` with tag-based routing, YAML/JSON serialization, comprehensive test coverage. Asterisk consumer migration deferred to a separate contract.
