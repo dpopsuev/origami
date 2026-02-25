@@ -118,3 +118,92 @@ func TestProviderRouter_EmptyProviderUsesDefault(t *testing.T) {
 		t.Error("codex should not be called for empty provider")
 	}
 }
+
+func TestProviderRouter_AutoRouteFromPersonaSheet(t *testing.T) {
+	def := &mockDispatcher{name: "default"}
+	anthropic := &mockDispatcher{name: "anthropic"}
+	openai := &mockDispatcher{name: "openai"}
+
+	router := NewProviderRouter(def, map[string]Dispatcher{
+		"anthropic": anthropic,
+		"openai":    openai,
+	})
+	router.StepProviderHints = map[string]string{
+		"investigate": "anthropic",
+		"triage":      "openai",
+	}
+
+	result, err := router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "investigate", Provider: "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !anthropic.called {
+		t.Error("anthropic should be called via auto-route")
+	}
+	if def.called {
+		t.Error("default should not be called when auto-route matches")
+	}
+	if string(result) != "anthropic-output" {
+		t.Errorf("result = %q, want anthropic-output", result)
+	}
+
+	result, err = router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "triage", Provider: "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !openai.called {
+		t.Error("openai should be called via auto-route for triage")
+	}
+	if string(result) != "openai-output" {
+		t.Errorf("result = %q, want openai-output", result)
+	}
+}
+
+func TestProviderRouter_AutoRoute_NoHint_FallsToDefault(t *testing.T) {
+	def := &mockDispatcher{name: "default"}
+	router := NewProviderRouter(def, nil)
+	router.StepProviderHints = map[string]string{
+		"investigate": "anthropic",
+	}
+
+	_, err := router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "recall", Provider: "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !def.called {
+		t.Error("default should be called when no auto-route hint exists for step")
+	}
+}
+
+func TestProviderRouter_ExplicitProvider_OverridesAutoRoute(t *testing.T) {
+	def := &mockDispatcher{name: "default"}
+	anthropic := &mockDispatcher{name: "anthropic"}
+	openai := &mockDispatcher{name: "openai"}
+
+	router := NewProviderRouter(def, map[string]Dispatcher{
+		"anthropic": anthropic,
+		"openai":    openai,
+	})
+	router.StepProviderHints = map[string]string{
+		"investigate": "anthropic",
+	}
+
+	_, err := router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "investigate", Provider: "openai",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !openai.called {
+		t.Error("explicit provider should override auto-route")
+	}
+	if anthropic.called {
+		t.Error("auto-route should not override explicit provider")
+	}
+}

@@ -1,5 +1,5 @@
 # Compiled binaries
-origami
+/origami
 *.exe
 *.exe~
 *.dll

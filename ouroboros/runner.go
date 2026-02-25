@@ -13,6 +13,9 @@ const BatteryVersion = "ouroboros-v1"
 // OuroborosBattery returns the standard battery of all 5 probe specs.
 // Callers provide the specs because the probes/ package is a separate Go
 // package; this function stitches them into a battery.
+//
+// Deprecated: Use seed YAML files with PipelineNodes and ProfileFromPoleResults
+// instead. See ouroboros/seeds/ for the YAML-driven approach.
 func OuroborosBattery(specs ...ProbeSpec) []ProbeSpec {
 	return specs
 }
@@ -21,6 +24,10 @@ func OuroborosBattery(specs ...ProbeSpec) []ProbeSpec {
 // collects results, and assembles a ModelProfile. The caller must identify
 // the model separately (e.g. via a discovery probe); RunOuroboros only
 // measures behavior.
+//
+// Deprecated: Use the 3-node seed pipeline (ouroboros-probe.yaml) with
+// PipelineNodes and ProfileFromPoleResults instead. The seed pipeline
+// replaces keyword scorers with AI judge scoring.
 func RunOuroboros(
 	ctx context.Context,
 	model framework.ModelIdentity,
@@ -66,6 +73,8 @@ func RunOuroboros(
 // RunSingleProbe dispatches one probe and scores the response. The scorer
 // function is looked up from the ProbeSpec's Step. If no scorer is registered,
 // the result has empty DimensionScores (the raw output is still captured).
+//
+// Deprecated: Use seed YAML files with PipelineNodes instead.
 func RunSingleProbe(
 	ctx context.Context,
 	dispatcher Dispatcher,
@@ -102,6 +111,8 @@ var defaultScorers = map[ProbeStep]Scorer{}
 
 // RegisterScorer registers a dimension scorer for a probe step.
 // Called by the probes/ package during initialization.
+//
+// Deprecated: Seed pipeline uses AI judge scoring instead of keyword scorers.
 func RegisterScorer(step ProbeStep, scorer Scorer) {
 	defaultScorers[step] = scorer
 }

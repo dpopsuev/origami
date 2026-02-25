@@ -135,9 +135,11 @@ func validateCmd(args []string) error {
 
 func ouroborosCmd(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: origami ouroboros <prompt|analyze|save|serve> [flags]")
+		return fmt.Errorf("usage: origami ouroboros <run|prompt|analyze|save|serve> [flags]")
 	}
 	switch args[0] {
+	case "run":
+		return ouroborosRun(args[1:])
 	case "prompt":
 		return ouroborosPrompt(args[1:])
 	case "analyze":
@@ -149,6 +151,51 @@ func ouroborosCmd(args []string) error {
 	default:
 		return fmt.Errorf("unknown ouroboros subcommand: %s", args[0])
 	}
+}
+
+func ouroborosRun(args []string) error {
+	fs := flag.NewFlagSet("ouroboros run", flag.ContinueOnError)
+	seedPath := fs.String("seed", "", "path to seed YAML file")
+	verbose := fs.Bool("v", false, "verbose output")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if *seedPath == "" {
+		return fmt.Errorf("--seed is required\nusage: origami ouroboros run --seed <path>")
+	}
+
+	seed, err := ouroboros.LoadSeed(*seedPath)
+	if err != nil {
+		return fmt.Errorf("load seed: %w", err)
+	}
+
+	level := slog.LevelInfo
+	if *verbose {
+		level = slog.LevelDebug
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+
+	logger.Info("running ouroboros probe", "seed", seed.Name, "category", seed.Category)
+
+	pipelinePath := "ouroboros/pipelines/ouroboros-probe.yaml"
+	dispatcher := func(_ context.Context, nodeName string, prompt string) (string, error) {
+		return "", fmt.Errorf("node %q: no dispatcher configured (use --serve for MCP dispatch)", nodeName)
+	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	nodes := ouroboros.PipelineNodes(seed, dispatcher)
+	if err := framework.Run(ctx, pipelinePath, nil,
+		framework.WithNodes(nodes),
+		framework.WithLogger(logger),
+	); err != nil {
+		return err
+	}
+
+	logger.Info("probe completed", "seed", seed.Name)
+	return nil
 }
 
 func ouroborosPrompt(args []string) error {

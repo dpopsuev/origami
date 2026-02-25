@@ -1,3 +1,6 @@
+// Deprecated: The probes package uses hardcoded keyword scorers. Use seed YAML
+// files with the ouroboros-probe pipeline instead. See ouroboros/seeds/ for
+// the YAML-driven approach with AI judge scoring.
 package probes
 
 import (
