@@ -1,0 +1,285 @@
+package kami
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+// RegisterMCPTools registers all Kami debug and visualization tools
+// on an MCP server. The debug controller and server must be provided
+// for tools that interact with the pipeline state.
+func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
+	// Read tools
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_get_pipeline_state",
+		Description: "Get the current pipeline state: running/paused, current node, visited nodes.",
+	}, noOut(handleGetPipelineState(dc)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_get_snapshot",
+		Description: "Get a full pipeline snapshot: state, breakpoints, visited nodes, artifacts.",
+	}, noOut(handleGetSnapshot(dc)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_get_assertions",
+		Description: "Run all registered assertions and return results.",
+	}, noOut(handleGetAssertions(dc)))
+
+	// Write tools
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_pause",
+		Description: "Pause pipeline execution at the next node boundary.",
+	}, noOut(handlePause(dc)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_resume",
+		Description: "Resume pipeline execution from a paused state.",
+	}, noOut(handleResume(dc)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_advance_node",
+		Description: "Step to the next node and pause again.",
+	}, noOut(handleAdvanceNode(dc)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_set_breakpoint",
+		Description: "Set a breakpoint on a node. Execution pauses when the walk enters this node.",
+	}, noOut(handleSetBreakpoint(dc)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_clear_breakpoint",
+		Description: "Clear a breakpoint from a node.",
+	}, noOut(handleClearBreakpoint(dc)))
+
+	// Visualization tools
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_highlight_nodes",
+		Description: "Highlight one or more nodes in the visualization.",
+	}, noOut(handleHighlightNodes(srv)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_highlight_zone",
+		Description: "Highlight an entire zone in the visualization.",
+	}, noOut(handleHighlightZone(srv)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_zoom_to_zone",
+		Description: "Zoom the visualization to a specific zone.",
+	}, noOut(handleZoomToZone(srv)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_place_marker",
+		Description: "Place a labeled marker on a node.",
+	}, noOut(handlePlaceMarker(srv)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_clear_all",
+		Description: "Clear all highlights, markers, and overlays.",
+	}, noOut(handleClearAll(srv)))
+
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_set_speed",
+		Description: "Set the visualization playback speed multiplier.",
+	}, noOut(handleSetSpeed(srv)))
+}
+
+// noOut wraps a handler to suppress outputSchema (same pattern as pipeline_server).
+func noOut[In, Out any](h func(context.Context, *sdkmcp.CallToolRequest, In) (*sdkmcp.CallToolResult, Out, error)) sdkmcp.ToolHandlerFor[In, any] {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, input In) (*sdkmcp.CallToolResult, any, error) {
+		res, out, err := h(ctx, req, input)
+		return res, out, err
+	}
+}
+
+func jsonResult(v any) (*sdkmcp.CallToolResult, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: string(data)}},
+	}, nil
+}
+
+func textResult(msg string) *sdkmcp.CallToolResult {
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: msg}},
+	}
+}
+
+// --- Read tool handlers ---
+
+type emptyInput struct{}
+
+func handleGetPipelineState(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
+		snap := dc.Snapshot()
+		result := map[string]any{
+			"state":        snap.State,
+			"current_node": snap.CurrentNode,
+			"nodes_visited": snap.NodesVisited,
+		}
+		res, err := jsonResult(result)
+		return res, result, err
+	}
+}
+
+func handleGetSnapshot(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, PipelineSnapshot, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, PipelineSnapshot, error) {
+		snap := dc.Snapshot()
+		res, err := jsonResult(snap)
+		return res, snap, err
+	}
+}
+
+func handleGetAssertions(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
+		errs := dc.RunAssertions()
+		failures := make([]string, len(errs))
+		for i, e := range errs {
+			failures[i] = e.Error()
+		}
+		result := map[string]any{
+			"total":    len(dc.Snapshot().Breakpoints),
+			"failures": failures,
+			"passed":   len(errs) == 0,
+		}
+		res, err := jsonResult(result)
+		return res, result, err
+	}
+}
+
+// --- Write tool handlers ---
+
+func handlePause(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, string, error) {
+		dc.Pause()
+		return textResult("paused"), "paused", nil
+	}
+}
+
+func handleResume(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, string, error) {
+		dc.Resume()
+		return textResult("resumed"), "resumed", nil
+	}
+}
+
+func handleAdvanceNode(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, string, error) {
+		dc.AdvanceNode()
+		return textResult("advanced"), "advanced", nil
+	}
+}
+
+type nodeInput struct {
+	Node string `json:"node"`
+}
+
+func handleSetBreakpoint(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, nodeInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, input nodeInput) (*sdkmcp.CallToolResult, string, error) {
+		if input.Node == "" {
+			return nil, "", fmt.Errorf("node is required")
+		}
+		dc.SetBreakpoint(input.Node)
+		return textResult(fmt.Sprintf("breakpoint set on %q", input.Node)), "ok", nil
+	}
+}
+
+func handleClearBreakpoint(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, nodeInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, input nodeInput) (*sdkmcp.CallToolResult, string, error) {
+		if input.Node == "" {
+			return nil, "", fmt.Errorf("node is required")
+		}
+		dc.ClearBreakpoint(input.Node)
+		return textResult(fmt.Sprintf("breakpoint cleared on %q", input.Node)), "ok", nil
+	}
+}
+
+// --- Visualization tool handlers ---
+
+type highlightNodesInput struct {
+	Nodes []string `json:"nodes"`
+	Color string   `json:"color,omitempty"`
+}
+
+func handleHighlightNodes(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, highlightNodesInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, input highlightNodesInput) (*sdkmcp.CallToolResult, string, error) {
+		msg := map[string]any{"action": "highlight_nodes", "nodes": input.Nodes, "color": input.Color}
+		if err := srv.BroadcastWS(ctx, msg); err != nil {
+			return nil, "", err
+		}
+		return textResult("highlighted"), "ok", nil
+	}
+}
+
+type zoneInput struct {
+	Zone  string `json:"zone"`
+	Color string `json:"color,omitempty"`
+}
+
+func handleHighlightZone(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, zoneInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, input zoneInput) (*sdkmcp.CallToolResult, string, error) {
+		msg := map[string]any{"action": "highlight_zone", "zone": input.Zone, "color": input.Color}
+		if err := srv.BroadcastWS(ctx, msg); err != nil {
+			return nil, "", err
+		}
+		return textResult("highlighted"), "ok", nil
+	}
+}
+
+func handleZoomToZone(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, zoneInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, input zoneInput) (*sdkmcp.CallToolResult, string, error) {
+		msg := map[string]any{"action": "zoom_to_zone", "zone": input.Zone}
+		if err := srv.BroadcastWS(ctx, msg); err != nil {
+			return nil, "", err
+		}
+		return textResult("zoomed"), "ok", nil
+	}
+}
+
+type markerInput struct {
+	Node  string `json:"node"`
+	Label string `json:"label"`
+	Color string `json:"color,omitempty"`
+}
+
+func handlePlaceMarker(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, markerInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, input markerInput) (*sdkmcp.CallToolResult, string, error) {
+		msg := map[string]any{"action": "place_marker", "node": input.Node, "label": input.Label, "color": input.Color}
+		if err := srv.BroadcastWS(ctx, msg); err != nil {
+			return nil, "", err
+		}
+		return textResult("marker placed"), "ok", nil
+	}
+}
+
+func handleClearAll(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, string, error) {
+		msg := map[string]any{"action": "clear_all"}
+		if err := srv.BroadcastWS(ctx, msg); err != nil {
+			return nil, "", err
+		}
+		return textResult("cleared"), "ok", nil
+	}
+}
+
+type speedInput struct {
+	Speed float64 `json:"speed"`
+}
+
+func handleSetSpeed(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, speedInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, input speedInput) (*sdkmcp.CallToolResult, string, error) {
+		if input.Speed <= 0 {
+			return nil, "", fmt.Errorf("speed must be positive")
+		}
+		msg := map[string]any{"action": "set_speed", "speed": input.Speed}
+		if err := srv.BroadcastWS(ctx, msg); err != nil {
+			return nil, "", err
+		}
+		return textResult(fmt.Sprintf("speed set to %.1fx", input.Speed)), "ok", nil
+	}
+}
