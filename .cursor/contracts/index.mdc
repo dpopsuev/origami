@@ -37,6 +37,7 @@ See `current-goal.mdc` for the full completed contracts list.
 - `draft/durable-execution.md` — Checkpointer interface (pluggable backends, durability modes) + Interrupt/Resume HITL primitive. Extracted from LangGraph case study Gaps 1+2. Should-tier.
 - `draft/memory-evolution.md` — Evolve MemoryStore: namespaces, search, PersistentStore (SQLite), memory type conventions (semantic/episodic/procedural). Extracted from LangGraph case study Gap 4. Nice-tier.
 - `draft/pipeline-efficiency.md` — Node caching (CachePolicy, InMemoryCache) + fan-in merge strategies (append/latest/custom). Extracted from LangGraph case study Gaps 5+6. Nice-tier.
+- `draft/kami-presentation-engine.md` — Data-driven presentation SPA as a Kami framework feature. Consumers provide PresentationConfig + Theme; Kami renders sections dynamically. Should-tier.
 
 ## Files
 - `_TEMPLATE.md` — contract template (copy to create new contracts)

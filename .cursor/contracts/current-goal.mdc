@@ -57,11 +57,12 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 
 **CHECKPOINT D** — PASSED. EventBridge and MCP tools don't break Asterisk. `go build`, `go test` clean across all repos.
 
-### Sprint 5 — Demo (Asterisk)
+### Sprint 5 — Presentation engine + Demo
 
 | # | Contract | Tier | Notes |
 |---|----------|------|-------|
-| — | *Asterisk: `demo-presentation`* | should | Depends on Kami (#6). Police Station theme, `asterisk demo` CLI, recorded replay. **This is the presentation.** |
+| 7 | `kami-presentation-engine` | should | Framework-level presentation SPA. Consumers provide PresentationConfig + Theme, Kami renders sections. Moves element selector from Asterisk. **Must complete before Asterisk demo.** |
+| — | *Asterisk: `demo-presentation`* | should | Depends on #7. Implements `PresentationConfig` with Police Station personality. `asterisk demo` CLI, recorded replay. **This is the presentation.** |
 
 **CHECKPOINT E** — Final gate. Everything works. Demo replays cleanly. Calibration hasn't regressed. **E2E gate:** full sweep — all scenarios, all real-YAML walks, all injected walks. Ready to present.
 
