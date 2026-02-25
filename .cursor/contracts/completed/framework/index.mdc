@@ -36,3 +36,4 @@
 - `consumer-ergonomics.md` — ResolvePipelinePath, WithOutputCapture, DefaultWalker: three primitives eliminating consumer boilerplate.
 - `walker-experience.md` — WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern.
 - `ouroboros-seed-pipeline.md` — Replace Ouroboros v1 runner with 3-node YAML pipeline (Generator/Subject/Judge) + seed catalog + PersonaSheet + auto-routing.
+- `kami-live-debugger.md` — Kami live agentic debugger: EventBridge, KamiServer (HTTP/SSE + WS), Debug API, 14 MCP tools, Recorder/Replayer, React+Tailwind frontend with RH Color Collection 1.

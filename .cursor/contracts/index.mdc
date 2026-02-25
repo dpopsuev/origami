@@ -20,11 +20,11 @@
 - `completed/framework/consumer-ergonomics.md` — ResolvePipelinePath, WithOutputCapture, DefaultWalker: three consumer-boilerplate primitives. Complete.
 - `completed/framework/walker-experience.md` — WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern. Complete.
 - `completed/framework/ouroboros-seed-pipeline.md` — 3-node pipeline (Generator/Subject/Judge), YAML seeds, PersonaSheet, auto-routing. Phase 8 deferred. Complete.
+- `completed/framework/kami-live-debugger.md` — Kami live agentic debugger (Demiurge pattern: MCP + HTTP/SSE + WS). EventBridge, debug API, MCP tools, recorder/replayer, React frontend. Complete.
 
 See `current-goal.mdc` for the full completed contracts list.
 
 ## Draft
-- `draft/kami-live-debugger.md` — Kami live agentic debugger (Demiurge pattern: MCP + HTTP/SSE + WS). EventBridge, debug API, MCP tools, recorder/replayer, React frontend. Presentation-critical.
 - `draft/prompt-calibration.md` — Framework-level prompt tuning loop (deferred).
 - `draft/domain-calibration.md` — Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality.
 - `draft/case-study-omo-agentic-arms-race.md` — Competitive analysis of Oh My OpenCode. Analysis complete; implementation extracted to `provider-resilience` and `ouroboros-seed-pipeline` Phase 10.

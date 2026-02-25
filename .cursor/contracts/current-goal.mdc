@@ -49,13 +49,13 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 
 **CHECKPOINT C** — PASSED. Ouroboros API cleanup (deprecated v1 types removed). `go build`, `go test` clean across all repos. E2E gate: `TestE2E` passes.
 
-### Sprint 4 — Kami debugger
+### Sprint 4 — Kami debugger (COMPLETE)
 
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| 6 | `kami-live-debugger` | should | Presentation-critical. Pipeline layer must be stable (#5). |
+| # | Contract | Tier | Status |
+|---|----------|------|--------|
+| 6 | `kami-live-debugger` | should | **Complete.** EventBridge, KamiServer, Debug API, 14 MCP tools, Recorder/Replayer, React+Tailwind frontend. 27 Go tests. |
 
-**CHECKPOINT D** — Last checkpoint before demo integration. Verify Kami's EventBridge and new MCP tools don't break Asterisk's existing MCP server. SignalBus changes must be backward-compatible. **E2E gate:** same as C + Kami EventBridge integration (from `e2e-dsl-testing` task I2).
+**CHECKPOINT D** — PASSED. EventBridge and MCP tools don't break Asterisk. `go build`, `go test` clean across all repos.
 
 ### Sprint 5 — Demo (Asterisk)
 
@@ -169,3 +169,4 @@ See completed contracts list below for the full record.
 | `consumer-ergonomics` | framework | ResolvePipelinePath, WithOutputCapture, DefaultWalker, SetObserver. |
 | `walker-experience` | framework | WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation. |
 | `ouroboros-seed-pipeline` | framework | 3-node seed pipeline, PersonaSheet, auto-routing (Phase 8 deferred). |
+| `kami-live-debugger` | framework | Kami live debugger: EventBridge, KamiServer, Debug API, MCP tools, Recorder/Replayer, React frontend. |
