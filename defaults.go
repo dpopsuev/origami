@@ -1,0 +1,27 @@
+package framework
+
+// DefaultWalker returns a zero-config Walker suitable for consumers that
+// don't need persona or element customization. Uses Earth element
+// (stable, methodical) and Sentinel persona (observant, reliable).
+//
+// The identity is deterministic: calling DefaultWalker() twice produces
+// identical walkers, making pipeline runs reproducible.
+func DefaultWalker() Walker {
+	return defaultWalkerWith(ElementEarth)
+}
+
+// DefaultWalkerWithElement returns a default Walker with a custom element.
+// The persona remains Sentinel; only the element changes.
+func DefaultWalkerWithElement(element Element) Walker {
+	return defaultWalkerWith(element)
+}
+
+func defaultWalkerWith(element Element) *ProcessWalker {
+	persona, _ := PersonaByName("Sentinel")
+	id := persona.Identity
+	id.Element = element
+	return &ProcessWalker{
+		identity: id,
+		state:    NewWalkerState("default"),
+	}
+}
