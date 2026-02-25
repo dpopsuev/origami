@@ -79,41 +79,24 @@ Part 1 writes the case study document (analysis + concept mapping). Part 2 imple
 
 ## Tasks
 
-### Part 1 — Case study document
+### Part 1 — Case study document (complete)
 
-- [ ] **CS1** Create `docs/case-studies/` directory and `docs/case-studies/index.mdc`
-- [ ] **CS2** Write `docs/case-studies/omo-agentic-arms-race.md` with sections: Overview, Concept Mapping Table (OmO → Origami, 10 rows), Competitive Advantages (8 items Origami has, OmO lacks), Competitive Gaps (3 items OmO has, Origami should learn), Architectural Class Analysis, Actionable Takeaways
-- [ ] **CS3** Update `docs/index.mdc` to reference `case-studies/` directory
+- [x] **CS1** Create `docs/case-studies/` directory and `docs/case-studies/index.mdc`
+- [x] **CS2** Write `docs/case-studies/omo-agentic-arms-race.md`
+- [x] **CS3** Update `docs/index.mdc` to reference `case-studies/` directory
 
-### Part 2 — Actionable improvements
+### Part 2 — Actionable improvements (extracted)
 
-#### Gap 1: Auto-routing (close Ouroboros → ProviderRouter loop)
+Implementation tasks extracted to dedicated feature contracts:
 
-- [ ] **AR1** Define `AutoRouteOption` — a `RunOption` that accepts a `PersonaSheet` and configures the `AffinityScheduler` + `ProviderRouter` from it at walk start
-- [ ] **AR2** `PersonaSheet.ProviderHints() map[string]string` — maps step names to preferred provider names (derived from element affinity + known provider-element mapping)
-- [ ] **AR3** Wire into `ProviderRouter`: when `DispatchContext.Provider` is empty, check `PersonaSheet.ProviderHints[step]` before falling through to default
-- [ ] **AR4** Unit test: walk with `AutoRouteOption` + PersonaSheet routes step "investigate" to provider "anthropic" based on Water affinity
-- [ ] **AR5** Cross-reference: depends on `ouroboros-seed-pipeline` Phase 7 (PersonaSheet struct). Can stub PersonaSheet for testing.
-
-#### Gap 2: Provider fallback chains
-
-- [ ] **PF1** Add `Fallbacks map[string][]string` to `ProviderRouter` — maps primary provider to ordered fallback list
-- [ ] **PF2** On `Dispatch` failure (non-nil error from primary), iterate fallbacks in order until one succeeds or all fail
-- [ ] **PF3** Emit `EventProviderFallback` via `WalkObserver` when a fallback is used (includes: primary provider, fallback provider, error from primary)
-- [ ] **PF4** `WithFallbacks(fallbacks map[string][]string) ProviderRouterOption` — constructor option
-- [ ] **PF5** Unit tests: primary fails → fallback succeeds, all fail → error aggregated, no fallbacks configured → original behavior unchanged
-
-#### Gap 3: Entry classifier pattern
-
-- [ ] **EC1** Create `testdata/patterns/intent-classifier.yaml` — example pipeline where the first node classifies input type and sets `vars.intent`, downstream edges use `when: vars.intent == "investigation"` etc.
-- [ ] **EC2** Document the pattern in the case study's "Actionable Takeaways" section: how to build an Intent Gate as a standard Origami pipeline node
-- [ ] **EC3** Verify the YAML parses and the graph builds with `BuildGraphWith`
+- **Gap 1 (Auto-routing)** → `ouroboros-seed-pipeline` Phase 10
+- **Gap 2 (Provider fallback chains) + Gap 3 (Entry classifier pattern)** → `provider-resilience` contract
 
 ### Part 3 — Validate and tune
 
-- [ ] **V1** Validate (green) — `go build ./...`, `go test ./...` all pass. Case study document is complete. Fallback chains work. Auto-route option compiles (PersonaSheet can be stubbed).
-- [ ] **V2** Tune (blue) — Review case study for tone (evidence-based, not dismissive). Polish YAML example. Refine glossary entries.
-- [ ] **V3** Validate (green) — all tests still pass after tuning.
+- [ ] **V1** Validate (green) — case study document is complete and accurate.
+- [ ] **V2** Tune (blue) — Review case study for tone (evidence-based, not dismissive). Refine glossary entries.
+- [ ] **V3** Validate (green) — no regressions after tuning.
 
 ## Acceptance criteria
 
@@ -138,5 +121,7 @@ Part 1 writes the case study document (analysis + concept mapping). Part 2 imple
 No trust boundaries affected. Provider fallback chains route to already-configured dispatchers. Auto-routing uses locally-stored PersonaSheet data. The intent classifier pattern is a YAML example with no external calls.
 
 ## Notes
+
+2026-02-25 — Part 2 implementation tasks extracted. Gap 1 (auto-routing) → `ouroboros-seed-pipeline` Phase 10. Gaps 2-3 (fallback chains, entry classifier) → `provider-resilience` contract. Part 1 (case study document) complete. Case study contract is now analysis-only with cross-references.
 
 2026-02-25 — Contract created from competitive analysis of Oh My OpenCode (`github.com/code-yeongyu/oh-my-opencode`). OmO is a multi-model orchestration harness built on prompt engineering + glue code. Its key innovation — closing the model-to-task routing loop at runtime — is something Origami has all the pieces for (Ouroboros, ElementMatch, ProviderRouter, StepAffinity) but hasn't wired end-to-end. This contract closes the loop. The architectural class difference is stark: OmO is imperative prompt templates; Origami is a formal graph framework with empirical calibration. Origami's advantages (DSL, Ouroboros, Dialectic, Masks, Zones, Calibration, Kami) are not something OmO can replicate by adding more prompt templates. But OmO's "just wire it up" pragmatism is a useful reminder to close the feedback loops we've built the infrastructure for.

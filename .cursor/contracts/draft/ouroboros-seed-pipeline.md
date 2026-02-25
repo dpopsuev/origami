@@ -67,7 +67,7 @@ flowchart LR
 
 ## Execution strategy
 
-Phase 1 defines the seed data model. Phase 2 builds the pipeline YAML and node extractors. Phase 3 adds types and wires scoring into the existing ModelProfile aggregation. Phase 4 replaces the custom runner with pipeline execution. Phase 5 migrates existing probes to seeds and adds new seed categories. Phase 7 adds the Persona Sheet — a per-model routing document combining ModelProfile with pipeline step affinity. Phase 8 scopes future calibrate/curate integration (drift detection, seed discrimination, judge agreement). Phase 9 validates and tunes.
+Phase 1 defines the seed data model. Phase 2 builds the pipeline YAML and node extractors. Phase 3 adds types and wires scoring into the existing ModelProfile aggregation. Phase 4 replaces the custom runner with pipeline execution. Phase 5 migrates existing probes to seeds and adds new seed categories. Phase 7 adds the Persona Sheet — a per-model routing document combining ModelProfile with pipeline step affinity. Phase 8 scopes future calibrate/curate integration (drift detection, seed discrimination, judge agreement). Phase 10 closes the auto-routing loop (PersonaSheet → ProviderRouter via `AutoRouteOption`). Phase 11 validates and tunes.
 
 ## Coverage matrix
 
@@ -138,7 +138,15 @@ Phase 1 defines the seed data model. Phase 2 builds the pipeline YAML and node e
 - [ ] **CC4** Ouroboros + `curate/`: longitudinal evaluation dataset — seed results over time as a versioned dataset, enabling trend analysis across model versions
 - [ ] **CC5** Wire drift metrics into `calibrate.MetricSet` or a new `ouroboros.DriftReport` type
 
-### Phase 9 — Validate and tune
+### Phase 10 — Auto-routing (PersonaSheet → ProviderRouter)
+
+- [ ] **AR1** `PersonaSheet.ProviderHints() map[string]string` — maps pipeline step names to preferred provider names, derived from element affinity + known provider-element mapping
+- [ ] **AR2** Define `AutoRouteOption` — a `RunOption` that accepts a `PersonaSheet` and configures the `AffinityScheduler` + `ProviderRouter` from it at walk start
+- [ ] **AR3** Wire into `ProviderRouter`: when `DispatchContext.Provider` is empty, check `PersonaSheet.ProviderHints[step]` before falling through to default
+- [ ] **AR4** Unit tests: walk with `AutoRouteOption` + PersonaSheet routes step "investigate" to provider "anthropic" based on Water affinity; PersonaSheet can be stubbed
+- [ ] **AR5** Cross-reference: depends on Phase 7 (PersonaSheet). Replaces OmO's manual category→model mapping with empirical routing. Extracted from `case-study-omo-agentic-arms-race` Gap 1.
+
+### Phase 11 — Validate and tune
 
 - [ ] **V1** Validate (green) — `go build ./...`, `go test ./...` all pass. Pipeline walk produces `PoleResult`. Dimensions aggregate into `ModelProfile`. PersonaSheet emits for all pipeline steps.
 - [ ] **V2** Tune (blue) — Seed quality review, prompt engineering for generator/judge node prompts. No behavior changes.
@@ -166,11 +174,17 @@ Phase 1 defines the seed data model. Phase 2 builds the pipeline YAML and node e
 **When** `EmitPersonaSheet` is called,  
 **Then** the resulting `PersonaSheet` contains: model identity, element match, dimension scores, and a suggested persona for each of the 7 pipeline steps with non-zero affinity scores.
 
+**Given** a `PersonaSheet` with `ProviderHints{"investigate": "anthropic", "triage": "openai"}`,  
+**When** `AutoRouteOption` is used in a `Run()` call,  
+**Then** the "investigate" step dispatches to the "anthropic" provider and "triage" dispatches to "openai" without explicit `NodeDef.Provider` configuration.
+
 ## Security assessment
 
 No trust boundaries affected. Seeds are local YAML files. The pipeline uses the same dispatcher interface as all other Origami pipelines. No new external calls, no new data persistence, no new user input surfaces.
 
 ## Notes
+
+2026-02-25 — Injected Phase 10 (Auto-routing). PersonaSheet → ProviderRouter via AutoRouteOption, closing the Ouroboros → runtime routing loop identified in the OmO case study. Extracted from `case-study-omo-agentic-arms-race` Gap 1.
 
 2026-02-25 14:00 — Injected Phase 7 (Persona Sheet) and Phase 8 (calibrate/curate integration). Persona Sheet is a per-model routing document — the output artifact that the AffinityScheduler / agent router consumes for performance optimization. Phase 8 scopes future integration with calibrate/ (model drift, seed discrimination, judge agreement) and curate/ (longitudinal evaluation dataset). These are roadmap items for visibility.
 

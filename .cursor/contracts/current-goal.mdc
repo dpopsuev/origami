@@ -26,8 +26,10 @@ description: Active goal manifest — single-read orientation for agents to know
 | **nice** | `consumer-ergonomics` | draft | ResolvePipelinePath, WithOutputCapture, DefaultWalker. API polish for consumers. |
 | **nice** | `prompt-calibration` | draft | Framework-level prompt tuning loop. Per-step accuracy. Deferred. |
 | **nice** | `domain-calibration` | draft | Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/`. |
-| **nice** | `case-study-omo-agentic-arms-race` | draft | Competitive analysis of OmO. Auto-routing, provider fallback, entry classifier pattern. |
-| **nice** | `case-study-crewai-crews-and-flows` | draft | Competitive analysis of CrewAI. Crews+Flows duality vs unified graph. WalkerDef, MemoryStore, delegation pattern. |
+| **nice** | `case-study-omo-agentic-arms-race` | draft | Competitive analysis of OmO. Analysis complete; implementation extracted. |
+| **nice** | `case-study-crewai-crews-and-flows` | draft | Competitive analysis of CrewAI. Analysis complete; implementation extracted. |
+| **should** | `walker-experience` | draft | WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern. From CrewAI case study. |
+| **nice** | `provider-resilience` | draft | Provider fallback chains, entry classifier pattern. From OmO case study. |
 
 ## Framework Maturity (complete)
 

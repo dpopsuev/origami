@@ -94,40 +94,22 @@ Part 1 writes the case study document (analysis + concept mapping). Part 2 imple
 
 ## Tasks
 
-### Part 1 — Case study document
+### Part 1 — Case study document (complete)
 
-- [ ] **CS1** Write `docs/case-studies/crewai-crews-and-flows.md` with sections: Overview, The Duality Problem (Crews vs Flows), Concept Mapping Table (10 rows), Competitive Advantages (Origami over CrewAI), Competitive Gaps (CrewAI over Origami), Architectural Class Analysis (unified graph vs dual system), Actionable Takeaways
-- [ ] **CS2** Update `docs/case-studies/index.mdc` to include the new document
+- [x] **CS1** Write `docs/case-studies/crewai-crews-and-flows.md`
+- [x] **CS2** Update `docs/case-studies/index.mdc` to include the new document
 
-### Part 2 — Actionable improvements
+### Part 2 — Actionable improvements (extracted)
 
-#### Gap 1: Agent-in-YAML (WalkerDef)
+Implementation tasks extracted to dedicated feature contract:
 
-- [ ] **WD1** Define `WalkerDef` in `dsl.go`: `Name`, `Element`, `Persona`, `Preamble`, `StepAffinity map[string]float64`
-- [ ] **WD2** Add `Walkers []WalkerDef` to `PipelineDef`
-- [ ] **WD3** `BuildWalkersFromDef(defs []WalkerDef) ([]Walker, error)` — constructs ProcessWalker instances from YAML definitions
-- [ ] **WD4** Unit tests: parse YAML with `walkers:` section, build walkers, verify element and persona assignment
-- [ ] **WD5** Cross-reference: does not overlap with `consumer-ergonomics` (which adds DefaultWalker for the "don't care" case; WalkerDef is for the "do care, but in YAML" case)
-
-#### Gap 2: Cross-walk memory (MemoryStore)
-
-- [ ] **MS1** Define `MemoryStore` interface: `Get(walkerID, key string) (any, bool)`, `Set(walkerID, key string, value any)`, `Keys(walkerID string) []string`
-- [ ] **MS2** `InMemoryStore` implementation (thread-safe, scoped by walker identity)
-- [ ] **MS3** `WithMemory(store MemoryStore) RunOption` — injects memory into the walk context, accessible via `WalkerContext.Memory()`
-- [ ] **MS4** Unit tests: set value in walk 1, retrieve in walk 2 with same walker identity, verify isolation between different walker identities
-- [ ] **MS5** Cross-reference: does not overlap with existing `MemoryStore` in `poc-batteries` (that is a pipeline-level key-value store; this is walker-scoped identity memory)
-
-#### Gap 3: Hierarchical delegation pattern
-
-- [ ] **HD1** Create `testdata/patterns/hierarchical-delegation.yaml` — coordinator node fans out to specialist sub-pipelines, merges results. Uses `parallel:` edges and a merge node.
-- [ ] **HD2** Document the pattern in the case study's "Actionable Takeaways" section: how Origami's fan-out + zone stickiness models CrewAI's hierarchical process declaratively
-- [ ] **HD3** Verify the YAML parses and the graph builds with `BuildGraphWith`
+- **Gap 1 (WalkerDef) + Gap 2 (MemoryStore) + Gap 3 (Hierarchical delegation)** → `walker-experience` contract
 
 ### Part 3 — Validate and tune
 
-- [ ] **V1** Validate (green) — `go build ./...`, `go test ./...` all pass. Case study document is complete. WalkerDef parses. MemoryStore works cross-walk.
-- [ ] **V2** Tune (blue) — Review case study for tone (respectful of CrewAI's scale, precise about architectural differences). Polish YAML examples.
-- [ ] **V3** Validate (green) — all tests still pass after tuning.
+- [ ] **V1** Validate (green) — case study document is complete and accurate.
+- [ ] **V2** Tune (blue) — Review case study for tone (respectful of CrewAI's scale, precise about architectural differences).
+- [ ] **V3** Validate (green) — no regressions after tuning.
 
 ## Acceptance criteria
 
@@ -152,5 +134,7 @@ Part 1 writes the case study document (analysis + concept mapping). Part 2 imple
 No trust boundaries affected. WalkerDef reads local YAML. MemoryStore is in-process with no persistence beyond the process lifetime. The hierarchical delegation pattern is a YAML example.
 
 ## Notes
+
+2026-02-25 — Part 2 implementation tasks extracted to `walker-experience` contract. Part 1 (case study document) complete. Case study contract is now analysis-only with cross-references to the feature contract.
 
 2026-02-25 — Contract created from competitive analysis of CrewAI (`github.com/crewAIInc/crewAI`, 44.6k stars). CrewAI is the dominant multi-agent framework. Its Crews+Flows duality (two systems for autonomy vs control) vs Origami's unified graph (one system for both) is the central architectural comparison. Three gaps identified: agent-in-YAML (WalkerDef), cross-walk memory (MemoryStore), hierarchical delegation pattern. CrewAI's scale (100k+ developers, enterprise AMP) is a market advantage Origami addresses through architectural depth rather than ecosystem breadth.
