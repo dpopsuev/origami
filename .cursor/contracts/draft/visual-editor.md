@@ -106,7 +106,7 @@ flowchart TB
 
 This is the largest product scope in Origami's roadmap. Execution is split into phases that each deliver a usable increment. Phase 1 delivers a read-only viewer (graph + run history). Phase 2 adds the pipeline builder (drag-and-drop + bidirectional YAML). Phase 3 adds run management (launch, schedule, monitor). Phase 4 adds enterprise features (RBAC, multi-tenancy, audit, SSO). Phase 5 adds the collections palette and certified content integration.
 
-Dependencies are strict: Kami (EventBridge + React Flow) must ship before Phase 1. LSP must ship before Phase 2. Collections must ship before Phase 5.
+Dependencies are strict: Kami (EventBridge + React Flow) must ship before Phase 1. LSP must ship before Phase 2. Collections Phase 3.5 (SubgraphNode) must ship before Phase 2.5, but Phase 2.5 can be developed in parallel using mock nested `PipelineDef` data. Collections must ship before Phase 5.
 
 ## Coverage matrix
 
@@ -145,6 +145,16 @@ Dependencies are strict: Kami (EventBridge + React Flow) must ship before Phase 
 - [ ] **B7** Pipeline validation — call `origami validate` on every change, show diagnostics inline on graph and in YAML pane
 - [ ] **B8** Export — download pipeline as `.yaml` file, copy Mermaid diagram to clipboard
 - [ ] **B9** Unit tests: bidirectional sync (graph -> YAML -> graph roundtrip preserves structure)
+
+### Phase 2.5 — Subgraph fold/unfold (depends on: Collections Phase 3.5)
+
+Subgraph visualization with IDE-like collapse/expand. Can be developed in parallel with Collections using mock nested `PipelineDef` data. Applies to both the read-only viewer (Phase 1) and the pipeline builder (Phase 2) — placed here because the graph model extension is needed before run management.
+
+- [ ] **SV1** Hierarchical graph model — extend the React Flow graph data model to represent `SubgraphNode`s as collapsible group nodes. When collapsed, show as a single node with a fold indicator (chevron or depth badge, like IDE code folding). When expanded, reveal the subgraph's internal nodes/edges inline, visually nested inside a container with a subtle border and indented background.
+- [ ] **SV2** Fold/unfold interaction — click the fold indicator to toggle. Keyboard shortcut (Ctrl+Shift+[ / Ctrl+Shift+]) for fold/unfold, matching IDE conventions. "Fold All" / "Unfold All" toolbar buttons. Depth-aware: folding a parent also folds all children. Unfolding only reveals one level at a time (like IDE indent folding).
+- [ ] **SV3** Edge routing across levels — edges that cross subgraph boundaries render as dashed lines entering/exiting the collapsed node. When expanded, edges connect to the actual internal source/target nodes. Animated transition on fold/unfold so the user doesn't lose spatial context.
+- [ ] **SV4** Breadcrumb navigation — when zoomed deep into a nested subgraph (2+ levels), show a breadcrumb trail at the top: `Root > Investigation > Correlation`. Clicking a breadcrumb folds everything below that level and zooms to fit.
+- [ ] **SV5** Minimap depth — the React Flow minimap shows collapsed subgraphs as single rectangles, expanded ones as grouped rectangles. Matches the current fold state.
 
 ### Phase 3 — Run management
 
@@ -196,6 +206,10 @@ Dependencies are strict: Kami (EventBridge + React Flow) must ship before Phase 
 **Given** an Enterprise Edition with RBAC configured,  
 **When** a user with "viewer" role attempts to launch a run,  
 **Then** the launch button is disabled. The audit trail records the denied action. Only users with "operator" or "admin" role can launch runs.
+
+**Given** a pipeline with a SubgraphNode containing 3 internal nodes,  
+**When** the subgraph node's fold indicator is clicked to expand,  
+**Then** the internal graph unfolds inline with animated transition, edges reconnect to internal nodes, and the breadcrumb shows the subgraph name. Clicking the fold indicator collapses it back to a single node. Keyboard shortcut (Ctrl+Shift+[/]) toggles fold state.
 
 **Given** the Community Edition without an enterprise license,  
 **When** the Visual Editor starts,  

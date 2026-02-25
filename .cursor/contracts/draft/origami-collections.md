@@ -111,7 +111,7 @@ Phase 1 defines the Collection struct and manifest parser. Phase 2 adds FQCN res
 
 ### Phase 3.5 — SubgraphNode *(injected from LangGraph case study Gap 3)*
 
-- [ ] **SG1** Define `SubgraphNode` in `subgraph.go` — wraps a compiled `Graph` and implements the `Node` interface. `InputMapper func(Artifact) (*WalkerState, error)` translates the parent artifact into subgraph walker state. `OutputMapper func(*WalkerState) (Artifact, error)` translates the subgraph's final state back into a parent artifact.
+- [ ] **SG1** Define `SubgraphNode` in `subgraph.go` — wraps a compiled `Graph` and implements the `Node` interface. `InputMapper func(Artifact) (*WalkerState, error)` translates the parent artifact into subgraph walker state. `OutputMapper func(*WalkerState) (Artifact, error)` translates the subgraph's final state back into a parent artifact. Must expose `PipelineDef() *PipelineDef` so the Visual Editor and Kami can query the subgraph's internal topology for rendering (fold/unfold, breadcrumbs, minimap). See `visual-editor` Phase 2.5 and `kami-live-debugger` F6b.
 - [ ] **SG2** Add `Subgraph string` field to `NodeDef` in `dsl.go` — `subgraph: <pipeline-ref>` resolves via `ResolvePipelinePath`, loads the pipeline, builds the graph, and wraps it as a `SubgraphNode`
 - [ ] **SG3** Collections distribute subgraph pipelines via `Pipelines map[string][]byte` (already defined in C1). A collection can provide a reusable sub-pipeline that consumers reference via FQCN in `subgraph: namespace.pipeline-name`.
 - [ ] **SG4** Unit tests: build graph with subgraph node, walk parent → enters subgraph → subgraph nodes execute → returns to parent. Verify artifact flows through InputMapper/OutputMapper correctly.

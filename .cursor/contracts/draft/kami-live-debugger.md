@@ -140,6 +140,7 @@ Phase 1 builds the EventBridge — the core primitive that unifies both event sy
 - [ ] **F4** `ExpandablePanel` component — click-to-fullscreen wrapper for top/bottom panels
 - [ ] **F5** `IntroSequence` component — agent card carousel with CSS 3D rotating polyhedra (Fire=Tetrahedron, Water=Icosahedron, Earth=Cube, Air=Octahedron, Diamond=Diamond, Lightning=Star)
 - [ ] **F6** `PipelineGraph` component — React Flow interactive graph with zone backgrounds, agent position dots, hover tooltips, breakpoint indicators
+- [ ] **F6b** Subgraph fold/unfold in `PipelineGraph` — when a walk enters a `SubgraphNode`, Kami auto-expands that subgraph to show internal node progress. When the walk exits, auto-fold back to collapsed view. Manual override: user can pin a subgraph open or closed regardless of walk state. Shares the fold/unfold model with the Visual Editor (Phase 2.5) — same hierarchical graph data model, same fold indicator UX, same breadcrumb navigation.
 - [ ] **F7** `MonologuePanel` (top), `CooperationPopup` (left/right), `EvidencePanel` (bottom)
 - [ ] **F8** `KamiOverlay` — debug mode overlay (breakpoints, pause state, AI annotations)
 - [ ] **F9** `go:embed frontend/dist/*` in `kami/embed.go`, verify `origami kami --port 3000` serves SPA
