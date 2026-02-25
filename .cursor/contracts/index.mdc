@@ -17,17 +17,18 @@
 - `completed/framework/origami-cursor-first-architecture.md` — CLIDispatcher, skill scaffold, provider routing. Cursor as first-class citizen.
 - `completed/framework/origami-papercup-v2-hardening.md` — Align Cursor Skill guide with Papercup v2 choreography. Companion: `asterisk-papercup-v2-hardening`.
 
+- `completed/framework/consumer-ergonomics.md` — ResolvePipelinePath, WithOutputCapture, DefaultWalker: three consumer-boilerplate primitives. Complete.
+- `completed/framework/walker-experience.md` — WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern. Complete.
+- `completed/framework/ouroboros-seed-pipeline.md` — 3-node pipeline (Generator/Subject/Judge), YAML seeds, PersonaSheet, auto-routing. Phase 8 deferred. Complete.
+
 See `current-goal.mdc` for the full completed contracts list.
 
 ## Draft
 - `draft/kami-live-debugger.md` — Kami live agentic debugger (Demiurge pattern: MCP + HTTP/SSE + WS). EventBridge, debug API, MCP tools, recorder/replayer, React frontend. Presentation-critical.
-- `draft/ouroboros-seed-pipeline.md` — Replace Ouroboros v1 (custom runner + keyword scorers) with a 3-node pipeline (Generator/Subject/Judge) driven by YAML seed definitions with dichotomous pole scoring. Includes Persona Sheet output, auto-routing (PersonaSheet → ProviderRouter), and calibrate/curate integration.
-- `draft/consumer-ergonomics.md` — Three missing framework primitives: ResolvePipelinePath, WithOutputCapture, DefaultWalker. API polish for consumers.
 - `draft/prompt-calibration.md` — Framework-level prompt tuning loop (deferred).
 - `draft/domain-calibration.md` — Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality.
 - `draft/case-study-omo-agentic-arms-race.md` — Competitive analysis of Oh My OpenCode. Analysis complete; implementation extracted to `provider-resilience` and `ouroboros-seed-pipeline` Phase 10.
 - `draft/case-study-crewai-crews-and-flows.md` — Competitive analysis of CrewAI (market leader). Analysis complete; implementation extracted to `walker-experience`.
-- `draft/walker-experience.md` — WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern. Extracted from CrewAI case study gaps.
 - `draft/provider-resilience.md` — Provider fallback chains, entry classifier pattern. Extracted from OmO case study gaps.
 - `draft/e2e-dsl-testing.md` — Comprehensive E2E walk tests for all DSL features. Scenario YAMLs + real-YAML walks. Injected as gates into CHECKPOINTs C-F.
 - `draft/origami-lsp.md` — Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. Vision-tier.

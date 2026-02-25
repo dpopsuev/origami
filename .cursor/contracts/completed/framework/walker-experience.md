@@ -1,6 +1,6 @@
 # Contract — Walker Experience
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Add WalkerDef (agent-in-YAML), cross-walk MemoryStore, and hierarchical delegation pattern — closing the three walker-side gaps identified in the CrewAI case study.  
 **Serves:** Polishing & Presentation (should)
 
@@ -81,31 +81,31 @@ Phase 1 extends the DSL with WalkerDef. Phase 2 adds the MemoryStore framework p
 
 ### Phase 1 — WalkerDef (Agent-in-YAML)
 
-- [ ] **WD1** Define `WalkerDef` in `dsl.go`: `Name`, `Element`, `Persona`, `Preamble`, `StepAffinity map[string]float64`
-- [ ] **WD2** Add `Walkers []WalkerDef` to `PipelineDef`
-- [ ] **WD3** `BuildWalkersFromDef(defs []WalkerDef) ([]Walker, error)` — constructs `ProcessWalker` instances from YAML definitions. Resolves element by name, persona by name, applies preamble and step affinity.
-- [ ] **WD4** Unit tests: parse pipeline YAML with `walkers:` section, build walkers, verify element and persona assignment
-- [ ] **WD5** Cross-reference: does not overlap with `consumer-ergonomics` DefaultWalker (which is for the "don't care" case; WalkerDef is for the "do care, but in YAML" case)
+- [x] **WD1** Define `WalkerDef` in `dsl.go`: `Name`, `Element`, `Persona`, `Preamble`, `StepAffinity map[string]float64`
+- [x] **WD2** Add `Walkers []WalkerDef` to `PipelineDef`
+- [x] **WD3** `BuildWalkersFromDef(defs []WalkerDef) ([]Walker, error)` — constructs `ProcessWalker` instances from YAML definitions. Resolves element by name, persona by name, applies preamble and step affinity.
+- [x] **WD4** Unit tests: parse pipeline YAML with `walkers:` section, build walkers, verify element and persona assignment
+- [x] **WD5** Cross-reference: does not overlap with `consumer-ergonomics` DefaultWalker (which is for the "don't care" case; WalkerDef is for the "do care, but in YAML" case)
 
 ### Phase 2 — Cross-walk MemoryStore
 
-- [ ] **MS1** Define `MemoryStore` interface in `memory.go`: `Get(walkerID, key string) (any, bool)`, `Set(walkerID, key string, value any)`, `Keys(walkerID string) []string`
-- [ ] **MS2** `InMemoryStore` implementation (thread-safe via `sync.RWMutex`, scoped by walker identity)
-- [ ] **MS3** `WithMemory(store MemoryStore) RunOption` — injects memory into the walk context, accessible via `WalkerContext.Memory()`
-- [ ] **MS4** Unit tests: set value in walk 1, retrieve in walk 2 with same walker identity, verify isolation between different walker identities
-- [ ] **MS5** Cross-reference: does not overlap with `curate.MemoryStore` (dataset-level CRUD) — this is walker-scoped identity memory
+- [x] **MS1** Define `MemoryStore` interface in `memory.go`: `Get(walkerID, key string) (any, bool)`, `Set(walkerID, key string, value any)`, `Keys(walkerID string) []string`
+- [x] **MS2** `InMemoryStore` implementation (thread-safe via `sync.RWMutex`, scoped by walker identity)
+- [x] **MS3** `WithMemory(store MemoryStore) RunOption` — injects memory into the walk context, accessible via `WalkerContext.Memory()`
+- [x] **MS4** Unit tests: set value in walk 1, retrieve in walk 2 with same walker identity, verify isolation between different walker identities
+- [x] **MS5** Cross-reference: does not overlap with `curate.MemoryStore` (dataset-level CRUD) — this is walker-scoped identity memory
 
 ### Phase 3 — Hierarchical delegation pattern
 
-- [ ] **HD1** Create `testdata/patterns/hierarchical-delegation.yaml` — coordinator node fans out to specialist sub-pipelines via `parallel: true` edges, merges results at a merge node
-- [ ] **HD2** Document the pattern: how Origami's fan-out + zone stickiness models CrewAI's hierarchical process declaratively, with strictly more power (conditional delegation, weighted routing, multi-level hierarchy)
-- [ ] **HD3** Verify the YAML parses and the graph builds with `BuildGraphWith`
+- [x] **HD1** Create `testdata/patterns/hierarchical-delegation.yaml` — coordinator node fans out to specialist sub-pipelines via `parallel: true` edges, merges results at a merge node
+- [x] **HD2** Document the pattern: how Origami's fan-out + zone stickiness models CrewAI's hierarchical process declaratively, with strictly more power (conditional delegation, weighted routing, multi-level hierarchy)
+- [x] **HD3** Verify the YAML parses and the graph builds with `BuildGraphWith`
 
 ### Phase 4 — Validate and tune
 
-- [ ] **V1** Validate (green) — `go build ./...`, `go test ./...` all pass. WalkerDef parses from YAML. MemoryStore works cross-walk with isolation. Pattern YAML builds.
-- [ ] **V2** Tune (blue) — Review WalkerDef field names for API consistency with NodeDef. Review MemoryStore thread-safety under concurrent walk.
-- [ ] **V3** Validate (green) — all tests still pass after tuning.
+- [x] **V1** Validate (green) — `go build ./...`, `go test ./...` all pass. WalkerDef parses from YAML. MemoryStore works cross-walk with isolation. Pattern YAML builds.
+- [x] **V2** Tune (blue) — Review WalkerDef field names for API consistency with NodeDef. Review MemoryStore thread-safety under concurrent walk.
+- [x] **V3** Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 
@@ -128,3 +128,5 @@ No trust boundaries affected. WalkerDef reads local YAML. MemoryStore is in-proc
 ## Notes
 
 2026-02-25 — Contract extracted from `case-study-crewai-crews-and-flows` Part 2. The three gaps were identified by analyzing CrewAI's Crews+Flows architecture against Origami's unified graph. CrewAI's DX advantage in these areas is clear: agents in YAML, memory across tasks, documented delegation. Origami closes these gaps using its own primitives (Elements, Personas, AffinityScheduler, fan-out) rather than copying CrewAI's design.
+
+2026-02-25 — Contract complete. WalkerDef in `dsl.go` + `walker_build.go`, MemoryStore in `memory.go`, hierarchical delegation pattern in `testdata/patterns/`. Added curate.MemoryStore cross-reference comment. CHECKPOINTs A-C pass.

@@ -33,3 +33,6 @@
 - `knowledge-source-catalog.md` — KnowledgeSourceCatalog + Source types, KnowledgeSourceRouter for tag-based routing.
 - `migrate-ouroboros-to-marshaller.md` — Ouroboros discovery tools served via PipelineServer domain hooks.
 - `papercup-protocol-maturity.md` — Papercup choreography, zone stickiness, work stealing, adaptive lifecycle, transport decoupling.
+- `consumer-ergonomics.md` — ResolvePipelinePath, WithOutputCapture, DefaultWalker: three primitives eliminating consumer boilerplate.
+- `walker-experience.md` — WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern.
+- `ouroboros-seed-pipeline.md` — Replace Ouroboros v1 runner with 3-node YAML pipeline (Generator/Subject/Judge) + seed catalog + PersonaSheet + auto-routing.

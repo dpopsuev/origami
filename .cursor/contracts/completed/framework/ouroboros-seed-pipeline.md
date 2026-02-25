@@ -1,6 +1,6 @@
 # Contract — Ouroboros Seed Pipeline
 
-**Status:** active  
+**Status:** complete  
 **Goal:** Replace Ouroboros v1 (custom runner + heuristic keyword scorers) with a standard 3-node Origami pipeline (Generator/Subject/Judge) driven by YAML seed definitions with dichotomous pole scoring.  
 **Serves:** Polishing & Presentation (should)
 
@@ -193,3 +193,5 @@ No trust boundaries affected. Seeds are local YAML files. The pipeline uses the 
 2026-02-25 14:00 — Injected Phase 7 (Persona Sheet) and Phase 8 (calibrate/curate integration). Persona Sheet is a per-model routing document — the output artifact that the AffinityScheduler / agent router consumes for performance optimization. Phase 8 scopes future integration with calibrate/ (model drift, seed discrimination, judge agreement) and curate/ (longitudinal evaluation dataset). These are roadmap items for visibility.
 
 2026-02-25 — Contract created. Redesigns Ouroboros from a custom runner with heuristic keyword scorers into a standard 3-node pipeline (Generator/Subject/Judge) driven by YAML seed definitions. The "agentic train" insight: instead of 3 separate rounds (3x cost), pipeline the nodes linearly — each node's artifact is the next node's input. This is just a standard Origami graph walk. Design emerged from conversation about dichotomous evaluation (poles reveal element affinity, not correctness), test contamination prevention (questions generated fresh), and the Subject not knowing it's being tested.
+
+2026-02-25 — Contract complete. All phases implemented except Phase 8 (CC1-CC5) which was explicitly scoped as "future, roadmap visibility." Deprecated v1 types removed per pre-PoC API stability policy. CHECKPOINTs A-C pass.

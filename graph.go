@@ -60,6 +60,12 @@ func WithObserver(obs WalkObserver) GraphOption {
 	}
 }
 
+// SetObserver replaces the graph-level observer. This is useful for consumers
+// that build graphs via NewRunnerWith and need to attach observers externally.
+func (g *DefaultGraph) SetObserver(obs WalkObserver) {
+	g.observer = obs
+}
+
 // NewGraph constructs a DefaultGraph from the provided nodes, edges, and zones.
 // Returns an error if referential integrity checks fail (e.g. an edge
 // references a nonexistent node).

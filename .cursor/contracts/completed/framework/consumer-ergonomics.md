@@ -1,6 +1,6 @@
 # Contract — Consumer Ergonomics
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Add three missing framework primitives (`ResolvePipelinePath`, `WithOutputCapture`, `DefaultWalker`) that eliminate boilerplate in consumers like Asterisk and Achilles.  
 **Serves:** Polishing & Presentation (nice)
 
@@ -71,38 +71,38 @@ Phase 1-3 each deliver one primitive with unit tests. Phase 4 proves ergonomics 
 
 ### Phase 1 — ResolvePipelinePath
 
-- [ ] **P1** Define `ResolvePipelinePath(name string, opts ...ResolveOption) (string, error)` in a new file (e.g. `resolve.go`)
-- [ ] **P2** Resolution strategy: (1) check `go:embed` registry, (2) check `$ORIGAMI_PIPELINES` env var, (3) check working directory, (4) return error with searched locations
-- [ ] **P3** `RegisterEmbeddedPipeline(name string, content []byte)` — consumers call this in `init()` to register `go:embed` pipelines
-- [ ] **P4** Unit tests: embedded pipeline found, fs fallback, env var override, not-found error message lists searched paths
+- [x] **P1** Define `ResolvePipelinePath(name string, opts ...ResolveOption) (string, error)` in a new file (e.g. `resolve.go`)
+- [x] **P2** Resolution strategy: (1) check `go:embed` registry, (2) check `$ORIGAMI_PIPELINES` env var, (3) check working directory, (4) return error with searched locations
+- [x] **P3** `RegisterEmbeddedPipeline(name string, content []byte)` — consumers call this in `init()` to register `go:embed` pipelines
+- [x] **P4** Unit tests: embedded pipeline found, fs fallback, env var override, not-found error message lists searched paths
 
 ### Phase 2 — WithOutputCapture
 
-- [ ] **O1** Define `WithOutputCapture() RunOption` that returns a `RunOption` and an `*OutputCapture` handle
-- [ ] **O2** `OutputCapture` struct: `Artifacts() map[string]Artifact` (node name → artifact), `ArtifactAt(node string) (Artifact, bool)`
-- [ ] **O3** Implementation: `OutputCapture` implements `WalkObserver`, captures artifacts on `node_exit` events. Stacks with any existing observer via `CompositeObserver`.
-- [ ] **O4** Thread-safety: `OutputCapture` must be safe for concurrent reads during parallel fan-out walks
-- [ ] **O5** Unit tests: walk a 3-node graph, verify artifacts captured at each node, verify concurrent safety
+- [x] **O1** Define `WithOutputCapture() RunOption` that returns a `RunOption` and an `*OutputCapture` handle
+- [x] **O2** `OutputCapture` struct: `Artifacts() map[string]Artifact` (node name → artifact), `ArtifactAt(node string) (Artifact, bool)`
+- [x] **O3** Implementation: `OutputCapture` implements `WalkObserver`, captures artifacts on `node_exit` events. Stacks with any existing observer via `CompositeObserver`.
+- [x] **O4** Thread-safety: `OutputCapture` must be safe for concurrent reads during parallel fan-out walks
+- [x] **O5** Unit tests: walk a 3-node graph, verify artifacts captured at each node, verify concurrent safety
 
 ### Phase 3 — DefaultWalker
 
-- [ ] **W1** Define `DefaultWalker() Walker` factory in `walker.go` or `defaults.go`
-- [ ] **W2** Returns a Walker with: Earth element (stable, methodical — safest default), Sentinel persona (observant, reliable), deterministic seed for reproducibility
-- [ ] **W3** `DefaultWalkerWithElement(element Element) Walker` — override just the element, keep persona consistent
-- [ ] **W4** Unit tests: DefaultWalker produces deterministic identity across calls, element override works
+- [x] **W1** Define `DefaultWalker() Walker` factory in `walker.go` or `defaults.go`
+- [x] **W2** Returns a Walker with: Earth element (stable, methodical — safest default), Sentinel persona (observant, reliable), deterministic seed for reproducibility
+- [x] **W3** `DefaultWalkerWithElement(element Element) Walker` — override just the element, keep persona consistent
+- [x] **W4** Unit tests: DefaultWalker produces deterministic identity across calls, element override works
 
 ### Phase 4 — Prove ergonomics (Achilles)
 
-- [ ] **A1** Update Achilles `main.go` to use `ResolvePipelinePath("achilles")` instead of hardcoded path
-- [ ] **A2** Update Achilles to use `WithOutputCapture()` instead of ad-hoc artifact collection
-- [ ] **A3** Update Achilles to use `DefaultWalker()` instead of manual walker construction
-- [ ] **A4** Verify Achilles `go build ./...` and `go test ./...` pass with reduced boilerplate
+- [x] **A1** Update Achilles `main.go` to use `ResolvePipelinePath("achilles")` instead of hardcoded path
+- [x] **A2** Update Achilles to use `WithOutputCapture()` instead of ad-hoc artifact collection
+- [x] **A3** Update Achilles to use `DefaultWalker()` instead of manual walker construction
+- [x] **A4** Verify Achilles `go build ./...` and `go test ./...` pass with reduced boilerplate
 
 ### Phase 5 — Validate and tune
 
-- [ ] **V1** Validate (green) — `go build ./...`, `go test ./...` in both Origami and Achilles. All three primitives work independently and together.
-- [ ] **V2** Tune (blue) — Review naming, godoc, error messages. Ensure discoverability.
-- [ ] **V3** Validate (green) — all tests still pass after tuning.
+- [x] **V1** Validate (green) — `go build ./...`, `go test ./...` in both Origami and Achilles. All three primitives work independently and together.
+- [x] **V2** Tune (blue) — Review naming, godoc, error messages. Ensure discoverability.
+- [x] **V3** Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 
@@ -129,3 +129,5 @@ No trust boundaries affected. `ResolvePipelinePath` reads local files and embedd
 ## Notes
 
 2026-02-25 — Contract created. Three primitives identified during Achilles audit (framework-implementation boundary analysis). Each addresses a pattern where both Asterisk and Achilles wrote ad-hoc code for a generic need. ResolvePipelinePath eliminates hardcoded paths, WithOutputCapture eliminates ad-hoc artifact collection, DefaultWalker lowers the entry barrier for simple consumers.
+
+2026-02-25 — Contract complete. All three primitives implemented: `resolve.go`, `capture.go`, `defaults.go` with full test coverage. Achilles adoption (A1-A4) done — main.go rewritten to use `go:embed` + `RegisterEmbeddedPipeline`, `DefaultWalker()`, and `OutputCapture`. Added `DefaultGraph.SetObserver()` to support external consumers setting observers on graphs built via `NewRunnerWith`. CHECKPOINTs A-C pass (Origami, Asterisk, Achilles all build and test clean).

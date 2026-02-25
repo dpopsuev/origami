@@ -6,6 +6,8 @@ import "sync"
 // Walker identity (walkerID) is the scoping dimension: each walker has
 // its own namespace. Values persist across multiple graph walks when
 // the same MemoryStore instance is reused.
+//
+// Distinct from curate.MemoryStore which is dataset-level CRUD storage.
 type MemoryStore interface {
 	Get(walkerID, key string) (any, bool)
 	Set(walkerID, key string, value any)

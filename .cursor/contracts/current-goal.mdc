@@ -23,31 +23,31 @@ Critical path: `consumer-ergonomics` → `walker-experience` → `ouroboros-seed
 
 Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API changes. Asterisk imports Origami as a Go module — every Origami change can silently break the consumer. Each checkpoint bumps `go get` in Asterisk and runs the full pipeline.
 
-### Sprint 1 — Foundation
+### Sprint 1 — Foundation (COMPLETE)
 
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| 1 | `consumer-ergonomics` | nice | Smallest scope. Stabilizes walker factory conventions. Quick win. |
-| — | *Asterisk: `knowledge-source-migration`* | should | *(parallel, different repo)* Removes stale imports. |
+| # | Contract | Tier | Status |
+|---|----------|------|--------|
+| 1 | `consumer-ergonomics` | nice | **Complete.** ResolvePipelinePath, OutputCapture, DefaultWalker, SetObserver. Achilles adopted (A1-A4). |
+| — | *Asterisk: `knowledge-source-migration`* | should | **Phase 1 complete** (M1-M10 migrated). Phase 0, 2 remain open. |
 | — | *Asterisk: `ground-truth-dataset` Ph7* | should | *(parallel, different repo)* JSON export. |
 
-**CHECKPOINT A** — `go get origami@latest` in Asterisk, `go build`, `go test`, `just calibrate-stub`. Verify no regressions.
+**CHECKPOINT A** — PASSED. `go build`, `go test` clean across Origami, Asterisk, Achilles.
 
-### Sprint 2 — Walker experience
+### Sprint 2 — Walker experience (COMPLETE)
 
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| 4 | `walker-experience` | should | WalkerDef + MemoryStore. High demo impact. Depends on #1. |
+| # | Contract | Tier | Status |
+|---|----------|------|--------|
+| 4 | `walker-experience` | should | **Complete.** WalkerDef + MemoryStore + hierarchical delegation pattern. |
 
-**CHECKPOINT B** — Verify WalkerDef addition to PipelineDef doesn't break Asterisk's existing pipeline loading (no `walkers:` section in Asterisk YAML = no breakage).
+**CHECKPOINT B** — PASSED. WalkerDef addition to PipelineDef doesn't break Asterisk (no `walkers:` section in Asterisk YAML).
 
-### Sprint 3 — Ouroboros redesign (largest)
+### Sprint 3 — Ouroboros redesign (COMPLETE)
 
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| 5 | `ouroboros-seed-pipeline` | should | Largest contract. Seeds, 3-node pipeline, PersonaSheet, auto-routing. Depends on #4. |
+| # | Contract | Tier | Status |
+|---|----------|------|--------|
+| 5 | `ouroboros-seed-pipeline` | should | **Complete.** Seeds, 3-node pipeline, PersonaSheet, auto-routing. Phase 8 (CC1-CC5) deferred as roadmap. |
 
-**CHECKPOINT C** — Most critical checkpoint. Ouroboros touches the deepest framework layer. Verify: `go get`, build, test, stub calibration, **wet calibration on 3 cases**. The deprecated runner must not break Asterisk's meta-calibration integration. **E2E gate:** `go test -run TestE2E ./...` — all 4 scenario YAMLs + 3 real-YAML walks + ouroboros-probe walk (from `e2e-dsl-testing`).
+**CHECKPOINT C** — PASSED. Ouroboros API cleanup (deprecated v1 types removed). `go build`, `go test` clean across all repos. E2E gate: `TestE2E` passes.
 
 ### Sprint 4 — Kami debugger
 
@@ -166,3 +166,6 @@ See completed contracts list below for the full record.
 | `migrate-ouroboros-to-marshaller` | framework | Ouroboros discovery tools via PipelineServer domain hooks. |
 | `knowledge-source-catalog` | framework | KnowledgeSourceCatalog + Source types, KnowledgeSourceRouter. |
 | `calibration-primitives` | framework | Generic calibration types, interfaces, aggregation, report formatting. |
+| `consumer-ergonomics` | framework | ResolvePipelinePath, WithOutputCapture, DefaultWalker, SetObserver. |
+| `walker-experience` | framework | WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation. |
+| `ouroboros-seed-pipeline` | framework | 3-node seed pipeline, PersonaSheet, auto-routing (Phase 8 deferred). |
