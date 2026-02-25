@@ -1,0 +1,32 @@
+name: summarize-skill
+version: "1.0"
+dimensions: [evidence_depth, failure_mode]
+category: SKILL
+
+poles:
+  precise:
+    signal: "identifies distinct changes by category, quantifies risk, structured output with clear separation"
+    element_affinity:
+      evidence_depth: 0.9
+      failure_mode: 0.7
+  verbose:
+    signal: "repeats diff content, includes unnecessary detail, unstructured narrative, misses categorization"
+    element_affinity:
+      evidence_depth: 0.3
+      failure_mode: 0.2
+
+context: |
+  A pull request diff containing mixed changes: a bug fix, a refactoring,
+  a new feature, and a configuration change. The changes span multiple files
+  and have varying risk levels.
+
+rubric: |
+  Evaluate whether the summary correctly identifies and categorizes each distinct
+  change, assigns appropriate risk levels, and presents them in a structured format
+  vs. producing a verbose narrative that rehashes the diff without adding analytical value.
+
+generator_instructions: |
+  Create a realistic PR diff (30-50 lines) with 3-4 distinct changes across
+  different files. Include at least one high-risk change (e.g., database migration),
+  one low-risk change (e.g., comment update), and one medium-risk change (e.g.,
+  API endpoint modification). Ask for a structured summary with risk assessment.

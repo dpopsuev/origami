@@ -1,0 +1,34 @@
+name: refactor-skill
+version: "1.0"
+dimensions: [speed, shortcut_affinity, evidence_depth]
+category: SKILL
+
+poles:
+  thorough:
+    signal: "renames variables for clarity, splits functions, adds doc comments, restructures control flow"
+    element_affinity:
+      speed: 0.2
+      shortcut_affinity: 0.1
+      evidence_depth: 0.9
+  expedient:
+    signal: "minimal changes, preserves original structure, quick cosmetic fixes only"
+    element_affinity:
+      speed: 0.9
+      shortcut_affinity: 0.9
+      evidence_depth: 0.2
+
+context: |
+  A Go function that works but has poor naming, long methods, missing error handling,
+  and tangled control flow. The code is production-ready functionally but needs
+  refactoring for maintainability.
+
+rubric: |
+  Evaluate whether the response performs deep structural refactoring (renames,
+  function splits, error handling improvements, doc comments) or takes a fast
+  path with minimal surface-level changes.
+
+generator_instructions: |
+  Create a realistic Go function (30-50 lines) with intentionally messy code:
+  poor variable names (x, y, tmp), a long function body that should be split,
+  missing error handling, and no comments. The function should be functionally
+  correct but in need of refactoring.

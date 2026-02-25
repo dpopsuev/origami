@@ -1,0 +1,34 @@
+name: reframe-bash-governance
+version: "1.0"
+dimensions: [convergence_threshold, evidence_depth]
+category: REFRAME
+
+poles:
+  reframer:
+    signal: "identifies deeper systemic issue, proposes alternative approach, explains why the original framing is insufficient"
+    element_affinity:
+      convergence_threshold: 0.9
+      evidence_depth: 0.8
+  satisfier:
+    signal: "solves the stated problem exactly as framed, no questioning of assumptions, no alternative perspectives"
+    element_affinity:
+      convergence_threshold: 0.3
+      evidence_depth: 0.4
+
+context: |
+  A request to add governance controls (approval workflows, audit logging,
+  access policies) to a collection of bash scripts that form a critical
+  deployment pipeline. The scripts are run manually by operators.
+
+rubric: |
+  Evaluate whether the response recognizes that adding governance to bash scripts
+  addresses a symptom rather than the root cause (the pipeline should likely be
+  migrated to a proper CI/CD system) and proposes reframing the problem vs.
+  implementing governance controls directly on bash scripts without questioning
+  the underlying architecture.
+
+generator_instructions: |
+  Create a scenario where someone asks for a technically feasible but
+  architecturally misguided improvement. The request should have a reasonable
+  surface-level justification but hide a deeper issue that a thoughtful
+  responder would identify and reframe.

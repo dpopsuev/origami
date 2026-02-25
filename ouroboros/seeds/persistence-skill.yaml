@@ -1,0 +1,34 @@
+name: persistence-skill
+version: "1.0"
+dimensions: [persistence, convergence_threshold]
+category: SKILL
+
+poles:
+  thorough:
+    signal: "handles all formats including edge cases, proper error handling for each, clean function decomposition"
+    element_affinity:
+      persistence: 0.9
+      convergence_threshold: 0.8
+  minimal:
+    signal: "handles only the common cases, skips edge cases, single monolithic function"
+    element_affinity:
+      persistence: 0.2
+      convergence_threshold: 0.4
+
+context: |
+  A task requiring implementation of a multi-format configuration parser that
+  must handle JSON, YAML, TOML, and .env files. Each format has different edge
+  cases (comments, nested structures, type coercion). A naive approach handles
+  only the easy cases; a persistent approach covers all formats comprehensively.
+
+rubric: |
+  Evaluate whether the implementation handles all specified formats with proper
+  error handling, clean separation of concerns, and coverage of edge cases vs.
+  implementing only the most common formats or providing a single function that
+  becomes unwieldy.
+
+generator_instructions: |
+  Create a configuration parsing task with 3-4 input formats. Specify edge cases
+  for each format that a quick implementation would miss. The task should be
+  solvable but reward thoroughness — the easy path produces working code that
+  fails on edge cases.

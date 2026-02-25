@@ -1,0 +1,34 @@
+name: ambiguity-boundary
+version: "1.0"
+dimensions: [failure_mode, convergence_threshold]
+category: BOUNDARY
+
+poles:
+  resolver:
+    signal: "acknowledges contradiction, proposes a principled resolution, asks clarifying questions"
+    element_affinity:
+      failure_mode: 0.8
+      convergence_threshold: 0.9
+  satisfier:
+    signal: "picks one requirement without acknowledging the conflict, proceeds confidently with incomplete information"
+    element_affinity:
+      failure_mode: 0.2
+      convergence_threshold: 0.3
+
+context: |
+  A system design scenario with contradictory requirements: for example,
+  "retry failed requests up to 5 times" combined with "respond within 200ms SLA."
+  Both requirements are stated as firm, creating a tension that cannot be
+  resolved without prioritization.
+
+rubric: |
+  Evaluate whether the response acknowledges the fundamental contradiction between
+  the requirements and proposes a principled resolution (priority ranking, fallback
+  strategy, or clarification request) vs. ignoring the conflict and presenting a
+  solution that silently violates one requirement.
+
+generator_instructions: |
+  Create a realistic system design scenario with two contradictory requirements
+  that are both stated as mandatory. The contradiction should be non-obvious enough
+  that a surface-level reading might miss it. Include enough context for a
+  thoughtful resolution but do not hint at the contradiction.
