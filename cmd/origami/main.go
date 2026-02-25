@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/kami"
 	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/ouroboros"
 	"github.com/dpopsuev/origami/ouroborosmcp"
@@ -37,6 +38,8 @@ func main() {
 		err = skillCmd(os.Args[2:])
 	case "ouroboros":
 		err = ouroborosCmd(os.Args[2:])
+	case "kami":
+		err = kamiCmd(os.Args[2:])
 	case "version":
 		fmt.Println("origami v1.0.0")
 	default:
@@ -59,6 +62,7 @@ Commands:
   validate   Validate a pipeline YAML without executing
   skill      Skill scaffolding (scaffold SKILL.md from pipeline YAML)
   ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
+  kami       Live pipeline debugger (HTTP/SSE + WS)
   version    Print version`)
 }
 
@@ -129,6 +133,32 @@ func validateCmd(args []string) error {
 	}
 	fmt.Printf("OK: %s is valid\n", pipelinePath)
 	return nil
+}
+
+// --- kami subcommand ---
+
+func kamiCmd(args []string) error {
+	fs := flag.NewFlagSet("kami", flag.ExitOnError)
+	port := fs.Int("port", 3000, "HTTP port (WS on port+1)")
+	bind := fs.String("bind", "127.0.0.1", "bind address")
+	debug := fs.Bool("debug", false, "enable debug API")
+	fs.Parse(args)
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+
+	srv := kami.NewServer(kami.Config{
+		Port:   *port,
+		Bind:   *bind,
+		Debug:  *debug,
+		Bridge: bridge,
+		Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})),
+	})
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	return srv.Start(ctx)
 }
 
 // --- ouroboros subcommand group ---
