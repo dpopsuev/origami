@@ -24,3 +24,6 @@ Thumbs.db
 
 # Debug
 __debug_bin*
+
+# Sensitive / non-distributable assets
+rh-presentation-assets.pdf
