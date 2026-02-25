@@ -7,4 +7,5 @@
 - `architecture.md` — Origami architecture overview and layer diagram
 - `distillation-manifest.md` — Asterisk-Origami distillation manifest (package classification, LOC)
 - `parallel-architecture.mdc` — Parallel investigation pipeline architecture
+- `rh-presentation-dna.md` — Red Hat corporate brand guide: color system (4 collections), slide types (12), design constraints, element-to-color mapping, accessibility rules. Shared across all repos.
 - `subagent-cost-model.mdc` — Cost model for serial vs batch vs batch+clustering calibration modes

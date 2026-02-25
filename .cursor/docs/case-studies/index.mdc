@@ -3,3 +3,6 @@
 ## Files
 - `omo-agentic-arms-race.md` — Competitive analysis of Oh My OpenCode's multi-model agent orchestration vs Origami's formal graph framework. Concept mapping, gaps, advantages, actionable takeaways.
 - `crewai-crews-and-flows.md` — Competitive analysis of CrewAI (44.6k stars, market leader). Crews+Flows duality vs Origami's unified graph. Agent-in-YAML, cross-walk memory, hierarchical delegation gaps.
+- `ansible-collections.md` — Ansible Collections as a distribution model for agentic frameworks. Package format, FQCNs, Galaxy registry mapped to Origami. Implementation extracted to `origami-collections` + `origami-lsp`.
+- `visual-editor-landscape.md` — Visual editor business model analysis: Excalidraw (SaaS), Mermaid (SaaS), Ansible Automation Controller (open-core). Recommends Ansible open-core model for Origami. Implementation extracted to `visual-editor`.
+- `langgraph-graph-duality.md` — Competitive analysis of LangGraph (25.1k stars, Pregel-inspired). State-centric vs walker-centric graph philosophy. Durable execution, HITL, subgraph, memory gaps. Infrastructure vs intelligence ceiling thesis.
