@@ -63,6 +63,7 @@ Commands:
   skill      Skill scaffolding (scaffold SKILL.md from pipeline YAML)
   ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
   kami       Live pipeline debugger (HTTP/SSE + WS)
+  kami serve Start Kami MCP server over stdio (co-starts HTTP/WS)
   version    Print version`)
 }
 
@@ -138,6 +139,10 @@ func validateCmd(args []string) error {
 // --- kami subcommand ---
 
 func kamiCmd(args []string) error {
+	if len(args) > 0 && args[0] == "serve" {
+		return kamiServe(args[1:])
+	}
+
 	fs := flag.NewFlagSet("kami", flag.ExitOnError)
 	port := fs.Int("port", 3000, "HTTP port (WS on port+1)")
 	bind := fs.String("bind", "127.0.0.1", "bind address")
@@ -177,6 +182,48 @@ func kamiCmd(args []string) error {
 	}
 
 	return srv.Start(ctx)
+}
+
+func kamiServe(args []string) error {
+	fs := flag.NewFlagSet("kami serve", flag.ContinueOnError)
+	port := fs.Int("port", 3000, "HTTP port for Kami server (WS on port+1)")
+	bind := fs.String("bind", "127.0.0.1", "bind address")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+
+	dc := kami.NewDebugController(bridge)
+	kamiSrv := kami.NewServer(kami.Config{
+		Port:   *port,
+		Bind:   *bind,
+		Debug:  true,
+		Bridge: bridge,
+		Logger: logger,
+		SPA:    kami.FrontendFS(),
+	})
+
+	mcpSrv := fwmcp.NewServer("origami-kami-debugger", "1.0.0")
+	kami.RegisterMCPTools(mcpSrv.MCPServer, dc, kamiSrv)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	fwmcp.WatchStdin(ctx, nil, cancel)
+
+	go func() {
+		logger.Info("kami HTTP+WS server starting", "addr", fmt.Sprintf("%s:%d", *bind, *port))
+		if err := kamiSrv.Start(ctx); err != nil {
+			logger.Error("kami server error", "error", err)
+		}
+	}()
+
+	logger.Info("starting kami MCP server over stdio")
+	return mcpSrv.MCPServer.Run(ctx, &sdkmcp.StdioTransport{})
 }
 
 // --- ouroboros subcommand group ---
