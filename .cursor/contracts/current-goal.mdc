@@ -80,6 +80,7 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 | R1d | `durable-execution` | should | yes | `Checkpointer` interface + HITL Interrupt/Resume. |
 | R1f | `origami-adapters` | should | yes | FQCN resolution on all registries. `imports:` on PipelineDef. Core adapter. |
 | R1g | `memory-evolution` | should | yes | MemoryStore: namespaced, searchable, persistent. |
+| R1h | `origami-observability` | should | yes | Day-0 OTel traces + Prometheus metrics. `/metrics` on KamiServer. `DefaultObservability()`. TokenTracker Prometheus-counter-friendly. |
 
 #### Sprint R2 — Pipelines + Structural Node Changes
 
@@ -119,7 +120,7 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 |----------|------|-------|
 | `e2e-dsl-testing` | should | E2E walk tests injected as gates into CHECKPOINTs C-F. No dedicated sprint. |
 
-### Analysis (complete)
+### Analysis
 
 | Contract | Status | Notes |
 |----------|--------|-------|
@@ -128,6 +129,7 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 | `case-study-ansible-collections` | done | Implementation extracted to `origami-adapters` + `origami-marbles` + `origami-lsp`. |
 | `case-study-visual-editor-landscape` | done | Excalidraw + Mermaid + Ansible Automation Controller business model analysis. Implementation extracted to `visual-editor`. |
 | `case-study-langgraph-graph-duality` | done | LangGraph (25.1k stars) state-centric vs walker-centric graph analysis. Implementation extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`, injected into `origami-adapters`. |
+| `case-study-cloud-native-pipeline-tools` | draft | Argo Workflows, Tekton, KEDA, Falco, CloudEvents analysis. Integration points and gaps. Feeds into `origami-adapters`, `origami-marbles`, `pipeline-efficiency`. |
 
 ## Framework Maturity (complete)
 

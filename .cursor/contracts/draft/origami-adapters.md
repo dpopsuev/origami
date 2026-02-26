@@ -167,7 +167,7 @@ The following adapters are identified from the Asterisk and Achilles codebases. 
 | `asterisk.store-hooks` | `internal/orchestrate/hooks.go` | Pipeline lifecycle hooks: persist artifacts to store on node completion. |
 | `asterisk.prompt-params` | `internal/orchestrate/params.go` + `template.go` | Prompt template parameter assembly. Builds `{{variable}}` context for each pipeline step. |
 | `asterisk.report-formatters` | `internal/calibrate/report.go` + `rca_report.go` | Calibration report formatting (table, markdown, summary). RCA output formatting. |
-| `asterisk.observability` | `internal/calibrate/tokimeter.go` + `transcript.go` | Token cost tracking, per-step transcript generation, cost bills. |
+| `asterisk.observability` | `internal/calibrate/transcript.go` + `internal/display/display.go` (StepNameFunc) | Per-step transcript generation and `StepNameFunc` adapter mapping step IDs to display names. TokiMeter cost bill has migrated to `origami/calibrate/cost_bill.go` (see `principled-calibration-scorecard` Phase 2.5). |
 
 ### Achilles adapters
 

@@ -187,7 +187,7 @@ Phase 1 defines the `Marble` interface and `MarbleRegistry`. Phase 2 adds the `m
 | FQCN | Current Code | Type | Description |
 |------|-------------|------|-------------|
 | `asterisk.symptom-cluster` | `internal/calibrate/cluster.go` | Atomic | Groups similar failures by symptom pattern during recall/triage. |
-| `origami.score-metrics` | `internal/calibrate/metrics.go` (to migrate) | Atomic | Evaluates a `ScoreCard` against metric values. Framework-level, reusable by any consumer. |
+| `origami.score-metrics` | `internal/calibrate/metrics.go` (to migrate) | Atomic | Evaluates a `ScoreCard` against metric values. Uses `DefaultScoreCard()` internally; consumers override with their own ScoreCard. The 7 universal metrics from `DefaultMetrics()` are always included unless explicitly excluded. Framework-level, reusable by any consumer. |
 | `origami.calibrate-walk` | `internal/calibrate/runner.go` (to migrate) | Composite | Full calibration pipeline: load → fan-out → walk → score → fan-in → aggregate → report. Origami dog-foods its own marble system. |
 | `achilles.vuln-scan` | Achilles 4-node pipeline | Composite | Vulnerability scanning subgraph: scan → classify → assess → report. |
 

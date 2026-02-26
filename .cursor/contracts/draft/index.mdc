@@ -15,3 +15,5 @@
 - `prompt-calibration.md` — Framework-level calibration-driven prompt tuning infrastructure (deferred).
 - `pipeline-efficiency.md` — Node caching + fan-in merge strategies.
 - `memory-evolution.md` — Namespaced, searchable, persistent MemoryStore.
+- `origami-observability.md` — Day-0 OTel traces + Prometheus metrics for pipeline walks. `/metrics` on KamiServer. `DefaultObservability()`.
+- `case-study-cloud-native-pipeline-tools.md` — CNCF tool analysis: Argo Workflows, Tekton, KEDA, Falco, CloudEvents vs Origami.

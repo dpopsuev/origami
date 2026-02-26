@@ -39,6 +39,8 @@ See `current-goal.mdc` for the full completed contracts list.
 - `draft/durable-execution.md` — Checkpointer interface (pluggable backends, durability modes) + Interrupt/Resume HITL primitive. Extracted from LangGraph case study Gaps 1+2. Should-tier.
 - `draft/memory-evolution.md` — Evolve MemoryStore: namespaces, search, PersistentStore (SQLite), memory type conventions (semantic/episodic/procedural). Extracted from LangGraph case study Gap 4. Nice-tier.
 - `draft/pipeline-efficiency.md` — Node caching (CachePolicy, InMemoryCache) + fan-in merge strategies (append/latest/custom). Extracted from LangGraph case study Gaps 5+6. Nice-tier.
+- `draft/origami-observability.md` — Day-0 OTel traces + Prometheus metrics for pipeline walks. `/metrics` on KamiServer. `DefaultObservability()`. Should-tier (R1).
+- `draft/case-study-cloud-native-pipeline-tools.md` — CNCF tool analysis: Argo Workflows, Tekton, KEDA, Falco, CloudEvents vs Origami. Nice-tier (analysis).
 ## Files
 - `_TEMPLATE.md` — contract template (copy to create new contracts)
 - `current-goal.mdc` — active goal manifest — single-read orientation for agents
