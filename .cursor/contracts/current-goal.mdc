@@ -98,12 +98,20 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 |---|----------|------|-------|
 | R3b | `prompt-calibration` | nice | Feedback loop: calibration results → prompt improvements. |
 
+#### Sprint R3.5 — Lint (fast-track)
+
+| # | Contract | Tier | Notes |
+|---|----------|------|-------|
+| R3.5a | `origami-lint` | should | Rule-based pipeline YAML linter. Profiles (min→strict), auto-fix, CI gate. Engine that the LSP (R4b) embeds. Drastically improves agentic workflow. |
+
+**CHECKPOINT R3.5/G** — `origami lint --profile strict` produces zero findings on all `testdata/` YAMLs. Linter runs as agent-operations pipeline stage.
+
 #### Sprint R4 — Demo + LSP
 
 | # | Contract | Tier | Notes |
 |---|----------|------|-------|
 | R4a | *Asterisk: `improve-asterisk-kabuki-demo`* | should | Three-act narrative, War Room, principled results. |
-| R4b | `origami-lsp` | vision | Language Server. Needs stable DSL from R1-R3. |
+| R4b | `origami-lsp` | vision | Language Server. Embeds `origami-lint` engine. Needs stable DSL from R1-R3. |
 
 **CHECKPOINT R4/F** — LSP validates all E2E scenario YAMLs without false diagnostics. Completion, hover, and color coding work.
 

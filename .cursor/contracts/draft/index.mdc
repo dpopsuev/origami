@@ -9,6 +9,7 @@
 - `origami-marbles.md` — Marble type (atomic/composite, MarbleRegistry, subgraph encapsulation, Kami fold/unfold). Reusable graph nodes.
 - `e2e-dsl-testing.md` — E2E walk tests for every framework feature. Cross-cutting test gates.
 - `durable-execution.md` — Checkpointer interface + HITL Interrupt/Resume.
+- `origami-lint.md` — Rule-based pipeline YAML linter (structural, semantic, best-practice rules, auto-fix, profiles). Engine that the LSP will embed.
 - `origami-lsp.md` — Language Server for pipeline YAML (color coding, virtual text, Kami live connection).
 - `visual-editor.md` — Drag-and-drop pipeline builder, bidirectional YAML sync, run management dashboard.
 - `provider-resilience.md` — Provider fallback chains + intent classifier.
