@@ -20,7 +20,8 @@ type Config struct {
 	Bridge       *EventBridge
 	SPA          http.FileSystem    // embedded frontend (nil = no SPA)
 	Theme        Theme              // consumer theme (nil = default)
-	Kabuki KabukiConfig // Kabuki presentation sections (nil = debugger-only mode)
+	Kabuki       KabukiConfig       // Kabuki presentation sections (nil = debugger-only mode)
+	MetricsHandler http.Handler     // Prometheus /metrics handler (nil = no metrics)
 }
 
 func (c *Config) addr() string {
@@ -87,6 +88,10 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
 	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
 	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
+
+	if s.cfg.MetricsHandler != nil {
+		mux.Handle("GET /metrics", s.cfg.MetricsHandler)
+	}
 
 	if s.cfg.SPA != nil {
 		mux.Handle("GET /", http.FileServer(s.cfg.SPA))

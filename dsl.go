@@ -12,6 +12,7 @@ import (
 type PipelineDef struct {
 	Pipeline    string             `yaml:"pipeline"`
 	Description string             `yaml:"description,omitempty"`
+	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Zones       map[string]ZoneDef `yaml:"zones,omitempty"`
 	Nodes       []NodeDef          `yaml:"nodes"`

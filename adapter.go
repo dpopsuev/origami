@@ -1,0 +1,142 @@
+package framework
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
+
+// Adapter bundles reusable plumbing (transformers, extractors, hooks) under
+// a namespace. Consumers merge adapters into their registries at build time.
+type Adapter struct {
+	Namespace    string
+	Name         string
+	Version      string
+	Description  string
+	Transformers TransformerRegistry
+	Extractors   ExtractorRegistry
+	Hooks        HookRegistry
+}
+
+// AdapterManifest is the YAML schema for adapter.yaml files.
+type AdapterManifest struct {
+	Adapter     string `yaml:"adapter"`
+	Namespace   string `yaml:"namespace"`
+	Version     string `yaml:"version"`
+	Description string `yaml:"description,omitempty"`
+	Provides    struct {
+		Transformers []string `yaml:"transformers,omitempty"`
+		Extractors   []string `yaml:"extractors,omitempty"`
+		Hooks        []string `yaml:"hooks,omitempty"`
+	} `yaml:"provides"`
+	Requires struct {
+		Origami string `yaml:"origami,omitempty"`
+	} `yaml:"requires,omitempty"`
+}
+
+// LoadAdapterManifest reads and parses an adapter.yaml file.
+func LoadAdapterManifest(path string) (*AdapterManifest, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read adapter manifest %s: %w", path, err)
+	}
+	var m AdapterManifest
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("parse adapter manifest %s: %w", path, err)
+	}
+	if m.Namespace == "" {
+		return nil, fmt.Errorf("adapter manifest %s: namespace is required", path)
+	}
+	return &m, nil
+}
+
+// MergeAdapters merges one or more adapters into a base GraphRegistries.
+// Each adapter's items are registered under their FQCN (namespace.name).
+// Short names are also registered if no collision with the base or earlier adapters.
+// Returns an error if two adapters provide the same FQCN.
+func MergeAdapters(base GraphRegistries, adapters ...*Adapter) (GraphRegistries, error) {
+	merged := GraphRegistries{
+		Transformers: cloneMap(base.Transformers),
+		Extractors:   cloneMap(base.Extractors),
+		Hooks:        cloneMap(base.Hooks),
+		Nodes:        base.Nodes,
+		Edges:        base.Edges,
+	}
+
+	for _, a := range adapters {
+		if err := mergeTransformers(merged.Transformers, a); err != nil {
+			return GraphRegistries{}, err
+		}
+		if err := mergeExtractors(merged.Extractors, a); err != nil {
+			return GraphRegistries{}, err
+		}
+		if err := mergeHooks(merged.Hooks, a); err != nil {
+			return GraphRegistries{}, err
+		}
+	}
+	return merged, nil
+}
+
+func mergeTransformers(dst TransformerRegistry, a *Adapter) error {
+	for name, t := range a.Transformers {
+		fqcn := a.Namespace + "." + name
+		if _, exists := dst[fqcn]; exists {
+			return fmt.Errorf("transformer %q collision (adapter %s)", fqcn, a.Namespace)
+		}
+		dst[fqcn] = t
+		if _, exists := dst[name]; !exists {
+			dst[name] = t
+		}
+	}
+	return nil
+}
+
+func mergeExtractors(dst ExtractorRegistry, a *Adapter) error {
+	for name, e := range a.Extractors {
+		fqcn := a.Namespace + "." + name
+		if _, exists := dst[fqcn]; exists {
+			return fmt.Errorf("extractor %q collision (adapter %s)", fqcn, a.Namespace)
+		}
+		dst[fqcn] = e
+		if _, exists := dst[name]; !exists {
+			dst[name] = e
+		}
+	}
+	return nil
+}
+
+func mergeHooks(dst HookRegistry, a *Adapter) error {
+	for name, h := range a.Hooks {
+		fqcn := a.Namespace + "." + name
+		if _, exists := dst[fqcn]; exists {
+			return fmt.Errorf("hook %q collision (adapter %s)", fqcn, a.Namespace)
+		}
+		dst[fqcn] = h
+		if _, exists := dst[name]; !exists {
+			dst[name] = h
+		}
+	}
+	return nil
+}
+
+// ResolveFQCN splits a "namespace.name" string into parts.
+// Returns ("", name) for unqualified names.
+func ResolveFQCN(fqcn string) (namespace, name string) {
+	if idx := strings.Index(fqcn, "."); idx > 0 {
+		return fqcn[:idx], fqcn[idx+1:]
+	}
+	return "", fqcn
+}
+
+func cloneMap[K comparable, V any](src map[K]V) map[K]V {
+	if src == nil {
+		return make(map[K]V)
+	}
+	dst := make(map[K]V, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
