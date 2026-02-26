@@ -173,6 +173,11 @@ func (def *PipelineDef) Validate() error {
 	return nil
 }
 
+// AdapterLoader resolves an import name (e.g. "core", "vendor.rca-tools")
+// to a live Adapter with populated registries. BuildGraph calls the loader
+// for each entry in PipelineDef.Imports.
+type AdapterLoader func(name string) (*Adapter, error)
+
 // GraphRegistries bundles all optional registries for BuildGraph.
 // Fields are optional; BuildGraph resolves nodes by priority:
 // Transformer > Extractor > NodeRegistry (Family/Name).
@@ -183,14 +188,35 @@ type GraphRegistries struct {
 	Transformers TransformerRegistry
 	Hooks        HookRegistry
 	Marbles      MarbleRegistry
+	Adapters     AdapterLoader
 }
 
 // BuildGraph constructs a Graph from a PipelineDef using the full registries bundle.
 // Node resolution priority: Transformer > Extractor > NodeRegistry (Family/Name).
 // Edge resolution priority: expressionEdge (When) > EdgeFactory > dslEdge.
+// When PipelineDef.Imports is non-empty and reg.Adapters is set, imported
+// adapters are loaded and merged into the registries before node resolution.
 func (def *PipelineDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 	if err := def.Validate(); err != nil {
 		return nil, fmt.Errorf("validate: %w", err)
+	}
+
+	if len(def.Imports) > 0 && reg.Adapters != nil {
+		adapters := make([]*Adapter, 0, len(def.Imports))
+		for _, imp := range def.Imports {
+			a, err := reg.Adapters(imp)
+			if err != nil {
+				return nil, fmt.Errorf("import %q: %w", imp, err)
+			}
+			adapters = append(adapters, a)
+		}
+		merged, err := MergeAdapters(reg, adapters...)
+		if err != nil {
+			return nil, fmt.Errorf("merge imports: %w", err)
+		}
+		reg.Transformers = merged.Transformers
+		reg.Extractors = merged.Extractors
+		reg.Hooks = merged.Hooks
 	}
 
 	fwNodes := make([]Node, 0, len(def.Nodes))

@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // Extractor converts unstructured input into structured output.
@@ -24,12 +25,24 @@ type Extractor interface {
 type ExtractorRegistry map[string]Extractor
 
 // Get returns the extractor registered under name, or an error if not found.
+// Supports FQCN resolution: a dot-qualified name does a direct lookup;
+// an unqualified name tries direct first, then scans for a matching suffix.
 func (r ExtractorRegistry) Get(name string) (Extractor, error) {
-	ext, ok := r[name]
-	if !ok {
-		return nil, fmt.Errorf("extractor %q not registered", name)
+	if r == nil {
+		return nil, fmt.Errorf("extractor registry is nil")
 	}
-	return ext, nil
+	if ext, ok := r[name]; ok {
+		return ext, nil
+	}
+	if !strings.Contains(name, ".") {
+		suffix := "." + name
+		for k, ext := range r {
+			if strings.HasSuffix(k, suffix) {
+				return ext, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("extractor %q not registered", name)
 }
 
 // Register adds an extractor to the registry. Panics on duplicate name.

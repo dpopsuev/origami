@@ -87,6 +87,15 @@ func WithMemory(store MemoryStore) RunOption {
 	return func(c *runConfig) { c.memory = store }
 }
 
+// WithTaggedMemory wraps a MemoryStore so that every SetNS call during the
+// walk automatically attaches the given tags. This is useful for labeling
+// all memories produced during a specific calibration run, scenario, or walk.
+func WithTaggedMemory(store MemoryStore, tags ...string) RunOption {
+	return func(c *runConfig) {
+		c.memory = &taggedMemoryStore{inner: store, tags: tags}
+	}
+}
+
 // WithNodeCache enables node-level caching. When a node has a CacheDef,
 // the runner checks the cache before processing. On cache hit, the cached
 // artifact is returned and EventNodeCacheHit is emitted.

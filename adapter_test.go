@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -269,6 +270,120 @@ type adapterStubExtractor struct {
 
 func (e *adapterStubExtractor) Name() string                                   { return e.name }
 func (e *adapterStubExtractor) Extract(_ context.Context, _ any) (any, error) { return "extracted", nil }
+
+func TestTransformerRegistry_FQCNResolution(t *testing.T) {
+	reg := TransformerRegistry{
+		"core.llm": TransformerFunc("llm", func(_ context.Context, _ *TransformerContext) (any, error) { return "llm", nil }),
+	}
+
+	// Direct FQCN lookup
+	if _, err := reg.Get("core.llm"); err != nil {
+		t.Errorf("FQCN lookup failed: %v", err)
+	}
+
+	// Unqualified name resolved via suffix scan
+	if _, err := reg.Get("llm"); err != nil {
+		t.Errorf("suffix resolution failed: %v", err)
+	}
+
+	// Unknown name
+	if _, err := reg.Get("missing"); err == nil {
+		t.Error("expected error for unknown transformer")
+	}
+}
+
+func TestExtractorRegistry_FQCNResolution(t *testing.T) {
+	reg := ExtractorRegistry{
+		"achilles.govulncheck": &adapterStubExtractor{name: "govulncheck"},
+	}
+
+	if _, err := reg.Get("achilles.govulncheck"); err != nil {
+		t.Errorf("FQCN lookup failed: %v", err)
+	}
+	if _, err := reg.Get("govulncheck"); err != nil {
+		t.Errorf("suffix resolution failed: %v", err)
+	}
+}
+
+func TestHookRegistry_FQCNResolution(t *testing.T) {
+	reg := HookRegistry{
+		"rca.store": NewHookFunc("store", func(_ context.Context, _ string, _ Artifact) error { return nil }),
+	}
+
+	if _, err := reg.Get("rca.store"); err != nil {
+		t.Errorf("FQCN lookup failed: %v", err)
+	}
+	if _, err := reg.Get("store"); err != nil {
+		t.Errorf("suffix resolution failed: %v", err)
+	}
+}
+
+func TestBuildGraph_ImportsWiring(t *testing.T) {
+	def := &PipelineDef{
+		Pipeline: "test",
+		Imports:  []string{"vendor"},
+		Nodes: []NodeDef{
+			{Name: "start", Transformer: "my-t"},
+		},
+		Edges: []EdgeDef{
+			{ID: "e1", From: "start", To: "done"},
+		},
+		Start: "start",
+		Done:  "done",
+	}
+
+	vendorT := TransformerFunc("my-t", func(_ context.Context, _ *TransformerContext) (any, error) { return "ok", nil })
+	loader := func(name string) (*Adapter, error) {
+		if name == "vendor" {
+			return &Adapter{
+				Namespace:    "vendor",
+				Transformers: TransformerRegistry{"my-t": vendorT},
+			}, nil
+		}
+		return nil, fmt.Errorf("unknown adapter: %s", name)
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{},
+		Adapters:     loader,
+	}
+
+	g, err := def.BuildGraph(reg)
+	if err != nil {
+		t.Fatalf("BuildGraph with imports: %v", err)
+	}
+	if g == nil {
+		t.Fatal("expected non-nil graph")
+	}
+}
+
+func TestBuildGraph_ImportFailure(t *testing.T) {
+	def := &PipelineDef{
+		Pipeline: "test",
+		Imports:  []string{"missing-adapter"},
+		Nodes:    []NodeDef{{Name: "start"}},
+		Edges:    []EdgeDef{{ID: "e1", From: "start", To: "done"}},
+		Start:    "start",
+		Done:     "done",
+	}
+
+	loader := func(name string) (*Adapter, error) {
+		return nil, fmt.Errorf("adapter %q not found", name)
+	}
+
+	reg := GraphRegistries{
+		Nodes:    NodeRegistry{"": func(_ NodeDef) Node { return nil }},
+		Adapters: loader,
+	}
+
+	_, err := def.BuildGraph(reg)
+	if err == nil {
+		t.Fatal("expected error for missing adapter import")
+	}
+	if !contains(err.Error(), "missing-adapter") {
+		t.Errorf("error should reference the import name: %v", err)
+	}
+}
 
 func TestPipelineDef_ImportsField(t *testing.T) {
 	yaml := `

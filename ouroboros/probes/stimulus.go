@@ -11,8 +11,10 @@ import (
 // ProbeStimulus is a named input stimulus for an Ouroboros behavioral probe.
 // Consumers can load custom stimuli from YAML to replace or extend the defaults.
 type ProbeStimulus struct {
-	Name  string `yaml:"name"`
-	Input string `yaml:"input"`
+	Name             string `yaml:"name"`
+	Input            string `yaml:"input"`
+	Language         string `yaml:"language,omitempty"`
+	ExpectedBehavior string `yaml:"expected_behavior,omitempty"`
 }
 
 // StimuliSet maps probe names to their stimuli.
@@ -21,11 +23,36 @@ type StimuliSet map[string]ProbeStimulus
 // DefaultStimuli returns the built-in stimuli for all 5 Ouroboros probes.
 func DefaultStimuli() StimuliSet {
 	return StimuliSet{
-		"refactor":    {Name: "refactor", Input: ouroboros.MessyInput},
-		"debug":       {Name: "debug", Input: DebugInput},
-		"summarize":   {Name: "summarize", Input: SummarizeInput},
-		"ambiguity":   {Name: "ambiguity", Input: AmbiguityInput},
-		"persistence": {Name: "persistence", Input: PersistenceInput},
+		"refactor": {
+			Name:             "refactor",
+			Input:            ouroboros.MessyInput,
+			Language:         "Go",
+			ExpectedBehavior: "Refactored code with descriptive names, split functions, and comments",
+		},
+		"debug": {
+			Name:             "debug",
+			Input:            DebugInput,
+			Language:         "",
+			ExpectedBehavior: "Structured analysis identifying root cause, evidence, red herrings, and recommended fix",
+		},
+		"summarize": {
+			Name:             "summarize",
+			Input:            SummarizeInput,
+			Language:         "",
+			ExpectedBehavior: "Per-change summary with category (feature/refactor/bugfix/performance) and risk level",
+		},
+		"ambiguity": {
+			Name:             "ambiguity",
+			Input:            AmbiguityInput,
+			Language:         "Go",
+			ExpectedBehavior: "Implementation plan explicitly addressing contradictions with justified resolutions",
+		},
+		"persistence": {
+			Name:             "persistence",
+			Input:            PersistenceInput,
+			Language:         "Go",
+			ExpectedBehavior: "ParseConfig function handling all four input formats using only standard library",
+		},
 	}
 }
 

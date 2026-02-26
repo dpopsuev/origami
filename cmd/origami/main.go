@@ -46,6 +46,8 @@ func main() {
 		err = lspCmd()
 	case "kami":
 		err = kamiCmd(os.Args[2:])
+	case "adapter":
+		err = adapterCmd(os.Args[2:])
 	case "version":
 		fmt.Println("origami v1.0.0")
 	default:
@@ -72,6 +74,7 @@ Commands:
   ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
   kami       Live pipeline debugger (HTTP/SSE + WS)
   kami serve Start Kami MCP server over stdio (co-starts HTTP/WS)
+  adapter    Adapter management (list, inspect, validate)
   version    Print version`)
 }
 

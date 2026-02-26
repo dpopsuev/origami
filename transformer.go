@@ -28,15 +28,25 @@ type TransformerContext struct {
 type TransformerRegistry map[string]Transformer
 
 // Get returns the transformer registered under name, or an error if not found.
+// Supports FQCN resolution: a dot-qualified name (e.g. "core.llm") does a
+// direct lookup; an unqualified name tries direct first, then scans for a
+// matching ".name" suffix among registered FQCNs.
 func (r TransformerRegistry) Get(name string) (Transformer, error) {
 	if r == nil {
 		return nil, fmt.Errorf("transformer registry is nil")
 	}
-	t, ok := r[name]
-	if !ok {
-		return nil, fmt.Errorf("transformer %q not registered", name)
+	if t, ok := r[name]; ok {
+		return t, nil
 	}
-	return t, nil
+	if !strings.Contains(name, ".") {
+		suffix := "." + name
+		for k, t := range r {
+			if strings.HasSuffix(k, suffix) {
+				return t, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("transformer %q not registered", name)
 }
 
 // Register adds a transformer. Panics on duplicate.

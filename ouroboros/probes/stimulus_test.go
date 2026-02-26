@@ -21,6 +21,25 @@ func TestDefaultStimuli_AllProbesPresent(t *testing.T) {
 		if s.Name != name {
 			t.Errorf("stimulus Name = %q, want %q", s.Name, name)
 		}
+		if s.ExpectedBehavior == "" {
+			t.Errorf("stimulus %q has empty ExpectedBehavior", name)
+		}
+	}
+}
+
+func TestDefaultStimuli_LanguageFields(t *testing.T) {
+	stimuli := DefaultStimuli()
+	wantLang := map[string]string{
+		"refactor":    "Go",
+		"debug":       "",
+		"summarize":   "",
+		"ambiguity":   "Go",
+		"persistence": "Go",
+	}
+	for name, want := range wantLang {
+		if got := stimuli[name].Language; got != want {
+			t.Errorf("stimulus %q Language = %q, want %q", name, got, want)
+		}
 	}
 }
 
@@ -28,6 +47,8 @@ func TestLoadStimuli(t *testing.T) {
 	yaml := `stimuli:
   - name: debug
     input: "custom debug input"
+    language: "Python"
+    expected_behavior: "Find the bug"
   - name: newprobe
     input: "brand new probe"
 `
@@ -45,8 +66,17 @@ func TestLoadStimuli(t *testing.T) {
 	if loaded["debug"].Input != "custom debug input" {
 		t.Errorf("debug input = %q, want custom", loaded["debug"].Input)
 	}
+	if loaded["debug"].Language != "Python" {
+		t.Errorf("debug Language = %q, want Python", loaded["debug"].Language)
+	}
+	if loaded["debug"].ExpectedBehavior != "Find the bug" {
+		t.Errorf("debug ExpectedBehavior = %q, want 'Find the bug'", loaded["debug"].ExpectedBehavior)
+	}
 	if _, ok := loaded["newprobe"]; !ok {
 		t.Error("newprobe not loaded")
+	}
+	if loaded["newprobe"].Language != "" {
+		t.Errorf("newprobe Language = %q, want empty (omitted)", loaded["newprobe"].Language)
 	}
 }
 

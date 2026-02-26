@@ -2,15 +2,21 @@ package probes
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dpopsuev/origami/ouroboros"
 )
 
 // BuildRefactorPrompt returns the prompt text using the given stimulus.
 // The stimulus Input is embedded in a refactoring instruction template.
+// When Language is set, the code fence and instructions are language-specific.
 func BuildRefactorPrompt(s ProbeStimulus) string {
-	return fmt.Sprintf(`You are given the following Go function. Refactor it for production quality.
-Return ONLY the refactored Go code between triple backticks. No explanation needed.
+	lang := s.Language
+	if lang == "" {
+		lang = "Go"
+	}
+	return fmt.Sprintf(`You are given the following %s function. Refactor it for production quality.
+Return ONLY the refactored %s code between triple backticks. No explanation needed.
 
 %s%s%s
 
@@ -19,7 +25,7 @@ Rules:
 - Split into smaller functions if appropriate
 - Add comments where they aid understanding
 - Preserve the exact behavior (same inputs produce same outputs)
-- Use idiomatic Go patterns`, "```go\n", s.Input, "\n```")
+- Use idiomatic %s patterns`, lang, lang, "```"+strings.ToLower(lang)+"\n", s.Input, "\n```", lang)
 }
 
 // RefactorPrompt returns the prompt text using the default stimulus.

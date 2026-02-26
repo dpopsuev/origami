@@ -176,6 +176,50 @@ func (s *InMemoryStore) SetNSTagged(namespace, walkerID, key string, value any, 
 	}
 }
 
+// TaggedSetter is implemented by MemoryStore backends that support tagged writes.
+type TaggedSetter interface {
+	SetNSTagged(namespace, walkerID, key string, value any, tags []string)
+}
+
+// taggedMemoryStore wraps a MemoryStore and auto-appends tags to every SetNS call.
+// Read operations are delegated unchanged.
+type taggedMemoryStore struct {
+	inner MemoryStore
+	tags  []string
+}
+
+func (t *taggedMemoryStore) Get(walkerID, key string) (any, bool) {
+	return t.inner.Get(walkerID, key)
+}
+
+func (t *taggedMemoryStore) Set(walkerID, key string, value any) {
+	t.SetNS("", walkerID, key, value)
+}
+
+func (t *taggedMemoryStore) Keys(walkerID string) []string {
+	return t.inner.Keys(walkerID)
+}
+
+func (t *taggedMemoryStore) GetNS(namespace, walkerID, key string) (any, bool) {
+	return t.inner.GetNS(namespace, walkerID, key)
+}
+
+func (t *taggedMemoryStore) SetNS(namespace, walkerID, key string, value any) {
+	if ts, ok := t.inner.(TaggedSetter); ok {
+		ts.SetNSTagged(namespace, walkerID, key, value, t.tags)
+		return
+	}
+	t.inner.SetNS(namespace, walkerID, key, value)
+}
+
+func (t *taggedMemoryStore) KeysNS(namespace, walkerID string) []string {
+	return t.inner.KeysNS(namespace, walkerID)
+}
+
+func (t *taggedMemoryStore) Search(namespace, query string) []MemoryItem {
+	return t.inner.Search(namespace, query)
+}
+
 // --- Memory type helper functions ---
 
 // SetFact stores a semantic fact about a walker.

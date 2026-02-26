@@ -8,10 +8,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestBuild_MissingAnalyze(t *testing.T) {
-	_, err := NewCLI("test", "test tool").Build()
-	if err == nil {
-		t.Fatal("expected error for missing WithAnalyze")
+func TestBuild_NoAnalyzeOK(t *testing.T) {
+	c, err := NewCLI("test", "test tool").Build()
+	if err != nil {
+		t.Fatalf("Build without WithAnalyze should succeed: %v", err)
+	}
+	if findSubcommand(c.Root(), "analyze") != nil {
+		t.Error("analyze should not be registered when WithAnalyze is not called")
 	}
 }
 

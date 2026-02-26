@@ -7,8 +7,11 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
+
+	framework "github.com/dpopsuev/origami"
 )
 
 // Config controls the KamiServer behavior.
@@ -21,7 +24,8 @@ type Config struct {
 	SPA          http.FileSystem    // embedded frontend (nil = no SPA)
 	Theme        Theme              // consumer theme (nil = default)
 	Kabuki       KabukiConfig       // Kabuki presentation sections (nil = debugger-only mode)
-	MetricsHandler http.Handler     // Prometheus /metrics handler (nil = no metrics)
+	MetricsHandler http.Handler               // Prometheus /metrics handler (nil = no metrics)
+	Marbles        framework.MarbleRegistry  // marble registry for fold/unfold (nil = no marble API)
 }
 
 func (c *Config) addr() string {
@@ -88,6 +92,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
 	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
 	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
+	mux.HandleFunc("GET /api/marble/", s.handleMarbleAPI)
 
 	if s.cfg.MetricsHandler != nil {
 		mux.Handle("GET /metrics", s.cfg.MetricsHandler)
@@ -220,6 +225,71 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
+// handleMarbleAPI returns the inner PipelineDef for a composite marble node.
+// GET /api/marble/NODE_NAME
+func (s *Server) handleMarbleAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	nodeName := strings.TrimPrefix(r.URL.Path, "/api/marble/")
+	if nodeName == "" {
+		http.Error(w, `{"error":"node name required"}`, http.StatusBadRequest)
+		return
+	}
+
+	if s.cfg.Marbles == nil {
+		http.Error(w, `{"error":"no marble registry configured"}`, http.StatusNotFound)
+		return
+	}
+
+	factory, ok := s.cfg.Marbles[nodeName]
+	if !ok {
+		http.Error(w, `{"error":"marble not found"}`, http.StatusNotFound)
+		return
+	}
+
+	marble := factory(framework.NodeDef{Name: nodeName})
+	if !marble.IsComposite() {
+		http.Error(w, `{"error":"node is atomic, not expandable"}`, http.StatusBadRequest)
+		return
+	}
+
+	def := marble.PipelineDef()
+	if def == nil {
+		http.Error(w, `{"error":"composite marble has no pipeline definition"}`, http.StatusInternalServerError)
+		return
+	}
+
+	type marbleNode struct {
+		Name    string `json:"name"`
+		Element string `json:"element,omitempty"`
+	}
+	type marbleEdge struct {
+		ID   string `json:"id"`
+		From string `json:"from"`
+		To   string `json:"to"`
+	}
+	type marblePayload struct {
+		Pipeline string       `json:"pipeline"`
+		Nodes    []marbleNode `json:"nodes"`
+		Edges    []marbleEdge `json:"edges"`
+		Start    string       `json:"start"`
+		Done     string       `json:"done"`
+	}
+
+	payload := marblePayload{
+		Pipeline: def.Pipeline,
+		Start:    def.Start,
+		Done:     def.Done,
+	}
+	for _, n := range def.Nodes {
+		payload.Nodes = append(payload.Nodes, marbleNode{Name: n.Name, Element: n.Element})
+	}
+	for _, e := range def.Edges {
+		payload.Edges = append(payload.Edges, marbleEdge{ID: e.ID, From: e.From, To: e.To})
+	}
+	json.NewEncoder(w).Encode(payload)
+}
+
 // ListenAddr returns the HTTP listener address after the server starts.
 // Useful for tests that use port 0.
 func (s *Server) ListenAddr() string {
@@ -238,6 +308,7 @@ func (s *Server) StartOnAvailablePort(ctx context.Context) (httpAddr, wsAddr str
 	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
 	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
 	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
+	mux.HandleFunc("GET /api/marble/", s.handleMarbleAPI)
 
 	if s.cfg.SPA != nil {
 		mux.Handle("GET /", http.FileServer(s.cfg.SPA))

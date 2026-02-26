@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // Hook is a side-effect function invoked after a node completes.
@@ -18,15 +19,24 @@ type Hook interface {
 type HookRegistry map[string]Hook
 
 // Get returns the hook registered under name, or an error if not found.
+// Supports FQCN resolution: a dot-qualified name does a direct lookup;
+// an unqualified name tries direct first, then scans for a matching suffix.
 func (r HookRegistry) Get(name string) (Hook, error) {
 	if r == nil {
 		return nil, fmt.Errorf("hook registry is nil")
 	}
-	h, ok := r[name]
-	if !ok {
-		return nil, fmt.Errorf("hook %q not registered", name)
+	if h, ok := r[name]; ok {
+		return h, nil
 	}
-	return h, nil
+	if !strings.Contains(name, ".") {
+		suffix := "." + name
+		for k, h := range r {
+			if strings.HasSuffix(k, suffix) {
+				return h, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("hook %q not registered", name)
 }
 
 // Register adds a hook. Panics on duplicate.

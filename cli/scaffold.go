@@ -3,7 +3,14 @@ package cli
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
+	"os/signal"
+	"time"
 
+	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/kami"
+	"github.com/dpopsuev/origami/lint"
 	"github.com/spf13/cobra"
 )
 
@@ -146,10 +153,6 @@ type CLI struct {
 // Build assembles the Cobra command tree. Returns an error if required
 // configuration is missing (analyze is required).
 func (b *CLIBuilder) Build() (*CLI, error) {
-	if b.analyzeFn == nil {
-		return nil, fmt.Errorf("WithAnalyze is required")
-	}
-
 	root := &cobra.Command{
 		Use:   b.name,
 		Short: b.description,
@@ -164,7 +167,9 @@ func (b *CLIBuilder) Build() (*CLI, error) {
 		root.Version = b.version
 	}
 
-	root.AddCommand(b.buildAnalyze())
+	if b.analyzeFn != nil {
+		root.AddCommand(b.buildAnalyze())
+	}
 
 	if b.dataset != nil {
 		root.AddCommand(b.buildDataset())
@@ -349,33 +354,130 @@ func (b *CLIBuilder) buildPipeline() *cobra.Command {
 		},
 	})
 
-	pl.AddCommand(&cobra.Command{
+	validateCmd := &cobra.Command{
 		Use:   "validate <pipeline>",
-		Short: "Validate a pipeline YAML",
+		Short: "Validate a pipeline YAML (lint + structural check)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			fmt.Printf("Validating %s... (not yet implemented)\n", args[0])
+			raw, err := os.ReadFile(args[0])
+			if err != nil {
+				return fmt.Errorf("read %s: %w", args[0], err)
+			}
+			findings, err := lint.Run(raw, args[0])
+			if err != nil {
+				return fmt.Errorf("lint %s: %w", args[0], err)
+			}
+			if lint.HasErrors(findings) {
+				for _, f := range findings {
+					fmt.Fprintln(os.Stderr, f.String())
+				}
+				return fmt.Errorf("%s has %d error(s)", args[0], len(findings))
+			}
+			if lint.HasWarnings(findings) {
+				for _, f := range findings {
+					fmt.Fprintln(os.Stderr, f.String())
+				}
+			}
+			fmt.Printf("OK: %s is valid\n", args[0])
 			return nil
 		},
-	})
+	}
+	pl.AddCommand(validateCmd)
 
-	pl.AddCommand(&cobra.Command{
+	renderCmd := &cobra.Command{
 		Use:   "render <pipeline>",
-		Short: "Render pipeline as DOT graph",
+		Short: "Render pipeline as text or DOT graph",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			fmt.Printf("Rendering %s... (not yet implemented)\n", args[0])
+		RunE: func(cmd *cobra.Command, args []string) error {
+			raw, err := os.ReadFile(args[0])
+			if err != nil {
+				return fmt.Errorf("read %s: %w", args[0], err)
+			}
+			def, err := framework.LoadPipeline(raw)
+			if err != nil {
+				return fmt.Errorf("parse %s: %w", args[0], err)
+			}
+			format, _ := cmd.Flags().GetString("format")
+			if format == "dot" {
+				fmt.Println("digraph pipeline {")
+				fmt.Println("  rankdir=LR;")
+				for _, n := range def.Nodes {
+					label := n.Name
+					if n.Element != "" {
+						label += fmt.Sprintf(" [%s]", n.Element)
+					}
+					fmt.Printf("  %q [label=%q];\n", n.Name, label)
+				}
+				for _, e := range def.Edges {
+					label := e.Name
+					if label == "" {
+						label = e.ID
+					}
+					fmt.Printf("  %q -> %q [label=%q];\n", e.From, e.To, label)
+				}
+				fmt.Println("}")
+			} else {
+				fmt.Printf("Pipeline: %s\n", def.Pipeline)
+				fmt.Printf("Start:    %s\n", def.Start)
+				fmt.Printf("Done:     %s\n\n", def.Done)
+				fmt.Println("Nodes:")
+				for _, n := range def.Nodes {
+					elem := ""
+					if n.Element != "" {
+						elem = fmt.Sprintf(" [%s]", n.Element)
+					}
+					fmt.Printf("  %-20s%s\n", n.Name, elem)
+				}
+				fmt.Println("\nEdges:")
+				for _, e := range def.Edges {
+					fmt.Printf("  %s → %s", e.From, e.To)
+					if e.When != "" {
+						fmt.Printf("  (when: %s)", e.When)
+					}
+					fmt.Println()
+				}
+			}
 			return nil
 		},
-	})
+	}
+	renderCmd.Flags().String("format", "text", "output format: text, dot")
+	pl.AddCommand(renderCmd)
 
 	replayCmd := &cobra.Command{
 		Use:   "replay <recording.jsonl>",
 		Short: "Replay a pipeline recording via Kami",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			fmt.Printf("Replaying %s... (not yet implemented)\n", args[0])
-			return nil
+		RunE: func(cmd *cobra.Command, args []string) error {
+			speed, _ := cmd.Flags().GetFloat64("speed")
+			port, _ := cmd.Flags().GetInt("port")
+
+			bridge := kami.NewEventBridge(nil)
+			defer bridge.Close()
+
+			logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+			srv := kami.NewServer(kami.Config{
+				Port:   port,
+				Bridge: bridge,
+				Logger: logger,
+				SPA:    kami.FrontendFS(),
+			})
+
+			ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
+			defer cancel()
+
+			rp, err := kami.NewReplayer(bridge, args[0], speed)
+			if err != nil {
+				return fmt.Errorf("create replayer: %w", err)
+			}
+			go func() {
+				if err := rp.Play(ctx.Done()); err != nil {
+					logger.Error("replay error", "error", err)
+				}
+				logger.Info("replay complete")
+			}()
+
+			return srv.Start(ctx)
 		},
 	}
 	replayCmd.Flags().Float64("speed", 1.0, "replay speed multiplier")
@@ -402,7 +504,16 @@ func (b *CLIBuilder) buildConsume() *cobra.Command {
 		Use:   "status",
 		Short: "Show last ingestion status",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Println("Ingestion status: not yet implemented")
+			info, err := os.Stat(*b.consume)
+			if err != nil {
+				if os.IsNotExist(err) {
+					fmt.Println("No ingestion runs recorded yet.")
+					return nil
+				}
+				return fmt.Errorf("check pipeline %s: %w", *b.consume, err)
+			}
+			fmt.Printf("Pipeline:  %s\n", *b.consume)
+			fmt.Printf("Last run:  %s\n", info.ModTime().Format(time.RFC3339))
 			return nil
 		},
 	})

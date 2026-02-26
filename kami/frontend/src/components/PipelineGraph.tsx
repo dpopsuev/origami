@@ -62,8 +62,29 @@ function resolveVar(name: string, fallback: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
 }
 
+interface MarbleData {
+  nodes: { name: string; element?: string }[]
+  edges: { id: string; from: string; to: string }[]
+  pipeline: string
+}
+
+async function fetchMarble(nodeName: string): Promise<MarbleData | null> {
+  try {
+    const res = await fetch(`/api/marble/${encodeURIComponent(nodeName)}`)
+    if (!res.ok) return null
+    const def = await res.json()
+    return {
+      pipeline: def.pipeline || nodeName,
+      nodes: (def.nodes || []).map((n: any) => ({ name: n.name, element: n.element })),
+      edges: (def.edges || []).map((e: any) => ({ id: e.id, from: e.from, to: e.to })),
+    }
+  } catch {
+    return null
+  }
+}
+
 export function PipelineGraph({ events, nodeDescriptions }: Props) {
-  const [, setCollapsed] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded] = useState<Map<string, MarbleData>>(new Map())
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
   const activeNode = useMemo(() => {
@@ -118,11 +139,6 @@ export function PipelineGraph({ events, nodeDescriptions }: Props) {
     return pairs
   }, [events])
 
-  const positions = useMemo(
-    () => layoutGraph(nodeNames, edgePairs),
-    [nodeNames, edgePairs],
-  )
-
   const brandAccent = resolveVar('--brand-accent', '#ee0000')
   const surfaceRaised = resolveVar('--surface-raised', '#f2f2f2')
   const surfaceCanvas = resolveVar('--surface-canvas', '#ffffff')
@@ -131,59 +147,92 @@ export function PipelineGraph({ events, nodeDescriptions }: Props) {
   const edgeColor = resolveVar('--el-earth', '#5e40be')
   const unvisitedColor = resolveVar('--surface-sunken', '#4a4a4a')
 
+  const allNodeNames = useMemo(() => {
+    const names = [...nodeNames]
+    for (const [parent, data] of expanded) {
+      for (const n of data.nodes) {
+        names.push(`${parent}/${n.name}`)
+      }
+    }
+    return names
+  }, [nodeNames, expanded])
+
+  const allEdgePairs = useMemo(() => {
+    const pairs = [...edgePairs]
+    for (const [parent, data] of expanded) {
+      pairs.push({ source: parent, target: `${parent}/${data.nodes[0]?.name}` })
+      for (const e of data.edges) {
+        pairs.push({ source: `${parent}/${e.from}`, target: `${parent}/${e.to}` })
+      }
+    }
+    return pairs
+  }, [edgePairs, expanded])
+
+  const allPositions = useMemo(
+    () => layoutGraph(allNodeNames, allEdgePairs),
+    [allNodeNames, allEdgePairs],
+  )
+
+  function buildNodeStyle(name: string, isActive: boolean, isVisited: boolean, isInner: boolean) {
+    const elementColor = isActive && activeElement?.node === name
+      ? EL_COLORS[activeElement.element] || brandAccent
+      : undefined
+    const bgColor = isActive
+      ? (elementColor || brandAccent)
+      : isVisited ? surfaceRaised : unvisitedColor
+    return {
+      background: bgColor,
+      color: isActive || !isVisited ? '#ffffff' : textPrimary,
+      border: `2px ${isInner ? 'dashed' : 'solid'} ${isActive ? bgColor : isVisited ? borderDefault : unvisitedColor}`,
+      borderRadius: isInner ? '4px' : '8px',
+      padding: isInner ? '6px 12px' : '10px 16px',
+      fontWeight: isActive ? 700 : 500,
+      animation: isActive ? 'node-pulse 2s ease-in-out infinite' : undefined,
+      textTransform: 'capitalize' as const,
+      fontSize: isInner ? '11px' : '13px',
+      minWidth: isInner ? '120px' : `${NODE_WIDTH}px`,
+      opacity: isInner ? 0.85 : 1,
+    }
+  }
+
   const initialNodes: Node[] = useMemo(
     () =>
-      nodeNames.map((name) => {
-        const pos = positions.get(name) || { x: 0, y: 0 }
+      allNodeNames.map((name) => {
+        const pos = allPositions.get(name) || { x: 0, y: 0 }
+        const isInner = name.includes('/')
+        const displayName = isInner ? name.split('/').pop()! : name
         const isActive = name === activeNode
         const isVisited = visitedNodes.has(name)
-        const elementColor = isActive && activeElement?.node === name
-          ? EL_COLORS[activeElement.element] || brandAccent
-          : undefined
-
-        const bgColor = isActive
-          ? (elementColor || brandAccent)
-          : isVisited
-            ? surfaceRaised
-            : unvisitedColor
 
         return {
           id: name,
           position: pos,
-          data: { label: name },
-          style: {
-            background: bgColor,
-            color: isActive || !isVisited ? '#ffffff' : textPrimary,
-            border: `2px solid ${isActive ? bgColor : isVisited ? borderDefault : unvisitedColor}`,
-            borderRadius: '8px',
-            padding: '10px 16px',
-            fontWeight: isActive ? 700 : 500,
-            animation: isActive ? 'node-pulse 2s ease-in-out infinite' : undefined,
-            textTransform: 'capitalize' as const,
-            fontSize: '13px',
-            minWidth: `${NODE_WIDTH}px`,
-          },
+          data: { label: displayName },
+          style: buildNodeStyle(name, isActive, isVisited, isInner),
         }
       }),
-    [nodeNames, activeNode, activeElement, visitedNodes, positions, brandAccent, surfaceRaised, textPrimary, borderDefault, unvisitedColor],
+    [allNodeNames, activeNode, activeElement, visitedNodes, allPositions, brandAccent, surfaceRaised, textPrimary, borderDefault, unvisitedColor],
   )
 
   const initialEdges: Edge[] = useMemo(
     () =>
-      edgePairs.map(({ source, target }) => ({
-        id: `${source}->${target}`,
-        source,
-        target,
-        animated: true,
-        style: { stroke: edgeColor, strokeWidth: 2 },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: edgeColor,
-          width: 16,
-          height: 16,
-        },
-      })),
-    [edgePairs, edgeColor],
+      allEdgePairs.map(({ source, target }) => {
+        const isInner = source.includes('/') || target.includes('/')
+        return {
+          id: `${source}->${target}`,
+          source,
+          target,
+          animated: true,
+          style: { stroke: isInner ? borderDefault : edgeColor, strokeWidth: isInner ? 1 : 2, strokeDasharray: isInner ? '4 2' : undefined },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: isInner ? borderDefault : edgeColor,
+            width: isInner ? 12 : 16,
+            height: isInner ? 12 : 16,
+          },
+        }
+      }),
+    [allEdgePairs, edgeColor, borderDefault],
   )
 
   const [nodes, setNodes] = useNodesState(initialNodes)
@@ -192,16 +241,22 @@ export function PipelineGraph({ events, nodeDescriptions }: Props) {
   useEffect(() => { setNodes(initialNodes) }, [initialNodes, setNodes])
   useEffect(() => { setEdges(initialEdges) }, [initialEdges, setEdges])
 
-  const toggleCollapse = useCallback(
-    (nodeId: string) => {
-      setCollapsed((prev) => {
-        const next = new Set(prev)
-        if (next.has(nodeId)) next.delete(nodeId)
-        else next.add(nodeId)
-        return next
-      })
+  const toggleExpand = useCallback(
+    async (nodeId: string) => {
+      if (expanded.has(nodeId)) {
+        setExpanded((prev) => {
+          const next = new Map(prev)
+          next.delete(nodeId)
+          return next
+        })
+        return
+      }
+      const data = await fetchMarble(nodeId)
+      if (data) {
+        setExpanded((prev) => new Map(prev).set(nodeId, data))
+      }
     },
-    [],
+    [expanded],
   )
 
   const tooltip = hoveredNode && nodeDescriptions?.[hoveredNode]
@@ -212,7 +267,7 @@ export function PipelineGraph({ events, nodeDescriptions }: Props) {
         nodes={nodes}
         edges={edges}
         fitView
-        onNodeDoubleClick={(_, node) => toggleCollapse(node.id)}
+        onNodeDoubleClick={(_, node) => toggleExpand(node.id)}
         onNodeMouseEnter={(_, node) => setHoveredNode(node.id)}
         onNodeMouseLeave={() => setHoveredNode(null)}
       >

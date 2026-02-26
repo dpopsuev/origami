@@ -218,6 +218,79 @@ func TestInMemoryStore_SearchByTag(t *testing.T) {
 	}
 }
 
+func TestTaggedMemoryStore_AutoTags(t *testing.T) {
+	inner := NewInMemoryStore()
+	wrapped := &taggedMemoryStore{inner: inner, tags: []string{"run-001", "rca"}}
+
+	wrapped.SetNS("semantic", "w1", "finding", "goroutine leak")
+
+	item := inner.data["semantic"]["w1"]["finding"]
+	if item.Value != "goroutine leak" {
+		t.Errorf("value = %v, want 'goroutine leak'", item.Value)
+	}
+	if len(item.Tags) != 2 || item.Tags[0] != "run-001" || item.Tags[1] != "rca" {
+		t.Errorf("tags = %v, want [run-001 rca]", item.Tags)
+	}
+}
+
+func TestTaggedMemoryStore_ReadDelegation(t *testing.T) {
+	inner := NewInMemoryStore()
+	inner.SetNS("semantic", "w1", "key", "val")
+
+	wrapped := &taggedMemoryStore{inner: inner, tags: []string{"tag"}}
+
+	v, ok := wrapped.GetNS("semantic", "w1", "key")
+	if !ok || v != "val" {
+		t.Errorf("GetNS = %v, %v, want val/true", v, ok)
+	}
+
+	keys := wrapped.KeysNS("semantic", "w1")
+	if len(keys) != 1 || keys[0] != "key" {
+		t.Errorf("KeysNS = %v, want [key]", keys)
+	}
+
+	results := wrapped.Search("semantic", "val")
+	if len(results) != 1 {
+		t.Errorf("Search = %d results, want 1", len(results))
+	}
+}
+
+func TestTaggedMemoryStore_BackwardCompatSet(t *testing.T) {
+	inner := NewInMemoryStore()
+	wrapped := &taggedMemoryStore{inner: inner, tags: []string{"auto"}}
+
+	wrapped.Set("w1", "k", "v")
+
+	item := inner.data[""]["w1"]["k"]
+	if len(item.Tags) != 1 || item.Tags[0] != "auto" {
+		t.Errorf("Set via tagged wrapper: tags = %v, want [auto]", item.Tags)
+	}
+
+	v, ok := wrapped.Get("w1", "k")
+	if !ok || v != "v" {
+		t.Errorf("Get = %v, %v, want v/true", v, ok)
+	}
+}
+
+func TestWithTaggedMemory_RunOption(t *testing.T) {
+	store := NewInMemoryStore()
+	opt := WithTaggedMemory(store, "scenario-1", "wet")
+
+	cfg := &runConfig{}
+	opt(cfg)
+
+	tagged, ok := cfg.memory.(*taggedMemoryStore)
+	if !ok {
+		t.Fatal("WithTaggedMemory did not produce a taggedMemoryStore")
+	}
+	if tagged.inner != store {
+		t.Error("inner store mismatch")
+	}
+	if len(tagged.tags) != 2 || tagged.tags[0] != "scenario-1" || tagged.tags[1] != "wet" {
+		t.Errorf("tags = %v, want [scenario-1 wet]", tagged.tags)
+	}
+}
+
 func TestMemoryHelpers(t *testing.T) {
 	store := NewInMemoryStore()
 
