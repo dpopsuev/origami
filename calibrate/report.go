@@ -27,10 +27,37 @@ func DefaultThresholdFormat(m Metric) string {
 	return fmt.Sprintf("≥%.2f", m.Threshold)
 }
 
+// tierOrder defines the display ordering for auto-generated sections.
+var tierOrder = []CostTier{TierOutcome, TierInvestigation, TierDetection, TierEfficiency, TierMeta, ""}
+
+// tierTitle maps a CostTier to a human-readable section title.
+var tierTitle = map[CostTier]string{
+	TierOutcome:       "Outcome",
+	TierInvestigation: "Investigation",
+	TierDetection:     "Detection",
+	TierEfficiency:    "Efficiency",
+	TierMeta:          "Meta",
+	"":                "Other",
+}
+
+// sectionsFromTier auto-generates MetricSections grouped by Tier.
+func sectionsFromTier(ms MetricSet) []MetricSection {
+	byTier := ms.ByTier()
+	var sections []MetricSection
+	for _, tier := range tierOrder {
+		metrics, ok := byTier[tier]
+		if !ok || len(metrics) == 0 {
+			continue
+		}
+		title := tierTitle[tier]
+		sections = append(sections, MetricSection{Title: title, Metrics: metrics})
+	}
+	return sections
+}
+
 // FormatReport produces a human-readable calibration report with metric
 // tables, a pass/fail result line, and an optional token summary.
-// Consumers append domain-specific sections (per-case breakdown, etc.)
-// to the returned string.
+// When cfg.Sections is empty, sections are auto-generated from Metric.Tier.
 func FormatReport(report *CalibrationReport, cfg FormatConfig) string {
 	var b strings.Builder
 
@@ -52,7 +79,12 @@ func FormatReport(report *CalibrationReport, cfg FormatConfig) string {
 		threshFunc = DefaultThresholdFormat
 	}
 
-	for _, sec := range cfg.Sections {
+	sections := cfg.Sections
+	if len(sections) == 0 {
+		sections = sectionsFromTier(report.Metrics)
+	}
+
+	for _, sec := range sections {
 		b.WriteString(fmt.Sprintf("--- %s ---\n", sec.Title))
 		tbl := format.NewTable(format.ASCII)
 		tbl.Header("ID", "Metric", "Value", "Detail", "Pass", "Threshold")

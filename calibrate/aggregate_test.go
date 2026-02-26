@@ -20,8 +20,8 @@ func TestAggregateRunMetrics_SingleRun(t *testing.T) {
 	if got := len(agg.AllMetrics()); got != 8 {
 		t.Fatalf("single: want 8 metrics, got %d", got)
 	}
-	if agg.Structured[0].Value != 0.80 {
-		t.Errorf("single: M1 value want 0.80, got %.2f", agg.Structured[0].Value)
+	if agg.Metrics[0].Value != 0.80 {
+		t.Errorf("single: M1 value want 0.80, got %.2f", agg.Metrics[0].Value)
 	}
 }
 
@@ -38,27 +38,27 @@ func TestAggregateRunMetrics_TwoIdenticalRuns(t *testing.T) {
 
 func TestAggregateRunMetrics_Averaging(t *testing.T) {
 	run1 := calibrate.MetricSet{
-		Structured: []calibrate.Metric{{ID: "X", Name: "x", Value: 0.60, Threshold: 0.50}},
+		Metrics: []calibrate.Metric{{ID: "X", Name: "x", Value: 0.60, Threshold: 0.50}},
 	}
 	run2 := calibrate.MetricSet{
-		Structured: []calibrate.Metric{{ID: "X", Name: "x", Value: 0.80, Threshold: 0.50}},
+		Metrics: []calibrate.Metric{{ID: "X", Name: "x", Value: 0.80, Threshold: 0.50}},
 	}
 	agg := calibrate.AggregateRunMetrics([]calibrate.MetricSet{run1, run2}, nil)
-	if got := agg.Structured[0].Value; math.Abs(got-0.70) > 1e-9 {
+	if got := agg.Metrics[0].Value; math.Abs(got-0.70) > 1e-9 {
 		t.Errorf("avg: want 0.70, got %.4f", got)
 	}
-	if !agg.Structured[0].Pass {
+	if !agg.Metrics[0].Pass {
 		t.Error("avg: want pass=true (0.70 >= 0.50)")
 	}
 }
 
 func TestAggregateRunMetrics_CustomEvaluator(t *testing.T) {
 	run := calibrate.MetricSet{
-		Structured: []calibrate.Metric{{ID: "X", Value: 0.20, Threshold: 0.30}},
+		Metrics: []calibrate.Metric{{ID: "X", Value: 0.20, Threshold: 0.30}},
 	}
 	alwaysFail := func(_ calibrate.Metric) bool { return false }
 	agg := calibrate.AggregateRunMetrics([]calibrate.MetricSet{run, run}, alwaysFail)
-	if agg.Structured[0].Pass {
+	if agg.Metrics[0].Pass {
 		t.Error("custom eval: want pass=false")
 	}
 }

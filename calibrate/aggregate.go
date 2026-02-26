@@ -2,7 +2,8 @@ package calibrate
 
 import (
 	"fmt"
-	"math"
+
+	"github.com/dpopsuev/origami/internal/mathutil"
 )
 
 // PassEvaluator decides whether a metric passes after aggregation.
@@ -17,9 +18,8 @@ func DefaultPassEvaluator(m Metric) bool {
 
 // AggregateRunMetrics computes the mean value for each metric across
 // multiple runs and re-evaluates pass/fail using the provided evaluator.
-// All groups (including Aggregate) are averaged. Consumers that need
-// special aggregate handling (e.g. variance metrics) should post-process
-// the returned MetricSet.
+// All metrics are averaged. Consumers that need special aggregate handling
+// (e.g. variance metrics) should post-process the returned MetricSet.
 //
 // If eval is nil, DefaultPassEvaluator is used.
 func AggregateRunMetrics(runs []MetricSet, eval PassEvaluator) MetricSet {
@@ -41,64 +41,27 @@ func AggregateRunMetrics(runs []MetricSet, eval PassEvaluator) MetricSet {
 	}
 
 	agg := runs[0]
-	updateMetrics := func(metrics []Metric) {
-		for i := range metrics {
-			vals := allByID[metrics[i].ID]
-			metrics[i].Value = Mean(vals)
-			sd := Stddev(vals)
-			metrics[i].Detail = fmt.Sprintf("mean of %d runs (σ=%.3f)", len(runs), sd)
-			metrics[i].Pass = eval(metrics[i])
-		}
+	for i := range agg.Metrics {
+		vals := allByID[agg.Metrics[i].ID]
+		agg.Metrics[i].Value = mathutil.Mean(vals)
+		sd := mathutil.Stddev(vals)
+		agg.Metrics[i].Detail = fmt.Sprintf("mean of %d runs (σ=%.3f)", len(runs), sd)
+		agg.Metrics[i].Pass = eval(agg.Metrics[i])
 	}
-	updateMetrics(agg.Structured)
-	updateMetrics(agg.Workspace)
-	updateMetrics(agg.Evidence)
-	updateMetrics(agg.Semantic)
-	updateMetrics(agg.Pipeline)
-	updateMetrics(agg.Aggregate)
 
 	return agg
 }
 
 // Mean returns the arithmetic mean of vals. Returns 0 for empty input.
-func Mean(vals []float64) float64 {
-	if len(vals) == 0 {
-		return 0
-	}
-	sum := 0.0
-	for _, v := range vals {
-		sum += v
-	}
-	return sum / float64(len(vals))
-}
+// Delegated to internal/mathutil for use by other packages.
+func Mean(vals []float64) float64 { return mathutil.Mean(vals) }
 
 // Stddev returns the sample standard deviation (Bessel-corrected, N-1).
 // Returns 0 when fewer than 2 values are provided.
-func Stddev(vals []float64) float64 {
-	if len(vals) < 2 {
-		return 0
-	}
-	m := Mean(vals)
-	sum := 0.0
-	for _, v := range vals {
-		sum += (v - m) * (v - m)
-	}
-	return math.Sqrt(sum / float64(len(vals)-1))
-}
+func Stddev(vals []float64) float64 { return mathutil.Stddev(vals) }
 
-// SafeDiv divides two integers. Returns 1.0 when denom is 0
-// (0/0 = perfect: nothing to measure).
-func SafeDiv(num, denom int) float64 {
-	if denom == 0 {
-		return 1.0
-	}
-	return float64(num) / float64(denom)
-}
+// SafeDiv divides two integers. Returns 1.0 when denom is 0.
+func SafeDiv(num, denom int) float64 { return mathutil.SafeDiv(num, denom) }
 
 // SafeDivFloat divides two float64 values. Returns 1.0 when denom is 0.
-func SafeDivFloat(num, denom float64) float64 {
-	if denom == 0 {
-		return 1.0
-	}
-	return num / denom
-}
+func SafeDivFloat(num, denom float64) float64 { return mathutil.SafeDivFloat(num, denom) }
