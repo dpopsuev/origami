@@ -1,0 +1,187 @@
+// Package lsp implements a Language Server for Origami pipeline YAML.
+// It embeds the origami-lint engine for diagnostics and provides
+// completion, hover, and go-to-definition for the pipeline DSL.
+package lsp
+
+import (
+	"context"
+	"encoding/json"
+	"sync"
+
+	"go.lsp.dev/jsonrpc2"
+	"go.lsp.dev/protocol"
+	"go.lsp.dev/uri"
+
+	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/lint"
+)
+
+// Server is the Origami LSP server.
+type Server struct {
+	conn jsonrpc2.Conn
+
+	mu    sync.Mutex
+	docs  map[uri.URI]*document
+	ready bool
+}
+
+type document struct {
+	URI     uri.URI
+	Content string
+	Def     *framework.PipelineDef
+	LintCtx *lint.LintContext
+}
+
+// NewServer creates a new LSP server.
+func NewServer() *Server {
+	return &Server{
+		docs: make(map[uri.URI]*document),
+	}
+}
+
+// Handler returns a jsonrpc2.Handler for the server.
+func (s *Server) Handler() jsonrpc2.Handler {
+	return jsonrpc2.Handler(func(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) error {
+		switch req.Method() {
+		case "initialize":
+			return s.handleInitialize(ctx, reply, req)
+		case "initialized":
+			return reply(ctx, nil, nil)
+		case "shutdown":
+			return reply(ctx, nil, nil)
+		case "exit":
+			return reply(ctx, nil, nil)
+		case "textDocument/didOpen":
+			return s.handleDidOpen(ctx, reply, req)
+		case "textDocument/didChange":
+			return s.handleDidChange(ctx, reply, req)
+		case "textDocument/didClose":
+			return s.handleDidClose(ctx, reply, req)
+		case "textDocument/completion":
+			return s.handleCompletion(ctx, reply, req)
+		case "textDocument/hover":
+			return s.handleHover(ctx, reply, req)
+		case "textDocument/definition":
+			return s.handleDefinition(ctx, reply, req)
+		default:
+			return reply(ctx, nil, jsonrpc2.ErrMethodNotFound)
+		}
+	})
+}
+
+func (s *Server) handleInitialize(ctx context.Context, reply jsonrpc2.Replier, _ jsonrpc2.Request) error {
+	s.mu.Lock()
+	s.ready = true
+	s.mu.Unlock()
+
+	result := protocol.InitializeResult{
+		Capabilities: protocol.ServerCapabilities{
+			TextDocumentSync: protocol.TextDocumentSyncOptions{
+				OpenClose: true,
+				Change:    protocol.TextDocumentSyncKindFull,
+			},
+			CompletionProvider: &protocol.CompletionOptions{
+				TriggerCharacters: []string{":", " ", "-"},
+			},
+			HoverProvider: true,
+			DefinitionProvider: true,
+		},
+		ServerInfo: &protocol.ServerInfo{
+			Name:    "origami-lsp",
+			Version: "0.1.0",
+		},
+	}
+	return reply(ctx, result, nil)
+}
+
+func (s *Server) handleDidOpen(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) error {
+	var params protocol.DidOpenTextDocumentParams
+	if err := json.Unmarshal(req.Params(), &params); err != nil {
+		return reply(ctx, nil, err)
+	}
+
+	doc := s.updateDocument(params.TextDocument.URI, params.TextDocument.Text)
+	s.publishDiagnostics(ctx, doc)
+	return reply(ctx, nil, nil)
+}
+
+func (s *Server) handleDidChange(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) error {
+	var params protocol.DidChangeTextDocumentParams
+	if err := json.Unmarshal(req.Params(), &params); err != nil {
+		return reply(ctx, nil, err)
+	}
+
+	if len(params.ContentChanges) == 0 {
+		return reply(ctx, nil, nil)
+	}
+	content := params.ContentChanges[len(params.ContentChanges)-1].Text
+
+	doc := s.updateDocument(params.TextDocument.URI, content)
+	s.publishDiagnostics(ctx, doc)
+	return reply(ctx, nil, nil)
+}
+
+func (s *Server) handleDidClose(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) error {
+	var params protocol.DidCloseTextDocumentParams
+	if err := json.Unmarshal(req.Params(), &params); err != nil {
+		return reply(ctx, nil, err)
+	}
+
+	s.mu.Lock()
+	delete(s.docs, params.TextDocument.URI)
+	s.mu.Unlock()
+
+	return reply(ctx, nil, nil)
+}
+
+func (s *Server) updateDocument(docURI uri.URI, content string) *document {
+	raw := []byte(content)
+	file := string(docURI)
+
+	lintCtx, _ := lint.NewLintContext(raw, file)
+
+	var def *framework.PipelineDef
+	if lintCtx != nil {
+		def = lintCtx.Def
+	}
+
+	doc := &document{
+		URI:     docURI,
+		Content: content,
+		Def:     def,
+		LintCtx: lintCtx,
+	}
+
+	s.mu.Lock()
+	s.docs[docURI] = doc
+	s.mu.Unlock()
+
+	return doc
+}
+
+func (s *Server) getDocument(docURI uri.URI) *document {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.docs[docURI]
+}
+
+func (s *Server) publishDiagnostics(ctx context.Context, doc *document) {
+	if s.conn == nil {
+		return
+	}
+
+	diagnostics := computeDiagnostics(doc)
+
+	params := protocol.PublishDiagnosticsParams{
+		URI:         doc.URI,
+		Diagnostics: diagnostics,
+	}
+
+	raw, _ := json.Marshal(params)
+	_ = s.conn.Notify(ctx, "textDocument/publishDiagnostics", json.RawMessage(raw))
+}
+
+// SetConn sets the JSON-RPC connection for sending notifications.
+func (s *Server) SetConn(conn jsonrpc2.Conn) {
+	s.conn = conn
+}

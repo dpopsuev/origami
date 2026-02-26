@@ -15,6 +15,7 @@ import (
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/kami"
 	"github.com/dpopsuev/origami/lint"
+	originamilsp "github.com/dpopsuev/origami/lsp"
 	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/ouroboros"
 	"github.com/dpopsuev/origami/ouroborosmcp"
@@ -41,6 +42,8 @@ func main() {
 		err = ouroborosCmd(os.Args[2:])
 	case "lint":
 		err = lintCmd(os.Args[2:])
+	case "lsp":
+		err = lspCmd()
 	case "kami":
 		err = kamiCmd(os.Args[2:])
 	case "version":
@@ -64,6 +67,7 @@ Commands:
   run        Execute a pipeline YAML
   validate   Validate a pipeline YAML without executing
   lint       Static analysis for pipeline YAML (rules, profiles, auto-fix)
+  lsp        Language Server for pipeline YAML (diagnostics, completion, hover)
   skill      Skill scaffolding (scaffold SKILL.md from pipeline YAML)
   ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
   kami       Live pipeline debugger (HTTP/SSE + WS)
@@ -513,5 +517,20 @@ func lintCmd(args []string) error {
 	if exitCode > 0 {
 		os.Exit(exitCode)
 	}
+	return nil
+}
+
+func lspCmd() error {
+	srv := originamilsp.NewServer()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	stream := originamilsp.NewStdioStream(os.Stdin, os.Stdout)
+	conn := originamilsp.ServeStream(ctx, srv, stream)
+	srv.SetConn(conn)
+
+	slog.Info("origami-lsp started", "transport", "stdio")
+	<-ctx.Done()
 	return nil
 }
