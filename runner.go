@@ -2,9 +2,38 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 )
+
+// Interrupt signals that a walk should pause at the current node for
+// human-in-the-loop review. When a walker's Handle returns an Interrupt,
+// the runner checkpoints state and stops without error.
+type Interrupt struct {
+	Reason string
+	Data   map[string]any
+}
+
+func (i Interrupt) Error() string {
+	if i.Reason != "" {
+		return "interrupt: " + i.Reason
+	}
+	return "interrupt"
+}
+
+// IsInterrupt checks whether an error is an Interrupt signal.
+func IsInterrupt(err error) bool {
+	var i Interrupt
+	return errors.As(err, &i)
+}
+
+// AsInterrupt extracts the Interrupt from an error, if present.
+func AsInterrupt(err error) (Interrupt, bool) {
+	var i Interrupt
+	ok := errors.As(err, &i)
+	return i, ok
+}
 
 // Runner drives a pipeline graph with automatic artifact schema validation
 // and after-hooks. Domain tools create a Runner from a PipelineDef and their
@@ -159,5 +188,26 @@ func (hw *hookingWalker) Handle(ctx context.Context, node Node, nc NodeContext) 
 		}
 	}
 
+	return artifact, nil
+}
+
+// checkpointingWalker wraps a Walker to save state after each successful
+// node Handle. This is the outermost wrapper in the walker chain.
+type checkpointingWalker struct {
+	inner Walker
+	cp    Checkpointer
+}
+
+func (cw *checkpointingWalker) Identity() AgentIdentity { return cw.inner.Identity() }
+func (cw *checkpointingWalker) State() *WalkerState     { return cw.inner.State() }
+
+func (cw *checkpointingWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
+	artifact, err := cw.inner.Handle(ctx, node, nc)
+	if err != nil {
+		return nil, err
+	}
+	if cpErr := cw.cp.Save(cw.inner.State()); cpErr != nil {
+		return nil, fmt.Errorf("checkpoint after node %s: %w", node.Name(), cpErr)
+	}
 	return artifact, nil
 }

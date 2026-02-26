@@ -128,3 +128,114 @@ func TestWithMemoryRunOption(t *testing.T) {
 		t.Error("WithMemory did not set memory on runConfig")
 	}
 }
+
+func TestInMemoryStore_NamespaceIsolation(t *testing.T) {
+	store := NewInMemoryStore()
+	store.SetNS("semantic", "w1", "pref", "dark")
+	store.SetNS("episodic", "w1", "pref", "light")
+
+	v1, ok := store.GetNS("semantic", "w1", "pref")
+	if !ok || v1 != "dark" {
+		t.Errorf("semantic pref = %v, want dark", v1)
+	}
+
+	v2, ok := store.GetNS("episodic", "w1", "pref")
+	if !ok || v2 != "light" {
+		t.Errorf("episodic pref = %v, want light", v2)
+	}
+
+	_, ok = store.GetNS("procedural", "w1", "pref")
+	if ok {
+		t.Error("procedural should not have pref")
+	}
+}
+
+func TestInMemoryStore_BackwardCompat_DefaultNamespace(t *testing.T) {
+	store := NewInMemoryStore()
+	store.Set("w1", "key", "via-set")
+
+	v, ok := store.GetNS("", "w1", "key")
+	if !ok || v != "via-set" {
+		t.Errorf("GetNS with default ns = %v, want via-set", v)
+	}
+
+	store.SetNS("", "w1", "key2", "via-setns")
+	v2, ok := store.Get("w1", "key2")
+	if !ok || v2 != "via-setns" {
+		t.Errorf("Get from SetNS = %v, want via-setns", v2)
+	}
+}
+
+func TestInMemoryStore_KeysNS(t *testing.T) {
+	store := NewInMemoryStore()
+	store.SetNS("semantic", "w1", "a", 1)
+	store.SetNS("semantic", "w1", "b", 2)
+	store.SetNS("episodic", "w1", "c", 3)
+
+	keys := store.KeysNS("semantic", "w1")
+	sort.Strings(keys)
+	if len(keys) != 2 || keys[0] != "a" || keys[1] != "b" {
+		t.Errorf("semantic keys = %v, want [a b]", keys)
+	}
+
+	keys = store.KeysNS("episodic", "w1")
+	if len(keys) != 1 || keys[0] != "c" {
+		t.Errorf("episodic keys = %v, want [c]", keys)
+	}
+}
+
+func TestInMemoryStore_Search(t *testing.T) {
+	store := NewInMemoryStore()
+	store.SetNS("semantic", "w1", "theme-preference", "dark mode")
+	store.SetNS("semantic", "w1", "language", "english")
+	store.SetNS("semantic", "w2", "theme-preference", "light mode")
+
+	results := store.Search("semantic", "theme")
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results for 'theme', got %d", len(results))
+	}
+
+	results = store.Search("semantic", "dark")
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result for 'dark', got %d", len(results))
+	}
+	if results[0].Value != "dark mode" {
+		t.Errorf("search result = %v, want 'dark mode'", results[0].Value)
+	}
+}
+
+func TestInMemoryStore_SearchByTag(t *testing.T) {
+	store := NewInMemoryStore()
+	store.SetNSTagged("semantic", "w1", "k1", "v1", []string{"rca", "ptp"})
+	store.SetNSTagged("semantic", "w1", "k2", "v2", []string{"security"})
+
+	results := store.Search("semantic", "ptp")
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result for tag 'ptp', got %d", len(results))
+	}
+	if results[0].Key != "k1" {
+		t.Errorf("result key = %q, want k1", results[0].Key)
+	}
+}
+
+func TestMemoryHelpers(t *testing.T) {
+	store := NewInMemoryStore()
+
+	SetFact(store, "w1", "preference", "dark")
+	v, ok := store.GetNS(NamespaceSemantic, "w1", "preference")
+	if !ok || v != "dark" {
+		t.Errorf("SetFact: got %v", v)
+	}
+
+	RecordEpisode(store, "w1", "walk-001", "analyzed 5 failures")
+	v, ok = store.GetNS(NamespaceEpisodic, "w1", "walk-001")
+	if !ok || v != "analyzed 5 failures" {
+		t.Errorf("RecordEpisode: got %v", v)
+	}
+
+	UpdateInstruction(store, "w1", "greeting", "be concise")
+	v, ok = store.GetNS(NamespaceProcedural, "w1", "greeting")
+	if !ok || v != "be concise" {
+		t.Errorf("UpdateInstruction: got %v", v)
+	}
+}

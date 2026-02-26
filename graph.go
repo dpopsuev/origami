@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+// walkInterrupted is the sentinel error returned by Walk when a node
+// signals an Interrupt. The Run() function checks for this to decide
+// whether to clean up the checkpoint.
+var walkInterrupted = fmt.Errorf("walk interrupted")
+
 // Graph is a directed graph of Nodes connected by Edges, partitioned into Zones.
 type Graph interface {
 	Name() string
@@ -159,6 +164,18 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 		nodeElapsed := time.Since(nodeStart)
 
 		if err != nil {
+			if intr, ok := AsInterrupt(err); ok {
+				state.Status = "interrupted"
+				emitEvent(obs, WalkEvent{
+					Type:   EventWalkInterrupted,
+					Node:   node.Name(),
+					Walker: walkerName,
+					Metadata: map[string]any{
+						"reason": intr.Reason,
+					},
+				})
+				return walkInterrupted
+			}
 			state.Status = "error"
 			emitEvent(obs, WalkEvent{Type: EventNodeExit, Node: node.Name(), Walker: walkerName, Elapsed: nodeElapsed, Error: err})
 			emitEvent(obs, WalkEvent{Type: EventWalkError, Node: node.Name(), Error: err})

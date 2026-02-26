@@ -22,6 +22,9 @@ type runConfig struct {
 	observer     WalkObserver
 	logger       *slog.Logger
 	memory       MemoryStore
+	checkpointer Checkpointer
+	resumeID     string
+	resumeInput  any
 }
 
 // WithTransformers registers transformers for the run.
@@ -81,6 +84,30 @@ func WithLogger(l *slog.Logger) RunOption {
 // can read/write persistent state scoped by walker identity.
 func WithMemory(store MemoryStore) RunOption {
 	return func(c *runConfig) { c.memory = store }
+}
+
+// WithCheckpointer enables auto-checkpointing: the runner saves walker
+// state after each successful node, and removes the checkpoint on
+// successful walk completion.
+func WithCheckpointer(cp Checkpointer) RunOption {
+	return func(c *runConfig) { c.checkpointer = cp }
+}
+
+// WithResume loads a previously saved checkpoint and continues the walk
+// from the last checkpointed node instead of the pipeline's start node.
+// Requires WithCheckpointer to be set.
+func WithResume(walkerID string) RunOption {
+	return func(c *runConfig) { c.resumeID = walkerID }
+}
+
+// WithResumeInput loads a checkpoint and injects input into the walker's
+// context as "resume_input" before continuing. Used for HITL flows where
+// a human provides data to resume an interrupted walk.
+func WithResumeInput(walkerID string, input any) RunOption {
+	return func(c *runConfig) {
+		c.resumeID = walkerID
+		c.resumeInput = input
+	}
 }
 
 // Run loads a pipeline YAML, builds a graph, and walks it.
@@ -148,6 +175,26 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 		walker = NewProcessWalker("run")
 	}
 
+	startNode := def.Start
+
+	if cfg.checkpointer != nil && cfg.resumeID != "" {
+		loaded, loadErr := cfg.checkpointer.Load(cfg.resumeID)
+		if loadErr != nil {
+			return fmt.Errorf("load checkpoint %s: %w", cfg.resumeID, loadErr)
+		}
+		if loaded != nil {
+			*walker.State() = *loaded
+			startNode = loaded.CurrentNode
+			if cfg.observer != nil {
+				emitEvent(cfg.observer, WalkEvent{Type: EventWalkResumed, Node: startNode, Walker: walker.Identity().PersonaName})
+			}
+		}
+	}
+
+	if cfg.resumeInput != nil {
+		walker.State().Context["resume_input"] = cfg.resumeInput
+	}
+
 	if input != nil {
 		walker.State().Context["input"] = input
 	}
@@ -155,7 +202,26 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 		walker.State().Context["memory"] = cfg.memory
 	}
 
-	return runner.Walk(ctx, walker, def.Start)
+	if cfg.checkpointer != nil {
+		walker = &checkpointingWalker{inner: walker, cp: cfg.checkpointer}
+	}
+
+	err = runner.Walk(ctx, walker, startNode)
+
+	if err == walkInterrupted {
+		return nil
+	}
+
+	if err == nil && cfg.checkpointer != nil {
+		cpID := walker.State().ID
+		if rmErr := cfg.checkpointer.Remove(cpID); rmErr != nil {
+			slog.Warn("failed to remove checkpoint after successful walk",
+				slog.String("walker_id", cpID),
+				slog.String("error", rmErr.Error()),
+			)
+		}
+	}
+	return err
 }
 
 // Validate loads and validates a pipeline YAML without executing it.

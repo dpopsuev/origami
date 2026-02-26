@@ -350,3 +350,203 @@ func TestValidate_NoRegistries_StructuralOnly(t *testing.T) {
 		t.Fatalf("structural validation without registries should pass: %v", err)
 	}
 }
+
+func TestRun_WithCheckpointer_SavesAfterEachNode(t *testing.T) {
+	path := writeTempPipeline(t, testPipelineYAML)
+	cpDir := t.TempDir()
+	cp, _ := NewJSONCheckpointer(cpDir)
+
+	trace := &TraceCollector{}
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithCheckpointer(cp),
+		WithRunObserver(trace),
+	)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	ids, _ := cp.List()
+	if len(ids) != 0 {
+		t.Errorf("checkpoint should be removed after successful walk, got %d", len(ids))
+	}
+}
+
+func TestRun_WithCheckpointer_ResumeFromCheckpoint(t *testing.T) {
+	threeNodeYAML := `
+pipeline: test-resume
+nodes:
+  - name: a
+    element: fire
+    transformer: echo
+  - name: b
+    element: water
+    transformer: echo
+  - name: c
+    element: fire
+    transformer: echo
+edges:
+  - id: E1
+    from: a
+    to: b
+    when: "true"
+  - id: E2
+    from: b
+    to: c
+    when: "true"
+  - id: E3
+    from: c
+    to: _done
+    when: "true"
+start: a
+done: _done
+`
+	path := writeTempPipeline(t, threeNodeYAML)
+	cpDir := t.TempDir()
+	cp, _ := NewJSONCheckpointer(cpDir)
+
+	saved := NewWalkerState("run")
+	saved.CurrentNode = "b"
+	saved.Status = "running"
+	saved.RecordStep("a", "E1", "E1", "2026-01-01T00:00:00Z")
+	cp.Save(saved)
+
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithCheckpointer(cp),
+		WithResume("run"),
+	)
+	if err != nil {
+		t.Fatalf("Run with resume: %v", err)
+	}
+
+	ids, _ := cp.List()
+	if len(ids) != 0 {
+		t.Errorf("checkpoint should be removed after successful walk, got %d", len(ids))
+	}
+}
+
+func TestRun_Interrupt_PausesWalk(t *testing.T) {
+	yaml := `
+pipeline: test-interrupt
+nodes:
+  - name: a
+    element: fire
+    transformer: echo
+  - name: b
+    element: water
+    transformer: interrupt-here
+  - name: c
+    element: fire
+    transformer: echo
+edges:
+  - id: E1
+    from: a
+    to: b
+    when: "true"
+  - id: E2
+    from: b
+    to: c
+    when: "true"
+  - id: E3
+    from: c
+    to: _done
+    when: "true"
+start: a
+done: _done
+`
+	path := writeTempPipeline(t, yaml)
+	cpDir := t.TempDir()
+	cp, _ := NewJSONCheckpointer(cpDir)
+	trace := &TraceCollector{}
+
+	interruptTrans := TransformerFunc("interrupt-here", func(_ context.Context, _ *TransformerContext) (any, error) {
+		return nil, Interrupt{Reason: "need approval"}
+	})
+
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{
+			"echo":           &echoTransformer{},
+			"interrupt-here": interruptTrans,
+		}),
+		WithCheckpointer(cp),
+		WithRunObserver(trace),
+	)
+	if err != nil {
+		t.Fatalf("Run with interrupt should not return error, got: %v", err)
+	}
+
+	ids, _ := cp.List()
+	if len(ids) != 1 {
+		t.Fatalf("expected 1 checkpoint (walk interrupted), got %d", len(ids))
+	}
+
+	interrupted := trace.EventsOfType(EventWalkInterrupted)
+	if len(interrupted) != 1 {
+		t.Errorf("expected 1 interrupt event, got %d", len(interrupted))
+	}
+	if len(interrupted) > 0 && interrupted[0].Node != "b" {
+		t.Errorf("interrupt node = %q, want b", interrupted[0].Node)
+	}
+}
+
+func TestRun_ResumeWithInput_AfterInterrupt(t *testing.T) {
+	path := writeTempPipeline(t, testPipelineYAML)
+	cpDir := t.TempDir()
+	cp, _ := NewJSONCheckpointer(cpDir)
+
+	saved := NewWalkerState("resumable")
+	saved.CurrentNode = "start"
+	saved.Status = "interrupted"
+	cp.Save(saved)
+
+	trace := &TraceCollector{}
+	w := &stubWalker{
+		identity: AgentIdentity{PersonaName: "tester"},
+		state:    NewWalkerState("resumable"),
+	}
+
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithCheckpointer(cp),
+		WithResumeInput("resumable", map[string]any{"approved": true}),
+		WithWalker(w),
+		WithRunObserver(trace),
+	)
+	if err != nil {
+		t.Fatalf("Run with resume input: %v", err)
+	}
+
+	ri := w.State().Context["resume_input"]
+	if ri == nil {
+		t.Fatal("resume_input should be in walker context")
+	}
+	m, ok := ri.(map[string]any)
+	if !ok {
+		t.Fatalf("resume_input type = %T, want map[string]any", ri)
+	}
+	if m["approved"] != true {
+		t.Errorf("resume_input = %v, want {approved: true}", m)
+	}
+
+	resumed := trace.EventsOfType(EventWalkResumed)
+	if len(resumed) != 1 {
+		t.Errorf("expected 1 resume event, got %d", len(resumed))
+	}
+}
+
+func TestIsInterrupt(t *testing.T) {
+	i := Interrupt{Reason: "test"}
+	if !IsInterrupt(i) {
+		t.Error("IsInterrupt should return true for Interrupt")
+	}
+	if i.Error() != "interrupt: test" {
+		t.Errorf("Error() = %q, want 'interrupt: test'", i.Error())
+	}
+	if IsInterrupt(nil) {
+		t.Error("IsInterrupt(nil) should be false")
+	}
+	if IsInterrupt(os.ErrNotExist) {
+		t.Error("IsInterrupt should return false for non-Interrupt error")
+	}
+}

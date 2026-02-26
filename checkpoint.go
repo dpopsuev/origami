@@ -5,7 +5,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
+
+// Checkpointer persists and restores WalkerState between nodes, enabling
+// resume-from-failure and crash recovery. Implementations must be safe
+// for concurrent use by multiple walkers with distinct IDs.
+type Checkpointer interface {
+	Save(state *WalkerState) error
+	Load(id string) (*WalkerState, error)
+	Remove(id string) error
+	List() ([]string, error)
+}
 
 // JSONCheckpointer persists WalkerState to a JSON file between nodes,
 // enabling resume-from-failure for pipelines.
@@ -15,6 +26,9 @@ import (
 type JSONCheckpointer struct {
 	Dir string
 }
+
+// Compile-time interface check.
+var _ Checkpointer = (*JSONCheckpointer)(nil)
 
 // NewJSONCheckpointer creates a checkpointer that writes to the given directory.
 func NewJSONCheckpointer(dir string) (*JSONCheckpointer, error) {
@@ -71,6 +85,25 @@ func (c *JSONCheckpointer) Remove(id string) error {
 		return fmt.Errorf("checkpoint: remove %s: %w", path, err)
 	}
 	return nil
+}
+
+// List returns the IDs of all saved checkpoints.
+func (c *JSONCheckpointer) List() ([]string, error) {
+	entries, err := os.ReadDir(c.Dir)
+	if err != nil {
+		return nil, fmt.Errorf("checkpoint: list %s: %w", c.Dir, err)
+	}
+	var ids []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if strings.HasSuffix(name, ".checkpoint.json") {
+			ids = append(ids, strings.TrimSuffix(name, ".checkpoint.json"))
+		}
+	}
+	return ids, nil
 }
 
 func (c *JSONCheckpointer) path(id string) string {

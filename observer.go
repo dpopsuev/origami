@@ -17,8 +17,11 @@ const (
 	EventWalkerSwitch WalkEventType = "walker_switch"
 	EventFanOutStart  WalkEventType = "fan_out_start"
 	EventFanOutEnd    WalkEventType = "fan_out_end"
-	EventWalkComplete WalkEventType = "walk_complete"
-	EventWalkError    WalkEventType = "walk_error"
+	EventWalkComplete     WalkEventType = "walk_complete"
+	EventWalkError        WalkEventType = "walk_error"
+	EventWalkInterrupted  WalkEventType = "walk_interrupted"
+	EventWalkResumed      WalkEventType = "walk_resumed"
+	EventCheckpointSaved  WalkEventType = "checkpoint_saved"
 )
 
 // WalkEvent is a single observation from a graph walk. The Metadata map

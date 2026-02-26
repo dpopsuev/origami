@@ -133,3 +133,42 @@ func TestJSONCheckpointer_Overwrite(t *testing.T) {
 		t.Errorf("CurrentNode = %q, want investigate (overwritten)", loaded.CurrentNode)
 	}
 }
+
+func TestJSONCheckpointer_List(t *testing.T) {
+	dir := t.TempDir()
+	cp, _ := NewJSONCheckpointer(dir)
+
+	ids, err := cp.List()
+	if err != nil {
+		t.Fatalf("List empty: %v", err)
+	}
+	if len(ids) != 0 {
+		t.Errorf("expected 0 IDs, got %d", len(ids))
+	}
+
+	cp.Save(NewWalkerState("walk-a"))
+	cp.Save(NewWalkerState("walk-b"))
+	cp.Save(NewWalkerState("walk-c"))
+
+	ids, err = cp.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(ids) != 3 {
+		t.Fatalf("expected 3 IDs, got %d", len(ids))
+	}
+
+	found := map[string]bool{}
+	for _, id := range ids {
+		found[id] = true
+	}
+	for _, want := range []string{"walk-a", "walk-b", "walk-c"} {
+		if !found[want] {
+			t.Errorf("missing ID %q in List()", want)
+		}
+	}
+}
+
+func TestJSONCheckpointer_InterfaceCompliance(t *testing.T) {
+	var _ Checkpointer = (*JSONCheckpointer)(nil)
+}
