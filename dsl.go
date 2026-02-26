@@ -53,6 +53,13 @@ type NodeDef struct {
 	Input       string          `yaml:"input,omitempty"`
 	After       []string        `yaml:"after,omitempty"`
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
+	Cache       *CacheDef       `yaml:"cache,omitempty"`
+	Marble      string          `yaml:"marble,omitempty"`
+}
+
+// CacheDef configures node-level caching via the DSL.
+type CacheDef struct {
+	TTL string `yaml:"ttl,omitempty"`
 }
 
 // EdgeDef declares a conditional edge between two nodes.
@@ -69,7 +76,15 @@ type EdgeDef struct {
 	Parallel  bool   `yaml:"parallel,omitempty"`
 	Condition string `yaml:"condition,omitempty"`
 	When      string `yaml:"when,omitempty"`
+	Merge     string `yaml:"merge,omitempty"`
 }
+
+// Merge strategy constants for fan-in edges.
+const (
+	MergeAppend = "append"
+	MergeLatest = "latest"
+	MergeCustom = "custom"
+)
 
 // NodeRegistry maps node family names to Node factory functions.
 type NodeRegistry map[string]func(def NodeDef) Node
@@ -167,6 +182,7 @@ type GraphRegistries struct {
 	Extractors   ExtractorRegistry
 	Transformers TransformerRegistry
 	Hooks        HookRegistry
+	Marbles      MarbleRegistry
 }
 
 // BuildGraph constructs a Graph from a PipelineDef using the provided registries.
@@ -236,6 +252,10 @@ func (def *PipelineDef) BuildGraphWith(reg GraphRegistries) (Graph, error) {
 // Transformer > Extractor > NodeRegistry (Family/Name).
 func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error) {
 	elem := Element(strings.ToLower(nd.Element))
+
+	if nd.Marble != "" {
+		return resolveMarble(nd, reg.Marbles, 0)
+	}
 
 	if nd.Transformer != "" && reg.Transformers != nil {
 		t, err := reg.Transformers.Get(nd.Transformer)

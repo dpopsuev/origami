@@ -27,24 +27,43 @@ func NewRouter(catalog *KnowledgeSourceCatalog, rules ...RouteRule) *KnowledgeSo
 	return &KnowledgeSourceRouter{catalog: catalog, rules: rules}
 }
 
-// Route returns sources where at least one rule matches. If no rules are
-// configured or no rule matches any source, all sources are returned.
+// Route returns sources where at least one rule matches. Sources with
+// ReadPolicy == ReadAlways are always included regardless of rule matching.
+// If no rules are configured or no conditional rule matches any source,
+// all sources are returned.
 func (r *KnowledgeSourceRouter) Route(req RouteRequest) []Source {
 	if len(r.rules) == 0 || r.catalog == nil {
 		return r.allSources()
 	}
 
+	seen := make(map[string]bool, len(r.catalog.Sources))
 	matched := make([]Source, 0, len(r.catalog.Sources))
+
 	for _, src := range r.catalog.Sources {
+		if src.IsAlwaysRead() {
+			seen[src.Name] = true
+			matched = append(matched, src)
+			continue
+		}
 		for _, rule := range r.rules {
 			if rule.Match(src, req) {
-				matched = append(matched, src)
+				if !seen[src.Name] {
+					seen[src.Name] = true
+					matched = append(matched, src)
+				}
 				break
 			}
 		}
 	}
 
-	if len(matched) == 0 {
+	alwaysCount := 0
+	for _, src := range matched {
+		if src.IsAlwaysRead() {
+			alwaysCount++
+		}
+	}
+
+	if len(matched) == alwaysCount {
 		return r.allSources()
 	}
 	return matched

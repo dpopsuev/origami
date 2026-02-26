@@ -17,3 +17,9 @@ sources:
     kind: doc
     uri: ./docs/runbook.md
     purpose: Troubleshooting guide
+  - name: architecture
+    kind: doc
+    uri: ./docs/arch.md
+    purpose: System architecture (always loaded)
+    read_policy: always
+    local_path: ./docs/arch.md

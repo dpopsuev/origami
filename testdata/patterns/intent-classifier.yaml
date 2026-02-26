@@ -1,0 +1,102 @@
+# Intent Classifier Pattern
+#
+# Demonstrates provider resilience via fallback chains. The classify node
+# dispatches to a primary provider; if it fails (rate limit, timeout, error),
+# the ProviderRouter automatically falls back to secondary providers.
+#
+# Key primitives used:
+#   - provider fallbacks → automatic retry with a different LLM backend
+#   - node caching       → avoid re-classifying identical inputs within TTL
+#   - merge: latest      → fan-in takes the most recent classification
+#   - shortcut edge      → skip enrichment for high-confidence classifications
+pipeline: intent-classifier
+description: "Classify user intent with provider fallback and caching"
+
+zones:
+  ingestion:
+    nodes: [preprocess]
+    element: water
+    stickiness: 0
+  classification:
+    nodes: [classify, reclassify]
+    element: fire
+    stickiness: 2
+  enrichment:
+    nodes: [enrich]
+    element: earth
+    stickiness: 1
+  output:
+    nodes: [respond]
+    element: air
+    stickiness: 0
+
+nodes:
+  - name: preprocess
+    element: water
+    family: transform
+    prompt: "Normalize and tokenize the user input."
+
+  - name: classify
+    element: fire
+    family: classify
+    provider: primary-llm
+    prompt: "Classify the user's intent into one of: question, command, feedback, other."
+    cache:
+      ttl: 5m
+
+  - name: reclassify
+    element: fire
+    family: classify
+    provider: primary-llm
+    prompt: "Re-classify with additional context from enrichment."
+
+  - name: enrich
+    element: earth
+    family: enrich
+    prompt: "Add context from user history and knowledge base."
+
+  - name: respond
+    element: air
+    family: respond
+    prompt: "Generate a response appropriate to the classified intent."
+
+edges:
+  - id: E1
+    name: normalize input
+    from: preprocess
+    to: classify
+    condition: "always"
+
+  - id: E2-shortcut
+    name: high confidence shortcut
+    from: classify
+    to: respond
+    shortcut: true
+    condition: "confidence >= 0.9"
+
+  - id: E3
+    name: needs enrichment
+    from: classify
+    to: enrich
+    condition: "confidence < 0.9"
+
+  - id: E4
+    name: re-classify with context
+    from: enrich
+    to: reclassify
+    merge: latest
+
+  - id: E5
+    name: final classification
+    from: reclassify
+    to: respond
+    condition: "always"
+
+  - id: E6
+    name: done
+    from: respond
+    to: _done
+    condition: "always (terminal)"
+
+start: preprocess
+done: _done

@@ -22,6 +22,7 @@ type runConfig struct {
 	observer     WalkObserver
 	logger       *slog.Logger
 	memory       MemoryStore
+	nodeCache    NodeCache
 	checkpointer Checkpointer
 	resumeID     string
 	resumeInput  any
@@ -84,6 +85,13 @@ func WithLogger(l *slog.Logger) RunOption {
 // can read/write persistent state scoped by walker identity.
 func WithMemory(store MemoryStore) RunOption {
 	return func(c *runConfig) { c.memory = store }
+}
+
+// WithNodeCache enables node-level caching. When a node has a CacheDef,
+// the runner checks the cache before processing. On cache hit, the cached
+// artifact is returned and EventNodeCacheHit is emitted.
+func WithNodeCache(cache NodeCache) RunOption {
+	return func(c *runConfig) { c.nodeCache = cache }
 }
 
 // WithCheckpointer enables auto-checkpointing: the runner saves walker

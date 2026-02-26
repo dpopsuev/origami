@@ -128,3 +128,94 @@ func TestRouter_ReturnsDefensiveCopy(t *testing.T) {
 		t.Error("Route() should return a copy, not a reference to catalog sources")
 	}
 }
+
+var alwaysReadCatalog = &KnowledgeSourceCatalog{
+	Sources: []Source{
+		{Name: "arch-doc", Kind: SourceKindDoc, URI: "/docs/arch.md", ReadPolicy: ReadAlways},
+		{Name: "operator", Kind: SourceKindRepo, URI: "/op", Tags: map[string]string{"component": "ptp"}},
+		{Name: "tests", Kind: SourceKindRepo, URI: "/tests", Tags: map[string]string{"component": "ptp"}},
+		{Name: "cloud-events", Kind: SourceKindRepo, URI: "/ce", Tags: map[string]string{"component": "cep"}},
+	},
+}
+
+func TestRouter_AlwaysRead_IncludedRegardlessOfRules(t *testing.T) {
+	rule := TagMatchRule{Required: map[string]string{"component": "cep"}}
+	router := NewRouter(alwaysReadCatalog, rule)
+	got := router.Route(RouteRequest{})
+
+	names := map[string]bool{}
+	for _, s := range got {
+		names[s.Name] = true
+	}
+	if !names["arch-doc"] {
+		t.Error("ReadAlways source 'arch-doc' should always be included")
+	}
+	if !names["cloud-events"] {
+		t.Error("rule-matched 'cloud-events' should be included")
+	}
+	if names["operator"] || names["tests"] {
+		t.Error("non-matching conditional sources should be excluded")
+	}
+}
+
+func TestRouter_AlwaysRead_Dedup(t *testing.T) {
+	cat := &KnowledgeSourceCatalog{
+		Sources: []Source{
+			{Name: "arch-doc", Kind: SourceKindDoc, URI: "/docs/arch.md", ReadPolicy: ReadAlways, Tags: map[string]string{"component": "ptp"}},
+			{Name: "operator", Kind: SourceKindRepo, URI: "/op", Tags: map[string]string{"component": "ptp"}},
+		},
+	}
+	rule := TagMatchRule{Required: map[string]string{"component": "ptp"}}
+	router := NewRouter(cat, rule)
+	got := router.Route(RouteRequest{})
+
+	count := 0
+	for _, s := range got {
+		if s.Name == "arch-doc" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("arch-doc should appear exactly once, got %d", count)
+	}
+}
+
+func TestRouter_OnlyAlwaysRead_FallbackToAll(t *testing.T) {
+	rule := TagMatchRule{Required: map[string]string{"component": "nonexistent"}}
+	router := NewRouter(alwaysReadCatalog, rule)
+	got := router.Route(RouteRequest{})
+
+	if len(got) != 4 {
+		t.Errorf("when only always-read sources match, should return all; got %d", len(got))
+	}
+}
+
+func TestSource_IsAlwaysRead(t *testing.T) {
+	s := Source{ReadPolicy: ReadAlways}
+	if !s.IsAlwaysRead() {
+		t.Error("ReadAlways should return true")
+	}
+	s2 := Source{}
+	if s2.IsAlwaysRead() {
+		t.Error("empty ReadPolicy should return false")
+	}
+	s3 := Source{ReadPolicy: ReadConditional}
+	if s3.IsAlwaysRead() {
+		t.Error("ReadConditional should return false")
+	}
+}
+
+func TestCatalog_AlwaysReadSources(t *testing.T) {
+	got := alwaysReadCatalog.AlwaysReadSources()
+	if len(got) != 1 || got[0].Name != "arch-doc" {
+		t.Errorf("want [arch-doc], got %v", got)
+	}
+}
+
+func TestCatalog_AlwaysReadSources_Nil(t *testing.T) {
+	var cat *KnowledgeSourceCatalog
+	got := cat.AlwaysReadSources()
+	if got != nil {
+		t.Errorf("nil catalog should return nil, got %v", got)
+	}
+}

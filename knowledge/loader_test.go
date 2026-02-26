@@ -16,8 +16,8 @@ func TestLoadFromPath_NewFormat_YAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPath: %v", err)
 	}
-	if len(cat.Sources) != 3 {
-		t.Fatalf("want 3 sources, got %d", len(cat.Sources))
+	if len(cat.Sources) != 4 {
+		t.Fatalf("want 4 sources, got %d", len(cat.Sources))
 	}
 	s := cat.Sources[0]
 	if s.Name != "ptp-operator" || s.Kind != SourceKindRepo {
@@ -39,8 +39,8 @@ func TestLoadFromPath_NewFormat_JSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPath: %v", err)
 	}
-	if len(cat.Sources) != 2 {
-		t.Fatalf("want 2 sources, got %d", len(cat.Sources))
+	if len(cat.Sources) != 3 {
+		t.Fatalf("want 3 sources, got %d", len(cat.Sources))
 	}
 	if cat.Sources[0].Tags["team"] != "platform" {
 		t.Errorf("tags: got %v", cat.Sources[0].Tags)

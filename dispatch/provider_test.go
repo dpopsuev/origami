@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -11,11 +12,15 @@ type mockDispatcher struct {
 	name    string
 	called  bool
 	lastCtx DispatchContext
+	err     error
 }
 
 func (m *mockDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 	m.called = true
 	m.lastCtx = ctx
+	if m.err != nil {
+		return nil, m.err
+	}
 	return []byte(m.name + "-output"), nil
 }
 
@@ -205,5 +210,120 @@ func TestProviderRouter_ExplicitProvider_OverridesAutoRoute(t *testing.T) {
 	}
 	if anthropic.called {
 		t.Error("auto-route should not override explicit provider")
+	}
+}
+
+func TestProviderRouter_Fallback_PrimaryFails(t *testing.T) {
+	primary := &mockDispatcher{name: "primary", err: fmt.Errorf("rate limited")}
+	backup := &mockDispatcher{name: "backup"}
+
+	router := NewProviderRouter(primary, map[string]Dispatcher{
+		"primary": primary,
+		"backup":  backup,
+	}, WithFallbacks(map[string][]string{
+		"primary": {"backup"},
+	}))
+
+	result, err := router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "F0", Provider: "primary",
+	})
+	if err != nil {
+		t.Fatalf("expected fallback to succeed, got: %v", err)
+	}
+	if !backup.called {
+		t.Error("backup should be called on primary failure")
+	}
+	if string(result) != "backup-output" {
+		t.Errorf("result = %q, want backup-output", result)
+	}
+}
+
+func TestProviderRouter_Fallback_AllFail(t *testing.T) {
+	primary := &mockDispatcher{name: "primary", err: fmt.Errorf("error 1")}
+	fb1 := &mockDispatcher{name: "fb1", err: fmt.Errorf("error 2")}
+	fb2 := &mockDispatcher{name: "fb2", err: fmt.Errorf("error 3")}
+
+	router := NewProviderRouter(primary, map[string]Dispatcher{
+		"primary": primary,
+		"fb1":     fb1,
+		"fb2":     fb2,
+	}, WithFallbacks(map[string][]string{
+		"primary": {"fb1", "fb2"},
+	}))
+
+	_, err := router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "F0", Provider: "primary",
+	})
+	if err == nil {
+		t.Fatal("expected error when all providers fail")
+	}
+	if !strings.Contains(err.Error(), "all providers failed") {
+		t.Errorf("error = %v", err)
+	}
+}
+
+func TestProviderRouter_Fallback_NoFallbacks(t *testing.T) {
+	primary := &mockDispatcher{name: "primary", err: fmt.Errorf("fail")}
+
+	router := NewProviderRouter(primary, map[string]Dispatcher{
+		"primary": primary,
+	})
+
+	_, err := router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "F0", Provider: "primary",
+	})
+	if err == nil {
+		t.Fatal("expected error with no fallbacks")
+	}
+	if !strings.Contains(err.Error(), "fail") {
+		t.Errorf("error = %v", err)
+	}
+}
+
+func TestProviderRouter_Fallback_DefaultProvider(t *testing.T) {
+	def := &mockDispatcher{name: "default", err: fmt.Errorf("default fail")}
+	backup := &mockDispatcher{name: "backup"}
+
+	router := NewProviderRouter(def, map[string]Dispatcher{
+		"backup": backup,
+	}, WithFallbacks(map[string][]string{
+		"default": {"backup"},
+	}))
+
+	result, err := router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "F0",
+	})
+	if err != nil {
+		t.Fatalf("expected fallback to work for default: %v", err)
+	}
+	if string(result) != "backup-output" {
+		t.Errorf("result = %q, want backup-output", result)
+	}
+}
+
+func TestProviderRouter_FallbackCallback(t *testing.T) {
+	primary := &mockDispatcher{name: "primary", err: fmt.Errorf("fail")}
+	backup := &mockDispatcher{name: "backup"}
+
+	var gotPrimary, gotFallback string
+	router := NewProviderRouter(primary, map[string]Dispatcher{
+		"primary": primary,
+		"backup":  backup,
+	},
+		WithFallbacks(map[string][]string{"primary": {"backup"}}),
+		WithFallbackCallback(func(p, fb string, _ error) {
+			gotPrimary = p
+			gotFallback = fb
+		}),
+	)
+
+	_, err := router.Dispatch(DispatchContext{
+		CaseID: "C1", Step: "F0", Provider: "primary",
+	})
+	if err != nil {
+		t.Fatalf("expected success: %v", err)
+	}
+	if gotPrimary != "primary" || gotFallback != "backup" {
+		t.Errorf("callback: primary=%q fallback=%q", gotPrimary, gotFallback)
 	}
 }

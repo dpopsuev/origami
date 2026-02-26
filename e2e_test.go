@@ -266,3 +266,66 @@ func TestE2E_RealYAML_HierarchicalDelegation(t *testing.T) {
 		t.Fatalf("WalkTeam: %v", err)
 	}
 }
+
+func TestE2E_RealYAML_IntentClassifier(t *testing.T) {
+	def := loadScenario(t, "testdata/patterns/intent-classifier.yaml")
+
+	if def.Pipeline != "intent-classifier" {
+		t.Errorf("pipeline name = %q, want intent-classifier", def.Pipeline)
+	}
+
+	families := make([]string, 0, len(def.Nodes))
+	seen := map[string]bool{}
+	for _, nd := range def.Nodes {
+		if nd.Family != "" && !seen[nd.Family] {
+			families = append(families, nd.Family)
+			seen[nd.Family] = true
+		}
+	}
+
+	edgeIDs := make([]string, len(def.Edges))
+	for i, ed := range def.Edges {
+		edgeIDs[i] = ed.ID
+	}
+
+	graph, err := def.BuildGraph(stubNodeReg(families...), forwardEdgeFactory(edgeIDs...))
+	if err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+
+	walker := NewProcessWalker("classifier")
+	if err := graph.Walk(context.Background(), walker, def.Start); err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	if walker.state.Status != "done" {
+		t.Errorf("status = %q, want done", walker.state.Status)
+	}
+
+	hasShortcut := false
+	hasCacheDef := false
+	hasMerge := false
+	for _, ed := range def.Edges {
+		if ed.Shortcut {
+			hasShortcut = true
+		}
+		if ed.Merge != "" {
+			hasMerge = true
+		}
+	}
+	for _, nd := range def.Nodes {
+		if nd.Cache != nil {
+			hasCacheDef = true
+		}
+	}
+
+	if !hasShortcut {
+		t.Error("expected at least one shortcut edge in intent-classifier")
+	}
+	if !hasCacheDef {
+		t.Error("expected at least one node with cache: definition")
+	}
+	if !hasMerge {
+		t.Error("expected at least one edge with merge strategy")
+	}
+}

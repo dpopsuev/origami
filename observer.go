@@ -21,7 +21,8 @@ const (
 	EventWalkError        WalkEventType = "walk_error"
 	EventWalkInterrupted  WalkEventType = "walk_interrupted"
 	EventWalkResumed      WalkEventType = "walk_resumed"
-	EventCheckpointSaved  WalkEventType = "checkpoint_saved"
+	EventCheckpointSaved    WalkEventType = "checkpoint_saved"
+	EventProviderFallback   WalkEventType = "provider_fallback"
 )
 
 // WalkEvent is a single observation from a graph walk. The Metadata map

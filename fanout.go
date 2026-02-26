@@ -170,3 +170,35 @@ type branchResult struct {
 	nodeName string
 	artifact Artifact
 }
+
+// ListArtifact wraps multiple artifacts from parallel branches into a single
+// composite artifact. Produced by the "append" merge strategy.
+type ListArtifact struct {
+	Items []Artifact
+}
+
+func (a *ListArtifact) Type() string       { return "list" }
+func (a *ListArtifact) Confidence() float64 { return 0 }
+func (a *ListArtifact) Raw() any            { return a.Items }
+
+// applyMergeStrategy combines branch results into a single merged artifact
+// based on the merge strategy declared on the edge leading to the merge node.
+func applyMergeStrategy(strategy string, results []branchResult) Artifact {
+	if len(results) == 0 {
+		return nil
+	}
+	switch strategy {
+	case MergeAppend:
+		items := make([]Artifact, 0, len(results))
+		for _, r := range results {
+			if r.artifact != nil {
+				items = append(items, r.artifact)
+			}
+		}
+		return &ListArtifact{Items: items}
+	case MergeLatest:
+		return results[len(results)-1].artifact
+	default:
+		return results[0].artifact
+	}
+}
