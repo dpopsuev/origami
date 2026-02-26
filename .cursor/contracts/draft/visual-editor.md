@@ -21,7 +21,8 @@ Global rules only, plus:
 - `contracts/completed/framework/origami-pipeline-studio.md` — Completed design-only contract. Architecture sketch, API contract, data model. This contract supersedes Pipeline Studio with implementation scope.
 - `contracts/draft/kami-live-debugger.md` — EventBridge, KamiServer (triple-homed), Debug API, React frontend. The Visual Editor shares Kami's React Flow graph component and EventBridge data source.
 - `contracts/draft/origami-lsp.md` — Language Server for pipeline YAML. The Visual Editor embeds Monaco + LSP for the YAML editing pane.
-- `contracts/draft/origami-collections.md` — Collection format, FQCN resolution. The Visual Editor's component palette shows available collections and their contents.
+- `contracts/draft/origami-adapters.md` — Adapter format, FQCN resolution. The Visual Editor's component palette shows available adapters and their contents.
+- `contracts/draft/origami-marbles.md` — Marble type, MarbleRegistry, composite subgraph nodes. The Visual Editor's component palette shows available marbles with fold/unfold visualization.
 - `docs/case-studies/visual-editor-landscape.md` — Case study of Excalidraw, Mermaid, and Ansible Automation Controller. Business model analysis recommending the Ansible open-core model.
 - `docs/case-studies/ansible-collections.md` — Ansible Collections and Automation Hub as second revenue stream (certified content).
 - `docs/rh-presentation-dna.md` — Red Hat brand color system, element-to-color mapping, accessibility constraints. All Visual Editor UI must comply.
@@ -66,7 +67,7 @@ flowchart TB
             YAMLPane["YAML Editor\nMonaco + LSP"]
             RunDash["Run Dashboard"]
             ArtView["Artifact Inspector"]
-            Palette["Component Palette\nfrom Collections"]
+            Palette["Component Palette\nfrom Adapters + Marbles"]
         end
         subgraph be [Backend - Go]
             API["REST/GraphQL API"]
@@ -104,9 +105,9 @@ flowchart TB
 
 ## Execution strategy
 
-This is the largest product scope in Origami's roadmap. Execution is split into phases that each deliver a usable increment. Phase 0 establishes Playwright E2E testing and Kami integration from day 1 — every subsequent phase is gated by green smoke tests. Phase 1 delivers a read-only viewer (graph + run history). Phase 2 adds the pipeline builder (drag-and-drop + bidirectional YAML). Phase 2.5 adds subgraph fold/unfold. Phase 2.7 adds diagnostic overlays (heatmaps, traces, diffs). Phase 3 adds run management (launch, schedule, monitor). Phase 3.5 adds the Agentic Editor (AI-powered graph modification). Phase 4 adds enterprise features (RBAC, multi-tenancy, audit, SSO, collaboration cursors, alert rules). Phase 5 adds the collections palette and certified content integration. Phase 5.5 adds product polish (themes, analytics, export, templates, onboarding).
+This is the largest product scope in Origami's roadmap. Execution is split into phases that each deliver a usable increment. Phase 0 establishes Playwright E2E testing and Kami integration from day 1 — every subsequent phase is gated by green smoke tests. Phase 1 delivers a read-only viewer (graph + run history). Phase 2 adds the pipeline builder (drag-and-drop + bidirectional YAML). Phase 2.5 adds subgraph fold/unfold. Phase 2.7 adds diagnostic overlays (heatmaps, traces, diffs). Phase 3 adds run management (launch, schedule, monitor). Phase 3.5 adds the Agentic Editor (AI-powered graph modification). Phase 4 adds enterprise features (RBAC, multi-tenancy, audit, SSO, collaboration cursors, alert rules). Phase 5 adds the adapters + marbles palette and certified content integration. Phase 5.5 adds product polish (themes, analytics, export, templates, onboarding).
 
-Dependencies are strict: Kami (EventBridge + React Flow) must ship before Phase 1. LSP must ship before Phase 2. Collections Phase 3.5 (SubgraphNode) must ship before Phase 2.5, but Phase 2.5 can be developed in parallel using mock nested `PipelineDef` data. Collections must ship before Phase 5. Playwright E2E (Phase 0) gates every subsequent phase — no PR merges without green E2E smoke tests.
+Dependencies are strict: Kami (EventBridge + React Flow) must ship before Phase 1. LSP must ship before Phase 2. Marbles must ship before Phase 2.5, but Phase 2.5 can be developed in parallel using mock nested `PipelineDef` data. Adapters + Marbles must ship before Phase 5. Playwright E2E (Phase 0) gates every subsequent phase — no PR merges without green E2E smoke tests.
 
 ## Feature tiers
 
@@ -171,7 +172,7 @@ Every feature maps to one of three audience tiers. Tiers are cumulative — Tier
 | Topology viewer | 4 | E7 |
 | Collaboration cursors (Enterprise real-time) | 4 | E8 |
 | Alert rules (PagerDuty, Slack, webhooks) | 4 | E9 |
-| Collections palette | 5 | C1-C5 |
+| Adapters + Marbles palette | 5 | C1-C5 |
 | Theme system (domain-specific visual identity) | 5.5 | PP1 |
 | Pipeline analytics dashboard (trends, P95, cost) | 5.5 | PP2 |
 | Affinity matrix (walker-to-node fit) | 5.5 | PP3 |
@@ -236,11 +237,11 @@ Testing infrastructure that gates every subsequent phase. Adopts the Demiurge pa
 - [ ] **B12** Keyboard-first navigation — Tab cycles through nodes, Arrow keys move between connected nodes, Enter opens inspector, Esc closes panels. Focus ring visible on active node. All mouse interactions have keyboard equivalents.
 - [ ] **B13** Command palette — Ctrl+K opens fuzzy search over: nodes (by name/type), edges, zones, walkers, recent runs, actions (add node, export, validate). Same UX as VS Code command palette.
 
-### Phase 2.5 — Subgraph fold/unfold (depends on: Collections Phase 3.5)
+### Phase 2.5 — Subgraph fold/unfold (depends on: Marbles)
 
-Subgraph visualization with IDE-like collapse/expand. Can be developed in parallel with Collections using mock nested `PipelineDef` data. Applies to both the read-only viewer (Phase 1) and the pipeline builder (Phase 2) — placed here because the graph model extension is needed before run management.
+Subgraph visualization with IDE-like collapse/expand. Can be developed in parallel with Marbles using mock nested `PipelineDef` data. Applies to both the read-only viewer (Phase 1) and the pipeline builder (Phase 2) — placed here because the graph model extension is needed before run management.
 
-- [ ] **SV1** Hierarchical graph model — extend the React Flow graph data model to represent `SubgraphNode`s as collapsible group nodes. When collapsed, show as a single node with a fold indicator (chevron or depth badge, like IDE code folding). When expanded, reveal the subgraph's internal nodes/edges inline, visually nested inside a container with a subtle border and indented background.
+- [ ] **SV1** Hierarchical graph model — extend the React Flow graph data model to represent composite `Marble`s as collapsible group nodes. When collapsed, show as a single node with a fold indicator (chevron or depth badge, like IDE code folding). When expanded, reveal the subgraph's internal nodes/edges inline, visually nested inside a container with a subtle border and indented background.
 - [ ] **SV2** Fold/unfold interaction — click the fold indicator to toggle. Keyboard shortcut (Ctrl+Shift+[ / Ctrl+Shift+]) for fold/unfold, matching IDE conventions. "Fold All" / "Unfold All" toolbar buttons. Depth-aware: folding a parent also folds all children. Unfolding only reveals one level at a time (like IDE indent folding).
 - [ ] **SV3** Edge routing across levels — edges that cross subgraph boundaries render as dashed lines entering/exiting the collapsed node. When expanded, edges connect to the actual internal source/target nodes. Animated transition on fold/unfold so the user doesn't lose spatial context.
 - [ ] **SV4** Breadcrumb navigation — when zoomed deep into a nested subgraph (2+ levels), show a breadcrumb trail at the top: `Root > Investigation > Correlation`. Clicking a breadcrumb folds everything below that level and zooms to fit.
@@ -283,8 +284,8 @@ AI-powered graph construction and modification. The user describes intent in nat
 
 ### Phase 4 — Enterprise features
 
-- [ ] **E1** RBAC engine — roles (admin, operator, viewer), teams, org-scoped permissions on pipelines, runs, collections
-- [ ] **E2** Audit trail — every action (create pipeline, launch run, modify RBAC, install collection) logged with actor, timestamp, diff
+- [ ] **E1** RBAC engine — roles (admin, operator, viewer), teams, org-scoped permissions on pipelines, runs, adapters, marbles
+- [ ] **E2** Audit trail — every action (create pipeline, launch run, modify RBAC, install adapter/marble) logged with actor, timestamp, diff
 - [ ] **E3** SSO gateway — LDAP, SAML 2.0, OIDC integration for enterprise authentication
 - [ ] **E4** Multi-tenancy — organization isolation (separate namespaces, credentials, pipelines, run history)
 - [ ] **E5** Centralized logging — aggregated run logs with search, filtering, and export
@@ -293,19 +294,19 @@ AI-powered graph construction and modification. The user describes intent in nat
 - [ ] **E8** Collaboration cursors — real-time multi-user presence on the graph. Each user gets a colored cursor (based on their persona element color). See who is editing which node. Requires WebSocket presence channel. Enterprise only.
 - [ ] **E9** Alert rules — configure alerts on pipeline events: run failure, latency threshold exceeded, cost budget exceeded, node error rate spike. Delivery: PagerDuty, Slack webhook, email, generic webhook. Enterprise only.
 
-### Phase 5 — Collections integration (depends on: Collections)
+### Phase 5 — Adapters + Marbles integration (depends on: Adapters + Marbles)
 
-- [ ] **C1** Component palette integration — browse installed collections, show available transformers, extractors, nodes, pipelines
-- [ ] **C2** Collection installer — `Install` button wraps `origami collection install` with progress feedback
-- [ ] **C3** FQCN autocomplete in YAML editor — LSP provides collection-aware completion
-- [ ] **C4** Certified badge — visual indicator for enterprise-certified collections (from registry)
-- [ ] **C5** Collection dependency viewer — show which collections a pipeline uses, their versions, and update availability
+- [ ] **C1** Component palette integration — browse installed adapters and marbles, show available transformers, extractors, hooks, nodes
+- [ ] **C2** Adapter/Marble installer — `Install` button wraps `origami adapter install` with progress feedback
+- [ ] **C3** FQCN autocomplete in YAML editor — LSP provides adapter/marble-aware completion
+- [ ] **C4** Certified badge — visual indicator for enterprise-certified adapters and marbles (from registry)
+- [ ] **C5** Dependency viewer — show which adapters and marbles a pipeline uses, their versions, and update availability
 
 ### Phase 5.5 — Product polish
 
 Features that elevate the Visual Editor from a tool to a product. Each is independently valuable; none blocks the others.
 
-- [ ] **PP1** Theme system — domain-specific visual identity beyond RH colors. Consumers register a theme (icon set, node shapes, color overrides, logo) that reskins the entire editor. Default theme uses RH branding. Achilles theme uses security-oriented iconography. Custom themes loadable from Collections.
+- [ ] **PP1** Theme system — domain-specific visual identity beyond RH colors. Consumers register a theme (icon set, node shapes, color overrides, logo) that reskins the entire editor. Default theme uses RH branding. Achilles theme uses security-oriented iconography. Custom themes loadable from Adapters.
 - [ ] **PP2** Pipeline analytics dashboard — aggregate metrics across runs: P50/P95/P99 latency per node, total token cost trends, error rate over time, walker efficiency (nodes visited vs total). Filterable by date range, pipeline version, walker. Charts via lightweight library (e.g. Recharts).
 - [ ] **PP3** Affinity matrix — heatmap showing walker-to-node fit scores based on Ouroboros profiling data. Rows = walkers (personas), columns = nodes, cells = affinity score. Helps users assign the right persona to each pipeline step.
 - [ ] **PP4** Export to presentation — one-click export of the current graph view as SVG, PNG, or Mermaid code. Includes zone backgrounds, node labels, edge conditions. SVG is editable in design tools. Mermaid is pasteable into docs. PNG includes the current overlay state (heatmap, traces).
@@ -373,6 +374,6 @@ Features that elevate the Visual Editor from a tool to a product. Each is indepe
 
 ## Notes
 
-2026-02-25 — Contract created from case study `visual-editor-landscape.md`. Business model: Ansible open-core (free Community Edition, paid Enterprise Edition). The Visual Editor is the "money maker" — not because it gates basic functionality, but because it serves enterprise governance, scale, delegation, and visibility needs. Supersedes the design-only `origami-pipeline-studio` contract. Dependencies: Kami (Phase 1), LSP (Phase 2), Collections (Phase 5).
+2026-02-25 — Contract created from case study `visual-editor-landscape.md`. Business model: Ansible open-core (free Community Edition, paid Enterprise Edition). The Visual Editor is the "money maker" — not because it gates basic functionality, but because it serves enterprise governance, scale, delegation, and visibility needs. Supersedes the design-only `origami-pipeline-studio` contract. Dependencies: Kami (Phase 1), LSP (Phase 2), Adapters + Marbles (Phase 5).
 
 2026-02-25 — Feature tier matrix added. All features mapped to three audience tiers: PoC (Tier 1), QE Division Demo (Tier 2), CEO Matt Hicks Demo (Tier 3). New phases: Phase 0 (Playwright E2E + Kami integration — gates all PRs from day 1), Phase 2.7 (diagnostic overlays), Phase 3.5 (Agentic Editor), Phase 5.5 (product polish). Playwright pattern adopted from Hegemony's Demiurge: `window.__origami` bridge mirrors `window.__perf`, graceful service skip, factory separation, orphan guard. Kami integration provides the testing surface for agentic workflow E2E.

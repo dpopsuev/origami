@@ -7,7 +7,7 @@
 ## Contract rules
 
 - The LSP is a framework feature. It must not import any consumer code (Asterisk, Achilles).
-- Collection-provided names (FQCNs) are resolved when the `origami-collections` contract ships. Until then, the LSP validates framework-level names only (elements, personas, structural integrity).
+- Adapter-provided names (FQCNs) are resolved when the `origami-adapters` contract ships. Until then, the LSP validates framework-level names only (elements, personas, structural integrity).
 - E2E scenario YAMLs from `e2e-dsl-testing` are the LSP's test fixtures. If a scenario YAML is valid and walks correctly, the LSP must validate it without errors.
 - Virtual text hints are inlay hints (LSP 3.17+), not diagnostic messages. They inform, not warn.
 - Kami connection is optional -- the LSP must function fully without a running Kami instance.
@@ -147,4 +147,4 @@ Phase 1 builds the LSP core (validation, completion, hover). Phase 2 adds elemen
 
 ## Notes
 
-2026-02-25 -- Contract created. Inspired by Ansible Language Server case study. Element color palette from `persona.go` color constants. Kami bridge depends on `kami-live-debugger` contract (Sprint 4). FQCN awareness deferred until `origami-collections` ships.
+2026-02-25 -- Contract created. Inspired by Ansible Language Server case study. Element color palette from `persona.go` color constants. Kami bridge depends on `kami-live-debugger` contract (Sprint 4). FQCN awareness deferred until `origami-adapters` ships.

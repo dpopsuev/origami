@@ -33,7 +33,8 @@ See `current-goal.mdc` for the full completed contracts list.
 - `draft/provider-resilience.md` — Provider fallback chains, entry classifier pattern. Extracted from OmO case study gaps.
 - `draft/e2e-dsl-testing.md` — Comprehensive E2E walk tests for all DSL features. Scenario YAMLs + real-YAML walks. Injected as gates into CHECKPOINTs C-F.
 - `draft/origami-lsp.md` — Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. Vision-tier.
-- `draft/origami-collections.md` — Collection format, FQCN resolution, MergeCollections API, CLI. Prevents consumer duplication. Vision-tier.
+- `draft/origami-adapters.md` — Adapter format, FQCN resolution, MergeAdapters API, CLI. Distributable helper bundles (transformers, extractors, hooks). Vision-tier.
+- `draft/origami-marbles.md` — Marble type, MarbleRegistry, composite subgraph nodes, fold/unfold visualization. Reusable graph nodes. Vision-tier.
 - `draft/visual-editor.md` — Visual Editor for Origami pipelines. Drag-and-drop builder, bidirectional YAML sync, run management. Community + Enterprise editions (Ansible open-core model). Vision-tier.
 - `draft/durable-execution.md` — Checkpointer interface (pluggable backends, durability modes) + Interrupt/Resume HITL primitive. Extracted from LangGraph case study Gaps 1+2. Should-tier.
 - `draft/memory-evolution.md` — Evolve MemoryStore: namespaces, search, PersistentStore (SQLite), memory type conventions (semantic/episodic/procedural). Extracted from LangGraph case study Gap 4. Nice-tier.

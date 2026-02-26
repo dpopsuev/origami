@@ -7,6 +7,8 @@
 - `multi-subagent/` — completed multi-subagent-phase contracts
 - `pipeline/` — completed pipeline-phase contracts
 - `poc-v2/` — completed PoC v2-phase contracts
+- `analysis/` — completed case study/analysis contracts
+- `absorbed/` — contracts whose scope was absorbed by other contracts
 
 ## Files
 (No files)

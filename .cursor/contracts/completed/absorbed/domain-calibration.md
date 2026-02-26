@@ -1,8 +1,9 @@
 # Contract — Domain-Specific Calibration
 
-**Status:** draft  
+**Status:** closed (absorbed)  
 **Goal:** Explicitly scope calibration as a per-domain concern and establish Origami's domain calibration alongside Asterisk's existing one.  
-**Serves:** Architecture evolution (vision)
+**Serves:** Architecture evolution (vision)  
+**Closure:** Absorbed into `principled-calibration-scorecard.md` Phase 6. ScoreCard YAML makes calibration per-domain by design — each consumer defines its own scorecard. The domain taxonomy table was injected into the scorecard contract.
 
 ## Contract rules
 

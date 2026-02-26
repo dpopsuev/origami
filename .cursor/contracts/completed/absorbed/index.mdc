@@ -1,0 +1,7 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `domain-calibration.md` — Per-domain calibration types. Absorbed into `principled-calibration-scorecard.md` Phase 6 (Asterisk). ScoreCard YAML makes calibration per-domain by design.

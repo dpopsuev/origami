@@ -4,5 +4,14 @@
 (No directories)
 
 ## Files
-- `prompt-calibration.md` — Framework-level calibration-driven prompt tuning infrastructure (deferred)
-- `domain-calibration.md` — Scope calibration as per-domain; define `curate/eval/` types and runner for extraction quality measurement (moved from Asterisk)
+- `consumer-cli-scaffold.md` — 8 perennial CLI commands (`analyze`, `dataset`, `calibrate`, `pipeline`, `consume`, `serve`, `demo`, `profile`). `origami.NewCLI()` builder API.
+- `origami-adapters.md` — Adapter format (FQCNs, MergeAdapters, manifest, CLI). Helper bundles connecting graph to external systems.
+- `origami-marbles.md` — Marble type (atomic/composite, MarbleRegistry, subgraph encapsulation, Kami fold/unfold). Reusable graph nodes.
+- `e2e-dsl-testing.md` — E2E walk tests for every framework feature. Cross-cutting test gates.
+- `durable-execution.md` — Checkpointer interface + HITL Interrupt/Resume.
+- `origami-lsp.md` — Language Server for pipeline YAML (color coding, virtual text, Kami live connection).
+- `visual-editor.md` — Drag-and-drop pipeline builder, bidirectional YAML sync, run management dashboard.
+- `provider-resilience.md` — Provider fallback chains + intent classifier.
+- `prompt-calibration.md` — Framework-level calibration-driven prompt tuning infrastructure (deferred).
+- `pipeline-efficiency.md` — Node caching + fan-in merge strategies.
+- `memory-evolution.md` — Namespaced, searchable, persistent MemoryStore.

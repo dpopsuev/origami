@@ -1,0 +1,8 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `case-study-omo-agentic-arms-race.md` — OmO multi-model agent orchestration analysis. Implementation extracted to `provider-resilience` + `ouroboros-seed-pipeline`.
+- `case-study-crewai-crews-and-flows.md` — CrewAI Crews+Flows architecture analysis. Implementation extracted to `walker-experience`.
