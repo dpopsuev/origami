@@ -20,6 +20,19 @@ type KabukiConfig interface {
 	Roadmap() []Milestone
 	Closing() *ClosingSection
 	TransitionLine() string
+
+	// SectionOrder returns the ordered section IDs for the presentation.
+	// The frontend renders sections in this order instead of hardcoding.
+	// Return nil to use the default order.
+	SectionOrder() []string
+
+	// CodeShowcases returns code blocks for DSL/code showcase sections.
+	// Return nil if no code showcases are needed.
+	CodeShowcases() []CodeShowcase
+
+	// Concepts returns concept card groups for educational sections.
+	// Return nil if no concept sections are needed.
+	Concepts() []ConceptGroup
 }
 
 // HeroSection is the full-viewport opening slide.
@@ -97,6 +110,36 @@ type ClosingSection struct {
 	Lines    []string `json:"lines,omitempty"`
 }
 
+// CodeBlock is a syntax-highlighted code sample with optional annotation.
+type CodeBlock struct {
+	Language   string `json:"language"`
+	Code       string `json:"code"`
+	Annotation string `json:"annotation,omitempty"`
+}
+
+// CodeShowcase is a named group of code blocks for a showcase section.
+type CodeShowcase struct {
+	ID     string      `json:"id"`
+	Title  string      `json:"title"`
+	Blocks []CodeBlock `json:"blocks"`
+}
+
+// ConceptCard is a single card in a concept grid.
+type ConceptCard struct {
+	Name        string `json:"name"`
+	Icon        string `json:"icon,omitempty"`
+	Description string `json:"description"`
+	Color       string `json:"color,omitempty"`
+}
+
+// ConceptGroup is a titled group of concept cards.
+type ConceptGroup struct {
+	ID       string        `json:"id"`
+	Title    string        `json:"title"`
+	Subtitle string        `json:"subtitle,omitempty"`
+	Cards    []ConceptCard `json:"cards"`
+}
+
 // kabukiPayload is the JSON envelope for /api/kabuki.
 type kabukiPayload struct {
 	Hero           *HeroSection         `json:"hero,omitempty"`
@@ -107,6 +150,9 @@ type kabukiPayload struct {
 	Roadmap        []Milestone          `json:"roadmap,omitempty"`
 	Closing        *ClosingSection      `json:"closing,omitempty"`
 	TransitionLine string               `json:"transition_line,omitempty"`
+	SectionOrder   []string             `json:"section_order,omitempty"`
+	CodeShowcases  []CodeShowcase       `json:"code_showcases,omitempty"`
+	Concepts       []ConceptGroup       `json:"concepts,omitempty"`
 }
 
 // themePayload is the JSON envelope for /api/theme.
@@ -165,5 +211,8 @@ func (s *Server) handleKabukiAPI(w http.ResponseWriter, _ *http.Request) {
 		Roadmap:        p.Roadmap(),
 		Closing:        p.Closing(),
 		TransitionLine: p.TransitionLine(),
+		SectionOrder:   p.SectionOrder(),
+		CodeShowcases:  p.CodeShowcases(),
+		Concepts:       p.Concepts(),
 	})
 }

@@ -11,7 +11,7 @@ export function EvidencePanel({ events }: Props) {
 
   if (artifacts.length === 0) {
     return (
-      <div className="p-3 text-rh-gray-40 italic text-sm">
+      <div className="p-3 text-fg-faint italic text-sm">
         No artifacts yet.
       </div>
     )
@@ -23,16 +23,16 @@ export function EvidencePanel({ events }: Props) {
         <div
           key={i}
           data-kami={`artifact:${i}`}
-          className="rounded border border-rh-gray-20 bg-white p-3"
+          className="rounded border border-edge bg-canvas p-3"
         >
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-rh-purple-50">{e.node}</span>
+            <span className="font-semibold text-el-earth">{e.node}</span>
             {e.agent && (
-              <span className="text-xs text-rh-gray-40">[{e.agent}]</span>
+              <span className="text-xs text-fg-faint">[{e.agent}]</span>
             )}
           </div>
           {e.data && (
-            <pre className="text-xs text-rh-gray-60 whitespace-pre-wrap">
+            <pre className="text-xs text-fg-muted whitespace-pre-wrap">
               {JSON.stringify(e.data, null, 2)}
             </pre>
           )}

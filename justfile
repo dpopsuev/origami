@@ -19,6 +19,10 @@ build:
     @mkdir -p {{ bin_dir }}
     go build -o {{ bin_dir }}/origami {{ cmd }}
 
+# Install origami to ~/.local/bin
+install:
+    go build -o ~/.local/bin/origami {{ cmd }}
+
 # ─── Test ─────────────────────────────────────────────────
 
 # Run all Go tests
@@ -41,8 +45,7 @@ vet:
 
 # Run origami lint on all testdata YAMLs (strict profile)
 lint-pipelines:
-    @just build
-    @for f in testdata/*.yaml testdata/**/*.yaml; do echo "lint: $f"; {{ bin_dir }}/origami lint --profile strict "$f"; done
+    @for f in testdata/*.yaml testdata/**/*.yaml; do echo "lint: $f"; origami lint --profile strict "$f"; done
 
 # ─── Clean ────────────────────────────────────────────────
 

@@ -21,6 +21,10 @@ export function KamiOverlay({ commands }: Props) {
   const [markers, setMarkers] = useState<Marker[]>([])
   const [speed, setSpeed] = useState(1.0)
 
+  const styles = getComputedStyle(document.documentElement)
+  const defaultHighlight = styles.getPropertyValue('--brand-accent').trim() || '#ee0000'
+  const defaultMarker = styles.getPropertyValue('--el-earth').trim() || '#5e40be'
+
   useEffect(() => {
     const last = commands[commands.length - 1]
     if (!last) return
@@ -31,12 +35,11 @@ export function KamiOverlay({ commands }: Props) {
           ...prev,
           {
             nodes: last.nodes as string[],
-            color: (last.color as string) || '#ee0000',
+            color: (last.color as string) || defaultHighlight,
           },
         ])
         break
       case 'highlight_zone':
-        // Zone highlighting handled at graph level
         break
       case 'place_marker':
         setMarkers((prev) => [
@@ -44,7 +47,7 @@ export function KamiOverlay({ commands }: Props) {
           {
             node: last.node as string,
             label: last.label as string,
-            color: (last.color as string) || '#5e40be',
+            color: (last.color as string) || defaultMarker,
           },
         ])
         break
@@ -56,7 +59,7 @@ export function KamiOverlay({ commands }: Props) {
         setSpeed(last.speed as number)
         break
     }
-  }, [commands])
+  }, [commands, defaultHighlight, defaultMarker])
 
   if (highlights.length === 0 && markers.length === 0) return null
 
@@ -68,11 +71,11 @@ export function KamiOverlay({ commands }: Props) {
           className="text-xs px-2 py-1 rounded"
           style={{ backgroundColor: m.color + '20', color: m.color }}
         >
-          📌 {m.node}: {m.label}
+          {'\uD83D\uDCCC'} {m.node}: {m.label}
         </div>
       ))}
       {speed !== 1.0 && (
-        <div className="text-xs px-2 py-1 rounded bg-rh-teal-10 text-rh-teal-50">
+        <div className="text-xs px-2 py-1 rounded bg-rh-teal-10 text-el-water">
           Speed: {speed}x
         </div>
       )}

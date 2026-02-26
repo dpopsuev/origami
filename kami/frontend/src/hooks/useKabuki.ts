@@ -90,6 +90,32 @@ export interface ClosingData {
   lines?: string[]
 }
 
+export interface CodeBlockData {
+  language: string
+  code: string
+  annotation?: string
+}
+
+export interface CodeShowcaseData {
+  id: string
+  title: string
+  blocks: CodeBlockData[]
+}
+
+export interface ConceptCardData {
+  name: string
+  icon?: string
+  description: string
+  color?: string
+}
+
+export interface ConceptGroupData {
+  id: string
+  title: string
+  subtitle?: string
+  cards: ConceptCardData[]
+}
+
 export interface KabukiData {
   hero?: HeroData
   problem?: ProblemData
@@ -99,6 +125,9 @@ export interface KabukiData {
   roadmap?: MilestoneData[]
   closing?: ClosingData
   transition_line?: string
+  section_order?: string[]
+  code_showcases?: CodeShowcaseData[]
+  concepts?: ConceptGroupData[]
 }
 
 export type AppMode = 'kabuki' | 'debugger'

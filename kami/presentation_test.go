@@ -58,6 +58,9 @@ func (mockKabuki) Closing() *ClosingSection {
 	return &ClosingSection{Headline: "Thank you."}
 }
 func (mockKabuki) TransitionLine() string { return "Time to investigate." }
+func (mockKabuki) SectionOrder() []string    { return nil }
+func (mockKabuki) CodeShowcases() []CodeShowcase { return nil }
+func (mockKabuki) Concepts() []ConceptGroup      { return nil }
 
 // partialKabuki returns nil for some sections.
 type partialKabuki struct{ mockKabuki }
@@ -171,6 +174,38 @@ func TestAPI_KabukiNilConfig(t *testing.T) {
 
 	if body["hero"] != nil {
 		t.Errorf("hero should be nil when no KabukiConfig, got %v", body["hero"])
+	}
+}
+
+// orderedKabuki returns a custom section order.
+type orderedKabuki struct{ mockKabuki }
+
+func (orderedKabuki) SectionOrder() []string    { return []string{"closing", "hero"} }
+func (orderedKabuki) CodeShowcases() []CodeShowcase { return nil }
+func (orderedKabuki) Concepts() []ConceptGroup      { return nil }
+
+func TestAPI_KabukiSectionOrder(t *testing.T) {
+	addr := startTestServer(t, Config{Theme: mockTheme{}, Kabuki: orderedKabuki{}})
+	body := getJSON(t, fmt.Sprintf("http://%s/api/kabuki", addr))
+
+	order, ok := body["section_order"].([]any)
+	if !ok {
+		t.Fatal("section_order missing or wrong type")
+	}
+	if len(order) != 2 {
+		t.Fatalf("section_order len = %d, want 2", len(order))
+	}
+	if order[0] != "closing" || order[1] != "hero" {
+		t.Errorf("section_order = %v, want [closing hero]", order)
+	}
+}
+
+func TestAPI_KabukiNilSectionOrder(t *testing.T) {
+	addr := startTestServer(t, Config{Theme: mockTheme{}, Kabuki: mockKabuki{}})
+	body := getJSON(t, fmt.Sprintf("http://%s/api/kabuki", addr))
+
+	if body["section_order"] != nil {
+		t.Errorf("section_order should be nil when SectionOrder returns nil, got %v", body["section_order"])
 	}
 }
 

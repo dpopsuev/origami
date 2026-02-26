@@ -10,3 +10,4 @@
 - `rh-presentation-dna.md` — Red Hat corporate brand guide: color system (4 collections), slide types (12), design constraints, element-to-color mapping, accessibility rules. Shared across all repos.
 - `postmortem-supervisor-race.md` — Post-mortem: SupervisorTracker.Process() race condition — production symptom cascade analysis
 - `subagent-cost-model.mdc` — Cost model for serial vs batch vs batch+clustering calibration modes
+- `laws-of-ux-kabuki.md` — Laws of UX case study applied to Kabuki presentation engine: 10 UX laws mapped to design decisions, color harmony principles
