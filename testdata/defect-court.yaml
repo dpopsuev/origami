@@ -16,7 +16,7 @@ zones:
   bench:
     nodes: [hearing, verdict]
     element: diamond
-    stickiness: 3
+    stickiness: 2
 
 nodes:
   - name: indict
@@ -36,6 +36,18 @@ nodes:
     family: verdict
 
 edges:
+  - id: HD0
+    name: indict to discover
+    from: indict
+    to: discover
+    condition: "needs discovery phase"
+
+  - id: HD0b
+    name: discover to defend
+    from: discover
+    to: defend
+    condition: "evidence gathered"
+
   - id: HD1
     name: fast-track
     from: indict

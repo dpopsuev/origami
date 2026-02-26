@@ -38,3 +38,5 @@
 - `ouroboros-seed-pipeline.md` — Replace Ouroboros v1 runner with 3-node YAML pipeline (Generator/Subject/Judge) + seed catalog + PersonaSheet + auto-routing.
 - `kami-live-debugger.md` — Kami live agentic debugger: EventBridge, KamiServer (HTTP/SSE + WS), Debug API, 14 MCP tools, Recorder/Replayer, React+Tailwind frontend with RH Color Collection 1.
 - `kabuki-presentation-engine.md` — Kabuki data-driven presentation SPA: KabukiConfig interface, /api/theme + /api/pipeline + /api/kabuki endpoints, 12 section components, element selector, scroll-snap + keyboard nav.
+- `origami-lint.md` — Rule-based pipeline YAML linter: 24 rules (S1-S11, G1-G7, B1-B6), 4 profiles, auto-fix, CLI integration, YAML line resolver.
+- `prompt-calibration.md` — StepAnalyzer, TuningProposal, PromptCalibrationLoop for calibration-driven prompt tuning.

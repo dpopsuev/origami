@@ -9,7 +9,7 @@ zones:
   research:
     nodes: [research_a, research_b]
     element: water
-    stickiness: 3
+    stickiness: 2
 
 walkers:
   - name: coordinator

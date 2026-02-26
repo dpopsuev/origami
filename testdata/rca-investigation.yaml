@@ -12,7 +12,7 @@ zones:
   frontcourt:
     nodes: [resolve, investigate]
     element: water
-    stickiness: 3
+    stickiness: 2
   paint:
     nodes: [correlate, review, report]
     element: air

@@ -23,7 +23,7 @@ zones:
   research:
     nodes: [research_code]
     element: water
-    stickiness: 3
+    stickiness: 2
   logs:
     nodes: [research_logs]
     element: fire

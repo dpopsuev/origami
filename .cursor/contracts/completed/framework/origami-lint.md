@@ -1,6 +1,6 @@
 # Contract — Origami Lint
 
-**Status:** draft
+**Status:** complete
 **Goal:** Ship `origami lint` — a rule-based static analyzer for pipeline YAML that catches structural, semantic, and best-practice issues before runtime, and can auto-fix the most common ones.
 **Serves:** Polishing & Presentation (should — accelerates agentic workflow)
 

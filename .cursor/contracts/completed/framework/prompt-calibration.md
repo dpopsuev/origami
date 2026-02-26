@@ -1,6 +1,6 @@
 # Contract — Prompt Calibration
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Framework-level infrastructure for calibration-driven prompt tuning: measure walker effectiveness per node, identify underperforming prompts, and apply systematic improvements via a feedback loop.  
 **Serves:** Architecture evolution (vision — extends Tome III personae + Tome IV meta-calibration)
 

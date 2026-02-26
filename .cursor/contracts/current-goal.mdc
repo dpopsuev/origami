@@ -92,19 +92,14 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 | R2e | `pipeline-efficiency` | should | yes | Node caching, fan-in merge strategies. |
 | R2f | `provider-resilience` | nice | no | Dispatch fallback chains + intent classifier. |
 
-#### Sprint R3 — Tuning + Knowledge
+#### Sprint R3 — Tuning + Knowledge (COMPLETE)
 
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| R3b | `prompt-calibration` | nice | Feedback loop: calibration results → prompt improvements. |
+| # | Contract | Tier | Status |
+|---|----------|------|--------|
+| R3b | `prompt-calibration` | nice | **Complete.** StepAnalyzer, TuningProposal, PromptCalibrationLoop types with synthetic tests. |
+| R3.5a | `origami-lint` | should | **Complete.** 24 rules (S1-S11, G1-G7, B1-B6), 4 profiles, auto-fix (4 fixable rules), CLI integration, YAML line resolver. |
 
-#### Sprint R3.5 — Lint (fast-track)
-
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| R3.5a | `origami-lint` | should | Rule-based pipeline YAML linter. Profiles (min→strict), auto-fix, CI gate. Engine that the LSP (R4b) embeds. Drastically improves agentic workflow. |
-
-**CHECKPOINT R3.5/G** — `origami lint --profile strict` produces zero findings on all `testdata/` YAMLs. Linter runs as agent-operations pipeline stage.
+**CHECKPOINT R3/G** — PASSED. `origami lint --profile strict` produces zero findings on all 9 `testdata/` YAMLs. Linter runs as agent-operations pipeline stage. `PromptCalibrationLoop` has unit tests with synthetic data.
 
 #### Sprint R4 — Demo + LSP
 

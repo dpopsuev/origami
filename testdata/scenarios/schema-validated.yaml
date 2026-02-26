@@ -19,10 +19,12 @@ nodes:
 
 edges:
   - id: E1
+    name: classify to report
     from: classify
     to: report
     when: "true"
   - id: E2
+    name: report to done
     from: report
     to: _done
     when: "true"
