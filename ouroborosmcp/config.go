@@ -35,7 +35,7 @@ func NewOuroborosConfig(runsDir string) fwmcp.PipelineConfig {
 		WorkerPreamble: `You are an Ouroboros discovery worker probing AI models to discover their identity.
 For each step you receive a probe prompt. Send it EXACTLY as-is to a subagent (Task tool).
 Collect the subagent's raw response and wrap it in JSON: {"response": "<raw text>"}.
-Submit via submit_artifact. Do NOT modify the probe prompt.`,
+Submit via submit_step. Do NOT modify the probe prompt.`,
 		DefaultGetNextStepTimeout: 30000,  // 30s — discovery needs LLM inference time
 		DefaultSessionTTL:         600000, // 10min — discovery sessions can be slow
 		CreateSession: func(ctx context.Context, params fwmcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
@@ -126,7 +126,7 @@ func runDiscovery(
 		if handler != nil {
 			prompt = ouroboros.BuildFullPromptWith(seen, handler.Prompt())
 		} else {
-			prompt = ouroboros.BuildFullPrompt(seen)
+			prompt = ouroboros.BuildFullPromptWith(seen, ouroboros.BuildProbePrompt())
 		}
 
 		artifactBytes, err := disp.Dispatch(dispatch.DispatchContext{

@@ -108,7 +108,7 @@ The `ExtractorRegistry` maps names to implementations:
 ```go
 reg := make(framework.ExtractorRegistry)
 reg.Register(&ouroboros.IdentityExtractor{})
-graph, _ := def.BuildGraph(nodeReg, edgeFactory, reg)
+graph, _ := def.BuildGraph(framework.GraphRegistries{Nodes: nodeReg, Edges: edgeFactory, Extractors: reg})
 ```
 
 ### Wide walls
@@ -274,7 +274,7 @@ done: _done
 
 ### Compilation
 
-`PipelineDef.BuildGraph(nodes NodeRegistry, edges EdgeFactory, extractors ...ExtractorRegistry)` compiles the DSL into an executable `Graph`:
+`PipelineDef.BuildGraph(reg GraphRegistries)` compiles the DSL into an executable `Graph`:
 
 1. Nodes with an `extractor` field are wired to the named `Extractor` from the registry (creating an `extractorNode`).
 2. Other nodes have their `family` looked up in the `NodeRegistry` to create a `Node` implementation.

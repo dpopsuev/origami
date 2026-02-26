@@ -265,7 +265,7 @@ func Validate(pipelinePath string, opts ...RunOption) error {
 
 	hasRegistries := reg.Nodes != nil || reg.Edges != nil || reg.Extractors != nil || reg.Transformers != nil || reg.Hooks != nil
 	if hasRegistries {
-		if _, err := def.BuildGraphWith(reg); err != nil {
+		if _, err := def.BuildGraph(reg); err != nil {
 			return fmt.Errorf("build graph (dry run): %w", err)
 		}
 		for _, nd := range def.Nodes {

@@ -311,7 +311,7 @@ func ouroborosPrompt(args []string) error {
 		}
 	}
 
-	fmt.Print(ouroboros.BuildFullPrompt(exclude))
+	fmt.Print(ouroboros.BuildFullPromptWith(exclude, ouroboros.BuildProbePrompt()))
 	return nil
 }
 

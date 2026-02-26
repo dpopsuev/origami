@@ -61,12 +61,6 @@ func BuildFullPromptWith(seen []framework.ModelIdentity, probePrompt string) str
 	return b.String()
 }
 
-// BuildFullPrompt combines identity request, exclusion prompt, and the
-// default refactor probe. Backward-compatible wrapper around BuildFullPromptWith.
-func BuildFullPrompt(seen []framework.ModelIdentity) string {
-	return BuildFullPromptWith(seen, BuildProbePrompt())
-}
-
 // ExtractProbeText strips the identity JSON line and blank line from a raw
 // response, returning only the probe output. Used by non-refactor probes
 // where ParseProbeResponse (code block extraction) is not appropriate.

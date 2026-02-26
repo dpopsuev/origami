@@ -276,7 +276,7 @@ func walkTriagePipeline(def *fw.PipelineDef) {
 		"E7": func(d fw.EdgeDef) fw.Edge { return &demoEdge{def: d, scenario: scenario} },
 	}
 
-	graph, err := def.BuildGraph(nodeReg, edgeFactory)
+	graph, err := def.BuildGraph(fw.GraphRegistries{Nodes: nodeReg, Edges: edgeFactory})
 	if err != nil {
 		fmt.Printf("  %sBuild error: %v%s\n", red, err, reset)
 		return
@@ -600,7 +600,7 @@ func teamWalkDemo(def *fw.PipelineDef) {
 		"E7": func(d fw.EdgeDef) fw.Edge { return &demoEdge{def: d, scenario: scenario} },
 	}
 
-	graph, err := def.BuildGraph(nodeReg, edgeFactory)
+	graph, err := def.BuildGraph(fw.GraphRegistries{Nodes: nodeReg, Edges: edgeFactory})
 	if err != nil {
 		fmt.Printf("  %sBuild error: %v%s\n", red, err, reset)
 		return

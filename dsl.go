@@ -185,24 +185,10 @@ type GraphRegistries struct {
 	Marbles      MarbleRegistry
 }
 
-// BuildGraph constructs a Graph from a PipelineDef using the provided registries.
+// BuildGraph constructs a Graph from a PipelineDef using the full registries bundle.
 // Node resolution priority: Transformer > Extractor > NodeRegistry (Family/Name).
 // Edge resolution priority: expressionEdge (When) > EdgeFactory > dslEdge.
-// For backward compatibility, also accepts (NodeRegistry, EdgeFactory, ...ExtractorRegistry).
-func (def *PipelineDef) BuildGraph(nodes NodeRegistry, edges EdgeFactory, extractors ...ExtractorRegistry) (Graph, error) {
-	var extReg ExtractorRegistry
-	if len(extractors) > 0 && extractors[0] != nil {
-		extReg = extractors[0]
-	}
-	return def.BuildGraphWith(GraphRegistries{
-		Nodes:      nodes,
-		Edges:      edges,
-		Extractors: extReg,
-	})
-}
-
-// BuildGraphWith constructs a Graph using the full registries bundle.
-func (def *PipelineDef) BuildGraphWith(reg GraphRegistries) (Graph, error) {
+func (def *PipelineDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 	if err := def.Validate(); err != nil {
 		return nil, fmt.Errorf("validate: %w", err)
 	}

@@ -197,7 +197,7 @@ func TestPromptCompliance_CurrentPrompt_CoversAllWrappers(t *testing.T) {
 	prompt := BuildIdentityPrompt()
 	promptLower := strings.ToLower(prompt)
 
-	for wrapper := range framework.KnownWrappers {
+	for wrapper := range framework.DefaultModelRegistry().Wrappers() {
 		if !strings.Contains(promptLower, wrapper) {
 			t.Errorf("current prompt does not mention known wrapper %q", wrapper)
 		}

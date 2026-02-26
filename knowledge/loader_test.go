@@ -47,50 +47,6 @@ func TestLoadFromPath_NewFormat_JSON(t *testing.T) {
 	}
 }
 
-func TestLoadFromPath_LegacyFormat_YAML(t *testing.T) {
-	cat, err := LoadFromPath(testdataPath("legacy.yaml"))
-	if err != nil {
-		t.Fatalf("LoadFromPath: %v", err)
-	}
-	if len(cat.Sources) != 2 {
-		t.Fatalf("want 2 sources, got %d", len(cat.Sources))
-	}
-	s := cat.Sources[0]
-	if s.Name != "backend" || s.Kind != SourceKindRepo {
-		t.Errorf("first source: got %+v", s)
-	}
-	if s.URI != "../../my-backend" {
-		t.Errorf("URI from path: got %q", s.URI)
-	}
-	if s.Branch != "main" {
-		t.Errorf("branch: got %q", s.Branch)
-	}
-
-	s2 := cat.Sources[1]
-	if s2.URI != "https://github.com/org/frontend.git" {
-		t.Errorf("URI from url: got %q", s2.URI)
-	}
-	if s2.Purpose != "UI components" {
-		t.Errorf("purpose: got %q", s2.Purpose)
-	}
-}
-
-func TestLoadFromPath_LegacyFormat_JSON(t *testing.T) {
-	cat, err := LoadFromPath(testdataPath("legacy.json"))
-	if err != nil {
-		t.Fatalf("LoadFromPath: %v", err)
-	}
-	if len(cat.Sources) != 2 {
-		t.Fatalf("want 2 sources, got %d", len(cat.Sources))
-	}
-	if cat.Sources[0].Name != "tests" || cat.Sources[0].Kind != SourceKindRepo {
-		t.Errorf("first source: got %+v", cat.Sources[0])
-	}
-	if cat.Sources[1].Purpose != "SUT: lifecycle" {
-		t.Errorf("second purpose: got %q", cat.Sources[1].Purpose)
-	}
-}
-
 func TestLoad_DetectJSON(t *testing.T) {
 	data := []byte(`{"sources":[{"name":"a","kind":"repo","uri":"/a"}]}`)
 	cat, err := Load(data, "")
@@ -110,20 +66,6 @@ func TestLoad_DetectYAML(t *testing.T) {
 	}
 	if len(cat.Sources) != 1 || cat.Sources[0].Kind != SourceKindDoc {
 		t.Errorf("got %+v", cat)
-	}
-}
-
-func TestLoad_DetectLegacyYAML(t *testing.T) {
-	data := []byte("repos:\n  - name: r\n    path: /r\n")
-	cat, err := Load(data, "")
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if len(cat.Sources) != 1 || cat.Sources[0].Kind != SourceKindRepo {
-		t.Errorf("got %+v", cat)
-	}
-	if cat.Sources[0].URI != "/r" {
-		t.Errorf("URI: got %q", cat.Sources[0].URI)
 	}
 }
 

@@ -185,7 +185,7 @@ done: _done
 		t.Fatalf("LoadPipeline: %v", err)
 	}
 
-	g, err := def.BuildGraph(nodeReg, nil, extReg)
+	g, err := def.BuildGraph(GraphRegistries{Nodes: nodeReg, Extractors: extReg})
 	if err != nil {
 		t.Fatalf("BuildGraph: %v", err)
 	}
@@ -225,7 +225,7 @@ done: _done
 		t.Fatalf("LoadPipeline: %v", err)
 	}
 
-	_, err = def.BuildGraph(nodeReg, nil, extReg)
+	_, err = def.BuildGraph(GraphRegistries{Nodes: nodeReg, Extractors: extReg})
 	if err == nil {
 		t.Fatal("expected error for unregistered extractor")
 	}

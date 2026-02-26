@@ -255,7 +255,7 @@ func (s *PipelineSession) WorkerPrompt(cfg *PipelineConfig) string {
 
 - Respond based ONLY on the prompt content provided.
 - Do NOT read scenario files, ground truth, test code, or prior artifacts.
-- Use submit_step (NOT submit_artifact) to submit structured fields.
+- Use submit_step to submit structured fields.
 - You call get_next_step and submit_step DIRECTLY. The parent does NOT relay for you.
 - If available=false, retry immediately — the pipeline may be between rounds.
 - Process each step independently based on the prompt content.
@@ -420,8 +420,7 @@ func (s *PipelineSession) GetNextStepWithHints(ctx context.Context, timeout time
 }
 
 // SubmitArtifact routes the agent's artifact to the correct Dispatch caller.
-// Callers are responsible for ensuring data is valid JSON before calling this
-// (submit_step validates via schema, submit_artifact validates via json.Valid).
+// Callers are responsible for ensuring data is valid JSON before calling this.
 func (s *PipelineSession) SubmitArtifact(ctx context.Context, dispatchID int64, data []byte) error {
 	s.touchActivity()
 	return s.dispatcher.SubmitArtifact(ctx, dispatchID, data)

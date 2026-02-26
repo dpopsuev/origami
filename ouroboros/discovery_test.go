@@ -38,7 +38,7 @@ func TestBuildExclusionPrompt_WithExclusions(t *testing.T) {
 }
 
 func TestBuildFullPrompt_CombinesAll(t *testing.T) {
-	prompt := BuildFullPrompt(nil)
+	prompt := BuildFullPromptWith(nil, BuildProbePrompt())
 
 	if !strings.Contains(prompt, "model_name") {
 		t.Error("missing identity prompt")
@@ -54,7 +54,7 @@ func TestBuildFullPrompt_CombinesAll(t *testing.T) {
 // TestBuildFullPrompt_IdentityFirst ensures identity is placed before the
 // probe so the model identifies itself before being primed by task instructions.
 func TestBuildFullPrompt_IdentityFirst(t *testing.T) {
-	prompt := BuildFullPrompt(nil)
+	prompt := BuildFullPromptWith(nil, BuildProbePrompt())
 
 	idxIdentity := strings.Index(prompt, "RESPONSE FORMAT")
 	idxProbe := strings.Index(prompt, "Refactor")

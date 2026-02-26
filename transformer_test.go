@@ -78,7 +78,7 @@ func TestBuildGraphWith_TransformerNode(t *testing.T) {
 		Transformers: TransformerRegistry{"echo": trans},
 	}
 
-	graph, err := def.BuildGraphWith(reg)
+	graph, err := def.BuildGraph(reg)
 	if err != nil {
 		t.Fatalf("BuildGraphWith: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestBuildGraphWith_MixedTransformerAndWalker(t *testing.T) {
 		Nodes:        NodeRegistry{"legacy": nodeFactory},
 	}
 
-	graph, err := def.BuildGraphWith(reg)
+	graph, err := def.BuildGraph(reg)
 	if err != nil {
 		t.Fatalf("BuildGraphWith: %v", err)
 	}

@@ -63,7 +63,7 @@ func NewRunner(def *PipelineDef, nodes NodeRegistry, edges EdgeFactory, extracto
 
 // NewRunnerWith constructs a Runner using the full registries bundle.
 func NewRunnerWith(def *PipelineDef, reg GraphRegistries) (*Runner, error) {
-	graph, err := def.BuildGraphWith(reg)
+	graph, err := def.BuildGraph(reg)
 	if err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
 	}

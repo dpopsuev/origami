@@ -146,17 +146,6 @@ var defaultRegistry = func() *ModelRegistry {
 // built-in foundation models and wrappers.
 func DefaultModelRegistry() *ModelRegistry { return defaultRegistry }
 
-// --- Backward-compatible package-level functions ---
-// These delegate to DefaultModelRegistry() so existing callers compile unchanged.
-
-// KnownModels returns the default registry's model map. Provided for
-// backward compatibility; prefer DefaultModelRegistry().Models().
-var KnownModels = defaultRegistry.Models()
-
-// KnownWrappers returns the default registry's wrapper map. Provided for
-// backward compatibility; prefer DefaultModelRegistry().Wrappers().
-var KnownWrappers = defaultRegistry.Wrappers()
-
 // IsKnownModel delegates to the default registry.
 func IsKnownModel(mi ModelIdentity) bool { return defaultRegistry.IsKnown(mi) }
 

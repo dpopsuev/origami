@@ -65,7 +65,7 @@ func TestPipelineWalk_FullFlow(t *testing.T) {
 	}
 
 	nodes := PipelineNodes(seed, dispatcher)
-	g, err := def.BuildGraph(nodes, nil)
+	g, err := def.BuildGraph(framework.GraphRegistries{Nodes: nodes})
 	if err != nil {
 		t.Fatalf("build graph: %v", err)
 	}

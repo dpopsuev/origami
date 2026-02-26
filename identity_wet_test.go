@@ -72,7 +72,7 @@ func TestWetIdentityProbe_CheckRegistry(t *testing.T) {
 // TestWetIdentityProbe_RegistryNotEmpty ensures someone has populated the
 // registry. If it's empty, the wet test is meaningless.
 func TestWetIdentityProbe_RegistryNotEmpty(t *testing.T) {
-	if len(KnownModels) == 0 {
-		t.Fatal("KnownModels registry is empty -- run a live probe first and populate it")
+	if len(DefaultModelRegistry().Models()) == 0 {
+		t.Fatal("model registry is empty -- run a live probe first and populate it")
 	}
 }

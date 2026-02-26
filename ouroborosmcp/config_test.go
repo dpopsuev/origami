@@ -149,13 +149,14 @@ func submitResponse(t *testing.T, ctx context.Context, session *sdkmcp.ClientSes
 		t.Fatal("expected step available, got done=true")
 	}
 
+	stepName := step["step"].(string)
 	dispatchID := step["dispatch_id"].(float64)
-	artifactJSON, _ := json.Marshal(map[string]string{"response": raw})
 
-	callTool(t, ctx, session, "submit_artifact", map[string]any{
-		"session_id":    sessionID,
-		"dispatch_id":   dispatchID,
-		"artifact_json": string(artifactJSON),
+	callTool(t, ctx, session, "submit_step", map[string]any{
+		"session_id":  sessionID,
+		"dispatch_id": int64(dispatchID),
+		"step":        stepName,
+		"fields":      map[string]any{"response": raw},
 	})
 }
 
@@ -189,13 +190,13 @@ func TestOuroboros_ToolDiscovery(t *testing.T) {
 	}
 
 	expected := map[string]bool{
-		"start_pipeline":     false,
-		"get_next_step":      false,
-		"submit_artifact":    false,
-		"get_report":         false,
-		"emit_signal":        false,
-		"get_signals":        false,
-		"assemble_profiles":  false,
+		"start_pipeline":    false,
+		"get_next_step":     false,
+		"submit_step":       false,
+		"get_report":        false,
+		"emit_signal":       false,
+		"get_signals":       false,
+		"assemble_profiles": false,
 	}
 
 	for _, tool := range tools.Tools {

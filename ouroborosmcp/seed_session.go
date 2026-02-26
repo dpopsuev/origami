@@ -104,7 +104,7 @@ func runSeedPipeline(
 		return nil, fmt.Errorf("load pipeline: %w", err)
 	}
 
-	g, err := def.BuildGraph(nodes, nil)
+	g, err := def.BuildGraph(framework.GraphRegistries{Nodes: nodes})
 	if err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
 	}

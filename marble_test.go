@@ -193,7 +193,7 @@ func TestBuildGraphWith_MarbleNode(t *testing.T) {
 		},
 	}
 
-	graph, err := def.BuildGraphWith(reg)
+	graph, err := def.BuildGraph(reg)
 	if err != nil {
 		t.Fatalf("BuildGraphWith: %v", err)
 	}

@@ -50,20 +50,6 @@ var testStepSchemas = []mcp.StepSchema{
 	},
 }
 
-// testArtifact returns minimal valid JSON for a given step.
-func testArtifact(step string, workerID int) string {
-	switch step {
-	case "STEP_A":
-		return fmt.Sprintf(`{"value":"worker-%d","score":0.9}`, workerID)
-	case "STEP_B":
-		return `{"result":true}`
-	case "STEP_C":
-		return fmt.Sprintf(`{"summary":"done by worker-%d"}`, workerID)
-	default:
-		return fmt.Sprintf(`{"step":"%s","worker":%d}`, step, workerID)
-	}
-}
-
 // testReport is the domain result type for test pipelines.
 type testReport struct {
 	CasesProcessed int
@@ -295,7 +281,6 @@ func TestPipelineServer_ToolDiscovery(t *testing.T) {
 		"start_pipeline":    false,
 		"get_next_step":     false,
 		"submit_step":       false,
-		"submit_artifact":   false,
 		"get_report":        false,
 		"emit_signal":       false,
 		"get_signals":       false,
@@ -685,11 +670,11 @@ func TestV2Workers_FullDrain_Deterministic(t *testing.T) {
 				step, _ := res["step"].(string)
 				dispatchID, _ := res["dispatch_id"].(float64)
 
-				artifact := testArtifact(step, workerID)
-				_, err = callToolE(ctx, session, "submit_artifact", map[string]any{
-					"session_id":    sessionID,
-					"artifact_json": artifact,
-					"dispatch_id":   int64(dispatchID),
+				_, err = callToolE(ctx, session, "submit_step", map[string]any{
+					"session_id":  sessionID,
+					"dispatch_id": int64(dispatchID),
+					"step":        step,
+					"fields":      testFieldsForStepWithWorker(step, workerID),
 				})
 				if err != nil {
 					errCh <- fmt.Errorf("w%d submit(%s/%s): %w", workerID, caseID, step, err)
@@ -830,11 +815,11 @@ func TestV2Workers_ConcurrencyTiming_Deterministic(t *testing.T) {
 				step, _ := res["step"].(string)
 				dispatchID, _ := res["dispatch_id"].(float64)
 
-				artifact := testArtifact(step, workerID)
-				_, err = callToolE(ctx, session, "submit_artifact", map[string]any{
-					"session_id":    sessionID,
-					"artifact_json": artifact,
-					"dispatch_id":   int64(dispatchID),
+				_, err = callToolE(ctx, session, "submit_step", map[string]any{
+					"session_id":  sessionID,
+					"dispatch_id": int64(dispatchID),
+					"step":        step,
+					"fields":      testFieldsForStepWithWorker(step, workerID),
 				})
 				if err != nil {
 					errCh <- err
@@ -1348,5 +1333,18 @@ func testFieldsForStep(step string) map[string]any {
 		return map[string]any{"summary": "done"}
 	default:
 		return map[string]any{"data": step}
+	}
+}
+
+func testFieldsForStepWithWorker(step string, workerID int) map[string]any {
+	switch step {
+	case "STEP_A":
+		return map[string]any{"value": fmt.Sprintf("worker-%d", workerID), "score": 0.9}
+	case "STEP_B":
+		return map[string]any{"result": true}
+	case "STEP_C":
+		return map[string]any{"summary": fmt.Sprintf("done by worker-%d", workerID)}
+	default:
+		return map[string]any{"step": step, "worker": workerID}
 	}
 }

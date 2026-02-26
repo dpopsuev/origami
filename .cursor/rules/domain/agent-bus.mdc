@@ -23,7 +23,7 @@ Every pipeline step MUST be processed by a worker. The parent agent acts as a **
 | Responsibility | Owner |
 |----------------|-------|
 | `start_calibration`, `get_report` | Parent (supervisor) |
-| `get_next_step`, `submit_artifact` | Worker subagent |
+| `get_next_step`, `submit_step` | Worker subagent |
 | Read prompt, generate artifact JSON | Worker subagent |
 | `emit_signal` (worker_started, worker_stopped) | Worker subagent |
 | `emit_signal` (start, done, error) | Worker subagent |
@@ -44,14 +44,14 @@ while true:
     emit_signal(session_id, "start", "worker", case_id, step)
     prompt = read(response.prompt_path)
     artifact = generate_artifact(prompt)
-    submit_artifact(session_id, artifact_json, dispatch_id)
+    submit_step(session_id, dispatch_id, step, fields)
     emit_signal(session_id, "done", "worker", case_id, step, {bytes})
 emit_signal(session_id, "worker_stopped", "worker", meta={worker_id})
 ```
 
 ## Supervisor pattern
 
-The parent launches N workers and monitors via signals. It does NOT call `get_next_step` or `submit_artifact`.
+The parent launches N workers and monitors via signals. It does NOT call `get_next_step` or `submit_step`.
 
 ```
 session = start_calibration(scenario, adapter, parallel=N)
@@ -81,7 +81,7 @@ report = get_report(session_id)
 |-------|------|
 | `session_started` | `start_calibration` |
 | `step_ready` | `get_next_step` returns a step |
-| `artifact_submitted` | `submit_artifact` succeeds |
+| `artifact_submitted` | `submit_step` succeeds |
 | `pipeline_done` | `get_next_step` returns `done=true` |
 | `session_done` | Calibration run completes |
 | `session_error` | Calibration run fails |
@@ -92,7 +92,7 @@ report = get_report(session_id)
 emit_signal(session_id, event, agent, case_id?, step?, meta?)
 get_signals(session_id, since?)
 get_next_step(session_id, timeout_ms?)
-submit_artifact(session_id, artifact_json, dispatch_id)
+submit_step(session_id, dispatch_id, step, fields)
 ```
 
 - `since` is a 0-based index; omit to get all signals. Use `since` for polling.
@@ -104,9 +104,10 @@ The signal bus (`dispatch.SignalBus`) is transport-agnostic. Workers can access 
 
 | Transport | Pull/Submit | Signal bus |
 |-----------|-------------|------------|
-| MCP tools | `get_next_step` / `submit_artifact` | `emit_signal` / `get_signals` |
+| MCP tools | `get_next_step` / `submit_step` | `emit_signal` / `get_signals` |
 | HTTP | `GET /next` / `POST /submit` | `POST /signal` / `GET /signals?since=N` |
 | Go API | `MuxDispatcher.GetNextStep()` / `.SubmitArtifact()` | `SignalBus.Emit()` / `.Since()` |
+
 | CLI wrapper | `CLIWorkerDispatcher.Run()` (internal loop) | Automatic via `WithCLIWorkerBus()` |
 
 ## Backward compatibility (v1 serial mode)

@@ -87,7 +87,7 @@ func (m *CompositeMarble) Process(ctx context.Context, nc NodeContext) (Artifact
 		return nil, fmt.Errorf("marble nesting depth %d exceeds limit %d", m.depth, maxMarbleDepth)
 	}
 
-	graph, err := m.def.BuildGraphWith(m.reg)
+	graph, err := m.def.BuildGraph(m.reg)
 	if err != nil {
 		return nil, fmt.Errorf("marble %s: build sub-graph: %w", m.name, err)
 	}

@@ -60,7 +60,7 @@ func RunPipeline(ctx context.Context, input *CalibrationInput, opts ...PipelineO
 		Edges: forwardEdgeFactory(edgeIDs...),
 	}
 
-	graph, err := def.BuildGraphWith(reg)
+	graph, err := def.BuildGraph(reg)
 	if err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
 	}

@@ -107,16 +107,6 @@ type submitStepOutput struct {
 	OK string `json:"ok"`
 }
 
-type submitArtifactInput struct {
-	SessionID    string `json:"session_id" jsonschema:"session ID from start_pipeline"`
-	ArtifactJSON string `json:"artifact_json" jsonschema:"JSON artifact string for this pipeline step"`
-	DispatchID   int64  `json:"dispatch_id,omitempty" jsonschema:"dispatch ID from get_next_step for artifact routing"`
-}
-
-type submitArtifactOutput struct {
-	OK string `json:"ok"`
-}
-
 type getReportInput struct {
 	SessionID string `json:"session_id" jsonschema:"session ID from start_pipeline"`
 }
@@ -188,11 +178,6 @@ func (s *PipelineServer) registerTools() {
 		Name:        "submit_step",
 		Description: "Submit a schema-validated artifact for a pipeline step. The step name selects the schema; fields are validated before routing.",
 	}, noOutputSchema(s.handleSubmitStep))
-
-	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
-		Name:        "submit_artifact",
-		Description: "Deprecated: use submit_step instead. Submit a JSON artifact for the current pipeline step. The runner scores it and advances.",
-	}, noOutputSchema(s.handleSubmitArtifact))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_report",
@@ -415,47 +400,6 @@ func (s *PipelineServer) handleSubmitStep(ctx context.Context, _ *sdkmcp.CallToo
 	})
 
 	return nil, submitStepOutput{OK: "step accepted"}, nil
-}
-
-// handleSubmitArtifact is the deprecated freeform JSON submission path.
-// New workers should use submit_step instead.
-func (s *PipelineServer) handleSubmitArtifact(ctx context.Context, _ *sdkmcp.CallToolRequest, input submitArtifactInput) (*sdkmcp.CallToolResult, submitArtifactOutput, error) {
-	logger := logging.New("pipeline-session")
-	logger.Warn("submit_artifact is deprecated; use submit_step for schema-validated submissions",
-		"session_id", input.SessionID, "dispatch_id", input.DispatchID)
-
-	sess, err := s.getSession(input.SessionID)
-	if err != nil {
-		return nil, submitArtifactOutput{}, err
-	}
-
-	if gateErr := sess.CheckCapacityGate(); gateErr != nil {
-		logger.Warn("capacity gate advisory on submit",
-			"session_id", input.SessionID, "dispatch_id", input.DispatchID, "detail", gateErr.Error())
-	}
-
-	if input.DispatchID == 0 {
-		return nil, submitArtifactOutput{}, fmt.Errorf("dispatch_id is required (got 0); did you submit after available=false?")
-	}
-
-	data := []byte(input.ArtifactJSON)
-	data = CleanArtifactJSON(data)
-	if !json.Valid(data) {
-		return nil, submitArtifactOutput{}, fmt.Errorf("artifact_json is not valid JSON")
-	}
-
-	if err := sess.SubmitArtifact(ctx, input.DispatchID, data); err != nil {
-		return nil, submitArtifactOutput{}, fmt.Errorf("submit_artifact: %w", err)
-	}
-
-	remaining := sess.AgentSubmit()
-	sess.Bus.Emit("artifact_submitted", "server", "", "", map[string]string{
-		"bytes":     fmt.Sprintf("%d", len(data)),
-		"in_flight": fmt.Sprintf("%d", remaining),
-		"via":       "submit_artifact_deprecated",
-	})
-
-	return nil, submitArtifactOutput{OK: "artifact accepted"}, nil
 }
 
 func (s *PipelineServer) handleGetReport(ctx context.Context, _ *sdkmcp.CallToolRequest, input getReportInput) (*sdkmcp.CallToolResult, getReportOutput, error) {
