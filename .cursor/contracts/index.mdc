@@ -21,6 +21,7 @@
 - `completed/framework/walker-experience.md` — WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern. Complete.
 - `completed/framework/ouroboros-seed-pipeline.md` — 3-node pipeline (Generator/Subject/Judge), YAML seeds, PersonaSheet, auto-routing. Phase 8 deferred. Complete.
 - `completed/framework/kami-live-debugger.md` — Kami live agentic debugger (Demiurge pattern: MCP + HTTP/SSE + WS). EventBridge, debug API, MCP tools, recorder/replayer, React frontend. Complete.
+- `completed/framework/kabuki-presentation-engine.md` — Kabuki data-driven presentation SPA: KabukiConfig interface, API endpoints, 12 section components, element selector, scroll-snap + keyboard nav. Complete.
 
 See `current-goal.mdc` for the full completed contracts list.
 
@@ -37,8 +38,6 @@ See `current-goal.mdc` for the full completed contracts list.
 - `draft/durable-execution.md` — Checkpointer interface (pluggable backends, durability modes) + Interrupt/Resume HITL primitive. Extracted from LangGraph case study Gaps 1+2. Should-tier.
 - `draft/memory-evolution.md` — Evolve MemoryStore: namespaces, search, PersistentStore (SQLite), memory type conventions (semantic/episodic/procedural). Extracted from LangGraph case study Gap 4. Nice-tier.
 - `draft/pipeline-efficiency.md` — Node caching (CachePolicy, InMemoryCache) + fan-in merge strategies (append/latest/custom). Extracted from LangGraph case study Gaps 5+6. Nice-tier.
-- `draft/kabuki-presentation-engine.md` — Data-driven presentation SPA as a framework feature (Kabuki = presentation, Kami = debugger). Consumers provide KabukiConfig + Theme; Kabuki renders sections dynamically. Should-tier.
-
 ## Files
 - `_TEMPLATE.md` — contract template (copy to create new contracts)
 - `current-goal.mdc` — active goal manifest — single-read orientation for agents

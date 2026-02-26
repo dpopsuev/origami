@@ -1,6 +1,6 @@
 # Contract — Kabuki Presentation Engine
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Kabuki renders a data-driven, section-based presentation SPA when a consumer provides a `KabukiConfig` alongside a `Theme` — any pipeline developer plugs in personality and metrics, Kabuki renders the show. Kami is the debugger; Kabuki is the presentation layer.  
 **Serves:** Polishing & Presentation (should)
 
@@ -98,36 +98,36 @@ Phase 1 defines the `KabukiConfig` interface and adds `/api/theme` + `/api/pipel
 
 ### Phase 1 — KabukiConfig interface + API endpoints
 
-- [ ] **P1** Define `KabukiConfig` interface in `kami/presentation.go` with section methods (Hero, Problem, Results, Competitive, Roadmap, Closing, TransitionLine). Each returns a JSON-serializable struct pointer (nil = skip).
-- [ ] **P2** Add `Kabuki KabukiConfig` field to `kami.Config`. KamiServer accepts it alongside Theme.
-- [ ] **P3** Implement `GET /api/theme` endpoint — serializes Theme (agent intros, node descriptions, dialogs) as JSON.
-- [ ] **P4** Implement `GET /api/pipeline` endpoint — serializes pipeline structure (nodes, edges) as JSON. Accept pipeline data via Config or derive from Theme's NodeDescriptions.
-- [ ] **P5** Implement `GET /api/kabuki` endpoint — serializes KabukiConfig sections as JSON. Returns `null` sections for those the consumer doesn't implement.
-- [ ] **P6** Unit tests: API endpoints return correct JSON, nil sections omitted, standalone mode (no KabukiConfig) returns empty response.
+- [x] **P1** Define `KabukiConfig` interface in `kami/presentation.go` with section methods (Hero, Problem, Results, Competitive, Roadmap, Closing, TransitionLine). Each returns a JSON-serializable struct pointer (nil = skip).
+- [x] **P2** Add `Kabuki KabukiConfig` field to `kami.Config`. KamiServer accepts it alongside Theme.
+- [x] **P3** Implement `GET /api/theme` endpoint — serializes Theme (agent intros, node descriptions, dialogs) as JSON.
+- [x] **P4** Implement `GET /api/pipeline` endpoint — serializes pipeline structure (nodes, edges) as JSON. Accept pipeline data via Config or derive from Theme's NodeDescriptions.
+- [x] **P5** Implement `GET /api/kabuki` endpoint — serializes KabukiConfig sections as JSON. Returns `null` sections for those the consumer doesn't implement.
+- [x] **P6** Unit tests: API endpoints return correct JSON, nil sections omitted, standalone mode (no KabukiConfig) returns empty response.
 
 ### Phase 2 — Move element selector to Origami
 
-- [ ] **M1** Move `selector.css` from Asterisk to Origami's `kami/frontend/src/`.
-- [ ] **M2** Move `useKamiSelector` hook from Asterisk to Origami's `kami/frontend/src/hooks/`.
-- [ ] **M3** Move `data-kami` attribute convention: framework components (PipelineGraph, MonologuePanel, EvidencePanel) get `data-kami` attributes.
-- [ ] **M4** Wire `useKamiSelector` in Origami's Kami App.tsx.
-- [ ] **M5** Verify selector still posts to `/events/selection` and `kami_get_selection` MCP tool works.
+- [x] **M1** Move `selector.css` from Asterisk to Origami's `kami/frontend/src/`.
+- [x] **M2** Move `useKamiSelector` hook from Asterisk to Origami's `kami/frontend/src/hooks/`.
+- [x] **M3** Move `data-kami` attribute convention: framework components (PipelineGraph, MonologuePanel, EvidencePanel) get `data-kami` attributes.
+- [x] **M4** Wire `useKamiSelector` in Origami's Kami App.tsx.
+- [x] **M5** Verify selector still posts to `/events/selection` and `kami_get_selection` MCP tool works.
 
 ### Phase 3 — Data-driven presentation frontend
 
-- [ ] **F1** Create `useKabuki` hook — fetches `/api/theme`, `/api/pipeline`, `/api/kabuki` on mount. Returns typed data or null. Mode is `'kabuki'` or `'debugger'`.
-- [ ] **F2** Create section components (data-driven, no hardcoded content): `HeroSection`, `AgendaSection`, `ProblemSection`, `SolutionSection`, `AgentIntrosSection`, `TransitionSection`, `ResultsSection`, `CompetitiveSection`, `RoadmapSection`, `ClosingSection`. Each receives its data as props.
-- [ ] **F3** The existing Kami debugger layout (PipelineGraph + MonologuePanel + EvidencePanel + KamiOverlay) becomes the `LiveDemoSection`.
-- [ ] **F4** App.tsx gains Kabuki mode: if `useKabuki` returns sections, render scroll-snap SPA with `data-kami="section:*"` attributes. If no Kabuki data, render standalone Kami debugger (current behavior).
-- [ ] **F5** Scroll-snap navigation, keyboard nav (arrow keys, PageUp/PageDown), IntersectionObserver for active section tracking.
-- [ ] **F6** Each section gets `data-kami` attributes on interactive child elements for the element selector.
-- [ ] **F7** Build and verify: `npm run build` passes, `go build ./...` passes.
+- [x] **F1** Create `useKabuki` hook — fetches `/api/theme`, `/api/pipeline`, `/api/kabuki` on mount. Returns typed data or null. Mode is `'kabuki'` or `'debugger'`.
+- [x] **F2** Create section components (data-driven, no hardcoded content): `HeroSection`, `AgendaSection`, `ProblemSection`, `SolutionSection`, `AgentIntrosSection`, `TransitionSection`, `ResultsSection`, `CompetitiveSection`, `RoadmapSection`, `ClosingSection`. Each receives its data as props.
+- [x] **F3** The existing Kami debugger layout (PipelineGraph + MonologuePanel + EvidencePanel + KamiOverlay) becomes the `LiveDemoSection`.
+- [x] **F4** App.tsx gains Kabuki mode: if `useKabuki` returns sections, render scroll-snap SPA with `data-kami="section:*"` attributes. If no Kabuki data, render standalone Kami debugger (current behavior).
+- [x] **F5** Scroll-snap navigation, keyboard nav (arrow keys, PageUp/PageDown), IntersectionObserver for active section tracking.
+- [x] **F6** Each section gets `data-kami` attributes on interactive child elements for the element selector.
+- [x] **F7** Build and verify: `npm run build` passes, `go build ./...` passes.
 
 ### Phase 4 — Validate and tune
 
-- [ ] Validate (green) — `go build ./...`, `go test ./...` across Origami. Kabuki mode renders with test data. Standalone Kami debugger mode unchanged.
-- [ ] Tune (blue) — Polish section transitions, animation timing, responsive layout.
-- [ ] Validate (green) — all tests still pass after tuning.
+- [x] Validate (green) — `go build ./...`, `go test ./...` across Origami. Kabuki mode renders with test data. Standalone Kami debugger mode unchanged.
+- [x] Tune (blue) — Polish section transitions, animation timing, responsive layout.
+- [x] Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 
@@ -156,3 +156,5 @@ No trust boundaries affected. Presentation runs on localhost, serves embedded st
 2026-02-25 — Contract created to crystallize the concept that the presentation is a framework feature, not a consumer-specific app. The Asterisk `demo-presentation` contract is updated to consume this engine rather than building a standalone SPA. Any pipeline developer (Asterisk, Achilles, future tools) plugs in a Theme + KabukiConfig and gets a branded, section-based showcase.
 
 2026-02-25 — Renamed from "Kami Presentation Engine" to "Kabuki Presentation Engine". Kami is the MCP debugger; Kabuki is the presentation layer. `PresentationConfig` → `KabukiConfig`, `/api/presentation` → `/api/kabuki`, `usePresentation` → `useKabuki`, mode `'presentation'` → `'kabuki'`.
+
+2026-02-26 — Contract complete. All 4 phases done: KabukiConfig interface + 3 API endpoints, element selector moved from Asterisk, 12 data-driven section components, scroll-snap + keyboard nav, `npm run build` + `go build ./...` + `go test ./...` all green. Asterisk consumer (`PoliceStationKabuki`) verified against the interface.
