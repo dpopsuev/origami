@@ -39,6 +39,11 @@ test-v:
 vet:
     go vet ./...
 
+# Run origami lint on all testdata YAMLs (strict profile)
+lint-pipelines:
+    @just build
+    @for f in testdata/*.yaml testdata/**/*.yaml; do echo "lint: $f"; {{ bin_dir }}/origami lint --profile strict "$f"; done
+
 # ─── Clean ────────────────────────────────────────────────
 
 # Remove build artifacts

@@ -14,6 +14,7 @@ import (
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/kami"
+	"github.com/dpopsuev/origami/lint"
 	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/ouroboros"
 	"github.com/dpopsuev/origami/ouroborosmcp"
@@ -38,6 +39,8 @@ func main() {
 		err = skillCmd(os.Args[2:])
 	case "ouroboros":
 		err = ouroborosCmd(os.Args[2:])
+	case "lint":
+		err = lintCmd(os.Args[2:])
 	case "kami":
 		err = kamiCmd(os.Args[2:])
 	case "version":
@@ -60,6 +63,7 @@ func printUsage() {
 Commands:
   run        Execute a pipeline YAML
   validate   Validate a pipeline YAML without executing
+  lint       Static analysis for pipeline YAML (rules, profiles, auto-fix)
   skill      Skill scaffolding (scaffold SKILL.md from pipeline YAML)
   ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
   kami       Live pipeline debugger (HTTP/SSE + WS)
@@ -438,4 +442,76 @@ func ouroborosServe(args []string) error {
 
 	slog.Info("starting ouroboros MCP server over stdio", "runs_dir", *runsDir)
 	return srv.MCPServer.Run(ctx, &sdkmcp.StdioTransport{})
+}
+
+func lintCmd(args []string) error {
+	fs := flag.NewFlagSet("lint", flag.ContinueOnError)
+	profile := fs.String("profile", "moderate", "lint profile: min, basic, moderate, strict")
+	format := fs.String("format", "text", "output format: text, json")
+	fix := fs.Bool("fix", false, "apply auto-fixes and print diff")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() == 0 {
+		return fmt.Errorf("usage: origami lint [--profile <name>] [--format text|json] [--fix] <file.yaml>...")
+	}
+
+	p := lint.Profile(*profile)
+	exitCode := 0
+
+	for _, file := range fs.Args() {
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %s: %v\n", file, err)
+			exitCode = 2
+			continue
+		}
+
+		if *fix {
+			fixed, fixes, err := lint.ApplyFixes(raw, file, lint.WithProfile(p))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error: %s: %v\n", file, err)
+				exitCode = 2
+				continue
+			}
+			if len(fixes) == 0 {
+				fmt.Fprintf(os.Stderr, "%s: no fixes to apply\n", file)
+				continue
+			}
+			if err := os.WriteFile(file, fixed, 0644); err != nil {
+				return fmt.Errorf("write %s: %w", file, err)
+			}
+			for _, f := range fixes {
+				fmt.Printf("fixed: %s\n", f.Finding)
+			}
+			continue
+		}
+
+		findings, err := lint.Run(raw, file, lint.WithProfile(p))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %s: %v\n", file, err)
+			exitCode = 2
+			continue
+		}
+
+		if *format == "json" {
+			data, _ := json.MarshalIndent(findings, "", "  ")
+			fmt.Println(string(data))
+		} else {
+			for _, f := range findings {
+				fmt.Println(f.String())
+			}
+		}
+
+		if lint.HasErrors(findings) && exitCode < 2 {
+			exitCode = 2
+		} else if lint.HasWarnings(findings) && exitCode < 1 {
+			exitCode = 1
+		}
+	}
+
+	if exitCode > 0 {
+		os.Exit(exitCode)
+	}
+	return nil
 }
