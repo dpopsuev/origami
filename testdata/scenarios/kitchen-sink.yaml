@@ -1,0 +1,75 @@
+pipeline: kitchen-sink
+description: "Exercises zones, when expressions, shortcuts, hooks, input resolution, prompt rendering, vars, schema"
+
+vars:
+  threshold: 0.85
+
+zones:
+  intake:
+    nodes: [classify]
+    element: fire
+    stickiness: 0
+  analysis:
+    nodes: [analyze, review]
+    element: water
+    stickiness: 2
+  output:
+    nodes: [report]
+    element: air
+    stickiness: 1
+
+nodes:
+  - name: classify
+    element: fire
+    transformer: echo
+    after: [track-node]
+    schema:
+      required: [type]
+      properties:
+        type: {type: string}
+  - name: analyze
+    element: water
+    transformer: echo
+    input: "${classify.output}"
+    prompt: "Analyze with threshold {{.Config.threshold}}"
+  - name: review
+    element: diamond
+    transformer: echo
+  - name: report
+    element: air
+    transformer: echo
+
+edges:
+  - id: shortcut
+    name: high-confidence shortcut
+    from: classify
+    to: report
+    shortcut: true
+    when: "output.confidence >= config.threshold"
+
+  - id: normal
+    name: needs analysis
+    from: classify
+    to: analyze
+    when: "true"
+
+  - id: analyzed
+    name: analysis complete
+    from: analyze
+    to: review
+    when: "true"
+
+  - id: approved
+    name: review approved
+    from: review
+    to: report
+    when: "true"
+
+  - id: done
+    name: final
+    from: report
+    to: _done
+    when: "true"
+
+start: classify
+done: _done

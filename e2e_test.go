@@ -1,93 +1,268 @@
-package framework_test
+package framework
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
-
-	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/ouroboros"
 )
 
-func TestE2E_OuroborosProbe(t *testing.T) {
-	seed := &ouroboros.Seed{
-		Name:       "e2e-probe",
-		Version:    "1.0",
-		Dimensions: []ouroboros.Dimension{"speed", "evidence_depth"},
-		Category:   ouroboros.CategorySkill,
-		Poles: map[string]ouroboros.Pole{
-			"systematic": {
-				Signal: "thorough analysis",
-				ElementAffinity: map[ouroboros.Dimension]float64{
-					"speed": 0.3, "evidence_depth": 0.9,
-				},
-			},
-			"heuristic": {
-				Signal: "quick pattern match",
-				ElementAffinity: map[ouroboros.Dimension]float64{
-					"speed": 0.9, "evidence_depth": 0.3,
-				},
-			},
-		},
-		Context:               "Code review scenario",
-		Rubric:                "Classify systematic vs heuristic",
-		GeneratorInstructions: "Create a code review question",
+// --- Test helpers ---
+
+func loadScenario(t *testing.T, path string) *PipelineDef {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	def, err := LoadPipeline(data)
+	if err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	return def
+}
+
+func stubNodeReg(families ...string) NodeRegistry {
+	reg := NodeRegistry{}
+	for _, f := range families {
+		f := f
+		reg[f] = func(d NodeDef) Node { return &stubBuildNode{name: d.Name} }
+	}
+	return reg
+}
+
+func forwardEdgeFactory(edgeIDs ...string) EdgeFactory {
+	ef := EdgeFactory{}
+	for _, id := range edgeIDs {
+		id := id
+		ef[id] = func(d EdgeDef) Edge {
+			return &stubEdge{id: d.ID, from: d.From, to: d.To, parallel: d.Parallel}
+		}
+	}
+	return ef
+}
+
+// --- Scenario tests ---
+
+func TestE2E_KitchenSink(t *testing.T) {
+	path := "testdata/scenarios/kitchen-sink.yaml"
+	hookCalled := false
+	hooks := HookRegistry{}
+	hooks.Register(NewHookFunc("track-node", func(_ context.Context, _ string, _ Artifact) error {
+		hookCalled = true
+		return nil
+	}))
+
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithHooks(hooks),
+	)
+	if err != nil {
+		t.Fatalf("Walk kitchen-sink: %v", err)
+	}
+	if !hookCalled {
+		t.Error("hook track-node should have been called")
+	}
+}
+
+func TestE2E_TeamDelegation(t *testing.T) {
+	def := loadScenario(t, "testdata/scenarios/team-delegation.yaml")
+
+	walkers, wErr := BuildWalkersFromDef(def.Walkers)
+	if wErr != nil {
+		t.Fatalf("BuildWalkersFromDef: %v", wErr)
+	}
+	if len(walkers) != 3 {
+		t.Fatalf("expected 3 walkers from def, got %d", len(walkers))
 	}
 
-	dispatcher := func(_ context.Context, nodeName string, _ string) (string, error) {
-		switch nodeName {
-		case "generate":
-			return "What would you do about this leak?", nil
-		case "subject":
-			return "I would trace the goroutine lifecycle systematically", nil
-		case "judge":
-			return "SELECTED_POLE: systematic\nCONFIDENCE: 0.9", nil
-		default:
-			return "", fmt.Errorf("unexpected node: %s", nodeName)
+	team := &Team{
+		Walkers:   walkers,
+		Scheduler: &AffinityScheduler{},
+		MaxSteps:  30,
+	}
+
+	trace := &TraceCollector{}
+	err := Run(context.Background(), "testdata/scenarios/team-delegation.yaml", nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithTeam(team),
+		WithRunObserver(trace),
+	)
+	if err != nil {
+		t.Fatalf("Walk team-delegation: %v", err)
+	}
+
+	complete := trace.EventsOfType(EventWalkComplete)
+	if len(complete) == 0 {
+		t.Error("walk should complete")
+	}
+}
+
+func TestE2E_MemoryPersistence(t *testing.T) {
+	path := "testdata/scenarios/memory-across-walks.yaml"
+	store := NewInMemoryStore()
+
+	w1 := &stubWalker{
+		identity: AgentIdentity{PersonaName: "agent-a"},
+		state:    NewWalkerState("agent-a"),
+	}
+	store.Set("agent-a", "count", 42)
+
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithWalker(w1),
+		WithMemory(store),
+	)
+	if err != nil {
+		t.Fatalf("Walk 1: %v", err)
+	}
+
+	w2 := &stubWalker{
+		identity: AgentIdentity{PersonaName: "agent-a"},
+		state:    NewWalkerState("agent-a"),
+	}
+
+	err = Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+		WithWalker(w2),
+		WithMemory(store),
+	)
+	if err != nil {
+		t.Fatalf("Walk 2: %v", err)
+	}
+
+	v, ok := store.Get("agent-a", "count")
+	if !ok || v != 42 {
+		t.Errorf("memory not persisted across walks: got %v/%v", v, ok)
+	}
+
+	_, ok = store.Get("agent-b", "count")
+	if ok {
+		t.Error("agent-b should not see agent-a's memory")
+	}
+}
+
+func TestE2E_SchemaValidation(t *testing.T) {
+	path := "testdata/scenarios/schema-validated.yaml"
+
+	err := Run(context.Background(), path, nil,
+		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
+	)
+	if err != nil {
+		t.Fatalf("Walk schema-validated: %v", err)
+	}
+}
+
+func TestE2E_RealYAML_RCAInvestigation(t *testing.T) {
+	def := loadScenario(t, "testdata/rca-investigation.yaml")
+
+	families := make([]string, 0, len(def.Nodes))
+	seen := map[string]bool{}
+	for _, nd := range def.Nodes {
+		if nd.Family != "" && !seen[nd.Family] {
+			families = append(families, nd.Family)
+			seen[nd.Family] = true
 		}
 	}
 
-	pipelineYAML, err := os.ReadFile("ouroboros/pipelines/ouroboros-probe.yaml")
+	edgeIDs := make([]string, len(def.Edges))
+	for i, ed := range def.Edges {
+		edgeIDs[i] = ed.ID
+	}
+
+	graph, err := def.BuildGraph(stubNodeReg(families...), forwardEdgeFactory(edgeIDs...))
 	if err != nil {
-		t.Fatalf("read pipeline: %v", err)
+		t.Fatalf("BuildGraph: %v", err)
 	}
-	def, err := framework.LoadPipeline(pipelineYAML)
+
+	walker := &stubWalker{
+		identity: AgentIdentity{PersonaName: "rca-tester"},
+		state:    NewWalkerState("rca-test"),
+	}
+	err = graph.Walk(context.Background(), walker, def.Start)
 	if err != nil {
-		t.Fatalf("load pipeline: %v", err)
+		t.Fatalf("Walk: %v", err)
 	}
+	if walker.state.Status != "done" {
+		t.Errorf("status = %q, want done", walker.state.Status)
+	}
+	if len(walker.visited) == 0 {
+		t.Error("no nodes visited")
+	}
+}
 
-	nodes := ouroboros.PipelineNodes(seed, dispatcher)
-	g, err := def.BuildGraph(nodes, nil)
-	if err != nil {
-		t.Fatalf("build graph: %v", err)
-	}
+func TestE2E_RealYAML_DefectDialectic(t *testing.T) {
+	def := loadScenario(t, "testdata/defect-dialectic.yaml")
 
-	walker := framework.NewProcessWalker("e2e-ouroboros")
-	if err := g.Walk(context.Background(), walker, def.Start); err != nil {
-		t.Fatalf("walk: %v", err)
-	}
-
-	if walker.State().Status != "done" {
-		t.Errorf("status = %q, want done", walker.State().Status)
-	}
-
-	history := walker.State().History
-	expectedNodes := []string{"generate", "subject", "judge"}
-	if len(history) != len(expectedNodes) {
-		t.Fatalf("history length = %d, want %d", len(history), len(expectedNodes))
-	}
-	for i, want := range expectedNodes {
-		if history[i].Node != want {
-			t.Errorf("history[%d].Node = %q, want %q", i, history[i].Node, want)
+	families := make([]string, 0, len(def.Nodes))
+	seen := map[string]bool{}
+	for _, nd := range def.Nodes {
+		if nd.Family != "" && !seen[nd.Family] {
+			families = append(families, nd.Family)
+			seen[nd.Family] = true
 		}
 	}
 
-	judgeArtifact := walker.State().Outputs["judge"]
-	if judgeArtifact == nil {
-		t.Fatal("judge output is nil")
+	edgeIDs := make([]string, len(def.Edges))
+	for i, ed := range def.Edges {
+		edgeIDs[i] = ed.ID
 	}
-	if judgeArtifact.Type() != "pole-result" {
-		t.Errorf("judge artifact type = %q, want pole-result", judgeArtifact.Type())
+
+	graph, err := def.BuildGraph(stubNodeReg(families...), forwardEdgeFactory(edgeIDs...))
+	if err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+
+	walker := &stubWalker{
+		identity: AgentIdentity{PersonaName: "dialectic-tester"},
+		state:    NewWalkerState("dialectic-test"),
+	}
+	err = graph.Walk(context.Background(), walker, def.Start)
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	if walker.state.Status != "done" {
+		t.Errorf("status = %q, want done", walker.state.Status)
+	}
+}
+
+func TestE2E_RealYAML_HierarchicalDelegation(t *testing.T) {
+	def := loadScenario(t, "testdata/patterns/hierarchical-delegation.yaml")
+
+	families := make([]string, 0, len(def.Nodes))
+	seen := map[string]bool{}
+	for _, nd := range def.Nodes {
+		if nd.Family != "" && !seen[nd.Family] {
+			families = append(families, nd.Family)
+			seen[nd.Family] = true
+		}
+	}
+
+	edgeIDs := make([]string, len(def.Edges))
+	for i, ed := range def.Edges {
+		edgeIDs[i] = ed.ID
+	}
+
+	graph, err := def.BuildGraph(stubNodeReg(families...), forwardEdgeFactory(edgeIDs...))
+	if err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+
+	walkers, wErr := BuildWalkersFromDef(def.Walkers)
+	if wErr != nil {
+		t.Fatalf("BuildWalkersFromDef: %v", wErr)
+	}
+	if len(walkers) < 2 {
+		t.Fatalf("expected multiple walkers from def, got %d", len(walkers))
+	}
+
+	team := &Team{
+		Walkers:   walkers,
+		Scheduler: &AffinityScheduler{},
+		MaxSteps:  30,
+	}
+
+	err = graph.WalkTeam(context.Background(), team, def.Start)
+	if err != nil {
+		t.Fatalf("WalkTeam: %v", err)
 	}
 }

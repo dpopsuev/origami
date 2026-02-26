@@ -1,0 +1,31 @@
+pipeline: schema-validated
+description: "Pipeline with artifact schema on every node for validation testing"
+
+nodes:
+  - name: classify
+    element: fire
+    transformer: echo
+    schema:
+      required: [type]
+      properties:
+        type: {type: string}
+  - name: report
+    element: air
+    transformer: echo
+    schema:
+      required: [type]
+      properties:
+        type: {type: string}
+
+edges:
+  - id: E1
+    from: classify
+    to: report
+    when: "true"
+  - id: E2
+    from: report
+    to: _done
+    when: "true"
+
+start: classify
+done: _done

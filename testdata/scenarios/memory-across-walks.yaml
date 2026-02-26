@@ -1,0 +1,25 @@
+pipeline: memory-test
+description: "Simple 2-node pipeline for verifying cross-walk MemoryStore persistence"
+
+nodes:
+  - name: process
+    element: fire
+    transformer: echo
+  - name: finish
+    element: water
+    transformer: echo
+
+edges:
+  - id: E1
+    name: proceed
+    from: process
+    to: finish
+    when: "true"
+  - id: E2
+    name: done
+    from: finish
+    to: _done
+    when: "true"
+
+start: process
+done: _done

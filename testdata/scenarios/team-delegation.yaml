@@ -1,0 +1,80 @@
+pipeline: team-delegation
+description: "Parallel fan-out from coordinator to specialists, merge at synthesis"
+
+zones:
+  coordination:
+    nodes: [plan, synthesize]
+    element: earth
+    stickiness: 0
+  research:
+    nodes: [research_a, research_b]
+    element: water
+    stickiness: 3
+
+walkers:
+  - name: coordinator
+    element: earth
+    persona: sentinel
+    preamble: "Coordinate the investigation."
+  - name: specialist-a
+    element: water
+    persona: seeker
+    preamble: "Research area A."
+    step_affinity:
+      research_a: 0.95
+  - name: specialist-b
+    element: fire
+    persona: herald
+    preamble: "Research area B."
+    step_affinity:
+      research_b: 0.95
+
+nodes:
+  - name: plan
+    element: earth
+    transformer: echo
+  - name: research_a
+    element: water
+    transformer: echo
+  - name: research_b
+    element: fire
+    transformer: echo
+  - name: synthesize
+    element: earth
+    transformer: echo
+
+edges:
+  - id: fan-a
+    name: delegate to A
+    from: plan
+    to: research_a
+    parallel: true
+    when: "true"
+
+  - id: fan-b
+    name: delegate to B
+    from: plan
+    to: research_b
+    parallel: true
+    when: "true"
+
+  - id: a-done
+    name: A complete
+    from: research_a
+    to: synthesize
+    when: "true"
+
+  - id: b-done
+    name: B complete
+    from: research_b
+    to: synthesize
+    when: "true"
+
+  - id: final
+    name: synthesis done
+    from: synthesize
+    to: _done
+    when: "true"
+
+start: plan
+done: _done
