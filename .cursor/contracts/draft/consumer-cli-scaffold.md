@@ -86,7 +86,7 @@ flowchart TB
 |---|---------|-------------|-------------|
 | 1 | **analyze** | The domain function. The reason the tool exists. | *(domain-defined)* |
 | 2 | **dataset** | Manage datasets: list, status, import, export, review, promote | `list`, `status <name>`, `import <path>`, `export <path>`, `review`, `promote <case-id>` |
-| 3 | **calibrate** | Run scorecard evaluation against a dataset. Uses `DefaultScoreCard()` when no custom scorecard path is provided. `report` subcommand automatically includes `CostBill` (generic TokiMeter) output. | `run <scenario>`, `report <scenario>`, `compare <a> <b>` |
+| 3 | **calibrate** | Run scorecard evaluation against a dataset. Uses `DefaultScoreCard()` when no custom scorecard path is provided. `report` subcommand includes `CostBill` output (from `dispatch.FormatCostBill`). Note: `CostBill` is a dispatch-level concern — `pipeline run` also emits a cost bill for every dispatch, not just calibration. | `run <scenario>`, `report <scenario>`, `compare <a> <b>` |
 | 4 | **pipeline** | Pipeline operations (including replay) | `render <pipeline>`, `validate <pipeline>`, `list`, `replay <recording.jsonl> [--speed] [--port]` |
 
 ### Tier 2 — Infrastructure (most tools need)

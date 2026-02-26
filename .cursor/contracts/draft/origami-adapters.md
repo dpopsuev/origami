@@ -167,13 +167,20 @@ The following adapters are identified from the Asterisk and Achilles codebases. 
 | `asterisk.store-hooks` | `internal/orchestrate/hooks.go` | Pipeline lifecycle hooks: persist artifacts to store on node completion. |
 | `asterisk.prompt-params` | `internal/orchestrate/params.go` + `template.go` | Prompt template parameter assembly. Builds `{{variable}}` context for each pipeline step. |
 | `asterisk.report-formatters` | `internal/calibrate/report.go` + `rca_report.go` | Calibration report formatting (table, markdown, summary). RCA output formatting. |
-| `asterisk.observability` | `internal/calibrate/transcript.go` + `internal/display/display.go` (StepNameFunc) | Per-step transcript generation and `StepNameFunc` adapter mapping step IDs to display names. TokiMeter cost bill has migrated to `origami/calibrate/cost_bill.go` (see `principled-calibration-scorecard` Phase 2.5). |
+| `asterisk.observability` | `internal/calibrate/transcript.go` + `internal/display/display.go` (StepNameFunc) | Per-step transcript generation and `StepNameFunc` adapter mapping step IDs to display names. TokiMeter cost bill has migrated to `origami/dispatch/cost_bill.go` (see `principled-calibration-scorecard` Phase 2.5) — lives in `dispatch/` because every agent dispatch produces a cost bill, not just calibration. |
 
 ### Achilles adapters
 
 | FQCN | Current Code | Provides |
 |------|-------------|----------|
 | `achilles.vuln-tools` | `GovulncheckExtractor`, `ClassifyExtractor` | Vulnerability scanner integration (govulncheck), severity classifier. |
+
+### Framework adapters (to extract from consumers)
+
+| FQCN | Current Code | Provides |
+|------|-------------|----------|
+| `origami.artifact-io` | `asterisk/internal/orchestrate/artifact.go` (to migrate) | Case-scoped artifact I/O: `ReadArtifact[T]`, `WriteArtifact`, `CaseDir`, `EnsureCaseDir`, `ListCaseDirs`. Generic case-dir layout for any case-based pipeline. Complements `JSONCheckpointer` with per-case path scoping. Any consumer running case-based calibration or analysis needs this pattern. |
+| `origami.display-registry` | Pattern from `asterisk/internal/display/display.go` (to extract) | Generic `DisplayRegistry[T]` type: maps `ID -> DisplayName` with `WithCode(id)` variants. The "codes for machines, words for humans" pattern as a framework utility. Consumers register domain-specific mappings (defect types, stages, metrics); the registry pattern itself is framework-level. |
 
 ### Core adapter additions
 
@@ -186,3 +193,5 @@ The following adapters are identified from the Asterisk and Achilles codebases. 
 2026-02-26 — Contract split from `origami-collections`. The original contract mixed plumbing (hooks, extractors, transformers) with graph nodes (SubgraphNode). Adapters cover the plumbing; Marbles cover the nodes. Vision-tier: significant architectural work, no timeline pressure. Go modules as distribution mechanism eliminates the need for a custom registry in the near term.
 
 2026-02-26 — Adapter inventory injected from Asterisk/Achilles codebase analysis. 8 Asterisk adapters, 1 Achilles adapter, 1 core addition (`exec` transformer). This inventory demonstrates the scope of plumbing that would be duplicated by every new Origami consumer without the adapter mechanism.
+
+2026-02-26 — Architectural audit: 2 framework-level adapters added. (1) `origami.artifact-io` — case-scoped artifact I/O pattern (`ReadArtifact[T]`, `CaseDir`, etc.) currently trapped in Asterisk's `internal/orchestrate/artifact.go`. (2) `origami.display-registry` — the "codes for machines, words for humans" registry pattern currently in Asterisk's `internal/display/`. Both are generic patterns that any Origami consumer would need to reimplement.

@@ -17,3 +17,4 @@
 - `memory-evolution.md` — Namespaced, searchable, persistent MemoryStore.
 - `origami-observability.md` — Day-0 OTel traces + Prometheus metrics for pipeline walks. `/metrics` on KamiServer. `DefaultObservability()`.
 - `case-study-cloud-native-pipeline-tools.md` — CNCF tool analysis: Argo Workflows, Tekton, KEDA, Falco, CloudEvents vs Origami.
+- `origami-api-hygiene.md` — API cleanliness: configurable model registry, curate.Source rename to EvidenceSource, parameterized probe stimuli.

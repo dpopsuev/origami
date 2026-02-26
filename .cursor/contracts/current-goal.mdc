@@ -81,6 +81,7 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 | R1f | `origami-adapters` | should | yes | FQCN resolution on all registries. `imports:` on PipelineDef. Core adapter. |
 | R1g | `memory-evolution` | should | yes | MemoryStore: namespaced, searchable, persistent. |
 | R1h | `origami-observability` | should | yes | Day-0 OTel traces + Prometheus metrics. `/metrics` on KamiServer. `DefaultObservability()`. TokenTracker Prometheus-counter-friendly. |
+| R1i | `origami-api-hygiene` | should | yes | Configurable `ModelRegistry` (replaces hardcoded `KnownModels`). Rename `curate.Source` → `curate.EvidenceSource`. Parameterize Ouroboros probe stimuli. |
 
 #### Sprint R2 — Pipelines + Structural Node Changes
 
