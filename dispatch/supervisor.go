@@ -77,14 +77,16 @@ func NewSupervisorTracker(bus *SignalBus, opts ...SupervisorOption) *SupervisorT
 }
 
 // Process reads new signals from the bus and updates worker state.
+// Safe for concurrent callers — lastProcessed is read and written
+// under the same lock to prevent double-counting and index overshoot.
 func (s *SupervisorTracker) Process() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	signals := s.bus.Since(s.lastProcessed)
 	if len(signals) == 0 {
 		return
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	for _, sig := range signals {
 		s.lastProcessed++
