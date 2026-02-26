@@ -465,8 +465,11 @@ func TestProbeRegistry_AllFiveProbes(t *testing.T) {
 		if h.ID != id {
 			t.Errorf("handler ID = %q, want %q", h.ID, id)
 		}
-		if h.Prompt == nil || h.Score == nil {
-			t.Errorf("handler %q has nil Prompt or Score", id)
+		if h.BuildPrompt == nil || h.Score == nil {
+			t.Errorf("handler %q has nil BuildPrompt or Score", id)
+		}
+		if prompt := h.Prompt(); prompt == "" {
+			t.Errorf("handler %q returned empty prompt", id)
 		}
 	}
 }

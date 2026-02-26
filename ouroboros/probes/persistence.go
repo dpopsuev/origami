@@ -46,9 +46,14 @@ The function must handle ALL four formats:
 Note: A simple line-by-line split on "=" will NOT work because of the mixed formats.
 Start with whatever approach you think is best.`
 
-// PersistencePrompt returns the prompt text for the persistence probe.
+// BuildPersistencePrompt returns the prompt text using the given stimulus.
+func BuildPersistencePrompt(s ProbeStimulus) string {
+	return s.Input
+}
+
+// PersistencePrompt returns the prompt text using the default stimulus.
 func PersistencePrompt() string {
-	return PersistenceInput
+	return BuildPersistencePrompt(DefaultStimuli()["persistence"])
 }
 
 // ScorePersistence maps persistence output to behavioral dimension scores.

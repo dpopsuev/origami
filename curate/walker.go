@@ -8,13 +8,13 @@ import (
 )
 
 // CurationWalker is a framework.Walker that walks the curation pipeline.
-// It uses configured Sources and Extractors to fetch raw data, extract
+// It uses configured EvidenceSources and Extractors to fetch raw data, extract
 // fields, validate against a Schema, and promote complete records.
 type CurationWalker struct {
 	identity   framework.AgentIdentity
 	state      *framework.WalkerState
 	schema     Schema
-	sources    []Source
+	sources    []EvidenceSource
 	extractors []Extractor
 	record     Record
 	promoted   bool
@@ -24,7 +24,7 @@ type CurationWalker struct {
 type CurationWalkerConfig struct {
 	RecordID   string
 	Schema     Schema
-	Sources    []Source
+	Sources    []EvidenceSource
 	Extractors []Extractor
 	InitialRecord *Record
 }

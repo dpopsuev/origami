@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// stubSource is a test Source that returns fixed data for a known record ID.
+// stubSource is a test EvidenceSource that returns fixed data for a known record ID.
 type stubSource struct {
 	recordID string
 	data     []byte
@@ -68,7 +68,7 @@ func TestCurationWalker_FullPipeline(t *testing.T) {
 	walker := NewCurationWalker(CurationWalkerConfig{
 		RecordID:   "R01",
 		Schema:     testSchema(),
-		Sources:    []Source{src},
+		Sources:    []EvidenceSource{src},
 		Extractors: []Extractor{ext},
 	})
 
@@ -128,7 +128,7 @@ func TestCurationWalker_IncompleteRecord(t *testing.T) {
 	walker := NewCurationWalker(CurationWalkerConfig{
 		RecordID:   "R01",
 		Schema:     testSchema(),
-		Sources:    []Source{src},
+		Sources:    []EvidenceSource{src},
 		Extractors: []Extractor{ext},
 	})
 
@@ -172,7 +172,7 @@ func TestCurationWalker_WithInitialRecord(t *testing.T) {
 	walker := NewCurationWalker(CurationWalkerConfig{
 		RecordID:      "R01",
 		Schema:        testSchema(),
-		Sources:       []Source{src},
+		Sources:       []EvidenceSource{src},
 		Extractors:    []Extractor{ext},
 		InitialRecord: &initial,
 	})

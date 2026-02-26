@@ -70,9 +70,14 @@ Summarize this PR. For each distinct change, state:
 2. Category: feature / refactor / bugfix / performance
 3. Risk level: low / medium / high`
 
-// SummarizePrompt returns the prompt text for the summarization probe.
+// BuildSummarizePrompt returns the prompt text using the given stimulus.
+func BuildSummarizePrompt(s ProbeStimulus) string {
+	return s.Input
+}
+
+// SummarizePrompt returns the prompt text using the default stimulus.
 func SummarizePrompt() string {
-	return SummarizeInput
+	return BuildSummarizePrompt(DefaultStimuli()["summarize"])
 }
 
 // ScoreSummarize maps summarization output to behavioral dimension scores.

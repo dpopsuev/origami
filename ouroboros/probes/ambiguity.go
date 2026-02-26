@@ -29,9 +29,14 @@ Product wants retry on ALL requests, SRE excludes mutating methods.
 Write a Go implementation plan. Address the contradictions explicitly.
 How would you resolve each conflict? Justify your choices.`
 
-// AmbiguityPrompt returns the prompt text for the ambiguity probe.
+// BuildAmbiguityPrompt returns the prompt text using the given stimulus.
+func BuildAmbiguityPrompt(s ProbeStimulus) string {
+	return s.Input
+}
+
+// AmbiguityPrompt returns the prompt text using the default stimulus.
 func AmbiguityPrompt() string {
-	return AmbiguityInput
+	return BuildAmbiguityPrompt(DefaultStimuli()["ambiguity"])
 }
 
 // ScoreAmbiguity maps ambiguity-handling output to behavioral dimension scores.

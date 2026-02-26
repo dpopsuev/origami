@@ -33,9 +33,14 @@ What is the root cause of the errors? Provide your analysis as structured text:
 3. Red herrings you considered and rejected (with reasoning)
 4. Recommended fix`
 
-// DebugPrompt returns the prompt text for the debugging probe.
+// BuildDebugPrompt returns the prompt text using the given stimulus.
+func BuildDebugPrompt(s ProbeStimulus) string {
+	return s.Input
+}
+
+// DebugPrompt returns the prompt text using the default stimulus.
 func DebugPrompt() string {
-	return DebugInput
+	return BuildDebugPrompt(DefaultStimuli()["debug"])
 }
 
 // ScoreDebug maps debugging output to behavioral dimension scores.

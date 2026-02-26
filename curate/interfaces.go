@@ -9,9 +9,9 @@ type RawEvidence struct {
 	Data      []byte `json:"data"`
 }
 
-// Source fetches raw evidence from an external system (API, file, URL).
+// EvidenceSource fetches raw evidence from an external system (API, file, URL).
 // Implementations are domain-specific (e.g. JiraSource, GitHubPRSource).
-type Source interface {
+type EvidenceSource interface {
 	Type() string
 	CanHandle(ref string) bool
 	Fetch(ctx context.Context, ref string) (*RawEvidence, error)
