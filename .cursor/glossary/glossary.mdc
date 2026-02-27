@@ -47,6 +47,9 @@ description: Shared domain definitions for Origami
 - **Metacalibration** — Recursive model profiling via task-based probes. Produces `ModelProfile` with dimension scores.
 - **Probe** — A behavioral assessment task used in metacalibration (refactor, summarize, debug, ambiguity, persistence).
 
+- **Kami** — MCP Debugger. Live pipeline debugger over HTTP/SSE + WebSocket + MCP. Hosts the debugger frontend, exposes 14 MCP tools (breakpoints, step, highlight, markers, speed control), EventBridge for walk event observation, and Recorder/Replayer for session capture. When `KabukiConfig` is provided, Kami also serves the Kabuki presentation frontend — but Kami itself is the debugger, not the presentation layer. Lives in `kami/` package.
+- **Kabuki** — Pipeline Demo Presentation Layer. Three-act narrative presentation SPA that turns pipeline walks into branded, section-based demos. Consumers implement `KabukiConfig` to provide section content and themes; Kabuki renders the presentation. Kami hosts the server; Kabuki defines the content. Lives in `kami/presentation.go` (interface) and `kami/frontend/` (React SPA).
+
 ## BYO Architecture
 
 - **BYO Architecture** — Seven named principles governing the boundary between framework and consumer. The invariant: the framework owns contract shapes, never implementations.

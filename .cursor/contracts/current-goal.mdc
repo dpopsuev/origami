@@ -5,7 +5,7 @@ description: Active goal manifest — single-read orientation for agents to know
 # Current Goal
 
 **Goal:** Polishing & Presentation — stable API, engine reveal  
-**Status:** Framework Maturity complete. Now polish for presentation.  
+**Status:** Framework Maturity complete. System Refinement complete. Now polish for presentation.  
 **Summary:** Origami is the engine under Asterisk's hood. When the hood opens, viewers should find a new world they didn't know existed — a graph-based agentic pipeline framework with Elements, Personas, Masks, Adversarial Dialectic, and a declarative YAML DSL. The API must be stable, the playground must run, the documentation must be coherent. This is the engine reveal.
 
 ## What "presentation-ready" means
@@ -16,132 +16,87 @@ description: Active goal manifest — single-read orientation for agents to know
 - [ ] Test coverage on public interfaces is solid
 - [ ] README positions Origami as a standalone framework, not an Asterisk dependency
 - [ ] `testdata/` contains canonical pipeline YAMLs (triage, dialectic, court, curation)
+- [ ] `RichVocabulary` interface with `VocabEntry` (short/long/description) wired into Kami, LSP, Kabuki
 
-## Execution Order
+## Remaining Contracts
 
-Critical path: `consumer-ergonomics` → `walker-experience` → `ouroboros-seed-pipeline` → `kami-live-debugger` → `kabuki-presentation-engine` → `demo-presentation` (Asterisk).
+Flat priority list. No sprints — work in priority order, commit at green gates.
 
-Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API changes. Asterisk imports Origami as a Go module — every Origami change can silently break the consumer. Each checkpoint bumps `go get` in Asterisk and runs the full pipeline.
+| Tier | Contract | Notes |
+|------|----------|-------|
+| **should** | `rich-vocabulary` | Evolve `Vocabulary` to `RichVocabulary` (short/long/description). Wire into Kami hover, LSP hover, Kabuki cards. |
+| **should** | *Asterisk: `principled-calibration-scorecard`* | `MetricDef`, `ScoreCard` types in Origami `calibrate/`. Declarative YAML. Framework calibration primitives. |
+| **vision** | `origami-lsp` | Language Server for pipeline YAML. Embeds `origami-lint` engine. Needs stable DSL. |
+| **vision** | `visual-editor` | Drag-and-drop pipeline builder, bidirectional YAML sync. Separate product. |
 
-### Sprint 1 — Foundation (COMPLETE)
+### CHECKPOINT — Polish validated
 
-| # | Contract | Tier | Status |
-|---|----------|------|--------|
-| 1 | `consumer-ergonomics` | nice | **Complete.** ResolvePipelinePath, OutputCapture, DefaultWalker, SetObserver. Achilles adopted (A1-A4). |
-| — | *Asterisk: `knowledge-source-migration`* | should | **Phase 1 complete** (M1-M10 migrated). Phase 0, 2 remain open. |
-| — | *Asterisk: `ground-truth-dataset` Ph7* | should | *(parallel, different repo)* JSON export. |
+```
+Origami:  go build ./... && go test ./...
+Asterisk: go get github.com/dpopsuev/origami@latest
+          go build ./... && go test ./...
+          asterisk demo --replay
+```
 
-**CHECKPOINT A** — PASSED. `go build`, `go test` clean across Origami, Asterisk, Achilles.
+Verify: RichVocabulary wired. LSP validates all E2E scenario YAMLs. Demo replays cleanly.
 
-### Sprint 2 — Walker experience (COMPLETE)
+## Execution History
 
-| # | Contract | Tier | Status |
-|---|----------|------|--------|
-| 4 | `walker-experience` | should | **Complete.** WalkerDef + MemoryStore + hierarchical delegation pattern. |
+### Presentation Sprints 1-5 (COMPLETE)
 
-**CHECKPOINT B** — PASSED. WalkerDef addition to PipelineDef doesn't break Asterisk (no `walkers:` section in Asterisk YAML).
+| Sprint | Contract | Status |
+|--------|----------|--------|
+| 1 | `consumer-ergonomics` | **Complete.** ResolvePipelinePath, OutputCapture, DefaultWalker, SetObserver. |
+| 2 | `walker-experience` | **Complete.** WalkerDef + MemoryStore + hierarchical delegation. |
+| 3 | `ouroboros-seed-pipeline` | **Complete.** Seeds, 3-node pipeline, PersonaSheet, auto-routing. |
+| 4 | `kami-live-debugger` | **Complete.** EventBridge, KamiServer, Debug API, 14 MCP tools, Recorder/Replayer, React frontend. |
+| 5 | `kabuki-presentation-engine` | **Complete.** KabukiConfig, 12 section components, element selector, scroll-snap + keyboard nav. |
 
-### Sprint 3 — Ouroboros redesign (COMPLETE)
+CHECKPOINT E — PASSED.
 
-| # | Contract | Tier | Status |
-|---|----------|------|--------|
-| 5 | `ouroboros-seed-pipeline` | should | **Complete.** Seeds, 3-node pipeline, PersonaSheet, auto-routing. Phase 8 (CC1-CC5) deferred as roadmap. |
+### System Refinement (COMPLETE)
 
-**CHECKPOINT C** — PASSED. Ouroboros API cleanup (deprecated v1 types removed). `go build`, `go test` clean across all repos. E2E gate: `TestE2E` passes.
+All framework-side contracts completed. Asterisk-side contracts (scorecard, RTFM, ingestion, demo) deferred to polishing as they depend on the now-complete framework work.
 
-### Sprint 4 — Kami debugger (COMPLETE)
+| Contract | Status |
+|----------|--------|
+| `consumer-cli-scaffold` | **Complete.** 8 perennial commands, `origami.NewCLI()` builder, `WithObservability`. |
+| `e2e-dsl-testing` | **Complete.** E2E walk tests gate every checkpoint. |
+| `durable-execution` | **Complete.** `Checkpointer` interface + HITL Interrupt/Resume. |
+| `origami-adapters` | **Complete.** FQCN resolution on all registries. `imports:` on PipelineDef. Core adapter. |
+| `memory-evolution` | **Complete.** MemoryStore: namespaced, searchable, persistent. WithTaggedMemory. |
+| `origami-observability` | **Complete.** 9 Prometheus metrics + OTel traces. TokenTracker bridge. `/metrics` on KamiServer. |
+| `origami-api-hygiene` | **Complete.** Configurable `ModelRegistry`. Parameterized probe stimuli. |
+| `origami-marbles` | **Complete.** `Marble` interface, `marble:` on NodeDef, composite subgraph, Kami fold/unfold. |
+| `pipeline-efficiency` | **Complete.** Node caching (InMemoryCache with TTL), fan-in merge strategies (ListArtifact). |
+| `provider-resilience` | **Complete.** Dispatch fallback chains + intent classifier + OnFallback callback. |
+| `prompt-calibration` | **Complete.** StepAnalyzer, TuningProposal, PromptCalibrationLoop types with synthetic tests. |
+| `origami-lint` | **Complete.** 24 rules, 4 profiles, auto-fix, CLI integration, YAML line resolver. |
 
-| # | Contract | Tier | Status |
-|---|----------|------|--------|
-| 6 | `kami-live-debugger` | should | **Complete.** EventBridge, KamiServer, Debug API, 14 MCP tools, Recorder/Replayer, React+Tailwind frontend. 27 Go tests. |
-
-**CHECKPOINT D** — PASSED. EventBridge and MCP tools don't break Asterisk. `go build`, `go test` clean across all repos.
-
-### Sprint 5 — Presentation engine + Demo
-
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| 7 | `kabuki-presentation-engine` | should | Kabuki: framework-level presentation SPA (Kami = debugger, Kabuki = presentation). Consumers provide KabukiConfig + Theme, Kabuki renders sections. Moves element selector from Asterisk. **Must complete before Asterisk demo.** |
-| — | *Asterisk: `demo-presentation`* | should | Depends on #7. Implements `KabukiConfig` with Police Station personality. `asterisk demo` CLI, recorded replay. **This is the presentation.** |
-
-**CHECKPOINT E** — Final gate. Everything works. Demo replays cleanly. Calibration hasn't regressed. **E2E gate:** full sweep — all scenarios, all real-YAML walks, all injected walks. Ready to present.
-
-### System Refinement Sprints (aligned with Asterisk roadmap)
-
-**Principle: break early, stabilize later.** All breaking Origami API changes land in R1-R2.
-
-#### Sprint R1 — Foundation: Scorecard + Breaking API Changes
-
-| # | Contract | Tier | Breaking? | Notes |
-|---|----------|------|-----------|-------|
-| R1a | *Asterisk: `principled-calibration-scorecard`* Ph1-2 | gate | yes | `MetricDef`, `ScoreCard`, `CostTier`, `EvalDirection` — framework calibration primitives. |
-| R1b | `consumer-cli-scaffold` | should | yes | **Complete.** 8 perennial commands, `origami.NewCLI()` builder, `WithObservability`. |
-| R1c | `e2e-dsl-testing` | should | no | **Complete.** E2E walk tests gate every checkpoint. |
-| R1d | `durable-execution` | should | yes | **Complete.** `Checkpointer` interface + HITL Interrupt/Resume. |
-| R1f | `origami-adapters` | should | yes | **Complete.** FQCN resolution on all registries. `imports:` on PipelineDef. Core adapter. |
-| R1g | `memory-evolution` | should | yes | **Complete.** MemoryStore: namespaced, searchable, persistent. WithTaggedMemory. |
-| R1h | `origami-observability` | should | yes | **Complete.** 9 Prometheus metrics + OTel traces. TokenTracker bridge. Dispatch metrics. CLI `WithObservability`. `/metrics` on KamiServer. |
-| R1i | `origami-api-hygiene` | should | yes | **Complete.** Configurable `ModelRegistry`. Parameterized probe stimuli. |
-
-#### Sprint R2 — Pipelines + Structural Node Changes
-
-| # | Contract | Tier | Breaking? | Notes |
-|---|----------|------|-----------|-------|
-| R2a | *Asterisk: `principled-calibration-scorecard`* Ph6 | should | no | Calibration runner as DSL pipeline. |
-| R2d | `origami-marbles` | should | yes | **Complete.** `Marble` interface, `marble:` on NodeDef, composite subgraph, Kami fold/unfold. |
-| R2e | `pipeline-efficiency` | should | yes | **Complete.** Node caching (InMemoryCache with TTL), fan-in merge strategies (ListArtifact). |
-| R2f | `provider-resilience` | nice | no | **Complete.** Dispatch fallback chains + intent classifier + OnFallback callback. |
-
-#### Sprint R3 — Tuning + Knowledge (COMPLETE)
-
-| # | Contract | Tier | Status |
-|---|----------|------|--------|
-| R3b | `prompt-calibration` | nice | **Complete.** StepAnalyzer, TuningProposal, PromptCalibrationLoop types with synthetic tests. |
-| R3.5a | `origami-lint` | should | **Complete.** 24 rules (S1-S11, G1-G7, B1-B6), 4 profiles, auto-fix (4 fixable rules), CLI integration, YAML line resolver. |
-
-**CHECKPOINT R3/G** — PASSED. `origami lint --profile strict` produces zero findings on all 9 `testdata/` YAMLs. Linter runs as agent-operations pipeline stage. `PromptCalibrationLoop` has unit tests with synthetic data.
-
-#### Sprint R4 — Demo + LSP
-
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| R4a | *Asterisk: `improve-asterisk-kabuki-demo`* | should | Three-act narrative, War Room, principled results. |
-| R4b | `origami-lsp` | vision | Language Server. Embeds `origami-lint` engine. Needs stable DSL from R1-R3. |
-
-**CHECKPOINT R4/F** — LSP validates all E2E scenario YAMLs without false diagnostics. Completion, hover, and color coding work.
-
-### Product — Visual Editor (post-LSP, post-adapters/marbles)
-
-| # | Contract | Tier | Notes |
-|---|----------|------|-------|
-| 12 | `visual-editor` | vision | Separate product. Drag-and-drop pipeline builder, bidirectional YAML sync, run management dashboard. Community + Enterprise editions. Depends on Kami (#6), LSP, Adapters, Marbles. |
-
-**No checkpoint** — the Visual Editor is a standalone product, not a framework change.
-
-### Cross-cutting (no dedicated sprint)
-
-| Contract | Tier | Notes |
-|----------|------|-------|
-| `e2e-dsl-testing` | should | E2E walk tests injected as gates into CHECKPOINTs C-F. No dedicated sprint. |
-
-### Analysis
-
-| Contract | Status | Notes |
-|----------|--------|-------|
-| `case-study-omo-agentic-arms-race` | done | Implementation extracted to `provider-resilience` + `ouroboros-seed-pipeline` Ph10. |
-| `case-study-crewai-crews-and-flows` | done | Implementation extracted to `walker-experience`. |
-| `case-study-ansible-collections` | done | Implementation extracted to `origami-adapters` + `origami-marbles` + `origami-lsp`. |
-| `case-study-visual-editor-landscape` | done | Excalidraw + Mermaid + Ansible Automation Controller business model analysis. Implementation extracted to `visual-editor`. |
-| `case-study-langgraph-graph-duality` | done | LangGraph (25.1k stars) state-centric vs walker-centric graph analysis. Implementation extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`, injected into `origami-adapters`. |
-| `case-study-cloud-native-pipeline-tools` | done | Argo Workflows, Tekton, KEDA, Falco, CloudEvents analysis. Integration points and gaps. Tasks extracted to `origami-adapters`, `origami-marbles`, `pipeline-efficiency`. |
-
-## Framework Maturity (complete)
+### Framework Maturity (COMPLETE)
 
 All gates and next-milestone contracts complete. The DSL is done (C1-C5). Green border gaps closed. PoC batteries shipped. Papercup v2 choreography hardened. Knowledge source catalog shipped.
 
-See completed contracts list below for the full record.
+### Analysis (COMPLETE)
 
-## Completed
+| Contract | Notes |
+|----------|-------|
+| `case-study-omo-agentic-arms-race` | Implementation extracted to `provider-resilience` + `ouroboros-seed-pipeline` Ph10. |
+| `case-study-crewai-crews-and-flows` | Implementation extracted to `walker-experience`. |
+| `case-study-ansible-collections` | Implementation extracted to `origami-adapters` + `origami-marbles` + `origami-lsp`. |
+| `case-study-visual-editor-landscape` | Excalidraw + Mermaid + Ansible Automation Controller analysis. Extracted to `visual-editor`. |
+| `case-study-langgraph-graph-duality` | State-centric vs walker-centric analysis. Extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`. |
+| `case-study-cloud-native-pipeline-tools` | Argo, Tekton, KEDA, Falco, CloudEvents. Extracted to `origami-adapters`, `origami-marbles`, `pipeline-efficiency`. |
+
+### Product — Visual Editor (post-LSP)
+
+| Contract | Tier | Notes |
+|----------|------|-------|
+| `visual-editor` | vision | Separate product. Drag-and-drop pipeline builder. Depends on Kami, LSP, Adapters, Marbles. |
+
+**No checkpoint** — the Visual Editor is a standalone product, not a framework change.
+
+## Full Completed Contracts
 
 | Contract | Phase | Notes |
 |----------|-------|-------|
@@ -192,7 +147,20 @@ See completed contracts list below for the full record.
 | `migrate-ouroboros-to-marshaller` | framework | Ouroboros discovery tools via PipelineServer domain hooks. |
 | `knowledge-source-catalog` | framework | KnowledgeSourceCatalog + Source types, KnowledgeSourceRouter. |
 | `calibration-primitives` | framework | Generic calibration types, interfaces, aggregation, report formatting. |
-| `consumer-ergonomics` | framework | ResolvePipelinePath, WithOutputCapture, DefaultWalker, SetObserver. |
-| `walker-experience` | framework | WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation. |
-| `ouroboros-seed-pipeline` | framework | 3-node seed pipeline, PersonaSheet, auto-routing (Phase 8 deferred). |
-| `kami-live-debugger` | framework | Kami live debugger: EventBridge, KamiServer, Debug API, MCP tools, Recorder/Replayer, React frontend. |
+| `consumer-ergonomics` | presentation | ResolvePipelinePath, WithOutputCapture, DefaultWalker, SetObserver. |
+| `walker-experience` | presentation | WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation. |
+| `ouroboros-seed-pipeline` | presentation | 3-node seed pipeline, PersonaSheet, auto-routing (Phase 8 deferred). |
+| `kami-live-debugger` | presentation | Kami live debugger: EventBridge, KamiServer, Debug API, MCP tools, Recorder/Replayer, React frontend. |
+| `kabuki-presentation-engine` | presentation | KabukiConfig, API endpoints, 12 section components, element selector, scroll-snap + keyboard nav. |
+| `consumer-cli-scaffold` | refinement | 8 perennial commands, `origami.NewCLI()` builder, `WithObservability`. |
+| `e2e-dsl-testing` | refinement | E2E walk tests gate every checkpoint. |
+| `durable-execution` | refinement | `Checkpointer` interface + HITL Interrupt/Resume. |
+| `origami-adapters` | refinement | FQCN resolution, `imports:` on PipelineDef, core adapter. |
+| `memory-evolution` | refinement | MemoryStore: namespaced, searchable, persistent. |
+| `origami-observability` | refinement | 9 Prometheus metrics + OTel traces. `/metrics` on KamiServer. |
+| `origami-api-hygiene` | refinement | Configurable `ModelRegistry`. Parameterized probe stimuli. |
+| `origami-marbles` | refinement | `Marble` interface, `marble:` on NodeDef, composite subgraph. |
+| `pipeline-efficiency` | refinement | Node caching, fan-in merge strategies. |
+| `provider-resilience` | refinement | Dispatch fallback chains + intent classifier. |
+| `prompt-calibration` | refinement | StepAnalyzer, TuningProposal, PromptCalibrationLoop. |
+| `origami-lint` | refinement | 24 rules, 4 profiles, auto-fix, CLI integration. |

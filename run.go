@@ -16,6 +16,8 @@ type runConfig struct {
 	extractors   ExtractorRegistry
 	nodes        NodeRegistry
 	edges        EdgeFactory
+	adapters     AdapterLoader
+	marbles      MarbleRegistry
 	overrides    map[string]any
 	walker       Walker
 	team         *Team
@@ -51,6 +53,19 @@ func WithNodes(reg NodeRegistry) RunOption {
 // WithEdges registers edge factories for the run.
 func WithEdges(reg EdgeFactory) RunOption {
 	return func(c *runConfig) { c.edges = reg }
+}
+
+// WithAdapters registers an adapter loader for the run. When the pipeline
+// YAML contains imports: [...], the loader is called for each import name
+// and the resulting adapters are merged into the registries.
+func WithAdapters(loader AdapterLoader) RunOption {
+	return func(c *runConfig) { c.adapters = loader }
+}
+
+// WithMarbles registers a marble registry for the run. Nodes that declare
+// marble: <name> are resolved from this registry.
+func WithMarbles(reg MarbleRegistry) RunOption {
+	return func(c *runConfig) { c.marbles = reg }
 }
 
 // WithOverrides sets variable overrides (equivalent to --set key=value).
@@ -161,6 +176,8 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 		Extractors:   cfg.extractors,
 		Transformers: cfg.transformers,
 		Hooks:        cfg.hooks,
+		Marbles:      cfg.marbles,
+		Adapters:     cfg.adapters,
 	}
 
 	runner, err := NewRunnerWith(def, reg)
@@ -270,6 +287,8 @@ func Validate(pipelinePath string, opts ...RunOption) error {
 		Extractors:   cfg.extractors,
 		Transformers: cfg.transformers,
 		Hooks:        cfg.hooks,
+		Marbles:      cfg.marbles,
+		Adapters:     cfg.adapters,
 	}
 
 	hasRegistries := reg.Nodes != nil || reg.Edges != nil || reg.Extractors != nil || reg.Transformers != nil || reg.Hooks != nil

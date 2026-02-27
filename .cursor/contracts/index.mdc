@@ -8,14 +8,33 @@
 ## Active
 (No active contracts)
 
+## Draft
+
+| Contract | Goal | Tier |
+|----------|------|------|
+| `rich-vocabulary.md` | Evolve `Vocabulary` to `RichVocabulary` with short/long/description metadata; wire into Kami hover, LSP hover, Kabuki cards, adapter YAML. | should |
+| `domain-calibration.md` | Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality. | nice |
+| `origami-lsp.md` | Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
+| `visual-editor.md` | Visual Editor for Origami pipelines. Drag-and-drop builder, bidirectional YAML sync, run management. Community + Enterprise editions. | vision |
+
 ## Completed (recent)
-- `completed/framework/papercup-protocol-maturity.md` — Papercup choreography, zone stickiness, work stealing, adaptive lifecycle, transport decoupling. Complete.
-- `completed/framework/migrate-ouroboros-to-marshaller.md` — Ouroboros discovery tools served via PipelineServer domain hooks. Complete.
-- `completed/framework/knowledge-source-catalog.md` — KnowledgeSourceCatalog + Source types, KnowledgeSourceRouter for tag-based routing. Complete.
-- `completed/framework/calibration-primitives.md` — Generic calibration types, interfaces, aggregation, report formatting (`calibrate/` package). Companion: Asterisk `calibration-primitives-consumer`. Complete.
-- `completed/framework/marshaller-step-schema-factory.md` — Replace freeform `submit_artifact` with schema-validated `submit_step` tool using StepSchemas as a step factory. Complete.
-- `completed/framework/origami-cursor-first-architecture.md` — CLIDispatcher, skill scaffold, provider routing. Cursor as first-class citizen.
-- `completed/framework/origami-papercup-v2-hardening.md` — Align Cursor Skill guide with Papercup v2 choreography. Companion: `asterisk-papercup-v2-hardening`.
+
+### Refinement phase
+
+- `completed/framework/consumer-cli-scaffold.md` — 8 perennial commands, `origami.NewCLI()` builder, `WithObservability`. Complete.
+- `completed/framework/e2e-dsl-testing.md` — E2E walk tests gate every checkpoint. Complete.
+- `completed/framework/durable-execution.md` — `Checkpointer` interface + HITL Interrupt/Resume. Complete.
+- `completed/framework/origami-adapters.md` — FQCN resolution on all registries. `imports:` on PipelineDef. Core adapter. Complete.
+- `completed/framework/memory-evolution.md` — MemoryStore: namespaced, searchable, persistent. WithTaggedMemory. Complete.
+- `completed/framework/origami-observability.md` — 9 Prometheus metrics + OTel traces. `/metrics` on KamiServer. Complete.
+- `completed/framework/origami-api-hygiene.md` — Configurable `ModelRegistry`. Parameterized probe stimuli. Complete.
+- `completed/framework/origami-marbles.md` — `Marble` interface, `marble:` on NodeDef, composite subgraph, Kami fold/unfold. Complete.
+- `completed/framework/pipeline-efficiency.md` — Node caching (InMemoryCache with TTL), fan-in merge strategies (ListArtifact). Complete.
+- `completed/framework/provider-resilience.md` — Dispatch fallback chains + intent classifier + OnFallback callback. Complete.
+- `completed/framework/prompt-calibration.md` — StepAnalyzer, TuningProposal, PromptCalibrationLoop types with synthetic tests. Complete.
+- `completed/framework/origami-lint.md` — 24 rules, 4 profiles, auto-fix, CLI integration, YAML line resolver. Complete.
+
+### Presentation phase
 
 - `completed/framework/consumer-ergonomics.md` — ResolvePipelinePath, WithOutputCapture, DefaultWalker: three consumer-boilerplate primitives. Complete.
 - `completed/framework/walker-experience.md` — WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern. Complete.
@@ -23,25 +42,27 @@
 - `completed/framework/kami-live-debugger.md` — Kami live agentic debugger (Demiurge pattern: MCP + HTTP/SSE + WS). EventBridge, debug API, MCP tools, recorder/replayer, React frontend. Complete.
 - `completed/framework/kabuki-presentation-engine.md` — Kabuki data-driven presentation SPA: KabukiConfig interface, API endpoints, 12 section components, element selector, scroll-snap + keyboard nav. Complete.
 
+### Infrastructure phase
+
+- `completed/framework/papercup-protocol-maturity.md` — Papercup choreography, zone stickiness, work stealing, adaptive lifecycle, transport decoupling. Complete.
+- `completed/framework/migrate-ouroboros-to-marshaller.md` — Ouroboros discovery tools served via PipelineServer domain hooks. Complete.
+- `completed/framework/knowledge-source-catalog.md` — KnowledgeSourceCatalog + Source types, KnowledgeSourceRouter for tag-based routing. Complete.
+- `completed/framework/calibration-primitives.md` — Generic calibration types, interfaces, aggregation, report formatting (`calibrate/` package). Complete.
+- `completed/framework/marshaller-step-schema-factory.md` — Replace freeform `submit_artifact` with schema-validated `submit_step` tool using StepSchemas as a step factory. Complete.
+- `completed/framework/origami-cursor-first-architecture.md` — CLIDispatcher, skill scaffold, provider routing. Cursor as first-class citizen. Complete.
+- `completed/framework/origami-papercup-v2-hardening.md` — Align Cursor Skill guide with Papercup v2 choreography. Complete.
+
+### Analysis (all done)
+
+- `completed/analysis/case-study-omo-agentic-arms-race.md` — Oh My OpenCode competitive analysis. Extracted to `provider-resilience` + `ouroboros-seed-pipeline`.
+- `completed/analysis/case-study-crewai-crews-and-flows.md` — CrewAI competitive analysis. Extracted to `walker-experience`.
+- `completed/analysis/case-study-ansible-collections.md` — Ansible Collections analysis. Extracted to `origami-adapters` + `origami-marbles` + `origami-lsp`.
+- `completed/analysis/case-study-visual-editor-landscape.md` — Excalidraw + Mermaid + Ansible Automation Controller analysis. Extracted to `visual-editor`.
+- `completed/analysis/case-study-langgraph-graph-duality.md` — LangGraph state-centric vs walker-centric analysis. Extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`.
+- `completed/analysis/case-study-cloud-native-pipeline-tools.md` — Argo, Tekton, KEDA, Falco, CloudEvents analysis. Extracted to `origami-adapters`, `origami-marbles`, `pipeline-efficiency`.
+
 See `current-goal.mdc` for the full completed contracts list.
 
-## Draft
-- `draft/prompt-calibration.md` — Framework-level prompt tuning loop (deferred).
-- `draft/domain-calibration.md` — Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality.
-- `draft/case-study-omo-agentic-arms-race.md` — Competitive analysis of Oh My OpenCode. Analysis complete; implementation extracted to `provider-resilience` and `ouroboros-seed-pipeline` Phase 10.
-- `draft/case-study-crewai-crews-and-flows.md` — Competitive analysis of CrewAI (market leader). Analysis complete; implementation extracted to `walker-experience`.
-- `draft/provider-resilience.md` — Provider fallback chains, entry classifier pattern. Extracted from OmO case study gaps.
-- `draft/e2e-dsl-testing.md` — Comprehensive E2E walk tests for all DSL features. Scenario YAMLs + real-YAML walks. Injected as gates into CHECKPOINTs C-F.
-- `draft/origami-lsp.md` — Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. Vision-tier.
-- `draft/origami-adapters.md` — Adapter format, FQCN resolution, MergeAdapters API, CLI. Distributable helper bundles (transformers, extractors, hooks). Vision-tier.
-- `draft/origami-marbles.md` — Marble type, MarbleRegistry, composite subgraph nodes, fold/unfold visualization. Reusable graph nodes. Vision-tier.
-- `draft/visual-editor.md` — Visual Editor for Origami pipelines. Drag-and-drop builder, bidirectional YAML sync, run management. Community + Enterprise editions (Ansible open-core model). Vision-tier.
-- `draft/durable-execution.md` — Checkpointer interface (pluggable backends, durability modes) + Interrupt/Resume HITL primitive. Extracted from LangGraph case study Gaps 1+2. Should-tier.
-- `draft/memory-evolution.md` — Evolve MemoryStore: namespaces, search, PersistentStore (SQLite), memory type conventions (semantic/episodic/procedural). Extracted from LangGraph case study Gap 4. Nice-tier.
-- `draft/pipeline-efficiency.md` — Node caching (CachePolicy, InMemoryCache) + fan-in merge strategies (append/latest/custom). Extracted from LangGraph case study Gaps 5+6. Nice-tier.
-- `draft/origami-observability.md` — Day-0 OTel traces + Prometheus metrics for pipeline walks. `/metrics` on KamiServer. `DefaultObservability()`. Should-tier (R1).
-- `draft/case-study-cloud-native-pipeline-tools.md` — CNCF tool analysis: Argo Workflows, Tekton, KEDA, Falco, CloudEvents vs Origami. Nice-tier (analysis).
-- `draft/origami-api-hygiene.md` — API cleanliness: configurable model registry, curate.Source rename to EvidenceSource, parameterized probe stimuli. Should-tier (R1).
 ## Files
 - `_TEMPLATE.md` — contract template (copy to create new contracts)
 - `current-goal.mdc` — active goal manifest — single-read orientation for agents
