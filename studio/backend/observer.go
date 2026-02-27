@@ -1,0 +1,80 @@
+// Package backend provides the Studio server: a WalkObserver that records
+// pipeline events and serves them via REST API + SSE for the Visual Editor.
+package backend
+
+import (
+	"sync"
+	"time"
+
+	framework "github.com/dpopsuev/origami"
+)
+
+// StudioEvent is a serializable pipeline event stored in the event store.
+type StudioEvent struct {
+	ID        int            `json:"id"`
+	RunID     string         `json:"run_id"`
+	Type      string         `json:"type"`
+	Timestamp time.Time      `json:"ts"`
+	Node      string         `json:"node,omitempty"`
+	Edge      string         `json:"edge,omitempty"`
+	Walker    string         `json:"walker,omitempty"`
+	ElapsedMs int64          `json:"elapsed_ms,omitempty"`
+	Error     string         `json:"error,omitempty"`
+	Metadata  map[string]any `json:"metadata,omitempty"`
+}
+
+// RunInfo tracks metadata about a pipeline run.
+type RunInfo struct {
+	ID        string    `json:"id"`
+	Pipeline  string    `json:"pipeline"`
+	StartedAt time.Time `json:"started_at"`
+	EndedAt   time.Time `json:"ended_at,omitempty"`
+	Status    string    `json:"status"` // "running", "completed", "error"
+	NodeCount int       `json:"node_count"`
+	EdgeCount int       `json:"edge_count"`
+}
+
+// StudioObserver implements framework.WalkObserver and records events
+// for the Visual Editor's REST API.
+type StudioObserver struct {
+	mu     sync.RWMutex
+	store  *EventStore
+	runID  string
+	pipeline string
+}
+
+// NewStudioObserver creates an observer that records to the given store.
+func NewStudioObserver(store *EventStore, runID, pipeline string) *StudioObserver {
+	return &StudioObserver{
+		store:    store,
+		runID:    runID,
+		pipeline: pipeline,
+	}
+}
+
+// OnEvent implements framework.WalkObserver.
+func (o *StudioObserver) OnEvent(we framework.WalkEvent) {
+	evt := StudioEvent{
+		RunID:     o.runID,
+		Type:      string(we.Type),
+		Timestamp: time.Now().UTC(),
+		Node:      we.Node,
+		Edge:      we.Edge,
+		Walker:    we.Walker,
+		Metadata:  we.Metadata,
+	}
+	if we.Elapsed > 0 {
+		evt.ElapsedMs = we.Elapsed.Milliseconds()
+	}
+	if we.Error != nil {
+		evt.Error = we.Error.Error()
+	}
+
+	o.store.Append(evt)
+}
+
+// RunID returns the observer's run ID.
+func (o *StudioObserver) RunID() string { return o.runID }
+
+// Pipeline returns the observer's pipeline name.
+func (o *StudioObserver) Pipeline() string { return o.pipeline }

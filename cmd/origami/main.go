@@ -16,6 +16,7 @@ import (
 	"github.com/dpopsuev/origami/kami"
 	"github.com/dpopsuev/origami/lint"
 	originamilsp "github.com/dpopsuev/origami/lsp"
+	studiobackend "github.com/dpopsuev/origami/studio/backend"
 	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/ouroboros"
 	"github.com/dpopsuev/origami/ouroborosmcp"
@@ -46,6 +47,8 @@ func main() {
 		err = lspCmd()
 	case "kami":
 		err = kamiCmd(os.Args[2:])
+	case "studio":
+		err = studioCmd(os.Args[2:])
 	case "adapter":
 		err = adapterCmd(os.Args[2:])
 	case "version":
@@ -74,6 +77,7 @@ Commands:
   ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
   kami       Live pipeline debugger (HTTP/SSE + WS)
   kami serve Start Kami MCP server over stdio (co-starts HTTP/WS)
+  studio     Visual Pipeline Editor (embedded SPA + REST API)
   adapter    Adapter management (list, inspect, validate)
   version    Print version`)
 }
@@ -521,6 +525,24 @@ func lintCmd(args []string) error {
 		os.Exit(exitCode)
 	}
 	return nil
+}
+
+func studioCmd(args []string) error {
+	fs := flag.NewFlagSet("studio", flag.ContinueOnError)
+	port := fs.Int("port", 8080, "HTTP port for Studio server")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	srv := studiobackend.NewStudioServer(*port, studiobackend.PlaceholderStaticFS())
+	srv.Start()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	slog.Info("origami studio started", "port", *port, "url", fmt.Sprintf("http://localhost:%d", *port))
+	<-ctx.Done()
+	return srv.Stop(context.Background())
 }
 
 func lspCmd() error {
