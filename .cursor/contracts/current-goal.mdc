@@ -27,7 +27,7 @@ Flat priority list. No sprints — work in priority order, commit at green gates
 | **should** | `rich-vocabulary` | Evolve `Vocabulary` to `RichVocabulary` (short/long/description). Wire into Kami hover, LSP hover, Kabuki cards. |
 | **should** | *Asterisk: `principled-calibration-scorecard`* | `MetricDef`, `ScoreCard` types in Origami `calibrate/`. Declarative YAML. Framework calibration primitives. |
 | **vision** | `origami-lsp` | Language Server for pipeline YAML. Embeds `origami-lint` engine. Needs stable DSL. |
-| **vision** | `visual-editor` | Drag-and-drop pipeline builder, bidirectional YAML sync. Separate product. |
+| **vision** | `washi` | Washi — enterprise pipeline management UI. Shared Origami Design System with Kabuki. Separate product. |
 
 ### CHECKPOINT — Polish validated
 
@@ -84,17 +84,17 @@ All gates and next-milestone contracts complete. The DSL is done (C1-C5). Green 
 | `case-study-omo-agentic-arms-race` | Implementation extracted to `provider-resilience` + `ouroboros-seed-pipeline` Ph10. |
 | `case-study-crewai-crews-and-flows` | Implementation extracted to `walker-experience`. |
 | `case-study-ansible-collections` | Implementation extracted to `origami-adapters` + `origami-marbles` + `origami-lsp`. |
-| `case-study-visual-editor-landscape` | Excalidraw + Mermaid + Ansible Automation Controller analysis. Extracted to `visual-editor`. |
+| `case-study-visual-editor-landscape` | Excalidraw + Mermaid + Ansible Automation Controller analysis. Extracted to `washi`. |
 | `case-study-langgraph-graph-duality` | State-centric vs walker-centric analysis. Extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`. |
 | `case-study-cloud-native-pipeline-tools` | Argo, Tekton, KEDA, Falco, CloudEvents. Extracted to `origami-adapters`, `origami-marbles`, `pipeline-efficiency`. |
 
-### Product — Visual Editor (post-LSP)
+### Product — Washi (post-LSP)
 
 | Contract | Tier | Notes |
 |----------|------|-------|
-| `visual-editor` | vision | Separate product. Drag-and-drop pipeline builder. Depends on Kami, LSP, Adapters, Marbles. |
+| `washi` | vision | Washi — enterprise pipeline management UI. Shared ODS with Kabuki. Depends on Kami, LSP, Adapters, Marbles. |
 
-**No checkpoint** — the Visual Editor is a standalone product, not a framework change.
+**No checkpoint** — Washi is a standalone product, not a framework change.
 
 ## Full Completed Contracts
 

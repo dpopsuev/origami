@@ -15,7 +15,7 @@
 | `rich-vocabulary.md` | Evolve `Vocabulary` to `RichVocabulary` with short/long/description metadata; wire into Kami hover, LSP hover, Kabuki cards, adapter YAML. | should |
 | `domain-calibration.md` | Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality. | nice |
 | `origami-lsp.md` | Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
-| `visual-editor.md` | Visual Editor for Origami pipelines. Drag-and-drop builder, bidirectional YAML sync, run management. Community + Enterprise editions. | vision |
+| `washi.md` | Washi — enterprise pipeline management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 
 ## Completed (recent)
 
@@ -57,7 +57,7 @@
 - `completed/analysis/case-study-omo-agentic-arms-race.md` — Oh My OpenCode competitive analysis. Extracted to `provider-resilience` + `ouroboros-seed-pipeline`.
 - `completed/analysis/case-study-crewai-crews-and-flows.md` — CrewAI competitive analysis. Extracted to `walker-experience`.
 - `completed/analysis/case-study-ansible-collections.md` — Ansible Collections analysis. Extracted to `origami-adapters` + `origami-marbles` + `origami-lsp`.
-- `completed/analysis/case-study-visual-editor-landscape.md` — Excalidraw + Mermaid + Ansible Automation Controller analysis. Extracted to `visual-editor`.
+- `completed/analysis/case-study-visual-editor-landscape.md` — Excalidraw + Mermaid + Ansible Automation Controller analysis. Extracted to `washi`.
 - `completed/analysis/case-study-langgraph-graph-duality.md` — LangGraph state-centric vs walker-centric analysis. Extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`.
 - `completed/analysis/case-study-cloud-native-pipeline-tools.md` — Argo, Tekton, KEDA, Falco, CloudEvents analysis. Extracted to `origami-adapters`, `origami-marbles`, `pipeline-efficiency`.
 

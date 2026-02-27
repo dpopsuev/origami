@@ -49,6 +49,7 @@ description: Shared domain definitions for Origami
 
 - **Kami** — MCP Debugger. Live pipeline debugger over HTTP/SSE + WebSocket + MCP. Hosts the debugger frontend, exposes 14 MCP tools (breakpoints, step, highlight, markers, speed control), EventBridge for walk event observation, and Recorder/Replayer for session capture. When `KabukiConfig` is provided, Kami also serves the Kabuki presentation frontend — but Kami itself is the debugger, not the presentation layer. Lives in `kami/` package.
 - **Kabuki** — Pipeline Demo Presentation Layer. Three-act narrative presentation SPA that turns pipeline walks into branded, section-based demos. Consumers implement `KabukiConfig` to provide section content and themes; Kabuki renders the presentation. Kami hosts the server; Kabuki defines the content. Lives in `kami/presentation.go` (interface) and `kami/frontend/` (React SPA).
+- **Washi** — Enterprise Pipeline Management UI (和紙, traditional handmade paper). The operational management surface for Origami pipelines: drag-and-drop graph builder, bidirectional YAML sync, run management dashboard, artifact inspector. Community (open source, AWX model) and Enterprise (RBAC, multi-tenancy, audit, SSO) editions in one codebase. Shares the Origami Design System (ODS) with Kabuki — same tokens, typography, element colors, and components. Separate product; the framework has no dependency on Washi. Lives in `washi/`.
 
 ## BYO Architecture
 
