@@ -24,6 +24,7 @@ type Config struct {
 	SPA          http.FileSystem    // embedded frontend (nil = no SPA)
 	Theme        Theme              // consumer theme (nil = default)
 	Kabuki       KabukiConfig       // Kabuki presentation sections (nil = debugger-only mode)
+	Vocab          framework.RichVocabulary   // rich vocabulary for node tooltips (nil = Theme only)
 	MetricsHandler http.Handler               // Prometheus /metrics handler (nil = no metrics)
 	Marbles        framework.MarbleRegistry  // marble registry for fold/unfold (nil = no marble API)
 }

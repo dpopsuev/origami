@@ -178,7 +178,7 @@ func (s *Server) handleThemeAPI(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(themePayload{
 		Name:               s.cfg.Theme.Name(),
 		AgentIntros:        s.cfg.Theme.AgentIntros(),
-		NodeDescriptions:   s.cfg.Theme.NodeDescriptions(),
+		NodeDescriptions:   s.vocabOverlay(s.cfg.Theme.NodeDescriptions()),
 		CostumeAssets:      s.cfg.Theme.CostumeAssets(),
 		CooperationDialogs: s.cfg.Theme.CooperationDialogs(),
 	})
@@ -191,8 +191,25 @@ func (s *Server) handlePipelineAPI(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(pipelinePayload{
-		Nodes: s.cfg.Theme.NodeDescriptions(),
+		Nodes: s.vocabOverlay(s.cfg.Theme.NodeDescriptions()),
 	})
+}
+
+// vocabOverlay enriches node descriptions with RichVocabulary descriptions
+// when available. Falls back to Theme-provided descriptions for unknown nodes.
+func (s *Server) vocabOverlay(base map[string]string) map[string]string {
+	if s.cfg.Vocab == nil {
+		return base
+	}
+	out := make(map[string]string, len(base))
+	for code, desc := range base {
+		if d := s.cfg.Vocab.Description(code); d != "" {
+			out[code] = d
+		} else {
+			out[code] = desc
+		}
+	}
+	return out
 }
 
 func (s *Server) handleKabukiAPI(w http.ResponseWriter, _ *http.Request) {

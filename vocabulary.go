@@ -56,12 +56,20 @@ func (v *MapVocabulary) Name(code string) string {
 
 // NameWithCode formats as "Human Name (code)" for dual-audience contexts.
 // If the vocabulary returns the code unchanged, only the code is returned.
+// When v implements RichVocabulary and the entry has a Short field, the
+// parenthetical uses Short instead of the raw code: "Recall (F0)".
 func NameWithCode(v Vocabulary, code string) string {
 	name := v.Name(code)
 	if name == code {
 		return code
 	}
-	return name + " (" + code + ")"
+	paren := code
+	if rv, ok := v.(RichVocabulary); ok {
+		if s := rv.Short(code); s != "" && s != code {
+			paren = s
+		}
+	}
+	return name + " (" + paren + ")"
 }
 
 // ChainVocabulary tries multiple vocabularies in order. The first one that
@@ -76,4 +84,141 @@ func (c ChainVocabulary) Name(code string) string {
 		}
 	}
 	return code
+}
+
+// --- Rich Vocabulary ---
+
+// VocabEntry holds structured metadata for a machine code:
+// Short (abbreviation), Long (human name), and Description (tooltip/hover text).
+type VocabEntry struct {
+	Short       string
+	Long        string
+	Description string
+}
+
+// RichVocabulary extends Vocabulary with structured metadata access.
+// Implementations must be safe for concurrent use.
+type RichVocabulary interface {
+	Vocabulary
+	Entry(code string) (VocabEntry, bool)
+	Short(code string) string
+	Description(code string) string
+}
+
+// RichMapVocabulary is a thread-safe, register-based rich vocabulary.
+// Name() returns Long, falling back to Short, falling back to code itself.
+type RichMapVocabulary struct {
+	mu      sync.RWMutex
+	entries map[string]VocabEntry
+}
+
+// NewRichMapVocabulary returns an empty rich vocabulary ready for registration.
+func NewRichMapVocabulary() *RichMapVocabulary {
+	return &RichMapVocabulary{entries: make(map[string]VocabEntry)}
+}
+
+// RegisterEntry adds a single code → VocabEntry mapping. Returns the receiver for chaining.
+func (v *RichMapVocabulary) RegisterEntry(code string, entry VocabEntry) *RichMapVocabulary {
+	v.mu.Lock()
+	v.entries[code] = entry
+	v.mu.Unlock()
+	return v
+}
+
+// RegisterEntries adds multiple code → VocabEntry mappings. Returns the receiver for chaining.
+func (v *RichMapVocabulary) RegisterEntries(entries map[string]VocabEntry) *RichMapVocabulary {
+	v.mu.Lock()
+	for code, entry := range entries {
+		v.entries[code] = entry
+	}
+	v.mu.Unlock()
+	return v
+}
+
+// Name returns Long (falling back to Short, then code) for backward compatibility
+// with the Vocabulary interface.
+func (v *RichMapVocabulary) Name(code string) string {
+	v.mu.RLock()
+	e, ok := v.entries[code]
+	v.mu.RUnlock()
+	if !ok {
+		return code
+	}
+	if e.Long != "" {
+		return e.Long
+	}
+	if e.Short != "" {
+		return e.Short
+	}
+	return code
+}
+
+// Entry returns the full VocabEntry for code, or (zero, false) if unregistered.
+func (v *RichMapVocabulary) Entry(code string) (VocabEntry, bool) {
+	v.mu.RLock()
+	e, ok := v.entries[code]
+	v.mu.RUnlock()
+	return e, ok
+}
+
+// Short returns the short name for code, or "" if unregistered.
+func (v *RichMapVocabulary) Short(code string) string {
+	v.mu.RLock()
+	e, ok := v.entries[code]
+	v.mu.RUnlock()
+	if ok {
+		return e.Short
+	}
+	return ""
+}
+
+// Description returns the description for code, or "" if unregistered.
+func (v *RichMapVocabulary) Description(code string) string {
+	v.mu.RLock()
+	e, ok := v.entries[code]
+	v.mu.RUnlock()
+	if ok {
+		return e.Description
+	}
+	return ""
+}
+
+// RichChainVocabulary tries multiple RichVocabulary implementations in order.
+// The first one that has an entry for the code wins.
+type RichChainVocabulary []RichVocabulary
+
+func (c RichChainVocabulary) Name(code string) string {
+	for _, v := range c {
+		if _, ok := v.Entry(code); ok {
+			return v.Name(code)
+		}
+	}
+	return code
+}
+
+func (c RichChainVocabulary) Entry(code string) (VocabEntry, bool) {
+	for _, v := range c {
+		if e, ok := v.Entry(code); ok {
+			return e, true
+		}
+	}
+	return VocabEntry{}, false
+}
+
+func (c RichChainVocabulary) Short(code string) string {
+	for _, v := range c {
+		if _, ok := v.Entry(code); ok {
+			return v.Short(code)
+		}
+	}
+	return ""
+}
+
+func (c RichChainVocabulary) Description(code string) string {
+	for _, v := range c {
+		if _, ok := v.Entry(code); ok {
+			return v.Description(code)
+		}
+	}
+	return ""
 }

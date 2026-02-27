@@ -136,7 +136,7 @@ func TestHover_Element(t *testing.T) {
 		Content: "    element: fire",
 	}
 
-	hover := computeHover(doc, protocol.Position{Line: 0, Character: 13})
+	hover := computeHover(doc, protocol.Position{Line: 0, Character: 13}, nil)
 	if hover == nil {
 		t.Fatal("expected hover for element")
 	}
@@ -151,7 +151,7 @@ func TestHover_Persona(t *testing.T) {
 		Content: "    persona: herald",
 	}
 
-	hover := computeHover(doc, protocol.Position{Line: 0, Character: 14})
+	hover := computeHover(doc, protocol.Position{Line: 0, Character: 14}, nil)
 	if hover == nil {
 		t.Fatal("expected hover for persona")
 	}

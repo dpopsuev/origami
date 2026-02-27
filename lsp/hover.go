@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	framework "github.com/dpopsuev/origami"
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
 )
@@ -54,14 +55,14 @@ func (s *Server) handleHover(ctx context.Context, reply jsonrpc2.Replier, req js
 		return reply(ctx, nil, nil)
 	}
 
-	hover := computeHover(doc, params.Position)
+	hover := computeHover(doc, params.Position, s.vocab)
 	if hover == nil {
 		return reply(ctx, nil, nil)
 	}
 	return reply(ctx, hover, nil)
 }
 
-func computeHover(doc *document, pos protocol.Position) *protocol.Hover {
+func computeHover(doc *document, pos protocol.Position, vocab framework.RichVocabulary) *protocol.Hover {
 	lines := strings.Split(doc.Content, "\n")
 	if int(pos.Line) >= len(lines) {
 		return nil
@@ -116,6 +117,11 @@ func computeHover(doc *document, pos protocol.Position) *protocol.Hover {
 					}
 					if n.Element != "" {
 						md += fmt.Sprintf("**Element:** %s\n\n", n.Element)
+					}
+					if vocab != nil {
+						if d := vocab.Description(n.Name); d != "" {
+							md += fmt.Sprintf("---\n\n%s\n", d)
+						}
 					}
 					return &protocol.Hover{
 						Contents: protocol.MarkupContent{Kind: protocol.Markdown, Value: md},

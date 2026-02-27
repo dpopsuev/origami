@@ -24,6 +24,7 @@ type Server struct {
 	docs        map[uri.URI]*document
 	ready       bool
 	kamiBridge  *KamiBridge
+	vocab       framework.RichVocabulary
 }
 
 type document struct {
@@ -237,4 +238,11 @@ func (s *Server) KamiBridge() *KamiBridge {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.kamiBridge
+}
+
+// SetVocab sets the rich vocabulary for hover enrichment.
+func (s *Server) SetVocab(v framework.RichVocabulary) {
+	s.mu.Lock()
+	s.vocab = v
+	s.mu.Unlock()
 }
