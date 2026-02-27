@@ -1,6 +1,6 @@
 # Contract — rich-vocabulary
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** `Vocabulary` supports structured metadata (short name, long name, description) and is wired into Kami hover, LSP hover, and Kabuki cards.  
 **Serves:** Polishing & Presentation (should)
 

@@ -1,0 +1,7 @@
+# completed/polishing/ Index
+
+Contracts completed during the Polishing & Presentation goal phase.
+
+| Contract | Goal |
+|----------|------|
+| `rich-vocabulary.md` | `RichVocabulary` interface + `RichMapVocabulary` + Kami/LSP/Kabuki wiring. Bundle 2: Rich Names. |

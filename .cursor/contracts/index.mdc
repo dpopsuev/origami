@@ -12,7 +12,6 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
-| `rich-vocabulary.md` | Evolve `Vocabulary` to `RichVocabulary` with short/long/description metadata; wire into Kami hover, LSP hover, Kabuki cards, adapter YAML. | should |
 | `domain-calibration.md` | Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality. | nice |
 | `origami-lsp.md` | Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
 | `washi.md` | Washi — enterprise pipeline management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
@@ -51,6 +50,10 @@
 - `completed/framework/marshaller-step-schema-factory.md` — Replace freeform `submit_artifact` with schema-validated `submit_step` tool using StepSchemas as a step factory. Complete.
 - `completed/framework/origami-cursor-first-architecture.md` — CLIDispatcher, skill scaffold, provider routing. Cursor as first-class citizen. Complete.
 - `completed/framework/origami-papercup-v2-hardening.md` — Align Cursor Skill guide with Papercup v2 choreography. Complete.
+
+### Polishing phase
+
+- `completed/polishing/rich-vocabulary.md` — `RichVocabulary` interface + `RichMapVocabulary` + Kami/LSP/Kabuki wiring. Bundle 2: Rich Names. Complete.
 
 ### Analysis (all done)
 
