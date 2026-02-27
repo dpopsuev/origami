@@ -26,12 +26,12 @@ Contracts are grouped into cross-repo tandem bundles. Origami ships framework pr
 - Bundle 1: Principled Metrics -- DONE (declarative ScoreCard, MetricDef, CostBill)
 - Bundle 2: Rich Names -- DONE (RichVocabulary interface, Kami/LSP/Kabuki wiring)
 - Bundle 3: Smart Routing -- DONE (ReadPolicy on Source, KnowledgeSourceRouter)
+- Bundle 4: Demo Polish -- DONE (three-act Kabuki, War Room, Laws of UX, dark mode, responsive)
 
 **Remaining:**
 
 | Tier | Contract | Tandem | Unblocks in Asterisk |
 |------|----------|--------|----------------------|
-| **should** | *Asterisk: `improve-asterisk-kabuki-demo`* | Bundle 4: Demo Polish | Demo rewrite with principled results |
 | **vision** | `origami-lsp` | Bundle 5: Developer Tooling | Washi Phase 2 (Monaco + LSP embed) |
 | **vision** | `washi` | Bundle 5: Developer Tooling | Operational UI for all Origami consumers |
 
