@@ -221,11 +221,150 @@ func TestDefaultObservability_ReturnsTwoObservers(t *testing.T) {
 		t.Fatalf("expected 2 observers, got %d", len(obs))
 	}
 
-	// First should be OTel, second should be Prometheus
 	if _, ok := obs[0].(*OTelObserver); !ok {
 		t.Error("first observer should be *OTelObserver")
 	}
 	if _, ok := obs[1].(*PrometheusCollector); !ok {
 		t.Error("second observer should be *PrometheusCollector")
+	}
+}
+
+func TestPrometheusCollector_TokenMetrics(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	col := NewPrometheusCollector(reg)
+
+	col.StartWalk("rca-pipeline")
+	col.RecordTokens("recall", 500, 200, 0.0045)
+	col.RecordTokens("triage", 300, 100, 0.0024)
+
+	families, err := reg.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	findMetric := func(name string) *dto.MetricFamily {
+		for _, f := range families {
+			if f.GetName() == name {
+				return f
+			}
+		}
+		return nil
+	}
+
+	tokens := findMetric("origami_tokens_total")
+	if tokens == nil {
+		t.Fatal("missing origami_tokens_total")
+	}
+
+	totalTokens := 0.0
+	for _, m := range tokens.GetMetric() {
+		totalTokens += m.GetCounter().GetValue()
+	}
+	if totalTokens != 1100 {
+		t.Errorf("total tokens = %v, want 1100 (500+200+300+100)", totalTokens)
+	}
+
+	cost := findMetric("origami_tokens_cost_usd")
+	if cost == nil {
+		t.Fatal("missing origami_tokens_cost_usd")
+	}
+	totalCost := 0.0
+	for _, m := range cost.GetMetric() {
+		totalCost += m.GetCounter().GetValue()
+	}
+	expected := 0.0045 + 0.0024
+	if totalCost < expected-0.0001 || totalCost > expected+0.0001 {
+		t.Errorf("total cost = %v, want ~%v", totalCost, expected)
+	}
+}
+
+func TestPrometheusCollector_DispatchMetrics(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	col := NewPrometheusCollector(reg)
+
+	col.RecordDispatch("cursor", "recall", 2*time.Second, nil)
+	col.RecordDispatch("cursor", "triage", 500*time.Millisecond, fmt.Errorf("timeout"))
+	col.RecordDispatch("openai", "synthesis", 1*time.Second, nil)
+
+	families, err := reg.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	findMetric := func(name string) *dto.MetricFamily {
+		for _, f := range families {
+			if f.GetName() == name {
+				return f
+			}
+		}
+		return nil
+	}
+
+	dur := findMetric("origami_dispatch_duration_seconds")
+	if dur == nil {
+		t.Fatal("missing origami_dispatch_duration_seconds")
+	}
+	totalObs := uint64(0)
+	for _, m := range dur.GetMetric() {
+		totalObs += m.GetHistogram().GetSampleCount()
+	}
+	if totalObs != 3 {
+		t.Errorf("dispatch duration observations = %d, want 3", totalObs)
+	}
+
+	errs := findMetric("origami_dispatch_errors_total")
+	if errs == nil {
+		t.Fatal("missing origami_dispatch_errors_total")
+	}
+	errTotal := 0.0
+	for _, m := range errs.GetMetric() {
+		errTotal += m.GetCounter().GetValue()
+	}
+	if errTotal != 1 {
+		t.Errorf("dispatch errors = %v, want 1", errTotal)
+	}
+}
+
+func TestPrometheusCollector_AllNineMetrics(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	col := NewPrometheusCollector(reg)
+
+	col.StartWalk("test-pipeline")
+	col.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "a"})
+	col.OnEvent(framework.WalkEvent{Type: framework.EventNodeExit, Node: "a", Elapsed: 100 * time.Millisecond})
+	col.OnEvent(framework.WalkEvent{Type: framework.EventTransition, Node: "a",
+		Metadata: map[string]any{"from": "a", "to": "b"}})
+	col.OnEvent(framework.WalkEvent{Type: framework.EventWalkComplete})
+	col.RecordTokens("a", 100, 50, 0.001)
+	col.RecordDispatch("default", "a", 100*time.Millisecond, nil)
+	col.RecordDispatch("default", "a", 50*time.Millisecond, fmt.Errorf("fail"))
+	col.LoopsTotal.WithLabelValues("test-pipeline", "a").Inc()
+
+	families, err := reg.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []string{
+		"origami_walk_node_duration_seconds",
+		"origami_walk_edge_transitions_total",
+		"origami_walk_active",
+		"origami_walk_completed_total",
+		"origami_walk_loops_total",
+		"origami_tokens_total",
+		"origami_tokens_cost_usd",
+		"origami_dispatch_duration_seconds",
+		"origami_dispatch_errors_total",
+	}
+
+	found := make(map[string]bool)
+	for _, f := range families {
+		found[f.GetName()] = true
+	}
+
+	for _, name := range expected {
+		if !found[name] {
+			t.Errorf("missing metric %q", name)
+		}
 	}
 }

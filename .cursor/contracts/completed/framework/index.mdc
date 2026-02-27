@@ -40,3 +40,13 @@
 - `kabuki-presentation-engine.md` — Kabuki data-driven presentation SPA: KabukiConfig interface, /api/theme + /api/pipeline + /api/kabuki endpoints, 12 section components, element selector, scroll-snap + keyboard nav.
 - `origami-lint.md` — Rule-based pipeline YAML linter: 24 rules (S1-S11, G1-G7, B1-B6), 4 profiles, auto-fix, CLI integration, YAML line resolver.
 - `prompt-calibration.md` — StepAnalyzer, TuningProposal, PromptCalibrationLoop for calibration-driven prompt tuning.
+- `consumer-cli-scaffold.md` — 8 perennial CLI commands (`analyze`, `dataset`, `calibrate`, `pipeline`, `consume`, `serve`, `demo`, `profile`). `origami.NewCLI()` builder API.
+- `origami-adapters.md` — Adapter format (FQCNs, MergeAdapters, manifest, CLI). Helper bundles connecting graph to external systems.
+- `origami-marbles.md` — Marble type (atomic/composite, MarbleRegistry, subgraph encapsulation, Kami fold/unfold). Reusable graph nodes.
+- `memory-evolution.md` — Namespaced, searchable, persistent MemoryStore. WithTaggedMemory RunOption.
+- `origami-api-hygiene.md` — Configurable ModelRegistry, curate.Source rename, parameterized probe stimuli.
+- `e2e-dsl-testing.md` — E2E walk tests for every framework feature. Cross-cutting test gates.
+- `durable-execution.md` — Checkpointer interface + HITL Interrupt/Resume. JSONCheckpointer + SQLiteCheckpointer.
+- `provider-resilience.md` — Provider fallback chains + intent classifier. WithFallbacks, OnFallback callback.
+- `pipeline-efficiency.md` — Node caching + fan-in merge strategies. InMemoryCache with TTL, ListArtifact merge.
+- `origami-observability.md` — Day-0 OTel traces + Prometheus metrics (9 metrics). TokenTracker Prometheus bridge. Dispatch duration/error tracking. CLI WithObservability. `/metrics` on KamiServer.

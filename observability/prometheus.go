@@ -2,18 +2,27 @@ package observability
 
 import (
 	"sync"
+	"time"
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // PrometheusCollector translates WalkEvents into Prometheus metrics.
+// It also exposes RecordTokens and RecordDispatch for bridging with
+// the dispatch layer without creating import cycles.
 type PrometheusCollector struct {
 	NodeDuration     *prometheus.HistogramVec
 	EdgeTransitions  *prometheus.CounterVec
 	WalkActive       *prometheus.GaugeVec
 	WalkCompleted    *prometheus.CounterVec
 	LoopsTotal       *prometheus.CounterVec
+
+	TokensTotal      *prometheus.CounterVec
+	TokensCostUSD    *prometheus.CounterVec
+
+	DispatchDuration *prometheus.HistogramVec
+	DispatchErrors   *prometheus.CounterVec
 
 	Registry *prometheus.Registry
 
@@ -51,9 +60,32 @@ func NewPrometheusCollector(reg *prometheus.Registry) *PrometheusCollector {
 			Name: "origami_walk_loops_total",
 			Help: "Total loop iterations.",
 		}, []string{"pipeline", "node"}),
+
+		TokensTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "origami_tokens_total",
+			Help: "Total LLM tokens consumed.",
+		}, []string{"pipeline", "step", "direction"}),
+		TokensCostUSD: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "origami_tokens_cost_usd",
+			Help: "Estimated LLM token cost in USD.",
+		}, []string{"pipeline", "step"}),
+
+		DispatchDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "origami_dispatch_duration_seconds",
+			Help:    "Duration of dispatch calls in seconds.",
+			Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120},
+		}, []string{"provider", "step"}),
+		DispatchErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "origami_dispatch_errors_total",
+			Help: "Total dispatch errors by provider and step.",
+		}, []string{"provider", "step"}),
 	}
 
-	reg.MustRegister(c.NodeDuration, c.EdgeTransitions, c.WalkActive, c.WalkCompleted, c.LoopsTotal)
+	reg.MustRegister(
+		c.NodeDuration, c.EdgeTransitions, c.WalkActive, c.WalkCompleted, c.LoopsTotal,
+		c.TokensTotal, c.TokensCostUSD,
+		c.DispatchDuration, c.DispatchErrors,
+	)
 	return c
 }
 
@@ -104,4 +136,24 @@ func (c *PrometheusCollector) OnEvent(e framework.WalkEvent) {
 func (c *PrometheusCollector) StartWalk(pipeline string) {
 	c.SetPipeline(pipeline)
 	c.WalkActive.WithLabelValues(pipeline).Inc()
+}
+
+// RecordTokens increments token counters for a dispatch step.
+// direction should be "prompt" or "artifact".
+func (c *PrometheusCollector) RecordTokens(step string, promptTokens, artifactTokens int, costUSD float64) {
+	c.mu.Lock()
+	pipeline := c.pipeline
+	c.mu.Unlock()
+
+	c.TokensTotal.WithLabelValues(pipeline, step, "prompt").Add(float64(promptTokens))
+	c.TokensTotal.WithLabelValues(pipeline, step, "artifact").Add(float64(artifactTokens))
+	c.TokensCostUSD.WithLabelValues(pipeline, step).Add(costUSD)
+}
+
+// RecordDispatch records a dispatch duration and optional error.
+func (c *PrometheusCollector) RecordDispatch(provider, step string, duration time.Duration, err error) {
+	c.DispatchDuration.WithLabelValues(provider, step).Observe(duration.Seconds())
+	if err != nil {
+		c.DispatchErrors.WithLabelValues(provider, step).Inc()
+	}
 }

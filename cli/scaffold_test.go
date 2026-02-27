@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	framework "github.com/dpopsuev/origami"
 	"github.com/spf13/cobra"
 )
 
@@ -215,6 +216,65 @@ func TestBuild_HelpOutput(t *testing.T) {
 		if !strings.Contains(help, sub) {
 			t.Errorf("help output missing %q", sub)
 		}
+	}
+}
+
+func TestBuild_DefaultObservability(t *testing.T) {
+	c, err := NewCLI("test", "test tool").Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obs := c.Observers()
+	if len(obs) != 2 {
+		t.Fatalf("default observers count = %d, want 2", len(obs))
+	}
+	if c.MetricsHandler() == nil {
+		t.Error("MetricsHandler should be non-nil with default observability")
+	}
+	if c.PrometheusRegistry() == nil {
+		t.Error("PrometheusRegistry should be non-nil with default observability")
+	}
+}
+
+func TestBuild_WithObservabilityEmpty(t *testing.T) {
+	c, err := NewCLI("test", "test tool").
+		WithObservability().
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obs := c.Observers()
+	if len(obs) != 0 {
+		t.Fatalf("empty WithObservability should yield 0 observers, got %d", len(obs))
+	}
+	if c.MetricsHandler() != nil {
+		t.Error("MetricsHandler should be nil when observability is disabled")
+	}
+}
+
+func TestBuild_WithObservabilityCustom(t *testing.T) {
+	var events []string
+	custom := framework.WalkObserverFunc(func(e framework.WalkEvent) {
+		events = append(events, string(e.Type))
+	})
+
+	c, err := NewCLI("test", "test tool").
+		WithObservability(custom).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obs := c.Observers()
+	if len(obs) != 1 {
+		t.Fatalf("observers count = %d, want 1", len(obs))
+	}
+
+	obs[0].OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter})
+	if len(events) != 1 {
+		t.Errorf("custom observer should have received 1 event, got %d", len(events))
 	}
 }
 

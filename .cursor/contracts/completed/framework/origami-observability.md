@@ -1,6 +1,6 @@
 # Contract — Origami Observability
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Day-0 cloud-native observability for Origami pipelines — every walk is an OpenTelemetry trace, every node is metered via Prometheus, zero config required by default.  
 **Serves:** System Refinement (should)
 
@@ -211,3 +211,5 @@ Phases 1-4 are Origami core. Phase 5 touches `dispatch/token.go`. Phase 6 depend
 ## Notes
 
 2026-02-26 — Contract created. Motivated by the insight that pipeline walks ARE distributed traces and node visits ARE metric events. The cloud-native observability stack (OTel + Prometheus + Grafana + Jaeger) maps perfectly onto Origami's existing `WalkObserver` and `TokenTracker` interfaces. Placed in Sprint R1 because the TokiMeter migration (in `principled-calibration-scorecard`) must design TokenTracker counters Prometheus-friendly from the start — retrofitting later would mean a second breaking change.
+
+2026-02-27 — **Complete.** R6 sprint closed all remaining gaps: (1) `origami_tokens_total` + `origami_tokens_cost_usd` Prometheus counters bridged via `InMemoryTokenTracker.OnRecord` hook; (2) `origami_dispatch_duration_seconds` histogram + `origami_dispatch_errors_total` counter bridged via `TokenTrackingDispatcher.OnDispatch` hook; (3) `WithObservability()` on CLI scaffold with auto-default `DefaultObservability()` and `MetricsHandler()` accessor for KamiServer; (4) full 9-metric integration test. All 3 repos pass `go test -race`.

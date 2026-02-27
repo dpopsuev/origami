@@ -193,6 +193,92 @@ func TestFormatTokenSummary(t *testing.T) {
 	}
 }
 
+func TestInMemoryTokenTracker_OnRecordHook(t *testing.T) {
+	tracker := NewTokenTracker()
+
+	var hookCalls []struct {
+		step    string
+		costUSD float64
+	}
+	tracker.OnRecord(func(r TokenRecord, costUSD float64) {
+		hookCalls = append(hookCalls, struct {
+			step    string
+			costUSD float64
+		}{r.Step, costUSD})
+	})
+
+	tracker.Record(TokenRecord{
+		CaseID:         "C1",
+		Step:           "recall",
+		PromptTokens:   1000,
+		ArtifactTokens: 200,
+	})
+	tracker.Record(TokenRecord{
+		CaseID:         "C1",
+		Step:           "triage",
+		PromptTokens:   500,
+		ArtifactTokens: 100,
+	})
+
+	if len(hookCalls) != 2 {
+		t.Fatalf("hook calls = %d, want 2", len(hookCalls))
+	}
+	if hookCalls[0].step != "recall" {
+		t.Errorf("hook[0].step = %q, want %q", hookCalls[0].step, "recall")
+	}
+	if hookCalls[1].step != "triage" {
+		t.Errorf("hook[1].step = %q, want %q", hookCalls[1].step, "triage")
+	}
+	if hookCalls[0].costUSD <= 0 {
+		t.Error("hook[0].costUSD should be positive")
+	}
+}
+
+func TestTokenTrackingDispatcher_OnDispatchHook(t *testing.T) {
+	inner := &stubDispatcher{response: []byte(`{"ok":true}`)}
+	tracker := NewTokenTracker()
+	ttd := NewTokenTrackingDispatcher(inner, tracker)
+	ttd.SetProvider("cursor")
+
+	var hookCalls []struct {
+		provider string
+		step     string
+		hasErr   bool
+	}
+	ttd.OnDispatch(func(provider, step string, _ time.Duration, err error) {
+		hookCalls = append(hookCalls, struct {
+			provider string
+			step     string
+			hasErr   bool
+		}{provider, step, err != nil})
+	})
+
+	_, _ = ttd.Dispatch(DispatchContext{
+		CaseID:     "C1",
+		Step:       "recall",
+		PromptPath: "/dev/null",
+	})
+
+	if len(hookCalls) != 1 {
+		t.Fatalf("hook calls = %d, want 1", len(hookCalls))
+	}
+	if hookCalls[0].provider != "cursor" {
+		t.Errorf("provider = %q, want %q", hookCalls[0].provider, "cursor")
+	}
+	if hookCalls[0].step != "recall" {
+		t.Errorf("step = %q, want %q", hookCalls[0].step, "recall")
+	}
+}
+
+type stubDispatcher struct {
+	response []byte
+	err      error
+}
+
+func (s *stubDispatcher) Dispatch(_ DispatchContext) ([]byte, error) {
+	return s.response, s.err
+}
+
 func strContains(s, sub string) bool {
 	for i := 0; i <= len(s)-len(sub); i++ {
 		if s[i:i+len(sub)] == sub {

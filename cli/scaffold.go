@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -11,6 +12,9 @@ import (
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/kami"
 	"github.com/dpopsuev/origami/lint"
+	"github.com/dpopsuev/origami/observability"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 )
 
@@ -86,8 +90,10 @@ type CLIBuilder struct {
 	serve       *ServeConfig
 	demo        *DemoConfig
 	profile     *ProfileConfig
-	extra       []*cobra.Command
-	observers   []func() // observability setup hooks
+	extra        []*cobra.Command
+	observers    []framework.WalkObserver
+	obsExplicit  bool
+	promReg      *prometheus.Registry
 }
 
 // NewCLI creates a CLI builder for the named tool.
@@ -145,9 +151,38 @@ func (b *CLIBuilder) WithExtraCommand(cmd *cobra.Command) *CLIBuilder {
 	return b
 }
 
+// WithObservability registers walk observers for the CLI.
+// If not called, Build() uses DefaultObservability() automatically.
+// Call with no arguments to disable observability entirely.
+func (b *CLIBuilder) WithObservability(observers ...framework.WalkObserver) *CLIBuilder {
+	b.observers = observers
+	b.obsExplicit = true
+	return b
+}
+
 // CLI is the assembled command tree ready for execution.
 type CLI struct {
-	root *cobra.Command
+	root           *cobra.Command
+	observers      []framework.WalkObserver
+	promRegistry   *prometheus.Registry
+	metricsHandler http.Handler
+}
+
+// Observers returns the configured walk observers.
+func (c *CLI) Observers() []framework.WalkObserver {
+	return c.observers
+}
+
+// MetricsHandler returns a Prometheus /metrics HTTP handler, or nil
+// if no Prometheus collector was configured.
+func (c *CLI) MetricsHandler() http.Handler {
+	return c.metricsHandler
+}
+
+// PrometheusRegistry returns the Prometheus registry used by observability,
+// or nil if observability is disabled.
+func (c *CLI) PrometheusRegistry() *prometheus.Registry {
+	return c.promRegistry
 }
 
 // Build assembles the Cobra command tree. Returns an error if required
@@ -165,6 +200,30 @@ func (b *CLIBuilder) Build() (*CLI, error) {
 
 	if b.version != "" {
 		root.Version = b.version
+	}
+
+	c := &CLI{root: root}
+
+	if b.obsExplicit {
+		c.observers = b.observers
+	} else {
+		reg := prometheus.NewRegistry()
+		c.observers = observability.DefaultObservabilityWithRegistry(reg)
+		b.promReg = reg
+	}
+
+	if b.promReg == nil {
+		for _, obs := range c.observers {
+			if pc, ok := obs.(*observability.PrometheusCollector); ok {
+				b.promReg = pc.Registry
+				break
+			}
+		}
+	}
+
+	if b.promReg != nil {
+		c.promRegistry = b.promReg
+		c.metricsHandler = promhttp.HandlerFor(b.promReg, promhttp.HandlerOpts{})
 	}
 
 	if b.analyzeFn != nil {
@@ -196,7 +255,7 @@ func (b *CLIBuilder) Build() (*CLI, error) {
 		root.AddCommand(cmd)
 	}
 
-	return &CLI{root: root}, nil
+	return c, nil
 }
 
 // Execute runs the CLI with os.Args. The standard entry point.

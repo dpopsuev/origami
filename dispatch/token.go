@@ -70,11 +70,16 @@ type TokenSummary struct {
 	TotalWallClockMs    int64                       `json:"total_wall_clock_ms"`
 }
 
+// TokenRecordHook is called after each token record is appended.
+// Use it to bridge token tracking with external systems (e.g., Prometheus).
+type TokenRecordHook func(r TokenRecord, costUSD float64)
+
 // InMemoryTokenTracker is a thread-safe in-memory token tracker.
 type InMemoryTokenTracker struct {
 	mu      sync.Mutex
 	records []TokenRecord
 	cost    CostConfig
+	hooks   []TokenRecordHook
 }
 
 // NewTokenTracker creates an InMemoryTokenTracker with default cost config.
@@ -87,11 +92,27 @@ func NewTokenTrackerWithCost(c CostConfig) *InMemoryTokenTracker {
 	return &InMemoryTokenTracker{cost: c}
 }
 
-// Record appends a token record (thread-safe).
-func (t *InMemoryTokenTracker) Record(r TokenRecord) {
+// OnRecord registers a hook invoked after each Record call.
+func (t *InMemoryTokenTracker) OnRecord(hook TokenRecordHook) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	t.hooks = append(t.hooks, hook)
+}
+
+// Record appends a token record (thread-safe) and invokes hooks.
+func (t *InMemoryTokenTracker) Record(r TokenRecord) {
+	t.mu.Lock()
 	t.records = append(t.records, r)
+	inputCost := float64(r.PromptTokens) / 1_000_000 * t.cost.InputPricePerMToken
+	outputCost := float64(r.ArtifactTokens) / 1_000_000 * t.cost.OutputPricePerMToken
+	costUSD := inputCost + outputCost
+	hooks := make([]TokenRecordHook, len(t.hooks))
+	copy(hooks, t.hooks)
+	t.mu.Unlock()
+
+	for _, h := range hooks {
+		h(r, costUSD)
+	}
 }
 
 // Summary computes the aggregate token summary.
@@ -185,16 +206,32 @@ func EstimateTokens(bytes int) int {
 	return bytes / 4
 }
 
+// DispatchHook is called after each dispatch with timing and error info.
+type DispatchHook func(provider, step string, duration time.Duration, err error)
+
 // TokenTrackingDispatcher wraps any Dispatcher and records token usage
-// for each dispatch call.
+// for each dispatch call. Optional DispatchHooks receive timing/error data
+// for bridging with metrics systems.
 type TokenTrackingDispatcher struct {
-	inner   Dispatcher
-	tracker TokenTracker
+	inner         Dispatcher
+	tracker       TokenTracker
+	provider      string
+	dispatchHooks []DispatchHook
 }
 
 // NewTokenTrackingDispatcher wraps a dispatcher with token tracking.
 func NewTokenTrackingDispatcher(inner Dispatcher, tracker TokenTracker) *TokenTrackingDispatcher {
 	return &TokenTrackingDispatcher{inner: inner, tracker: tracker}
+}
+
+// SetProvider sets the provider label used for dispatch hooks.
+func (d *TokenTrackingDispatcher) SetProvider(name string) {
+	d.provider = name
+}
+
+// OnDispatch registers a hook invoked after each Dispatch call.
+func (d *TokenTrackingDispatcher) OnDispatch(hook DispatchHook) {
+	d.dispatchHooks = append(d.dispatchHooks, hook)
 }
 
 // Dispatch delegates to the inner dispatcher while recording token metrics.
@@ -204,9 +241,18 @@ func (d *TokenTrackingDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) 
 		promptBytes = int(info.Size())
 	}
 
+	provider := d.provider
+	if ctx.Provider != "" {
+		provider = ctx.Provider
+	}
+
 	start := time.Now()
 	data, err := d.inner.Dispatch(ctx)
 	elapsed := time.Since(start)
+
+	for _, h := range d.dispatchHooks {
+		h(provider, ctx.Step, elapsed, err)
+	}
 
 	if err != nil {
 		return data, err

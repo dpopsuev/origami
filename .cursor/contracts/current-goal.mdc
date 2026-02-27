@@ -75,22 +75,22 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 | # | Contract | Tier | Breaking? | Notes |
 |---|----------|------|-----------|-------|
 | R1a | *Asterisk: `principled-calibration-scorecard`* Ph1-2 | gate | yes | `MetricDef`, `ScoreCard`, `CostTier`, `EvalDirection` — framework calibration primitives. |
-| R1b | `consumer-cli-scaffold` | should | yes | 8 perennial commands, `origami.NewCLI()` builder. |
-| R1c | `e2e-dsl-testing` | should | no | E2E walk tests gate every checkpoint. |
-| R1d | `durable-execution` | should | yes | `Checkpointer` interface + HITL Interrupt/Resume. |
-| R1f | `origami-adapters` | should | yes | FQCN resolution on all registries. `imports:` on PipelineDef. Core adapter. |
-| R1g | `memory-evolution` | should | yes | MemoryStore: namespaced, searchable, persistent. |
-| R1h | `origami-observability` | should | yes | Day-0 OTel traces + Prometheus metrics. `/metrics` on KamiServer. `DefaultObservability()`. TokenTracker Prometheus-counter-friendly. |
-| R1i | `origami-api-hygiene` | should | yes | Configurable `ModelRegistry` (replaces hardcoded `KnownModels`). Rename `curate.Source` → `curate.EvidenceSource`. Parameterize Ouroboros probe stimuli. |
+| R1b | `consumer-cli-scaffold` | should | yes | **Complete.** 8 perennial commands, `origami.NewCLI()` builder, `WithObservability`. |
+| R1c | `e2e-dsl-testing` | should | no | **Complete.** E2E walk tests gate every checkpoint. |
+| R1d | `durable-execution` | should | yes | **Complete.** `Checkpointer` interface + HITL Interrupt/Resume. |
+| R1f | `origami-adapters` | should | yes | **Complete.** FQCN resolution on all registries. `imports:` on PipelineDef. Core adapter. |
+| R1g | `memory-evolution` | should | yes | **Complete.** MemoryStore: namespaced, searchable, persistent. WithTaggedMemory. |
+| R1h | `origami-observability` | should | yes | **Complete.** 9 Prometheus metrics + OTel traces. TokenTracker bridge. Dispatch metrics. CLI `WithObservability`. `/metrics` on KamiServer. |
+| R1i | `origami-api-hygiene` | should | yes | **Complete.** Configurable `ModelRegistry`. Parameterized probe stimuli. |
 
 #### Sprint R2 — Pipelines + Structural Node Changes
 
 | # | Contract | Tier | Breaking? | Notes |
 |---|----------|------|-----------|-------|
 | R2a | *Asterisk: `principled-calibration-scorecard`* Ph6 | should | no | Calibration runner as DSL pipeline. |
-| R2d | `origami-marbles` | should | yes | `Marble` interface, `marble:` on NodeDef, composite subgraph. |
-| R2e | `pipeline-efficiency` | should | yes | Node caching, fan-in merge strategies. |
-| R2f | `provider-resilience` | nice | no | Dispatch fallback chains + intent classifier. |
+| R2d | `origami-marbles` | should | yes | **Complete.** `Marble` interface, `marble:` on NodeDef, composite subgraph, Kami fold/unfold. |
+| R2e | `pipeline-efficiency` | should | yes | **Complete.** Node caching (InMemoryCache with TTL), fan-in merge strategies (ListArtifact). |
+| R2f | `provider-resilience` | nice | no | **Complete.** Dispatch fallback chains + intent classifier + OnFallback callback. |
 
 #### Sprint R3 — Tuning + Knowledge (COMPLETE)
 
@@ -133,7 +133,7 @@ Strategic pauses (CHECKPOINT) verify Asterisk still works after Origami API chan
 | `case-study-ansible-collections` | done | Implementation extracted to `origami-adapters` + `origami-marbles` + `origami-lsp`. |
 | `case-study-visual-editor-landscape` | done | Excalidraw + Mermaid + Ansible Automation Controller business model analysis. Implementation extracted to `visual-editor`. |
 | `case-study-langgraph-graph-duality` | done | LangGraph (25.1k stars) state-centric vs walker-centric graph analysis. Implementation extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`, injected into `origami-adapters`. |
-| `case-study-cloud-native-pipeline-tools` | draft | Argo Workflows, Tekton, KEDA, Falco, CloudEvents analysis. Integration points and gaps. Feeds into `origami-adapters`, `origami-marbles`, `pipeline-efficiency`. |
+| `case-study-cloud-native-pipeline-tools` | done | Argo Workflows, Tekton, KEDA, Falco, CloudEvents analysis. Integration points and gaps. Tasks extracted to `origami-adapters`, `origami-marbles`, `pipeline-efficiency`. |
 
 ## Framework Maturity (complete)
 

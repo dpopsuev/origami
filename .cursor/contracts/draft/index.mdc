@@ -4,16 +4,5 @@
 (No directories)
 
 ## Files
-- [framework] `consumer-cli-scaffold.md` — 8 perennial CLI commands (`analyze`, `dataset`, `calibrate`, `pipeline`, `consume`, `serve`, `demo`, `profile`). `origami.NewCLI()` builder API.
-- [framework] `origami-adapters.md` — Adapter format (FQCNs, MergeAdapters, manifest, CLI). Helper bundles connecting graph to external systems.
-- [framework] `origami-marbles.md` — Marble type (atomic/composite, MarbleRegistry, subgraph encapsulation, Kami fold/unfold). Reusable graph nodes.
-- [prod] `e2e-dsl-testing.md` — E2E walk tests for every framework feature. Cross-cutting test gates.
-- [prod] `durable-execution.md` — Checkpointer interface + HITL Interrupt/Resume.
 - [demo] `origami-lsp.md` — Language Server for pipeline YAML (color coding, virtual text, Kami live connection).
 - [demo] `visual-editor.md` — Drag-and-drop pipeline builder, bidirectional YAML sync, run management dashboard.
-- [prod] `provider-resilience.md` — Provider fallback chains + intent classifier.
-- [prod] `pipeline-efficiency.md` — Node caching + fan-in merge strategies.
-- [framework] `memory-evolution.md` — Namespaced, searchable, persistent MemoryStore.
-- [prod] `origami-observability.md` — Day-0 OTel traces + Prometheus metrics for pipeline walks. `/metrics` on KamiServer. `DefaultObservability()`.
-- [framework] `case-study-cloud-native-pipeline-tools.md` — CNCF tool analysis: Argo Workflows, Tekton, KEDA, Falco, CloudEvents vs Origami.
-- [framework] `origami-api-hygiene.md` — API cleanliness: configurable model registry, curate.Source rename to EvidenceSource, parameterized probe stimuli.
