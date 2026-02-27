@@ -219,3 +219,62 @@ func TestCatalog_AlwaysReadSources_Nil(t *testing.T) {
 		t.Errorf("nil catalog should return nil, got %v", got)
 	}
 }
+
+func TestRouter_LayeredRoute(t *testing.T) {
+	catalog := &KnowledgeSourceCatalog{
+		Sources: []Source{
+			{Name: "base-repo", Kind: SourceKindRepo, Tags: map[string]string{"layer": "base", "component": "ptp"}},
+			{Name: "version-docs", Kind: SourceKindDoc, Tags: map[string]string{"layer": "version", "version": "4.21"}},
+			{Name: "investigation-log", Kind: SourceKindDoc, Tags: map[string]string{"layer": "investigation", "launch": "33195"}},
+			{Name: "untagged", Kind: SourceKindRepo},
+			{Name: "always-doc", Kind: SourceKindDoc, ReadPolicy: ReadAlways},
+		},
+	}
+	router := NewRouter(catalog, RequestTagMatchRule{})
+
+	got := router.LayeredRoute(
+		map[string]string{"layer": "base"},
+		map[string]string{"layer": "version", "version": "4.21"},
+		map[string]string{"layer": "investigation", "launch": "33195"},
+	)
+
+	names := make(map[string]bool)
+	for _, s := range got {
+		names[s.Name] = true
+	}
+
+	if !names["always-doc"] {
+		t.Error("always-read source should be included")
+	}
+	if !names["base-repo"] {
+		t.Error("base layer source should be included")
+	}
+	if !names["version-docs"] {
+		t.Error("version layer source should be included")
+	}
+	if !names["investigation-log"] {
+		t.Error("investigation layer source should be included")
+	}
+	if names["untagged"] {
+		t.Error("untagged source should NOT be included")
+	}
+}
+
+func TestRouter_LayeredRoute_EmptyLayers(t *testing.T) {
+	router := NewRouter(testCatalog, RequestTagMatchRule{})
+	got := router.LayeredRoute(nil, nil, nil)
+	if len(got) != len(testCatalog.Sources) {
+		t.Errorf("empty layers should return all sources, got %d", len(got))
+	}
+}
+
+func TestRouter_LayeredRoute_NilCatalog(t *testing.T) {
+	router := NewRouter(nil)
+	got := router.LayeredRoute(
+		map[string]string{"layer": "base"},
+		nil, nil,
+	)
+	if got != nil {
+		t.Error("nil catalog should return nil")
+	}
+}

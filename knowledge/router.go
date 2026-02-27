@@ -113,3 +113,52 @@ func (RequestTagMatchRule) Match(src Source, req RouteRequest) bool {
 	}
 	return true
 }
+
+// Layer tag constants for tag-based source layering.
+const (
+	LayerTagKey          = "layer"
+	LayerBase            = "base"
+	LayerVersion         = "version"
+	LayerInvestigation   = "investigation"
+)
+
+// LayeredRoute composes three tag queries (base, version, investigation)
+// and returns their union, deduplicated by source name. Always-read sources
+// are included regardless. This is a convenience wrapper over Route().
+func (r *KnowledgeSourceRouter) LayeredRoute(baseTags, versionTags, investigationTags map[string]string) []Source {
+	if r.catalog == nil {
+		return nil
+	}
+
+	layers := []map[string]string{baseTags, versionTags, investigationTags}
+	seen := make(map[string]bool, len(r.catalog.Sources))
+	var result []Source
+
+	for _, src := range r.catalog.Sources {
+		if src.IsAlwaysRead() && !seen[src.Name] {
+			seen[src.Name] = true
+			result = append(result, src)
+		}
+	}
+
+	for _, tags := range layers {
+		if len(tags) == 0 {
+			continue
+		}
+		rule := TagMatchRule{Required: tags}
+		for _, src := range r.catalog.Sources {
+			if seen[src.Name] {
+				continue
+			}
+			if rule.Match(src, RouteRequest{}) {
+				seen[src.Name] = true
+				result = append(result, src)
+			}
+		}
+	}
+
+	if len(result) == 0 {
+		return r.allSources()
+	}
+	return result
+}

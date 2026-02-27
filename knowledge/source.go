@@ -23,6 +23,17 @@ const (
 	ReadConditional ReadPolicy = "conditional"
 )
 
+// ResolutionStatus tracks whether a source's content has been fetched.
+type ResolutionStatus string
+
+const (
+	ResolutionResolved    ResolutionStatus = "resolved"
+	ResolutionCached      ResolutionStatus = "cached"
+	ResolutionDegraded    ResolutionStatus = "degraded"
+	ResolutionUnavailable ResolutionStatus = "unavailable"
+	ResolutionUnknown     ResolutionStatus = "unknown"
+)
+
 // Source is a single knowledge source — a repository, specification document,
 // API endpoint, or other information resource available to the pipeline.
 type Source struct {
@@ -35,6 +46,9 @@ type Source struct {
 	ReadPolicy ReadPolicy        `json:"read_policy,omitempty" yaml:"read_policy,omitempty"`
 	ReadWhen   string            `json:"read_when,omitempty" yaml:"read_when,omitempty"`
 	LocalPath  string            `json:"local_path,omitempty" yaml:"local_path,omitempty"`
+
+	Resolution      ResolutionStatus `json:"resolution,omitempty" yaml:"resolution,omitempty"`
+	ResolvedContent string           `json:"resolved_content,omitempty" yaml:"-"`
 }
 
 // IsAlwaysRead returns true if this source should be included in every
