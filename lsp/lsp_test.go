@@ -239,3 +239,454 @@ func TestServerHandler_Initialize(t *testing.T) {
 		t.Fatal("Handler() returned nil")
 	}
 }
+
+func TestSemanticTokens_ElementValues(t *testing.T) {
+	content := `pipeline: test
+nodes:
+  - name: recall
+    element: fire
+  - name: deep
+    element: water
+  - name: classify
+    element: earth
+edges:
+  - id: E1
+    from: recall
+    to: deep
+    when: "true"
+start: recall
+done: DONE`
+
+	doc := &document{
+		URI:     uri.URI("file:///test.yaml"),
+		Content: content,
+	}
+
+	raw := []byte(content)
+	lctx, _ := lint.NewLintContext(raw, "test.yaml")
+	if lctx != nil {
+		doc.Def = lctx.Def
+		doc.LintCtx = lctx
+	}
+
+	data := computeSemanticTokens(doc)
+	// Each token produces 5 uint32 values
+	if len(data)%5 != 0 {
+		t.Fatalf("data length %d is not a multiple of 5", len(data))
+	}
+	tokenCount := len(data) / 5
+	if tokenCount < 3 {
+		t.Errorf("expected at least 3 element tokens (fire, water, earth), got %d", tokenCount)
+	}
+
+	// Verify first token is fire (type 0)
+	if len(data) >= 5 {
+		tokenType := data[3]
+		if tokenType != elementTokenIndex["fire"] {
+			t.Errorf("first token type = %d, want %d (fire)", tokenType, elementTokenIndex["fire"])
+		}
+	}
+}
+
+func TestSemanticTokens_Empty(t *testing.T) {
+	doc := &document{
+		URI:     uri.URI("file:///empty.yaml"),
+		Content: "pipeline: test\nnodes:\n  - name: start\nstart: start\ndone: DONE",
+	}
+
+	data := computeSemanticTokens(doc)
+	if len(data) != 0 {
+		t.Errorf("expected no semantic tokens for pipeline without elements, got %d values", len(data))
+	}
+}
+
+func TestSemanticTokens_AllElements(t *testing.T) {
+	content := `pipeline: elements
+nodes:
+  - name: n1
+    element: fire
+  - name: n2
+    element: water
+  - name: n3
+    element: earth
+  - name: n4
+    element: air
+  - name: n5
+    element: diamond
+  - name: n6
+    element: lightning
+  - name: n7
+    element: iron
+start: n1
+done: DONE`
+
+	doc := &document{
+		URI:     uri.URI("file:///test.yaml"),
+		Content: content,
+	}
+	raw := []byte(content)
+	lctx, _ := lint.NewLintContext(raw, "test.yaml")
+	if lctx != nil {
+		doc.Def = lctx.Def
+	}
+
+	data := computeSemanticTokens(doc)
+	tokenCount := len(data) / 5
+	if tokenCount != 7 {
+		t.Errorf("expected 7 element tokens (all 7 types), got %d", tokenCount)
+	}
+
+	// Verify all 7 unique token types are present
+	seen := map[uint32]bool{}
+	for i := 0; i < len(data); i += 5 {
+		seen[data[i+3]] = true
+	}
+	for el, idx := range elementTokenIndex {
+		if !seen[idx] {
+			t.Errorf("missing token type for element %q (index %d)", el, idx)
+		}
+	}
+}
+
+func TestSemanticTokensLegend(t *testing.T) {
+	legend := SemanticTokensLegend()
+	types, ok := legend["tokenTypes"].([]string)
+	if !ok {
+		t.Fatal("legend missing tokenTypes")
+	}
+	if len(types) != 7 {
+		t.Errorf("expected 7 token types, got %d", len(types))
+	}
+}
+
+func TestSemanticTokensProvider(t *testing.T) {
+	provider := SemanticTokensProvider()
+	if provider["full"] != true {
+		t.Error("expected full: true")
+	}
+	legend, ok := provider["legend"].(map[string]any)
+	if !ok {
+		t.Fatal("expected legend in provider")
+	}
+	types, ok := legend["tokenTypes"].([]string)
+	if !ok {
+		t.Fatal("legend missing tokenTypes")
+	}
+	if len(types) != 7 {
+		t.Errorf("expected 7 token types, got %d", len(types))
+	}
+}
+
+func TestInlayHints_ElementTraits(t *testing.T) {
+	content := `pipeline: test
+nodes:
+  - name: recall
+    element: fire
+  - name: deep
+    element: water
+start: recall
+done: DONE`
+
+	doc := makeTestDoc(content)
+	hints := computeInlayHints(doc)
+
+	traitHints := filterHintsByKind(hints, 1)
+	found := 0
+	for _, h := range traitHints {
+		if strings.Contains(h.Label, "high") || strings.Contains(h.Label, "low") {
+			found++
+		}
+	}
+	if found < 2 {
+		t.Errorf("expected at least 2 element trait hints (fire=high, water=low), found %d", found)
+	}
+}
+
+func TestInlayHints_PersonaDescription(t *testing.T) {
+	content := `pipeline: test
+nodes:
+  - name: recall
+walkers:
+  - name: scout
+    persona: herald
+start: recall
+done: DONE`
+
+	doc := makeTestDoc(content)
+	hints := computeInlayHints(doc)
+
+	found := false
+	for _, h := range hints {
+		if strings.Contains(h.Label, "Fire persona") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected persona hint for herald")
+	}
+}
+
+func TestInlayHints_ExpressionValidity(t *testing.T) {
+	content := `pipeline: test
+nodes:
+  - name: recall
+  - name: triage
+edges:
+  - id: E1
+    from: recall
+    to: triage
+    when: "true"
+  - id: E2
+    from: triage
+    to: DONE
+    when: "output.confidence > 0.8"
+start: recall
+done: DONE`
+
+	doc := makeTestDoc(content)
+	hints := computeInlayHints(doc)
+
+	staticCount := 0
+	outputDepCount := 0
+	for _, h := range hints {
+		if h.Label == "static" {
+			staticCount++
+		}
+		if h.Label == "output-dep" {
+			outputDepCount++
+		}
+	}
+	if staticCount < 1 {
+		t.Error("expected at least 1 'static' expression hint for when: true")
+	}
+	if outputDepCount < 1 {
+		t.Error("expected at least 1 'output-dep' expression hint")
+	}
+}
+
+func TestInlayHints_EdgeFlow(t *testing.T) {
+	content := `pipeline: test
+nodes:
+  - name: recall
+    element: fire
+  - name: triage
+    element: water
+edges:
+  - id: E1
+    from: recall
+    to: triage
+    when: "true"
+  - id: E2
+    from: triage
+    to: DONE
+    when: "true"
+start: recall
+done: DONE`
+
+	doc := makeTestDoc(content)
+	hints := computeInlayHints(doc)
+
+	found := false
+	for _, h := range hints {
+		if strings.Contains(h.Label, "fire") && strings.Contains(h.Label, "water") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected edge flow hint showing fire → water")
+	}
+}
+
+func TestInlayHints_StartNode(t *testing.T) {
+	content := `pipeline: test
+nodes:
+  - name: recall
+    element: fire
+    family: ingest
+start: recall
+done: DONE`
+
+	doc := makeTestDoc(content)
+	hints := computeInlayHints(doc)
+
+	found := false
+	for _, h := range hints {
+		if strings.Contains(h.Label, "entry") {
+			found = true
+			if !strings.Contains(h.Label, "fire") {
+				t.Error("start node hint should include element")
+			}
+			if !strings.Contains(h.Label, "ingest") {
+				t.Error("start node hint should include family")
+			}
+		}
+	}
+	if !found {
+		t.Error("expected start node entry hint")
+	}
+}
+
+func TestInlayHints_Empty(t *testing.T) {
+	doc := &document{
+		URI:     uri.URI("file:///test.yaml"),
+		Content: "pipeline: test",
+	}
+	hints := computeInlayHints(doc)
+	if len(hints) != 0 {
+		t.Errorf("expected no hints for doc without parsed def, got %d", len(hints))
+	}
+}
+
+func makeTestDoc(content string) *document {
+	doc := &document{
+		URI:     uri.URI("file:///test.yaml"),
+		Content: content,
+	}
+	raw := []byte(content)
+	lctx, _ := lint.NewLintContext(raw, "test.yaml")
+	if lctx != nil {
+		doc.Def = lctx.Def
+		doc.LintCtx = lctx
+	}
+	return doc
+}
+
+func filterHintsByKind(hints []InlayHint, kind int) []InlayHint {
+	var out []InlayHint
+	for _, h := range hints {
+		if h.Kind == kind {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
+func TestKamiBridge_ProcessEvents(t *testing.T) {
+	kb := NewKamiBridge(0)
+
+	kb.processEvent(`{"type":"node_enter","node":"recall","agent":"seeker","ts":"2026-02-26T10:00:00Z"}`)
+	state := kb.State()
+	if state.ActiveNode != "recall" {
+		t.Errorf("active node = %q, want recall", state.ActiveNode)
+	}
+	if state.ActiveAgent != "seeker" {
+		t.Errorf("active agent = %q, want seeker", state.ActiveAgent)
+	}
+	if _, ok := state.Visited["recall"]; !ok {
+		t.Error("recall should be in visited map")
+	}
+
+	kb.processEvent(`{"type":"transition","edge":"E1","ts":"2026-02-26T10:00:01Z"}`)
+	state = kb.State()
+	if _, ok := state.Transitions["E1"]; !ok {
+		t.Error("E1 should be in transitions map")
+	}
+
+	kb.processEvent(`{"type":"paused","ts":"2026-02-26T10:00:02Z"}`)
+	state = kb.State()
+	if !state.Paused {
+		t.Error("expected paused=true after paused event")
+	}
+
+	kb.processEvent(`{"type":"resumed","ts":"2026-02-26T10:00:03Z"}`)
+	state = kb.State()
+	if state.Paused {
+		t.Error("expected paused=false after resumed event")
+	}
+
+	kb.processEvent(`{"type":"walk_complete","ts":"2026-02-26T10:00:04Z"}`)
+	state = kb.State()
+	if state.ActiveNode != "" {
+		t.Errorf("active node should be empty after walk_complete, got %q", state.ActiveNode)
+	}
+}
+
+func TestKamiBridge_LiveInlayHints(t *testing.T) {
+	kb := NewKamiBridge(0)
+
+	content := `pipeline: test
+nodes:
+  - name: recall
+    element: fire
+  - name: triage
+    element: water
+start: recall
+done: DONE`
+
+	doc := makeTestDoc(content)
+
+	kb.processEvent(`{"type":"node_enter","node":"recall","agent":"herald","ts":"2026-02-26T10:00:00Z"}`)
+
+	hints := kb.LiveInlayHints(doc)
+	foundActive := false
+	foundVisited := false
+	for _, h := range hints {
+		if strings.Contains(h.Label, "ACTIVE") {
+			foundActive = true
+			if !strings.Contains(h.Label, "herald") {
+				t.Error("active hint should include agent name")
+			}
+		}
+	}
+	if !foundActive {
+		t.Error("expected ACTIVE hint for recall node")
+	}
+
+	kb.processEvent(`{"type":"node_exit","node":"recall","ts":"2026-02-26T10:00:01Z"}`)
+	kb.processEvent(`{"type":"node_enter","node":"triage","agent":"herald","ts":"2026-02-26T10:00:02Z"}`)
+
+	hints = kb.LiveInlayHints(doc)
+	for _, h := range hints {
+		if strings.Contains(h.Label, "visited") {
+			foundVisited = true
+		}
+	}
+	if !foundVisited {
+		t.Error("expected 'visited' hint for recall after it was exited")
+	}
+}
+
+func TestKamiBridge_PausedHint(t *testing.T) {
+	kb := NewKamiBridge(0)
+
+	content := `pipeline: test
+nodes:
+  - name: recall
+start: recall
+done: DONE`
+	doc := makeTestDoc(content)
+
+	kb.processEvent(`{"type":"node_enter","node":"recall","agent":"seeker","ts":"2026-02-26T10:00:00Z"}`)
+	kb.processEvent(`{"type":"paused","ts":"2026-02-26T10:00:01Z"}`)
+
+	hints := kb.LiveInlayHints(doc)
+	found := false
+	for _, h := range hints {
+		if h.Label == "PAUSED" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected PAUSED hint when pipeline is paused on active node")
+	}
+}
+
+func TestKamiBridge_NotConnected(t *testing.T) {
+	kb := NewKamiBridge(0)
+	if kb.Connected() {
+		t.Error("bridge should not be connected without Start()")
+	}
+}
+
+func TestKamiBridge_StateSnapshotIsolation(t *testing.T) {
+	kb := NewKamiBridge(0)
+	kb.processEvent(`{"type":"node_enter","node":"recall","agent":"seeker","ts":"2026-02-26T10:00:00Z"}`)
+
+	state := kb.State()
+	state.Visited["injected"] = VisitInfo{Agent: "hacker"}
+
+	fresh := kb.State()
+	if _, ok := fresh.Visited["injected"]; ok {
+		t.Error("state snapshot should be isolated — mutation leaked")
+	}
+}

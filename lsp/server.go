@@ -20,9 +20,10 @@ import (
 type Server struct {
 	conn jsonrpc2.Conn
 
-	mu    sync.Mutex
-	docs  map[uri.URI]*document
-	ready bool
+	mu          sync.Mutex
+	docs        map[uri.URI]*document
+	ready       bool
+	kamiBridge  *KamiBridge
 }
 
 type document struct {
@@ -63,10 +64,28 @@ func (s *Server) Handler() jsonrpc2.Handler {
 			return s.handleHover(ctx, reply, req)
 		case "textDocument/definition":
 			return s.handleDefinition(ctx, reply, req)
+		case "textDocument/semanticTokens/full":
+			return s.handleSemanticTokensFull(ctx, reply, req)
+		case "textDocument/inlayHint":
+			return s.handleInlayHint(ctx, reply, req)
+		case "workspace/didChangeConfiguration":
+			return s.handleDidChangeConfiguration(ctx, reply, req)
 		default:
 			return reply(ctx, nil, jsonrpc2.ErrMethodNotFound)
 		}
 	})
+}
+
+// initializeResult extends protocol.InitializeResult with LSP 3.17 fields
+// not present in go.lsp.dev/protocol v0.12.
+type initializeResult struct {
+	Capabilities initializeCapabilities `json:"capabilities"`
+	ServerInfo   *protocol.ServerInfo   `json:"serverInfo,omitempty"`
+}
+
+type initializeCapabilities struct {
+	protocol.ServerCapabilities
+	InlayHintProvider bool `json:"inlayHintProvider,omitempty"`
 }
 
 func (s *Server) handleInitialize(ctx context.Context, reply jsonrpc2.Replier, _ jsonrpc2.Request) error {
@@ -74,17 +93,21 @@ func (s *Server) handleInitialize(ctx context.Context, reply jsonrpc2.Replier, _
 	s.ready = true
 	s.mu.Unlock()
 
-	result := protocol.InitializeResult{
-		Capabilities: protocol.ServerCapabilities{
-			TextDocumentSync: protocol.TextDocumentSyncOptions{
-				OpenClose: true,
-				Change:    protocol.TextDocumentSyncKindFull,
+	result := initializeResult{
+		Capabilities: initializeCapabilities{
+			ServerCapabilities: protocol.ServerCapabilities{
+				TextDocumentSync: protocol.TextDocumentSyncOptions{
+					OpenClose: true,
+					Change:    protocol.TextDocumentSyncKindFull,
+				},
+				CompletionProvider: &protocol.CompletionOptions{
+					TriggerCharacters: []string{":", " ", "-"},
+				},
+				HoverProvider:          true,
+				DefinitionProvider:     true,
+				SemanticTokensProvider: SemanticTokensProvider(),
 			},
-			CompletionProvider: &protocol.CompletionOptions{
-				TriggerCharacters: []string{":", " ", "-"},
-			},
-			HoverProvider: true,
-			DefinitionProvider: true,
+			InlayHintProvider: true,
 		},
 		ServerInfo: &protocol.ServerInfo{
 			Name:    "origami-lsp",
@@ -184,4 +207,34 @@ func (s *Server) publishDiagnostics(ctx context.Context, doc *document) {
 // SetConn sets the JSON-RPC connection for sending notifications.
 func (s *Server) SetConn(conn jsonrpc2.Conn) {
 	s.conn = conn
+}
+
+func (s *Server) handleDidChangeConfiguration(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) error {
+	var params struct {
+		Settings json.RawMessage `json:"settings"`
+	}
+	if err := json.Unmarshal(req.Params(), &params); err != nil {
+		return reply(ctx, nil, nil)
+	}
+
+	var settings struct {
+		Origami struct {
+			Kami struct {
+				Enabled bool `json:"enabled"`
+				Port    int  `json:"port"`
+			} `json:"kami"`
+		} `json:"origami"`
+	}
+	if json.Unmarshal(params.Settings, &settings) == nil && settings.Origami.Kami.Port > 0 {
+		s.configureKami(settings.Origami.Kami.Enabled, settings.Origami.Kami.Port)
+	}
+
+	return reply(ctx, nil, nil)
+}
+
+// KamiBridge returns the server's Kami bridge (may be nil).
+func (s *Server) KamiBridge() *KamiBridge {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.kamiBridge
 }
