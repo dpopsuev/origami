@@ -18,16 +18,18 @@ description: Active goal manifest — single-read orientation for agents to know
 - [ ] `testdata/` contains canonical pipeline YAMLs (triage, dialectic, court, curation)
 - [ ] `RichVocabulary` interface with `VocabEntry` (short/long/description) wired into Kami, LSP, Kabuki
 
-## Remaining Contracts
+## Remaining Contracts — Tandem Bundles
 
-Flat priority list. No sprints — work in priority order, commit at green gates.
+Contracts are grouped into cross-repo tandem bundles. Origami ships framework primitives first, then Asterisk consumes. Work in bundle priority order; commit at green gates.
 
-| Tier | Contract | Notes |
-|------|----------|-------|
-| **should** | `rich-vocabulary` | Evolve `Vocabulary` to `RichVocabulary` (short/long/description). Wire into Kami hover, LSP hover, Kabuki cards. |
-| **should** | *Asterisk: `principled-calibration-scorecard`* | `MetricDef`, `ScoreCard` types in Origami `calibrate/`. Declarative YAML. Framework calibration primitives. |
-| **vision** | `origami-lsp` | Language Server for pipeline YAML. Embeds `origami-lint` engine. Needs stable DSL. |
-| **vision** | `washi` | Washi — enterprise pipeline management UI. Shared Origami Design System with Kabuki. Separate product. |
+| Tier | Contract | Tandem | Unblocks in Asterisk |
+|------|----------|--------|----------------------|
+| **should** | `rich-vocabulary` | Bundle 2: Rich Names | `asterisk-internal-cleanup` P7 — migrate `display/` to `RichMapVocabulary` |
+| **should** | *Asterisk: `principled-calibration-scorecard`* | Bundle 1: Principled Metrics (gate) | Asterisk metric migration, M19 reweight, TokiMeter deletion |
+| **vision** | `origami-lsp` | Bundle 5: Developer Tooling | Washi Phase 2 (Monaco + LSP embed) |
+| **vision** | `washi` | Bundle 5: Developer Tooling | Operational UI for all Origami consumers |
+
+Bundles 1, 3, 4 are single contracts tracked in Asterisk that span both repos. Origami ships framework changes (calibrate/ types, Source/router, Kabuki components) as part of those Asterisk-tracked contracts.
 
 ### CHECKPOINT — Polish validated
 
