@@ -12,7 +12,6 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
-| `domain-calibration.md` | Per-domain calibration scoping (Asterisk, Origami, Achilles); `curate/eval/` types and runner for extraction quality. | nice |
 | `origami-lsp.md` | Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
 | `washi.md` | Washi — enterprise pipeline management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 

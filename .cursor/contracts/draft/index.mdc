@@ -4,5 +4,5 @@
 (No directories)
 
 ## Files
-- [demo] `origami-lsp.md` — Language Server for pipeline YAML (color coding, virtual text, Kami live connection).
-- [demo] `visual-editor.md` — Drag-and-drop pipeline builder, bidirectional YAML sync, run management dashboard.
+- `origami-lsp.md` — Language Server for pipeline YAML (validation, completion, color coding, virtual text, Kami live connection).
+- `washi.md` — Washi — enterprise pipeline management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.
