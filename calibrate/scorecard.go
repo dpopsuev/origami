@@ -30,6 +30,8 @@ type MetricDef struct {
 	Strategy  ThresholdStrategy `json:"strategy,omitempty" yaml:"strategy,omitempty"`
 	Rationale string            `json:"rationale,omitempty" yaml:"rationale,omitempty"`
 	DryCapped bool              `json:"dry_capped,omitempty" yaml:"dry_capped,omitempty"`
+	Scorer    string            `json:"scorer,omitempty" yaml:"scorer,omitempty"`
+	Params    map[string]any    `json:"params,omitempty" yaml:"params,omitempty"`
 }
 
 // Evaluate checks whether a metric value passes given this definition's
