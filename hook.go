@@ -2,8 +2,12 @@ package framework
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"text/template"
 )
 
 // Hook is a side-effect function invoked after a node completes.
@@ -61,4 +65,54 @@ func NewHookFunc(name string, fn func(ctx context.Context, nodeName string, arti
 func (h *HookFunc) Name() string { return h.name }
 func (h *HookFunc) Run(ctx context.Context, nodeName string, artifact Artifact) error {
 	return h.fn(ctx, nodeName, artifact)
+}
+
+// Built-in hook names recognized by the Runner.
+const BuiltinHookFileWrite = "file-write"
+
+// FileWriteHook is a built-in hook that writes an artifact to a JSON file.
+// The output path is read from NodeDef.Meta["output_path"] and supports
+// Go template variables: {{ .NodeName }}.
+type FileWriteHook struct {
+	nodeMeta map[string]map[string]any // node name -> meta (set by Runner)
+}
+
+func (h *FileWriteHook) Name() string { return BuiltinHookFileWrite }
+
+func (h *FileWriteHook) Run(_ context.Context, nodeName string, artifact Artifact) error {
+	meta := h.nodeMeta[nodeName]
+	pathTmpl, _ := meta["output_path"].(string)
+	if pathTmpl == "" {
+		return fmt.Errorf("file-write hook: node %q missing meta.output_path", nodeName)
+	}
+
+	tmpl, err := template.New("path").Parse(pathTmpl)
+	if err != nil {
+		return fmt.Errorf("file-write hook: parse path template: %w", err)
+	}
+
+	var buf strings.Builder
+	data := map[string]string{"NodeName": nodeName}
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return fmt.Errorf("file-write hook: render path: %w", err)
+	}
+	outPath := buf.String()
+
+	if dir := filepath.Dir(outPath); dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("file-write hook: mkdir: %w", err)
+		}
+	}
+
+	raw := artifact.Raw()
+	jsonData, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return fmt.Errorf("file-write hook: marshal: %w", err)
+	}
+
+	if err := os.WriteFile(outPath, jsonData, 0o644); err != nil {
+		return fmt.Errorf("file-write hook: write: %w", err)
+	}
+
+	return nil
 }

@@ -67,6 +67,7 @@ type transformerNode struct {
 	input    string         // from NodeDef.Input (e.g. "${recall.output}")
 	provider string         // from NodeDef.Provider (e.g. "cursor", "codex")
 	config   map[string]any // pipeline vars (from PipelineDef.Vars)
+	meta     map[string]any // from NodeDef.Meta
 }
 
 func (n *transformerNode) Name() string            { return n.name }
@@ -110,10 +111,13 @@ func (n *transformerNode) Process(ctx context.Context, nc NodeContext) (Artifact
 	}
 
 	meta := nc.Meta
+	if meta == nil {
+		meta = make(map[string]any)
+	}
+	for k, v := range n.meta {
+		meta[k] = v
+	}
 	if n.provider != "" {
-		if meta == nil {
-			meta = make(map[string]any)
-		}
 		meta["provider"] = n.provider
 	}
 
@@ -161,6 +165,33 @@ type transformerFunc struct {
 func (t *transformerFunc) Name() string { return t.name }
 func (t *transformerFunc) Transform(ctx context.Context, tc *TransformerContext) (any, error) {
 	return t.fn(ctx, tc)
+}
+
+// Built-in transformer names recognized by resolveNode.
+const (
+	BuiltinTransformerGoTemplate  = "go-template"
+	BuiltinTransformerPassthrough = "passthrough"
+)
+
+// goTemplateTransformer is a built-in transformer that returns the
+// already-rendered prompt as its output. The transformerNode.Process()
+// method renders NodeDef.Prompt via RenderPrompt() before calling
+// Transform(), so this transformer just captures the rendered result.
+type goTemplateTransformer struct{}
+
+func (t *goTemplateTransformer) Name() string { return BuiltinTransformerGoTemplate }
+func (t *goTemplateTransformer) Transform(_ context.Context, tc *TransformerContext) (any, error) {
+	return tc.Prompt, nil
+}
+
+// passthroughTransformer is a built-in transformer that returns its
+// input unchanged. Useful for nodes that only need hooks or schema
+// validation without any transformation logic.
+type passthroughTransformer struct{}
+
+func (t *passthroughTransformer) Name() string { return BuiltinTransformerPassthrough }
+func (t *passthroughTransformer) Transform(_ context.Context, tc *TransformerContext) (any, error) {
+	return tc.Input, nil
 }
 
 // IsTransformerNode returns true if the node was created from a transformer.

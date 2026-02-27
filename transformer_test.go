@@ -240,6 +240,285 @@ func TestTransformerNode_EmptyInput_FallsBackToPrior(t *testing.T) {
 	}
 }
 
+func TestTransformerNode_MetaFromNodeDef(t *testing.T) {
+	captureMeta := TransformerFunc("capture-meta", func(_ context.Context, tc *TransformerContext) (any, error) {
+		return tc.Meta, nil
+	})
+	node := &transformerNode{
+		name:    "test-node",
+		element: ElementFire,
+		trans:   captureMeta,
+		meta:    map[string]any{"output_path": "recall.json", "retries": 3},
+	}
+
+	nc := NodeContext{
+		WalkerState: NewWalkerState("test"),
+		Meta:        map[string]any{"existing": true},
+	}
+
+	artifact, err := node.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+
+	m := artifact.Raw().(map[string]any)
+	if m["output_path"] != "recall.json" {
+		t.Errorf("output_path = %v, want recall.json", m["output_path"])
+	}
+	if m["retries"] != 3 {
+		t.Errorf("retries = %v, want 3", m["retries"])
+	}
+	if m["existing"] != true {
+		t.Errorf("existing context key should be preserved")
+	}
+}
+
+func TestNodeDef_MetaParsedFromYAML(t *testing.T) {
+	yaml := `
+pipeline: test-meta
+nodes:
+  - name: recall
+    element: earth
+    transformer: echo
+    meta:
+      prompt_template: "prompts/recall.md"
+      persist_to: cases
+      max_retries: 3
+  - name: triage
+    element: fire
+    transformer: echo
+edges:
+  - id: E1
+    name: to-triage
+    from: recall
+    to: triage
+    when: "true"
+  - id: E2
+    name: to-done
+    from: triage
+    to: _done
+    when: "true"
+start: recall
+done: _done
+`
+	def, err := LoadPipeline([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadPipeline: %v", err)
+	}
+
+	recallDef := def.Nodes[0]
+	if recallDef.Meta == nil {
+		t.Fatal("recall node Meta should not be nil")
+	}
+	if recallDef.Meta["prompt_template"] != "prompts/recall.md" {
+		t.Errorf("prompt_template = %v", recallDef.Meta["prompt_template"])
+	}
+	if recallDef.Meta["persist_to"] != "cases" {
+		t.Errorf("persist_to = %v", recallDef.Meta["persist_to"])
+	}
+	if recallDef.Meta["max_retries"] != 3 {
+		t.Errorf("max_retries = %v", recallDef.Meta["max_retries"])
+	}
+
+	triageDef := def.Nodes[1]
+	if triageDef.Meta != nil {
+		t.Errorf("triage node Meta should be nil, got %v", triageDef.Meta)
+	}
+}
+
+func TestBuildGraph_MetaReachesTransformerContext(t *testing.T) {
+	var capturedMeta map[string]any
+	captureTrans := TransformerFunc("capture", func(_ context.Context, tc *TransformerContext) (any, error) {
+		capturedMeta = tc.Meta
+		return map[string]any{"ok": true}, nil
+	})
+
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{
+				Name:        "a",
+				Element:     "fire",
+				Transformer: "capture",
+				Meta:        map[string]any{"key1": "val1", "key2": 42},
+			},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "a", To: "_done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{
+		Transformers: TransformerRegistry{"capture": captureTrans},
+	})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	err = runner.Walk(context.Background(), nil, "a")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	if capturedMeta == nil {
+		t.Fatal("meta was not captured")
+	}
+	if capturedMeta["key1"] != "val1" {
+		t.Errorf("key1 = %v, want val1", capturedMeta["key1"])
+	}
+	if capturedMeta["key2"] != 42 {
+		t.Errorf("key2 = %v, want 42", capturedMeta["key2"])
+	}
+}
+
+func TestBuiltinGoTemplate_RendersPrompt(t *testing.T) {
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{
+				Name:        "render",
+				Element:     "fire",
+				Transformer: "go-template",
+				Prompt:      "Hello from {{.Node}}",
+			},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "render", To: "_done", When: "true"},
+		},
+		Start: "render",
+		Done:  "_done",
+	}
+
+	cap := NewOutputCapture()
+	runner, err := NewRunnerWith(def, GraphRegistries{})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+	runner.Graph.(*DefaultGraph).SetObserver(cap)
+
+	err = runner.Walk(context.Background(), nil, "render")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	art, found := cap.ArtifactAt("render")
+	if !found {
+		t.Fatal("no artifact for render node")
+	}
+	got, ok := art.Raw().(string)
+	if !ok {
+		t.Fatalf("artifact Raw() type = %T, want string", art.Raw())
+	}
+	if got != "Hello from render" {
+		t.Errorf("rendered = %q, want %q", got, "Hello from render")
+	}
+}
+
+func TestBuiltinPassthrough_ReturnsInput(t *testing.T) {
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{Name: "source", Element: "earth", Transformer: "go-template", Prompt: "data"},
+			{Name: "pass", Element: "fire", Transformer: "passthrough"},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "to-pass", From: "source", To: "pass", When: "true"},
+			{ID: "E2", Name: "done", From: "pass", To: "_done", When: "true"},
+		},
+		Start: "source",
+		Done:  "_done",
+	}
+
+	cap := NewOutputCapture()
+	runner, err := NewRunnerWith(def, GraphRegistries{})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+	runner.Graph.(*DefaultGraph).SetObserver(cap)
+
+	err = runner.Walk(context.Background(), nil, "source")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	art, found := cap.ArtifactAt("pass")
+	if !found {
+		t.Fatal("no artifact for pass node")
+	}
+	got, ok := art.Raw().(string)
+	if !ok {
+		t.Fatalf("artifact Raw() type = %T, want string", art.Raw())
+	}
+	if got != "data" {
+		t.Errorf("passthrough output = %q, want %q", got, "data")
+	}
+}
+
+func TestBuiltinGoTemplate_NoRegistry(t *testing.T) {
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{Name: "a", Element: "fire", Transformer: "go-template"},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "a", To: "_done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	_, err := def.BuildGraph(GraphRegistries{})
+	if err != nil {
+		t.Fatalf("BuildGraph should succeed for built-in transformer without registry: %v", err)
+	}
+}
+
+func TestBuiltinGoTemplate_WithMeta(t *testing.T) {
+	var capturedMeta map[string]any
+	metaCapture := TransformerFunc("meta-capture", func(_ context.Context, tc *TransformerContext) (any, error) {
+		capturedMeta = tc.Meta
+		return tc.Prompt, nil
+	})
+
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{
+				Name:        "a",
+				Element:     "fire",
+				Transformer: "meta-capture",
+				Meta:        map[string]any{"template_dir": "/prompts", "max_tokens": 1000},
+			},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "a", To: "_done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{
+		Transformers: TransformerRegistry{"meta-capture": metaCapture},
+	})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	err = runner.Walk(context.Background(), nil, "a")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	if capturedMeta["template_dir"] != "/prompts" {
+		t.Errorf("template_dir = %v", capturedMeta["template_dir"])
+	}
+	if capturedMeta["max_tokens"] != 1000 {
+		t.Errorf("max_tokens = %v", capturedMeta["max_tokens"])
+	}
+}
+
 func TestIsTransformerNode(t *testing.T) {
 	trans := &transformerNode{name: "t", trans: &echoTransformer{}}
 	plain := &testNode{name: "p"}

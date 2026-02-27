@@ -264,6 +264,159 @@ func TestLoadPipeline_ExtractorField_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestJSONSchemaExtractor_ValidInput(t *testing.T) {
+	schema := &ArtifactSchema{
+		Type:     "object",
+		Required: []string{"test_name", "status"},
+		Fields: map[string]FieldSchema{
+			"test_name": {Type: "string"},
+			"status":    {Type: "string"},
+		},
+	}
+	ext := &JSONSchemaExtractor{schema: schema}
+
+	if ext.Name() != "json-schema" {
+		t.Errorf("Name() = %q", ext.Name())
+	}
+
+	input := `{"test_name":"TestFoo","status":"passed","extra":42}`
+	result, err := ext.Extract(context.Background(), input)
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+
+	m, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("result type = %T, want map[string]any", result)
+	}
+	if m["test_name"] != "TestFoo" {
+		t.Errorf("test_name = %v", m["test_name"])
+	}
+}
+
+func TestJSONSchemaExtractor_MissingRequired(t *testing.T) {
+	schema := &ArtifactSchema{
+		Type:     "object",
+		Required: []string{"test_name"},
+		Fields:   map[string]FieldSchema{"test_name": {Type: "string"}},
+	}
+	ext := &JSONSchemaExtractor{schema: schema}
+
+	_, err := ext.Extract(context.Background(), `{"other":"val"}`)
+	if err == nil {
+		t.Fatal("expected validation error for missing required field")
+	}
+}
+
+func TestJSONSchemaExtractor_InvalidJSON(t *testing.T) {
+	ext := &JSONSchemaExtractor{}
+
+	_, err := ext.Extract(context.Background(), `{invalid}`)
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestJSONSchemaExtractor_ByteSliceInput(t *testing.T) {
+	ext := &JSONSchemaExtractor{}
+
+	result, err := ext.Extract(context.Background(), []byte(`{"key":"val"}`))
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	m := result.(map[string]any)
+	if m["key"] != "val" {
+		t.Errorf("key = %v", m["key"])
+	}
+}
+
+func TestJSONSchemaExtractor_NoSchema(t *testing.T) {
+	ext := &JSONSchemaExtractor{}
+
+	result, err := ext.Extract(context.Background(), `{"any":"thing"}`)
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	m := result.(map[string]any)
+	if m["any"] != "thing" {
+		t.Errorf("any = %v", m["any"])
+	}
+}
+
+func TestBuildGraph_BuiltinJSONSchemaExtractor(t *testing.T) {
+	data := []byte(`
+pipeline: json-schema-test
+nodes:
+  - name: parse
+    element: earth
+    extractor: json-schema
+    schema:
+      type: object
+      required: [name]
+      fields:
+        name: {type: string}
+edges:
+  - id: E1
+    name: to-done
+    from: parse
+    to: _done
+start: parse
+done: _done
+`)
+	def, err := LoadPipeline(data)
+	if err != nil {
+		t.Fatalf("LoadPipeline: %v", err)
+	}
+
+	g, err := def.BuildGraph(GraphRegistries{})
+	if err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+
+	n, ok := g.NodeByName("parse")
+	if !ok {
+		t.Fatal("parse node not found")
+	}
+	en, ok := n.(*extractorNode)
+	if !ok {
+		t.Fatalf("node type = %T, want *extractorNode", n)
+	}
+	if en.ext.Name() != "json-schema" {
+		t.Errorf("extractor = %q", en.ext.Name())
+	}
+
+	nc := NodeContext{
+		PriorArtifact: &extractorArtifact{raw: `{"name":"TestFoo"}`},
+	}
+	art, err := en.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+	m := art.Raw().(map[string]any)
+	if m["name"] != "TestFoo" {
+		t.Errorf("name = %v", m["name"])
+	}
+}
+
+func TestBuildGraph_BuiltinJSONSchemaExtractor_NoRegistry(t *testing.T) {
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{Name: "parse", Element: "earth", Extractor: "json-schema"},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "parse", To: "_done"},
+		},
+		Start: "parse",
+		Done:  "_done",
+	}
+
+	_, err := def.BuildGraph(GraphRegistries{})
+	if err != nil {
+		t.Fatalf("BuildGraph should succeed without extractor registry for built-in: %v", err)
+	}
+}
+
 // extTestNode is a minimal Node for extractor DSL tests.
 type extTestNode struct {
 	name string

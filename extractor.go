@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -59,6 +60,7 @@ type extractorNode struct {
 	name    string
 	element Element
 	ext     Extractor
+	meta    map[string]any // from NodeDef.Meta
 }
 
 func (n *extractorNode) Name() string            { return n.name }
@@ -90,3 +92,49 @@ type extractorArtifact struct {
 func (a *extractorArtifact) Type() string       { return a.typeName }
 func (a *extractorArtifact) Confidence() float64 { return a.confidence }
 func (a *extractorArtifact) Raw() any            { return a.raw }
+
+// Built-in extractor names recognized by resolveNode.
+const (
+	BuiltinExtractorJSONSchema = "json-schema"
+)
+
+// JSONSchemaExtractor is a built-in extractor that unmarshals JSON input
+// and validates it against an ArtifactSchema. No Go code required from
+// consumers — just `extractor: json-schema` + `schema:` in the pipeline YAML.
+type JSONSchemaExtractor struct {
+	schema *ArtifactSchema
+}
+
+func (e *JSONSchemaExtractor) Name() string { return BuiltinExtractorJSONSchema }
+
+func (e *JSONSchemaExtractor) Extract(_ context.Context, input any) (any, error) {
+	var data []byte
+	switch v := input.(type) {
+	case []byte:
+		data = v
+	case json.RawMessage:
+		data = []byte(v)
+	case string:
+		data = []byte(v)
+	default:
+		b, err := json.Marshal(input)
+		if err != nil {
+			return nil, fmt.Errorf("json-schema extractor: marshal input: %w", err)
+		}
+		data = b
+	}
+
+	var result any
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("json-schema extractor: unmarshal: %w", err)
+	}
+
+	if e.schema != nil {
+		art := &extractorArtifact{typeName: BuiltinExtractorJSONSchema, confidence: 1.0, raw: result}
+		if err := ValidateArtifact(e.schema, art); err != nil {
+			return nil, fmt.Errorf("json-schema extractor: %w", err)
+		}
+	}
+
+	return result, nil
+}

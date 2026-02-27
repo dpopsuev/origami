@@ -70,12 +70,32 @@ func NewRunnerWith(def *PipelineDef, reg GraphRegistries) (*Runner, error) {
 
 	schemas := make(map[string]*ArtifactSchema, len(def.Nodes))
 	nodeHooks := make(map[string][]string, len(def.Nodes))
+	nodeMeta := make(map[string]map[string]any, len(def.Nodes))
+	needsFileWrite := false
 	for _, nd := range def.Nodes {
 		if nd.Schema != nil {
 			schemas[nd.Name] = nd.Schema
 		}
 		if len(nd.After) > 0 {
 			nodeHooks[nd.Name] = nd.After
+			for _, h := range nd.After {
+				if h == BuiltinHookFileWrite {
+					needsFileWrite = true
+				}
+			}
+		}
+		if len(nd.Meta) > 0 {
+			nodeMeta[nd.Name] = nd.Meta
+		}
+	}
+
+	hooks := reg.Hooks
+	if needsFileWrite {
+		if hooks == nil {
+			hooks = make(HookRegistry)
+		}
+		if _, err := hooks.Get(BuiltinHookFileWrite); err != nil {
+			hooks.Register(&FileWriteHook{nodeMeta: nodeMeta})
 		}
 	}
 
@@ -84,7 +104,7 @@ func NewRunnerWith(def *PipelineDef, reg GraphRegistries) (*Runner, error) {
 		Graph:     graph,
 		Schemas:   schemas,
 		NodeHooks: nodeHooks,
-		Hooks:     reg.Hooks,
+		Hooks:     hooks,
 	}, nil
 }
 

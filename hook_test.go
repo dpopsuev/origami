@@ -2,6 +2,9 @@ package framework
 
 import (
 	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -136,6 +139,142 @@ func TestHookingWalker_MissingHookContinues(t *testing.T) {
 	err = runner.Walk(context.Background(), nil, "a")
 	if err != nil {
 		t.Fatalf("Walk should succeed even with missing hook: %v", err)
+	}
+}
+
+func TestFileWriteHook_WritesArtifact(t *testing.T) {
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "recall.json")
+
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{
+				Name:        "recall",
+				Element:     "earth",
+				Transformer: "go-template",
+				Prompt:      "test data",
+				After:       []string{"file-write"},
+				Meta:        map[string]any{"output_path": outPath},
+			},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "recall", To: "_done", When: "true"},
+		},
+		Start: "recall",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	err = runner.Walk(context.Background(), nil, "recall")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+
+	var result any
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if result != "test data" {
+		t.Errorf("file content = %v, want %q", result, "test data")
+	}
+}
+
+func TestFileWriteHook_TemplatedPath(t *testing.T) {
+	dir := t.TempDir()
+	pathTmpl := filepath.Join(dir, "{{ .NodeName }}.json")
+
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{
+				Name:        "triage",
+				Element:     "fire",
+				Transformer: "go-template",
+				Prompt:      "triage output",
+				After:       []string{"file-write"},
+				Meta:        map[string]any{"output_path": pathTmpl},
+			},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "triage", To: "_done", When: "true"},
+		},
+		Start: "triage",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	err = runner.Walk(context.Background(), nil, "triage")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	expectedPath := filepath.Join(dir, "triage.json")
+	if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
+		t.Fatalf("expected file at %s", expectedPath)
+	}
+}
+
+func TestFileWriteHook_MissingOutputPath(t *testing.T) {
+	hook := &FileWriteHook{
+		nodeMeta: map[string]map[string]any{
+			"node": {},
+		},
+	}
+
+	art := &transformerArtifact{typeName: "test", raw: "data"}
+	err := hook.Run(context.Background(), "node", art)
+	if err == nil {
+		t.Fatal("expected error for missing output_path")
+	}
+}
+
+func TestFileWriteHook_AutoRegisteredByRunner(t *testing.T) {
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "auto.json")
+
+	def := &PipelineDef{
+		Pipeline: "test",
+		Nodes: []NodeDef{
+			{
+				Name:        "a",
+				Element:     "fire",
+				Transformer: "passthrough",
+				After:       []string{"file-write"},
+				Meta:        map[string]any{"output_path": outPath},
+			},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "a", To: "_done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{})
+	if err != nil {
+		t.Fatalf("runner should auto-register file-write hook: %v", err)
+	}
+
+	if runner.Hooks == nil {
+		t.Fatal("hooks should not be nil")
+	}
+	_, err = runner.Hooks.Get("file-write")
+	if err != nil {
+		t.Fatalf("file-write hook should be registered: %v", err)
 	}
 }
 

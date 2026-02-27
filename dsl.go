@@ -55,6 +55,7 @@ type NodeDef struct {
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
 	Cache       *CacheDef       `yaml:"cache,omitempty"`
 	Marble      string          `yaml:"marble,omitempty"`
+	Meta        map[string]any  `yaml:"meta,omitempty"`
 }
 
 // CacheDef configures node-level caching via the DSL.
@@ -269,10 +270,22 @@ func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, erro
 		return resolveMarble(nd, reg.Marbles, 0)
 	}
 
-	if nd.Transformer != "" && reg.Transformers != nil {
-		t, err := reg.Transformers.Get(nd.Transformer)
-		if err != nil {
-			return nil, fmt.Errorf("node %q: %w", nd.Name, err)
+	if nd.Transformer != "" {
+		var t Transformer
+		switch nd.Transformer {
+		case BuiltinTransformerGoTemplate:
+			t = &goTemplateTransformer{}
+		case BuiltinTransformerPassthrough:
+			t = &passthroughTransformer{}
+		default:
+			if reg.Transformers == nil {
+				return nil, fmt.Errorf("node %q: transformer %q not found (registry is nil)", nd.Name, nd.Transformer)
+			}
+			var err error
+			t, err = reg.Transformers.Get(nd.Transformer)
+			if err != nil {
+				return nil, fmt.Errorf("node %q: %w", nd.Name, err)
+			}
 		}
 		return &transformerNode{
 			name:     nd.Name,
@@ -282,18 +295,30 @@ func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, erro
 			input:    nd.Input,
 			provider: nd.Provider,
 			config:   def.Vars,
+			meta:     nd.Meta,
 		}, nil
 	}
 
-	if nd.Extractor != "" && reg.Extractors != nil {
-		ext, err := reg.Extractors.Get(nd.Extractor)
-		if err != nil {
-			return nil, fmt.Errorf("node %q: %w", nd.Name, err)
+	if nd.Extractor != "" {
+		var ext Extractor
+		switch nd.Extractor {
+		case BuiltinExtractorJSONSchema:
+			ext = &JSONSchemaExtractor{schema: nd.Schema}
+		default:
+			if reg.Extractors == nil {
+				return nil, fmt.Errorf("node %q: extractor %q not found (registry is nil)", nd.Name, nd.Extractor)
+			}
+			var err error
+			ext, err = reg.Extractors.Get(nd.Extractor)
+			if err != nil {
+				return nil, fmt.Errorf("node %q: %w", nd.Name, err)
+			}
 		}
 		return &extractorNode{
 			name:    nd.Name,
 			element: elem,
 			ext:     ext,
+			meta:    nd.Meta,
 		}, nil
 	}
 
