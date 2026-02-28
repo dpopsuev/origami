@@ -255,6 +255,10 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 
 		emitEvent(obs, WalkEvent{Type: EventTransition, Node: node.Name(), Edge: matchedEdge.ID()})
 
+		if matchedEdge.IsLoop() {
+			state.IncrementLoop(node.Name())
+		}
+
 		state.RecordStep(node.Name(), matchedEdge.ID(), matchedEdge.ID(), time.Now().UTC().Format(time.RFC3339))
 		state.MergeContext(matched.ContextAdditions)
 
@@ -393,6 +397,10 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 		}
 
 		emitEvent(obs, WalkEvent{Type: EventTransition, Node: node.Name(), Edge: matchedEdge.ID()})
+
+		if matchedEdge.IsLoop() {
+			state.IncrementLoop(node.Name())
+		}
 
 		state.RecordStep(node.Name(), matchedEdge.ID(), matchedEdge.ID(), time.Now().UTC().Format(time.RFC3339))
 		state.MergeContext(matched.ContextAdditions)
