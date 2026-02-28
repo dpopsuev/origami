@@ -273,6 +273,160 @@ func TestRender_FullReport(t *testing.T) {
 	}
 }
 
+func TestParseReportDef_RepeatSection(t *testing.T) {
+	data := []byte(`
+name: repeat-test
+format: terminal
+sections:
+  - type: repeat
+    items: components
+    body:
+      - type: header
+        title: "Component"
+        level: 2
+      - type: text
+        content: "Name: {{ .name }}"
+`)
+	def, err := ParseReportDef(data)
+	if err != nil {
+		t.Fatalf("ParseReportDef: %v", err)
+	}
+	if def.Sections[0].Items != "components" {
+		t.Errorf("items = %q, want components", def.Sections[0].Items)
+	}
+	if len(def.Sections[0].Body) != 2 {
+		t.Errorf("body sections = %d, want 2", len(def.Sections[0].Body))
+	}
+}
+
+func TestRender_Repeat(t *testing.T) {
+	def := &ReportDef{
+		Name:   "test",
+		Format: "terminal",
+		Sections: []SectionDef{
+			{
+				Type:  "repeat",
+				Items: "components",
+				Body: []SectionDef{
+					{Type: "header", Title: "{{ .name }}", Level: 2},
+					{Type: "text", Content: "Status: {{ .status }}"},
+				},
+			},
+		},
+	}
+
+	data := map[string]any{
+		"components": []map[string]any{
+			{"name": "linuxptp-daemon", "status": "faulty"},
+			{"name": "cnf-gotests", "status": "ok"},
+		},
+	}
+
+	out, err := Render(def, data)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	for _, want := range []string{
+		"Status: faulty",
+		"Status: ok",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in output:\n%s", want, out)
+		}
+	}
+}
+
+func TestRender_RepeatEmpty(t *testing.T) {
+	def := &ReportDef{
+		Name:   "test",
+		Format: "terminal",
+		Sections: []SectionDef{
+			{
+				Type:  "repeat",
+				Items: "missing_key",
+				Body:  []SectionDef{{Type: "text", Content: "never"}},
+			},
+		},
+	}
+
+	out, err := Render(def, map[string]any{})
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if strings.Contains(out, "never") {
+		t.Error("should not render body when items key is missing")
+	}
+}
+
+func TestRender_RepeatMissingItemsField(t *testing.T) {
+	def := &ReportDef{
+		Name:   "test",
+		Format: "terminal",
+		Sections: []SectionDef{
+			{
+				Type: "repeat",
+				Body: []SectionDef{{Type: "text", Content: "x"}},
+			},
+		},
+	}
+
+	_, err := Render(def, map[string]any{})
+	if err == nil {
+		t.Fatal("expected error for repeat without items")
+	}
+}
+
+func TestRender_RepeatWithTable(t *testing.T) {
+	def := &ReportDef{
+		Name:   "test",
+		Format: "terminal",
+		Sections: []SectionDef{
+			{
+				Type:  "repeat",
+				Items: "cases",
+				Body: []SectionDef{
+					{Type: "text", Content: "Case: {{ .case_id }}"},
+					{
+						Type:    "table",
+						Columns: []string{"Step", "Result"},
+						DataKey: "steps",
+					},
+				},
+			},
+		},
+	}
+
+	data := map[string]any{
+		"cases": []map[string]any{
+			{
+				"case_id": "C1",
+				"steps": []map[string]any{
+					{"Step": "F0", "Result": "pass"},
+					{"Step": "F1", "Result": "fail"},
+				},
+			},
+			{
+				"case_id": "C2",
+				"steps": []map[string]any{
+					{"Step": "F0", "Result": "pass"},
+				},
+			},
+		},
+	}
+
+	out, err := Render(def, data)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	for _, want := range []string{"Case: C1", "Case: C2", "F0", "F1", "pass", "fail"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in output:\n%s", want, out)
+		}
+	}
+}
+
 func TestRender_MarkdownTable(t *testing.T) {
 	def := &ReportDef{
 		Name:   "md",

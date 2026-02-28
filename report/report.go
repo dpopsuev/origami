@@ -25,12 +25,14 @@ type ReportDef struct {
 
 // SectionDef describes one section in the report.
 type SectionDef struct {
-	Type    string   `yaml:"type"`              // "table", "text", "header"
-	Title   string   `yaml:"title,omitempty"`
-	Columns []string `yaml:"columns,omitempty"` // for table
-	DataKey string   `yaml:"data,omitempty"`    // key into report data
-	Content string   `yaml:"content,omitempty"` // for text (Go template)
-	Level   int      `yaml:"level,omitempty"`   // for header (1-3)
+	Type    string       `yaml:"type"`              // "table", "text", "header", "repeat"
+	Title   string       `yaml:"title,omitempty"`
+	Columns []string     `yaml:"columns,omitempty"` // for table
+	DataKey string       `yaml:"data,omitempty"`    // key into report data
+	Content string       `yaml:"content,omitempty"` // for text (Go template)
+	Level   int          `yaml:"level,omitempty"`   // for header (1-3)
+	Items   string       `yaml:"items,omitempty"`   // for repeat: key into data for []map[string]any
+	Body    []SectionDef `yaml:"body,omitempty"`    // for repeat: nested sections per item
 }
 
 // LoadReportDef reads a YAML report template from disk.
@@ -67,26 +69,72 @@ func Render(def *ReportDef, data map[string]any) (string, error) {
 	}
 
 	var buf strings.Builder
-	for i, sec := range def.Sections {
+	if err := renderSections(&buf, def.Sections, data, mode); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func renderSections(buf *strings.Builder, sections []SectionDef, data map[string]any, mode format.Mode) error {
+	for i, sec := range sections {
 		if i > 0 {
 			buf.WriteString("\n")
 		}
 		switch sec.Type {
 		case "header":
-			renderHeader(&buf, sec, mode)
+			renderHeader(buf, sec, mode)
 		case "table":
-			if err := renderTable(&buf, sec, data, mode); err != nil {
-				return "", fmt.Errorf("section %d (%s): %w", i, sec.Title, err)
+			if err := renderTable(buf, sec, data, mode); err != nil {
+				return fmt.Errorf("section %d (%s): %w", i, sec.Title, err)
 			}
 		case "text":
-			if err := renderText(&buf, sec, data); err != nil {
-				return "", fmt.Errorf("section %d (text): %w", i, err)
+			if err := renderText(buf, sec, data); err != nil {
+				return fmt.Errorf("section %d (text): %w", i, err)
+			}
+		case "repeat":
+			if err := renderRepeat(buf, sec, data, mode); err != nil {
+				return fmt.Errorf("section %d (repeat): %w", i, err)
 			}
 		default:
-			return "", fmt.Errorf("section %d: unknown type %q", i, sec.Type)
+			return fmt.Errorf("section %d: unknown type %q", i, sec.Type)
 		}
 	}
-	return buf.String(), nil
+	return nil
+}
+
+func renderRepeat(buf *strings.Builder, sec SectionDef, data map[string]any, mode format.Mode) error {
+	if sec.Items == "" {
+		return fmt.Errorf("repeat section requires 'items' field")
+	}
+	rawItems, ok := data[sec.Items]
+	if !ok {
+		return nil
+	}
+
+	items, ok := rawItems.([]map[string]any)
+	if !ok {
+		return fmt.Errorf("data[%q] must be []map[string]any, got %T", sec.Items, rawItems)
+	}
+
+	for i, item := range items {
+		merged := make(map[string]any, len(data)+len(item))
+		for k, v := range data {
+			merged[k] = v
+		}
+		for k, v := range item {
+			merged[k] = v
+		}
+		merged["_index"] = i
+		merged["_item"] = item
+
+		if err := renderSections(buf, sec.Body, merged, mode); err != nil {
+			return fmt.Errorf("item %d: %w", i, err)
+		}
+		if i < len(items)-1 {
+			buf.WriteString("\n")
+		}
+	}
+	return nil
 }
 
 func renderHeader(buf *strings.Builder, sec SectionDef, mode format.Mode) {
