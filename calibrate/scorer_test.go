@@ -8,20 +8,23 @@ import (
 
 func TestScorerRegistry_RegisterAndGet(t *testing.T) {
 	reg := make(ScorerRegistry)
-	reg.Register("custom", func(_, _ any, _ map[string]any) (float64, error) {
-		return 0.42, nil
+	reg.Register("custom", func(_, _ any, _ map[string]any) (float64, string, error) {
+		return 0.42, "test", nil
 	})
 
 	fn, err := reg.Get("custom")
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	val, err := fn(nil, nil, nil)
+	val, detail, err := fn(nil, nil, nil)
 	if err != nil {
 		t.Fatalf("scorer: %v", err)
 	}
 	if val != 0.42 {
 		t.Errorf("value = %v, want 0.42", val)
+	}
+	if detail != "test" {
+		t.Errorf("detail = %q, want test", detail)
 	}
 }
 
@@ -40,8 +43,8 @@ func TestScorerRegistry_DuplicatePanics(t *testing.T) {
 		}
 	}()
 	reg := make(ScorerRegistry)
-	reg.Register("dup", func(_, _ any, _ map[string]any) (float64, error) { return 0, nil })
-	reg.Register("dup", func(_, _ any, _ map[string]any) (float64, error) { return 0, nil })
+	reg.Register("dup", func(_, _ any, _ map[string]any) (float64, string, error) { return 0, "", nil })
+	reg.Register("dup", func(_, _ any, _ map[string]any) (float64, string, error) { return 0, "", nil })
 }
 
 func TestDefaultScorerRegistry_HasBuiltins(t *testing.T) {
@@ -57,7 +60,7 @@ func TestAccuracyScorer_Match(t *testing.T) {
 	result := map[string]any{"defect_type": "infrastructure"}
 	truth := map[string]any{"expected_defect": "Infrastructure"}
 
-	val, err := accuracyScorer(result, truth, map[string]any{
+	val, _, err := accuracyScorer(result, truth, map[string]any{
 		"predicted": "defect_type",
 		"expected":  "expected_defect",
 	})
@@ -73,7 +76,7 @@ func TestAccuracyScorer_Mismatch(t *testing.T) {
 	result := map[string]any{"defect_type": "product_bug"}
 	truth := map[string]any{"expected_defect": "infrastructure"}
 
-	val, err := accuracyScorer(result, truth, map[string]any{
+	val, _, err := accuracyScorer(result, truth, map[string]any{
 		"predicted": "defect_type",
 		"expected":  "expected_defect",
 	})
@@ -86,9 +89,22 @@ func TestAccuracyScorer_Mismatch(t *testing.T) {
 }
 
 func TestAccuracyScorer_MissingParams(t *testing.T) {
-	_, err := accuracyScorer(map[string]any{}, map[string]any{}, map[string]any{})
+	_, _, err := accuracyScorer(map[string]any{}, map[string]any{}, map[string]any{})
 	if err == nil {
 		t.Fatal("expected error for missing params")
+	}
+}
+
+func TestAccuracyScorer_Detail(t *testing.T) {
+	result := map[string]any{"a": "x"}
+	truth := map[string]any{"b": "x"}
+
+	_, detail, err := accuracyScorer(result, truth, map[string]any{"predicted": "a", "expected": "b"})
+	if err != nil {
+		t.Fatalf("scorer: %v", err)
+	}
+	if detail == "" {
+		t.Error("expected non-empty detail")
 	}
 }
 
@@ -96,7 +112,7 @@ func TestRateScorer_FullMatch(t *testing.T) {
 	result := map[string]any{"repos": []any{"A", "B", "C"}}
 	truth := map[string]any{"repos": []any{"A", "B"}}
 
-	val, err := rateScorer(result, truth, map[string]any{"field": "repos"})
+	val, _, err := rateScorer(result, truth, map[string]any{"field": "repos"})
 	if err != nil {
 		t.Fatalf("scorer: %v", err)
 	}
@@ -109,7 +125,7 @@ func TestRateScorer_PartialMatch(t *testing.T) {
 	result := map[string]any{"repos": []any{"A", "D"}}
 	truth := map[string]any{"repos": []any{"A", "B", "C"}}
 
-	val, err := rateScorer(result, truth, map[string]any{"field": "repos"})
+	val, detail, err := rateScorer(result, truth, map[string]any{"field": "repos"})
 	if err != nil {
 		t.Fatalf("scorer: %v", err)
 	}
@@ -117,13 +133,16 @@ func TestRateScorer_PartialMatch(t *testing.T) {
 	if val < expected-0.01 || val > expected+0.01 {
 		t.Errorf("value = %v, want ~%v", val, expected)
 	}
+	if detail != "1/3" {
+		t.Errorf("detail = %q, want 1/3", detail)
+	}
 }
 
 func TestRateScorer_EmptyTruth(t *testing.T) {
 	result := map[string]any{"repos": []any{"A"}}
 	truth := map[string]any{"repos": []any{}}
 
-	val, err := rateScorer(result, truth, map[string]any{"field": "repos"})
+	val, _, err := rateScorer(result, truth, map[string]any{"field": "repos"})
 	if err != nil {
 		t.Fatalf("scorer: %v", err)
 	}
@@ -135,7 +154,7 @@ func TestRateScorer_EmptyTruth(t *testing.T) {
 func TestThresholdCheckScorer_Pass(t *testing.T) {
 	result := map[string]any{"confidence": 0.85}
 
-	val, err := thresholdCheckScorer(result, nil, map[string]any{
+	val, _, err := thresholdCheckScorer(result, nil, map[string]any{
 		"field": "confidence",
 		"min":   0.80,
 	})
@@ -150,7 +169,7 @@ func TestThresholdCheckScorer_Pass(t *testing.T) {
 func TestThresholdCheckScorer_Fail(t *testing.T) {
 	result := map[string]any{"confidence": 0.3}
 
-	val, err := thresholdCheckScorer(result, nil, map[string]any{
+	val, _, err := thresholdCheckScorer(result, nil, map[string]any{
 		"field": "confidence",
 		"min":   0.80,
 	})
@@ -165,7 +184,7 @@ func TestThresholdCheckScorer_Fail(t *testing.T) {
 func TestThresholdCheckScorer_Range(t *testing.T) {
 	result := map[string]any{"loops": 2.5}
 
-	val, err := thresholdCheckScorer(result, nil, map[string]any{
+	val, _, err := thresholdCheckScorer(result, nil, map[string]any{
 		"field": "loops",
 		"min":   0.5,
 		"max":   3.0,
@@ -201,7 +220,7 @@ func TestScoreCard_ScoreCase(t *testing.T) {
 	result := map[string]any{"defect": "infrastructure"}
 	truth := map[string]any{"expected_defect": "Infrastructure"}
 
-	values, err := sc.ScoreCase(result, truth, reg)
+	values, details, err := sc.ScoreCase(result, truth, reg)
 	if err != nil {
 		t.Fatalf("ScoreCase: %v", err)
 	}
@@ -211,6 +230,9 @@ func TestScoreCard_ScoreCase(t *testing.T) {
 	}
 	if _, ok := values["M2"]; ok {
 		t.Error("M2 should not be scored (no Scorer field)")
+	}
+	if details["M1"] == "" {
+		t.Error("M1 detail should be non-empty")
 	}
 }
 

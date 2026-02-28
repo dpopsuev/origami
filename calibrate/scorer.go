@@ -6,9 +6,10 @@ import (
 )
 
 // ScorerFunc computes a single metric value from a case result and ground truth.
-// params carries metric-specific configuration from the scorecard YAML
-// (e.g. field names to compare).
-type ScorerFunc func(caseResult, groundTruth any, params map[string]any) (float64, error)
+// Returns (value, detail, error) where detail is a human-readable explanation
+// (e.g. "15/20 correct"). params carries metric-specific configuration from
+// the scorecard YAML (e.g. field names to compare).
+type ScorerFunc func(caseResult, groundTruth any, params map[string]any) (float64, string, error)
 
 // ScorerRegistry maps scorer names to implementations. Built-in scorers are
 // pre-registered; consumers add domain-specific scorers at startup.
@@ -46,29 +47,29 @@ func DefaultScorerRegistry() ScorerRegistry {
 // accuracyScorer compares two field values for equality.
 // params: "predicted" (field name in caseResult), "expected" (field name in groundTruth).
 // Both caseResult and groundTruth must be map[string]any. Returns 1.0 on match, 0.0 otherwise.
-func accuracyScorer(caseResult, groundTruth any, params map[string]any) (float64, error) {
+func accuracyScorer(caseResult, groundTruth any, params map[string]any) (float64, string, error) {
 	predictedField, _ := params["predicted"].(string)
 	expectedField, _ := params["expected"].(string)
 	if predictedField == "" || expectedField == "" {
-		return 0, fmt.Errorf("accuracy scorer: params must include 'predicted' and 'expected' field names")
+		return 0, "", fmt.Errorf("accuracy scorer: params must include 'predicted' and 'expected' field names")
 	}
 
 	resultMap, ok := caseResult.(map[string]any)
 	if !ok {
-		return 0, fmt.Errorf("accuracy scorer: caseResult must be map[string]any, got %T", caseResult)
+		return 0, "", fmt.Errorf("accuracy scorer: caseResult must be map[string]any, got %T", caseResult)
 	}
 	truthMap, ok := groundTruth.(map[string]any)
 	if !ok {
-		return 0, fmt.Errorf("accuracy scorer: groundTruth must be map[string]any, got %T", groundTruth)
+		return 0, "", fmt.Errorf("accuracy scorer: groundTruth must be map[string]any, got %T", groundTruth)
 	}
 
 	predicted := fmt.Sprintf("%v", resultMap[predictedField])
 	expected := fmt.Sprintf("%v", truthMap[expectedField])
 
 	if strings.EqualFold(predicted, expected) {
-		return 1.0, nil
+		return 1.0, fmt.Sprintf("%s=%s (match)", predictedField, predicted), nil
 	}
-	return 0.0, nil
+	return 0.0, fmt.Sprintf("%s=%s vs %s=%s", predictedField, predicted, expectedField, expected), nil
 }
 
 // rateScorer counts how many items in a list field match a condition.
@@ -76,33 +77,33 @@ func accuracyScorer(caseResult, groundTruth any, params map[string]any) (float64
 // "result_field" and "truth_field" for comparing elements.
 // Both caseResult and groundTruth must be map[string]any with list fields.
 // Returns matched/total.
-func rateScorer(caseResult, groundTruth any, params map[string]any) (float64, error) {
+func rateScorer(caseResult, groundTruth any, params map[string]any) (float64, string, error) {
 	field, _ := params["field"].(string)
 	if field == "" {
-		return 0, fmt.Errorf("rate scorer: params must include 'field'")
+		return 0, "", fmt.Errorf("rate scorer: params must include 'field'")
 	}
 
 	truthMap, ok := groundTruth.(map[string]any)
 	if !ok {
-		return 0, fmt.Errorf("rate scorer: groundTruth must be map[string]any")
+		return 0, "", fmt.Errorf("rate scorer: groundTruth must be map[string]any")
 	}
 
 	truthItems, ok := truthMap[field].([]any)
 	if !ok {
-		return 0, nil
+		return 0, "0/0", nil
 	}
 	if len(truthItems) == 0 {
-		return 1.0, nil
+		return 1.0, "0/0 (vacuous)", nil
 	}
 
 	resultMap, ok := caseResult.(map[string]any)
 	if !ok {
-		return 0, fmt.Errorf("rate scorer: caseResult must be map[string]any")
+		return 0, "", fmt.Errorf("rate scorer: caseResult must be map[string]any")
 	}
 
 	resultItems, ok := resultMap[field].([]any)
 	if !ok {
-		return 0, nil
+		return 0, fmt.Sprintf("0/%d", len(truthItems)), nil
 	}
 
 	resultSet := make(map[string]bool, len(resultItems))
@@ -117,48 +118,48 @@ func rateScorer(caseResult, groundTruth any, params map[string]any) (float64, er
 		}
 	}
 
-	return float64(matched) / float64(len(truthItems)), nil
+	return float64(matched) / float64(len(truthItems)), fmt.Sprintf("%d/%d", matched, len(truthItems)), nil
 }
 
 // thresholdCheckScorer checks if a numeric field meets a threshold.
 // params: "field" (field name in caseResult), "min" (minimum value, optional),
 // "max" (maximum value, optional). Returns 1.0 if within bounds, 0.0 otherwise.
-func thresholdCheckScorer(caseResult, _ any, params map[string]any) (float64, error) {
+func thresholdCheckScorer(caseResult, _ any, params map[string]any) (float64, string, error) {
 	field, _ := params["field"].(string)
 	if field == "" {
-		return 0, fmt.Errorf("threshold_check scorer: params must include 'field'")
+		return 0, "", fmt.Errorf("threshold_check scorer: params must include 'field'")
 	}
 
 	resultMap, ok := caseResult.(map[string]any)
 	if !ok {
-		return 0, fmt.Errorf("threshold_check scorer: caseResult must be map[string]any")
+		return 0, "", fmt.Errorf("threshold_check scorer: caseResult must be map[string]any")
 	}
 
 	val, err := toFloat64(resultMap[field])
 	if err != nil {
-		return 0, fmt.Errorf("threshold_check scorer: field %q: %w", field, err)
+		return 0, "", fmt.Errorf("threshold_check scorer: field %q: %w", field, err)
 	}
 
 	if minVal, ok := params["min"]; ok {
 		minF, err := toFloat64(minVal)
 		if err != nil {
-			return 0, fmt.Errorf("threshold_check scorer: min: %w", err)
+			return 0, "", fmt.Errorf("threshold_check scorer: min: %w", err)
 		}
 		if val < minF {
-			return 0.0, nil
+			return 0.0, fmt.Sprintf("%s=%.2f < min=%.2f", field, val, minF), nil
 		}
 	}
 	if maxVal, ok := params["max"]; ok {
 		maxF, err := toFloat64(maxVal)
 		if err != nil {
-			return 0, fmt.Errorf("threshold_check scorer: max: %w", err)
+			return 0, "", fmt.Errorf("threshold_check scorer: max: %w", err)
 		}
 		if val > maxF {
-			return 0.0, nil
+			return 0.0, fmt.Sprintf("%s=%.2f > max=%.2f", field, val, maxF), nil
 		}
 	}
 
-	return 1.0, nil
+	return 1.0, fmt.Sprintf("%s=%.2f (pass)", field, val), nil
 }
 
 func toFloat64(v any) (float64, error) {
@@ -177,24 +178,28 @@ func toFloat64(v any) (float64, error) {
 }
 
 // ScoreCase evaluates a single case against all metrics in the scorecard that
-// have a Scorer field. Returns metric ID -> value. Metrics without a Scorer
-// field are skipped (backward compatible — consumers provide those values via
-// the existing CaseScorer interface).
-func (sc *ScoreCard) ScoreCase(caseResult, groundTruth any, reg ScorerRegistry) (map[string]float64, error) {
+// have a Scorer field. Returns metric ID -> value and metric ID -> detail.
+// Metrics without a Scorer field are skipped (backward compatible — consumers
+// provide those values via the existing CaseScorer interface).
+func (sc *ScoreCard) ScoreCase(caseResult, groundTruth any, reg ScorerRegistry) (map[string]float64, map[string]string, error) {
 	values := make(map[string]float64)
+	details := make(map[string]string)
 	for _, def := range sc.MetricDefs {
 		if def.Scorer == "" {
 			continue
 		}
 		fn, err := reg.Get(def.Scorer)
 		if err != nil {
-			return nil, fmt.Errorf("metric %s: %w", def.ID, err)
+			return nil, nil, fmt.Errorf("metric %s: %w", def.ID, err)
 		}
-		val, err := fn(caseResult, groundTruth, def.Params)
+		val, detail, err := fn(caseResult, groundTruth, def.Params)
 		if err != nil {
-			return nil, fmt.Errorf("metric %s: scorer %q: %w", def.ID, def.Scorer, err)
+			return nil, nil, fmt.Errorf("metric %s: scorer %q: %w", def.ID, def.Scorer, err)
 		}
 		values[def.ID] = val
+		if detail != "" {
+			details[def.ID] = detail
+		}
 	}
-	return values, nil
+	return values, details, nil
 }
