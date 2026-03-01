@@ -35,12 +35,14 @@ func (r ScorerRegistry) Get(name string) (ScorerFunc, error) {
 	return fn, nil
 }
 
-// DefaultScorerRegistry returns a registry pre-loaded with built-in scorers.
+// DefaultScorerRegistry returns a registry pre-loaded with built-in scorers
+// (3 per-case + 10 batch patterns).
 func DefaultScorerRegistry() ScorerRegistry {
 	reg := make(ScorerRegistry)
 	reg["accuracy"] = accuracyScorer
 	reg["rate"] = rateScorer
 	reg["threshold_check"] = thresholdCheckScorer
+	RegisterBatchScorers(reg)
 	return reg
 }
 
