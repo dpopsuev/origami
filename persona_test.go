@@ -9,26 +9,26 @@ func TestAllPersonas_Count(t *testing.T) {
 	}
 }
 
-func TestLightPersonas_Count(t *testing.T) {
-	light := LightPersonas()
-	if len(light) != 4 {
-		t.Errorf("len(LightPersonas) = %d, want 4", len(light))
+func TestThesisPersonas_Count(t *testing.T) {
+	thesis := ThesisPersonas()
+	if len(thesis) != 4 {
+		t.Errorf("len(ThesisPersonas) = %d, want 4", len(thesis))
 	}
-	for _, p := range light {
-		if p.Identity.Alignment != AlignmentLight {
-			t.Errorf("persona %q has alignment %q, want light", p.Identity.PersonaName, p.Identity.Alignment)
+	for _, p := range thesis {
+		if p.Identity.Alignment != AlignmentThesis {
+			t.Errorf("persona %q has alignment %q, want thesis", p.Identity.PersonaName, p.Identity.Alignment)
 		}
 	}
 }
 
-func TestShadowPersonas_Count(t *testing.T) {
-	shadow := ShadowPersonas()
-	if len(shadow) != 4 {
-		t.Errorf("len(ShadowPersonas) = %d, want 4", len(shadow))
+func TestAntithesisPersonas_Count(t *testing.T) {
+	antithesis := AntithesisPersonas()
+	if len(antithesis) != 4 {
+		t.Errorf("len(AntithesisPersonas) = %d, want 4", len(antithesis))
 	}
-	for _, p := range shadow {
-		if p.Identity.Alignment != AlignmentShadow {
-			t.Errorf("persona %q has alignment %q, want shadow", p.Identity.PersonaName, p.Identity.Alignment)
+	for _, p := range antithesis {
+		if p.Identity.Alignment != AlignmentAntithesis {
+			t.Errorf("persona %q has alignment %q, want antithesis", p.Identity.PersonaName, p.Identity.Alignment)
 		}
 	}
 }
@@ -47,8 +47,8 @@ func TestPersonaByName_Herald(t *testing.T) {
 	if p.Identity.Position != PositionPG {
 		t.Errorf("Herald position = %q, want PG", p.Identity.Position)
 	}
-	if p.Identity.Alignment != AlignmentLight {
-		t.Errorf("Herald alignment = %q, want light", p.Identity.Alignment)
+	if p.Identity.Alignment != AlignmentThesis {
+		t.Errorf("Herald alignment = %q, want thesis", p.Identity.Alignment)
 	}
 }
 
@@ -119,7 +119,7 @@ func TestPersonas_AllPositionsCovered(t *testing.T) {
 	}
 	for pos, count := range positions {
 		if count != 2 {
-			t.Errorf("position %s has %d personas, want 2 (1 light + 1 shadow)", pos, count)
+			t.Errorf("position %s has %d personas, want 2 (1 thesis + 1 antithesis)", pos, count)
 		}
 	}
 }

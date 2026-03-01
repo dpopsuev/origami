@@ -172,10 +172,10 @@ func TestEquipMask_StackOnMaskedNode(t *testing.T) {
 	}
 }
 
-func TestDefaultLightMasks_Registry(t *testing.T) {
-	reg := DefaultLightMasks()
+func TestDefaultThesisMasks_Registry(t *testing.T) {
+	reg := DefaultThesisMasks()
 	if len(reg) != 4 {
-		t.Errorf("len(DefaultLightMasks) = %d, want 4", len(reg))
+		t.Errorf("len(DefaultThesisMasks) = %d, want 4", len(reg))
 	}
 
 	expected := []string{"mask-of-recall", "mask-of-the-forge", "mask-of-correlation", "mask-of-judgment"}
@@ -186,7 +186,7 @@ func TestDefaultLightMasks_Registry(t *testing.T) {
 	}
 }
 
-func TestAllLightMasks_ValidNodes(t *testing.T) {
+func TestAllThesisMasks_ValidNodes(t *testing.T) {
 	cases := []struct {
 		mask     Mask
 		node     string

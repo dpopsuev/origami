@@ -17,8 +17,8 @@ type Color struct {
 type Alignment string
 
 const (
-	AlignmentLight  Alignment = "light"
-	AlignmentShadow Alignment = "shadow"
+	AlignmentThesis     Alignment = "thesis"
+	AlignmentAntithesis Alignment = "antithesis"
 )
 
 // Position represents an agent's dialectic position (structural role).

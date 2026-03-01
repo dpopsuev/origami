@@ -79,7 +79,7 @@ This is not a matter of one being better — they optimize for different ceiling
 | **Node Caching** (TTL, CachePolicy) | No equivalent | **Gap.** LangGraph caches expensive node results by input hash with configurable TTL. Origami re-executes every node on every walk. |
 | **LangSmith** (tracing, evaluation, deployment) | **Kami** (live debugger, MCP + SSE + WS) | Different scope. LangSmith: production SaaS (tracing, evals, metrics, deployment). Kami: development-time live debugger (visualization, breakpoints, replay). LangSmith is broader; Kami is deeper for debugging. |
 | No equivalent | **Persona** + **Element** (quantified agent traits) | **LangGraph gap.** No agent personality system. Model selection is manual. Origami: 6 elements with quantified traits, 8 personas with step affinity, AffinityScheduler for optimal walker-node matching. |
-| No equivalent | **Adversarial Dialectic** (D0-D4) | **LangGraph gap.** No quality validation pattern. Origami: thesis/antithesis/synthesis with Shadow personas, structured confidence scoring, formal verdict. |
+| No equivalent | **Adversarial Dialectic** (D0-D4) | **LangGraph gap.** No quality validation pattern. Origami: thesis/antithesis/synthesis with Antithesis personas, structured confidence scoring, formal verdict. |
 | No equivalent | **Masks** (behavioral middleware) | **LangGraph gap.** No composable behavior modification. Origami: attach/detach masks at runtime (recall, forge, correlation, judgment) to modify walker behavior per node. |
 | No equivalent | **Zones** + **Stickiness** (spatial partitioning) | **LangGraph gap.** No graph spatial concept. Origami: nodes grouped into zones with element affinity and configurable stickiness (0-3) + work-stealing. |
 | No equivalent | **Ouroboros** (meta-calibration) | **LangGraph gap.** No empirical model profiling. Origami: dichotomous probing measures models on 6 behavioral dimensions, producing PersonaSheets for automated model-to-task routing. |
@@ -99,7 +99,7 @@ LangGraph has no concept of "who" is executing a node. Nodes are functions; any 
 
 ### 4.3 Adversarial quality validation
 
-LangGraph pipelines produce output. There is no built-in mechanism to challenge that output. Origami's Adversarial Dialectic (D0-D4) forces conclusions through thesis/antithesis/synthesis with Shadow personas, multi-round argumentation, and structured verdicts. This produces calibrated confidence — not just answers.
+LangGraph pipelines produce output. There is no built-in mechanism to challenge that output. Origami's Adversarial Dialectic (D0-D4) forces conclusions through thesis/antithesis/synthesis with Antithesis personas, multi-round argumentation, and structured verdicts. This produces calibrated confidence — not just answers.
 
 ### 4.4 Ouroboros meta-calibration
 
@@ -203,7 +203,7 @@ LangGraph and Origami are the two most architecturally serious graph-based agent
 - Origami Elements: `element.go` (6 elements, quantified traits)
 - Origami Personas: `persona.go` (8 personas, StepAffinity, PromptPreamble)
 - Origami Masks: `mask.go` (composable behavioral middleware)
-- Origami Dialectic: `dialectic.go` (D0-D4, Shadow pipeline, SynthesisDecision)
+- Origami Dialectic: `dialectic.go` (D0-D4, Antithesis pipeline, SynthesisDecision)
 - Origami Checkpointer: `checkpoint.go` (JSONCheckpointer)
 - Origami MemoryStore: `memory.go` (InMemoryStore)
 - Related case studies: `crewai-crews-and-flows.md`, `omo-agentic-arms-race.md`

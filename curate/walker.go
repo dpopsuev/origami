@@ -40,7 +40,7 @@ func NewCurationWalker(cfg CurationWalkerConfig) *CurationWalker {
 	return &CurationWalker{
 		identity: framework.AgentIdentity{
 			PersonaName: "curator",
-			Alignment:   framework.AlignmentLight,
+			Alignment:   framework.AlignmentThesis,
 		},
 		state:      framework.NewWalkerState(cfg.RecordID),
 		schema:     cfg.Schema,

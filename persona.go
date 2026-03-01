@@ -23,8 +23,8 @@ var (
 	ColorIron     = Color{Name: "Iron", DisplayName: "Iron", Hex: "#48494B", Family: "Neutrals"}
 )
 
-// LightPersonas returns the 4 perennial Light (Cadai) personas.
-func LightPersonas() []Persona {
+// ThesisPersonas returns the 4 perennial Thesis (Cadai) personas.
+func ThesisPersonas() []Persona {
 	return []Persona{
 		{
 			Identity: AgentIdentity{
@@ -32,7 +32,7 @@ func LightPersonas() []Persona {
 				Color:           ColorCrimson,
 				Element:         ElementFire,
 				Position:        PositionPG,
-				Alignment:       AlignmentLight,
+				Alignment:       AlignmentThesis,
 				HomeZone:        MetaPhaseBk,
 				StickinessLevel: 0,
 				StepAffinity: map[string]float64{
@@ -51,7 +51,7 @@ func LightPersonas() []Persona {
 				Color:           ColorCerulean,
 				Element:         ElementWater,
 				Position:        PositionC,
-				Alignment:       AlignmentLight,
+				Alignment:       AlignmentThesis,
 				HomeZone:        MetaPhaseFc,
 				StickinessLevel: 3,
 				StepAffinity: map[string]float64{
@@ -70,7 +70,7 @@ func LightPersonas() []Persona {
 				Color:           ColorCobalt,
 				Element:         ElementEarth,
 				Position:        PositionPF,
-				Alignment:       AlignmentLight,
+				Alignment:       AlignmentThesis,
 				HomeZone:        MetaPhaseFc,
 				StickinessLevel: 2,
 				StepAffinity: map[string]float64{
@@ -89,7 +89,7 @@ func LightPersonas() []Persona {
 				Color:           ColorAmber,
 				Element:         ElementAir,
 				Position:        PositionSG,
-				Alignment:       AlignmentLight,
+				Alignment:       AlignmentThesis,
 				HomeZone:        MetaPhasePt,
 				StickinessLevel: 1,
 				StepAffinity: map[string]float64{
@@ -105,8 +105,8 @@ func LightPersonas() []Persona {
 	}
 }
 
-// ShadowPersonas returns the 4 perennial Shadow (Cytharai) personas.
-func ShadowPersonas() []Persona {
+// AntithesisPersonas returns the 4 perennial Antithesis (Cytharai) personas.
+func AntithesisPersonas() []Persona {
 	return []Persona{
 		{
 			Identity: AgentIdentity{
@@ -114,7 +114,7 @@ func ShadowPersonas() []Persona {
 				Color:           ColorScarlet,
 				Element:         ElementFire,
 				Position:        PositionPG,
-				Alignment:       AlignmentShadow,
+				Alignment:       AlignmentAntithesis,
 				HomeZone:        MetaPhaseBk,
 				StickinessLevel: 0,
 				StepAffinity: map[string]float64{
@@ -132,7 +132,7 @@ func ShadowPersonas() []Persona {
 				Color:           ColorSapphire,
 				Element:         ElementWater,
 				Position:        PositionC,
-				Alignment:       AlignmentShadow,
+				Alignment:       AlignmentAntithesis,
 				HomeZone:        MetaPhaseFc,
 				StickinessLevel: 3,
 				StepAffinity: map[string]float64{
@@ -150,7 +150,7 @@ func ShadowPersonas() []Persona {
 				Color:           ColorIron,
 				Element:         ElementDiamond,
 				Position:        PositionPF,
-				Alignment:       AlignmentShadow,
+				Alignment:       AlignmentAntithesis,
 				HomeZone:        MetaPhaseFc,
 				StickinessLevel: 2,
 				StepAffinity: map[string]float64{
@@ -168,7 +168,7 @@ func ShadowPersonas() []Persona {
 				Color:           ColorObsidian,
 				Element:         ElementLightning,
 				Position:        PositionSG,
-				Alignment:       AlignmentShadow,
+				Alignment:       AlignmentAntithesis,
 				HomeZone:        MetaPhasePt,
 				StickinessLevel: 0,
 				StepAffinity: map[string]float64{
@@ -183,9 +183,9 @@ func ShadowPersonas() []Persona {
 	}
 }
 
-// AllPersonas returns all 8 perennial personas (4 Light + 4 Shadow).
+// AllPersonas returns all 8 perennial personas (4 Thesis + 4 Antithesis).
 func AllPersonas() []Persona {
-	return append(LightPersonas(), ShadowPersonas()...)
+	return append(ThesisPersonas(), AntithesisPersonas()...)
 }
 
 // PersonaByName looks up a persona by name (case-insensitive).

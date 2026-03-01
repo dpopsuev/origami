@@ -104,7 +104,7 @@ The cycles inform the `AffinityScheduler` (from III.1-personae) as tiebreakers:
 
 1. **Primary routing**: Step affinity weights (which agent is best for this step).
 2. **Tiebreaker**: If two agents have equal affinity, prefer the one whose element follows the previous agent's element in the generative cycle.
-3. **Shadow routing**: When the Shadow path activates (III.3), use the destructive cycle to select the challenger: pick the agent whose element challenges the previous Light agent's element.
+3. **Antithesis routing**: When the Antithesis path activates (III.3), use the destructive cycle to select the challenger: pick the agent whose element challenges the previous Thesis agent's element.
 
 ## Tasks
 

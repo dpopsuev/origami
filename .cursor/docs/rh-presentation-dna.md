@@ -243,5 +243,5 @@ CLI-generated calibration reports (ASCII tables, markdown summaries) should use 
 - Red Hat icon repository: Google Slides (internal link in template)
 - PatternFly design system: `patternfly.org`
 - Origami elements: `element.go` (6 core + Iron derived)
-- Origami personas: `persona.go` (8 personas, 4 Light + 4 Shadow)
+- Origami personas: `persona.go` (8 personas, 4 Thesis + 4 Antithesis)
 - Visual Accessibility at Red Hat: internal resource (referenced in template)

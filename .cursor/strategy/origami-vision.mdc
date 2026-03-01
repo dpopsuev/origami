@@ -114,21 +114,21 @@ The system is already concurrent (MuxDispatcher + 4 Cursor subagents proven in A
 
 The YAML DSL and BYO interfaces must survive all four stages. That is the key design constraint.
 
-## Graph Stratification: Light Path and Adversarial Dialectic
+## Graph Stratification: Thesis Path and Adversarial Dialectic
 
 The graph supports two tiers of execution, modeled on [dialectical reasoning](https://en.wikipedia.org/wiki/Dialectic):
 
-### Light Path (Thesis) — 80% of workloads
+### Thesis Path — 80% of workloads
 
 Direct analysis. The pipeline walks nodes, evaluates expression edges, produces artifacts. Handles medium-easy workloads where the initial analysis is strong enough on its own.
 
 ### Adversarial Dialectic (Antithesis + Synthesis) — 20% of workloads
 
-When the Light path's confidence falls below a contradiction threshold, the adversarial path activates. It challenges, contradicts, and stress-tests the thesis — not to "win" but to arrive at truth through structured opposition.
+When the Thesis path's confidence falls below a contradiction threshold, the adversarial path activates. It challenges, contradicts, and stress-tests the thesis — not to "win" but to arrive at truth through structured opposition.
 
 | Phase | Role | Description |
 |---|---|---|
-| **Thesis** | Light path | Initial analysis with confidence score |
+| **Thesis** | Thesis path | Initial analysis with confidence score |
 | **Antithesis** | Adversarial path | Challenges the thesis, identifies evidence gaps, proposes counter-explanations |
 | **Synthesis** | Merged result | Reconciled conclusion — stronger because it survived opposition. Hegel's *Aufheben*: the thesis is preserved and maintained while moving beyond its limitations |
 

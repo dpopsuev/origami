@@ -19,7 +19,7 @@
 - **SignalBus** (`dispatch/signal.go`): Agent coordination signals — `session_started`, `step_ready`, `artifact_submitted`, `zone_shift`, worker lifecycle. Thread-safe append-only log.
 - **WalkObserver** (`observer.go`): Graph walk events — `node_enter`, `node_exit`, `transition`, `walker_switch`, `fan_out_start/end`. Interface with `OnEvent(WalkEvent)`.
 - **Pipeline Studio spec** (`contracts/completed/framework/origami-pipeline-studio.md`): Earlier product spec for web UI visualization. Kami supersedes this with the debugger + demo approach.
-- **Origami Personas** (`persona.go`): 8 personas (4 Light + 4 Shadow) with element affinities, personality traits. Used for agent intro sequences.
+- **Origami Personas** (`persona.go`): 8 personas (4 Thesis + 4 Antithesis) with element affinities, personality traits. Used for agent intro sequences.
 - **Origami Elements** (`element.go`): 6 elements (Fire, Water, Earth, Air, Diamond, Lightning) with quantified traits and colors.
 - **Conversation context:** Design emerged from a discussion combining Inside Out-inspired agent visualization, Hegemony's Demiurge debugger pattern, and the need for a PoC presentation tool. The name Kami (神) comes from Shinto — the divine spirits inhabiting nature. In Origami, the agents walking the pipeline graph are the kami inhabiting the nodes.
 

@@ -250,7 +250,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    light["+ Light Thesis"] --> engine["Dialectic Engine"]
+    thesis["+ Thesis"] --> engine["Dialectic Engine"]
     engine --> synth["Synthesis"]
     synth -->|"MaxTurns (Rf)"| check["Convergence Check"]
     check -->|"to antithesis input"| engine
@@ -268,7 +268,7 @@ The ideal op-amp obeys two golden rules (Horowitz & Hill, *The Art of Electronic
 
 These translate directly to Dialectic design rules:
 
-1. **The synthesis does whatever is necessary to make the disagreement between thesis and antithesis zero.** A synthesis that leaves unresolved contradictions between Light and Shadow is like an op-amp that hasn't settled — it's still in transient, not at equilibrium. The convergence check should verify that the gap has closed, not just that N rounds have passed.
+1. **The synthesis does whatever is necessary to make the disagreement between thesis and antithesis zero.** A synthesis that leaves unresolved contradictions between Thesis and Antithesis is like an op-amp that hasn't settled — it's still in transient, not at equilibrium. The convergence check should verify that the gap has closed, not just that N rounds have passed.
 
 2. **The dialectic draws zero evidence.** The debate process should not consume, alter, or destroy the original evidence. Thesis and antithesis observe the same evidence; they interpret it differently. This is the "high input impedance" principle: the dialectic probes the evidence without loading it (changing it). If the dialectic process itself corrupts or selectively omits evidence, input impedance is too low.
 
@@ -276,8 +276,8 @@ These translate directly to Dialectic design rules:
 
 | Op-Amp Characteristic | Dialectic Equivalent | Design Implication |
 |---|---|---|
-| Non-inverting input (+V) | Light Path thesis | The primary signal to be processed |
-| Inverting input (-V) | Shadow Path antithesis | The challenging signal fed back from output |
+| Non-inverting input (+V) | Thesis Path | The primary signal to be processed |
+| Inverting input (-V) | Antithesis Path | The challenging signal fed back from output |
 | Differential stage | D0-D3: structured debate | Amplifies the disagreement between inputs |
 | Output (Vout) | D4 Synthesis verdict | Single reconciled output |
 | Feedback network (Rf, Rg) | MaxTurns, ConvergenceThreshold | Passive components that determine all useful behavior |
@@ -338,35 +338,35 @@ flowchart LR
 
 **Circuit principle:** Real-world systems are almost never pure analog or pure digital. They are **mixed-signal**: analog sections for interfacing with the physical world, digital sections for computation, and converters (ADC/DAC) at the boundaries. Each domain has different design rules. Analog design cares about noise, bandwidth, impedance. Digital design cares about timing, logic correctness, propagation delay. The boundary between domains is the most critical design point.
 
-**Origami mapping:** Origami pipelines are mixed-signal systems. Early pipeline stages (recall, investigation) operate in the "analog domain" — they deal with unstructured data, natural language, noisy LLM output. Later stages (judgment, synthesis) operate in the "digital domain" — they work with structured artifacts, typed fields, boolean decisions. The `Extractor` sits at the ADC boundary; `RenderPrompt` sits at the DAC boundary.
+**Origami mapping:** Origami pipelines are hybrid systems. Early pipeline stages (recall, investigation) operate in the **unstructured** domain — they deal with natural language, free-form JSON, noisy LLM output. Later stages (judgment, synthesis) operate in the **structured** domain — they work with typed artifacts, validated schemas, boolean decisions. The `Extractor` sits at the unstructured-to-structured boundary; `RenderPrompt` sits at the structured-to-unstructured boundary.
 
-**Zones** map naturally to signal domains:
-- **Analog zones** — Nodes that primarily consume and produce unstructured data (backcourt / intake)
-- **Digital zones** — Nodes that primarily consume and produce structured artifacts (frontcourt / synthesis)
-- **Mixed zones** — Nodes that convert between domains (the ADC/DAC boundary)
+**Zones** map naturally to data domains:
+- **Unstructured zones** — Nodes that primarily consume and produce free-form data (backcourt / intake)
+- **Structured zones** — Nodes that primarily consume and produce typed artifacts (frontcourt / synthesis)
+- **Hybrid zones** — Nodes that convert between domains (the extraction / rendering boundary)
 
-**Insight:** Treating zones as signal domains changes how pipeline designers think about node placement. Moving a structured-output node into an analog zone is like putting a digital IC on an analog board without proper decoupling — it will work, but suboptimally. The framework could warn when a node with `schema:` (digital) is placed in a zone dominated by unstructured processing (analog), or vice versa.
+**Insight:** Treating zones as data domains changes how pipeline designers think about node placement. Moving a schema-validated node into an unstructured zone is like putting a digital IC on an analog board without proper decoupling — it will work, but suboptimally. The framework could warn when a node with `schema:` (structured) is placed in a zone dominated by free-form processing (unstructured), or vice versa.
 
-**Possible adaptation:** An optional `domain:` annotation on zones (`analog`, `digital`, `mixed`) that feeds into pipeline linting. The linter checks that extraction nodes sit at analog-to-digital zone boundaries, and prompt rendering happens at digital-to-analog boundaries.
+**Possible adaptation:** An optional `domain:` annotation on zones (`unstructured`, `structured`, `hybrid`) that feeds into pipeline linting. The linter checks that extraction nodes sit at unstructured-to-structured zone boundaries, and prompt rendering happens at structured-to-unstructured boundaries.
 
 ```mermaid
 flowchart LR
-    subgraph analogZone ["Analog Zone (Backcourt)"]
+    subgraph unstructuredZone ["Unstructured Zone (Backcourt)"]
         recall["recall"] --> investigate["investigate"]
     end
 
-    investigate -->|"ADC"| ext["Extractor"]
+    investigate -->|"Extract"| ext["Extractor"]
     ext --> judge
 
-    subgraph digitalZone ["Digital Zone (Frontcourt)"]
+    subgraph structuredZone ["Structured Zone (Frontcourt)"]
         judge["judge"] --> synthesize["synthesize"]
     end
 
-    synthesize -->|"DAC"| rend["Renderer"]
+    synthesize -->|"Render"| rend["Renderer"]
     rend --> nextLLM["Next LLM call"]
 ```
 
-The zone boundary is the most critical design point. Placing an extractor inside an analog zone or a renderer inside a digital zone is like placing an ADC in the middle of an analog filter chain — it quantizes the signal before conditioning is complete.
+The zone boundary is the most critical design point. Placing an extractor inside an unstructured zone or a renderer inside a structured zone is like placing an ADC in the middle of an analog filter chain — it quantizes the signal before conditioning is complete.
 
 ### Pattern 3: Impedance Matching
 
@@ -554,7 +554,7 @@ Despite this, the structural patterns transfer remarkably well. The mixed-signal
 
 1. **Renderer interface (DAC symmetry)** — Define a `Renderer` interface symmetric to `Extractor`: `Name() string`, `Render(ctx context.Context, data any) (string, error)`. Add `RendererRegistry`. Wire into DSL via `renderer:` field on nodes. This closes the most significant gap the analogy reveals — the asymmetric treatment of the two conversion directions.
 
-2. **Mixed-signal zone annotations** — Add an optional `domain:` field to `ZoneDef` (`analog`, `digital`, `mixed`). Feed into `origami lint` to warn about extraction nodes outside analog-digital boundaries and structured nodes in analog zones. Low-cost DSL addition with design-time value.
+2. **Data-domain zone annotations** — Add an optional `domain:` field to `ZoneDef` (`unstructured`, `structured`, `hybrid`). Feed into `origami lint` to warn about extraction nodes outside unstructured-to-structured boundaries and schema-validated nodes in unstructured zones. Low-cost DSL addition with design-time value.
 
 3. **Context filter on zone boundaries** — Add `context_filter:` to `ZoneDef` with `pass` and `block` lists. When a walker crosses a zone boundary, strip blocked keys from `WalkerState.Context`. This is the decoupling capacitor pattern — prevents context noise from propagating across domain boundaries.
 

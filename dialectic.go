@@ -3,7 +3,7 @@ package framework
 import "time"
 
 // DialecticConfig controls the adversarial dialectic pipeline activation and limits.
-// When the Light path's confidence falls below the contradiction threshold,
+// When the Thesis path's confidence falls below the contradiction threshold,
 // the adversarial path activates for thesis-antithesis-synthesis debate.
 type DialecticConfig struct {
 	Enabled                bool          `json:"enabled"`
@@ -24,7 +24,7 @@ func DefaultDialecticConfig() DialecticConfig {
 	}
 }
 
-// NeedsAntithesis returns true when a Light path confidence falls in the
+// NeedsAntithesis returns true when a Thesis path confidence falls in the
 // uncertain range that triggers adversarial dialectic review.
 func (c DialecticConfig) NeedsAntithesis(confidence float64) bool {
 	if !c.Enabled {
@@ -118,7 +118,7 @@ func (s *Synthesis) Confidence() float64 { return s.ConfidenceScore }
 func (s *Synthesis) Raw() any            { return s }
 
 // NegationFeedback provides structured feedback when a case is remanded
-// back to the Light path for reinvestigation.
+// back to the Thesis path for reinvestigation.
 type NegationFeedback struct {
 	ChallengedEvidence []int    `json:"challenged_evidence"`
 	AlternativeHyp     string   `json:"alternative_hypothesis"`

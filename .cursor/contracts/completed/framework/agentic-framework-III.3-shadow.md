@@ -1,27 +1,27 @@
 # Contract — Agentic Framework III.3: Shadow
 
 **Status:** complete
-**Goal:** Define the adversarial pipeline pattern where Light and Shadow agents contest uncertain cases, using the Wuxing destructive cycle for challenger selection. Absorb scope of `defect-court.md`.
+**Goal:** Define the adversarial pipeline pattern where Thesis and Antithesis agents contest uncertain cases, using the Wuxing destructive cycle for challenger selection. Absorb scope of `defect-court.md`.
 **Serves:** Architecture evolution (Framework identity)
 
 ## Contract rules
 
-- The Shadow path is **optional** and **additive** -- it activates only for uncertain cases and does not modify the Light path (F0-F6) behavior.
+- The Antithesis path is **optional** and **additive** -- it activates only for uncertain cases and does not modify the Thesis path (F0-F6) behavior.
 - Role separation is mandatory: prosecution, defense, and judge must use different agent identities with different Alignments.
 - Fast-track (plea deal) must exist so easy cases bypass full adversarial review.
-- Challenger selection uses the destructive cycle from II.2-cycles: the Shadow agent's element challenges the Light agent's element.
-- The Shadow path reuses the Framework ontology (Nodes, Edges, Walkers, Graph) -- it IS a second pipeline definition, not a special case.
+- Challenger selection uses the destructive cycle from II.2-cycles: the Antithesis agent's element challenges the Thesis agent's element.
+- The Antithesis path reuses the Framework ontology (Nodes, Edges, Walkers, Graph) -- it IS a second pipeline definition, not a special case.
 - This contract absorbs the scope of `defect-court.md`. All D0-D4 steps, heuristics, and artifact types are preserved.
-- Inspired by: Warhammer (Loyal vs Traitor Primarchs), Inside Out (Joy needs Sadness), Jungian Shadow (the hidden self), Wuxing destructive cycle (ke).
+- Inspired by: Warhammer (Loyal vs Traitor Primarchs), Inside Out (Joy needs Sadness), Hegelian Dialectic (thesis/antithesis/synthesis), Wuxing destructive cycle (ke).
 
 ## Context
 
 - `contracts/draft/defect-court.md` -- defines D0-D4 pipeline, HD1-HD12 heuristics, prosecution/defense/judge roles, remand feedback, TTL/handoff limits. All absorbed here.
 - `contracts/draft/agentic-framework-I.1-ontology.md` -- Node, Edge, Walker, Graph interfaces.
-- `contracts/draft/agentic-framework-I.2-characteristica.md` -- DSL for declaring pipelines (the Shadow path IS a second pipeline).
+- `contracts/draft/agentic-framework-I.2-characteristica.md` -- DSL for declaring pipelines (the Antithesis path IS a second pipeline).
 - `contracts/draft/agentic-framework-II.2-cycles.md` -- destructive cycle for challenger selection.
-- `contracts/draft/agentic-framework-III.1-personae.md` -- Shadow personas (Challenger, Abyss, Bulwark, Specter).
-- `contracts/draft/agentic-framework-III.2-masks.md` -- Shadow masks (Indictment, Discovery).
+- `contracts/draft/agentic-framework-III.1-personae.md` -- Antithesis personas (Challenger, Abyss, Bulwark, Specter).
+- `contracts/draft/agentic-framework-III.2-masks.md` -- Antithesis masks (Indictment, Discovery).
 - Plan reference: `agentic_framework_contracts_2daf3e14.plan.md` -- Tome III: Personae.
 
 ## Architecture
@@ -29,16 +29,16 @@
 ### Pipeline paths
 
 ```
-Light path: F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6
-Shadow path:                   D0 -> D1 -> D2 -> D3
+Thesis path: F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6
+Antithesis path:               D0 -> D1 -> D2 -> D3
                                (indict, discover, defend, hear, verdict)
 ```
 
-The Shadow path activates when a Light agent's F5 Review confidence is in the "uncertain" range -- neither high enough to accept nor low enough to reject. This is the Wuxing destructive cycle in action: Shadow agents tear down weak conclusions so Light agents can rebuild stronger ones.
+The Antithesis path activates when a Thesis agent's F5 Review confidence is in the "uncertain" range -- neither high enough to accept nor low enough to reject. This is the Wuxing destructive cycle in action: Antithesis agents tear down weak conclusions so Thesis agents can rebuild stronger ones.
 
-### Shadow persona to court role mapping
+### Antithesis persona to court role mapping
 
-| Shadow Persona | Court Role | Element | Destructive Target |
+| Antithesis Persona | Court Role | Element | Destructive Target |
 |----------------|------------|---------|-------------------|
 | Challenger (Scarlet) | Prosecutor | Fire | Challenges Water (deep evidence) |
 | Abyss (Sapphire) | Devil's Advocate | Water | Challenges Earth (stable conclusions) |
@@ -47,12 +47,12 @@ The Shadow path activates when a Light agent's F5 Review confidence is in the "u
 
 ### Activation trigger
 
-The Shadow path activates based on the Light path's confidence:
-- Confidence >= 0.85: affirm (no Shadow needed)
-- 0.50 <= Confidence < 0.85: UNCERTAIN -- activate Shadow
-- Confidence < 0.50: reject (Light agent already uncertain)
+The Antithesis path activates based on the Thesis path's confidence:
+- Confidence >= 0.85: affirm (no Antithesis needed)
+- 0.50 <= Confidence < 0.85: UNCERTAIN -- activate Antithesis
+- Confidence < 0.50: reject (Thesis agent already uncertain)
 
-### Shadow pipeline definition (DSL)
+### Antithesis pipeline definition (DSL)
 
 ```yaml
 pipeline: defect-court
@@ -167,7 +167,7 @@ done: _done
 
 ### Remand feedback (structured, not blind)
 
-A court remand provides structured feedback to the Light path's F2/F3:
+A court remand provides structured feedback to the Thesis path's F2/F3:
 - Which evidence items were challenged and why
 - The defense's alternative hypothesis with supporting evidence
 - Specific questions the reinvestigation must address
@@ -180,7 +180,7 @@ type CourtConfig struct {
     TTL         time.Duration `json:"ttl"`
     MaxHandoffs int           `json:"max_handoffs"`
     MaxRemands  int           `json:"max_remands"`
-    ActivationThreshold float64 `json:"activation_threshold"` // confidence below which Shadow activates
+    ActivationThreshold float64 `json:"activation_threshold"` // confidence below which Antithesis activates
 }
 ```
 
@@ -192,13 +192,13 @@ Four phases matching `defect-court.md` but reframed as Framework implementations
 Define court artifact types and heuristic rules using Framework ontology.
 
 ### Phase 2 -- BasicAdapter court roles (heuristic baseline)
-Implement Shadow personas as BasicAdapter variants with specialized heuristics.
+Implement Antithesis personas as BasicAdapter variants with specialized heuristics.
 
 ### Phase 3 -- Calibration metrics for court
 Add verdict flip rate, defense challenge accuracy, remand effectiveness.
 
 ### Phase 4 -- LLM-based court (requires MCP)
-Shadow personas with distinct system prompts via MCP.
+Antithesis personas with distinct system prompts via MCP.
 
 ## Tasks
 
@@ -209,7 +209,7 @@ Shadow personas with distinct system prompts via MCP.
 - [x] Create `pipelines/defect-court.yaml` -- D0-D4 pipeline in Framework DSL (created in I.2)
 - [x] Define court Edge evaluators (HD1-HD12) as Framework Edge implementations
 - [x] Define `CourtEvidenceGap` extending shared `EvidenceGap` type
-- [x] Wire Shadow activation trigger: Light F5 confidence in uncertain range (`ShouldActivate`)
+- [x] Wire Antithesis activation trigger: Thesis F5 confidence in uncertain range (`ShouldActivate`)
 
 ### Phase 2 -- BasicAdapter court roles
 
@@ -217,7 +217,7 @@ Shadow personas with distinct system prompts via MCP.
 - [x] Implement Abyss persona as defense heuristic adapter
 - [x] Implement Bulwark persona as forensic expert heuristic adapter
 - [x] Implement Specter persona as summary judgment adapter
-- [x] Wire Shadow pipeline into calibrate runner as post-F6 phase
+- [x] Wire Antithesis pipeline into calibrate runner as post-F6 phase
 
 ### Phase 3 -- Metrics
 
@@ -230,33 +230,33 @@ Shadow personas with distinct system prompts via MCP.
 
 - [x] Prosecution, defense, and judge system prompts
 - [x] Multi-round hearing with structured JSON exchange
-- [x] Remand feedback integration with Light F2/F3
+- [x] Remand feedback integration with Thesis F2/F3
 
 ### Validation
 
-- [x] Validate (green) -- `go build ./...`, all tests pass, Light pipeline unchanged
+- [x] Validate (green) -- `go build ./...`, all tests pass, Thesis pipeline unchanged
 - [x] Tune (blue) -- review activation thresholds, court heuristic rules
 - [x] Validate (green) -- all tests still pass after tuning
 
 ## Acceptance criteria
 
-- **Given** the Light pipeline produces a classification with confidence 0.65 (uncertain range),
-- **When** the Shadow path activates,
-- **Then** Shadow agents (Challenger, Abyss) contest the classification using the destructive cycle.
+- **Given** the Thesis pipeline produces a classification with confidence 0.65 (uncertain range),
+- **When** the Antithesis path activates,
+- **Then** Antithesis agents (Challenger, Abyss) contest the classification using the destructive cycle.
 
 - **Given** a case where prosecution confidence is >= 0.95,
 - **When** defense evaluates the case,
 - **Then** the plea deal fast-track (HD2) skips to verdict with near-zero overhead.
 
 - **Given** a court remand back to F2/F3,
-- **When** the Light path reinvestigates with structured feedback,
+- **When** the Thesis path reinvestigates with structured feedback,
 - **Then** the second-pass classification addresses the defense's specific challenges.
 
 - **Given** the court's TTL or handoff counter is exceeded,
 - **When** the case cannot reach a verdict,
 - **Then** a mistrial is declared with an Evidence Gap Brief.
 
-- **Given** the Shadow pipeline YAML definition,
+- **Given** the Antithesis pipeline YAML definition,
 - **When** it is loaded into the Framework DSL,
 - **Then** it produces a valid Graph with 5 nodes and 12 edges.
 
@@ -272,6 +272,6 @@ Shadow personas with distinct system prompts via MCP.
 
 - 2026-02-22 -- Phase 1 complete: added BuildCourtEdgeFactory with HD1-HD12 court edge evaluators, CourtEvidenceGap type, updated defect-court.yaml to HD1-HD12 IDs. Fixed Artifact interface compliance: renamed Confidence struct fields to ConfidenceScore to resolve method/field clash (Confidence_() -> Confidence()). 15 court tests passing, compile-time interface assertions added. All Phase 1 tasks done.
 - 2026-02-21 20:30 -- Phase 1 partial: court artifact types (Indictment, DefenseBrief, HearingRecord, Verdict), CourtConfig with ShouldActivate, VerdictDecision constants, RemandFeedback. 9 court tests passing. Edge evaluators (HD1-HD12) and CourtEvidenceGap deferred to Phase 1 completion. Phases 2-4 require adapter/calibration/LLM integration outside framework layer. Contract moved to active.
-- 2026-02-20 -- Contract created. Absorbs `defect-court.md` scope. Reframed as a Framework pipeline instance (second Graph) rather than a special extension to F0-F6. Shadow personas (from III.1) serve as court roles. Destructive cycle (from II.2) determines challenger selection. Court pipeline expressed in Framework DSL (from I.2).
-- The key insight from Jung: the Shadow is not evil -- it is the hidden, unacknowledged aspect that must be integrated for wholeness. Similarly, Shadow agents are not trying to break the pipeline -- they are trying to make it honest.
+- 2026-02-20 -- Contract created. Absorbs `defect-court.md` scope. Reframed as a Framework pipeline instance (second Graph) rather than a special extension to F0-F6. Antithesis personas (from III.1) serve as court roles. Destructive cycle (from II.2) determines challenger selection. Court pipeline expressed in Framework DSL (from I.2).
+- The key insight from Hegel: the Antithesis is not opposition for its own sake -- it is the necessary counterforce that drives synthesis. Similarly, Antithesis agents are not trying to break the pipeline -- they are trying to make it honest.
 - Depends on I.1-ontology, I.2-characteristica, II.2-cycles, III.1-personae, III.2-masks.

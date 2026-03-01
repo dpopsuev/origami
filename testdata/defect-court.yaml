@@ -1,5 +1,5 @@
 # D0-D4 Defect Court adversarial pipeline.
-# Shadow path activates when Light F5 confidence is in the uncertain range.
+# Antithesis path activates when Thesis F5 confidence is in the uncertain range.
 # Edge evaluation logic is registered via BuildCourtEdgeFactory in Go.
 pipeline: defect-court
 description: "D0-D4 adversarial review pipeline"

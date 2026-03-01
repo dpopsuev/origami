@@ -20,9 +20,9 @@ Oh My OpenCode is a multi-model agent orchestration harness built on top of Open
 | Sisyphus | Main orchestrator, never stops | Walker traversing the graph |
 | Prometheus | Strategic planner (interview mode) | No equivalent — planning persona |
 | Atlas | Todo executor, distributes to subagents | WalkTeam + AffinityScheduler |
-| Oracle | Read-only architecture consultant | Shadow persona in Dialectic |
+| Oracle | Read-only architecture consultant | Antithesis persona in Dialectic |
 | Metis | Gap analyzer — catches what planner missed | Adversarial Dialectic (antithesis) |
-| Momus | Ruthless reviewer | Shadow persona (Challenger) |
+| Momus | Ruthless reviewer | Antithesis persona (Challenger) |
 | Librarian | Documentation and code search | Knowledge source (KnowledgeSourceRouter) |
 | Explore | Fast codebase grep | Not an agent concern — tooling |
 | Hephaestus | GPT-native autonomous agent | Walker with different element |
@@ -49,7 +49,7 @@ Oh My OpenCode is a multi-model agent orchestration harness built on top of Open
 | **Model matching** (category → model) | `ProviderRouter` + `DeriveStepAffinity` + `Ouroboros.ElementMatch` | Origami has the **infrastructure** but the loop is **not closed** — Ouroboros measures, DeriveStepAffinity suggests, but nothing auto-routes at walk time. |
 | **Parallel execution** (5+ background agents) | `WalkTeam` + `ParallelEdge` (fan-out via errgroup) | Origami is **more structured** (graph-based parallelism with fan-out/fan-in merge nodes) but **less ad-hoc** (can't fire arbitrary background agents outside the graph). |
 | **Accumulated wisdom** (cross-task learning) | `WalkerState` (partial) | **Gap.** Origami has per-walk state but no formal mechanism to carry learnings across separate pipeline walks. |
-| **Gap analysis** (Metis) | `Adversarial Dialectic` (D0-D4, Shadow pipeline: indict → discover → defend → hearing → verdict) | Origami is **architecturally deeper** — thesis/antithesis/synthesis with formal Shadow personas, quantified confidence, structured verdict. OmO's Metis is a single-pass review prompt. |
+| **Gap analysis** (Metis) | `Adversarial Dialectic` (D0-D4, Antithesis pipeline: indict → discover → defend → hearing → verdict) | Origami is **architecturally deeper** — thesis/antithesis/synthesis with formal Antithesis personas, quantified confidence, structured verdict. OmO's Metis is a single-pass review prompt. |
 | **Discipline enforcement** (Todo enforcer, Ralph Loop) | `Element.MaxLoops`, `ConvergenceThreshold`, `FailureMode` | Origami has the **traits** but no dedicated **enforcement runtime**. Element traits constrain walk behavior; OmO has explicit loop-and-check agents. |
 | **Provider fallback chains** | No equivalent | **Gap.** `ProviderRouter` is static routing with no fallback. If the primary provider fails, the dispatch fails. |
 | **Skills with embedded MCPs** | `PipelineServer` with domain hooks, schema-validated `submit_step` | Origami is **more formal** (schema factory, step validation) but MCPs are not scoped per-task — one server per pipeline. |
@@ -72,7 +72,7 @@ Origami empirically profiles models on 6 behavioral dimensions (Speed, Persisten
 
 ### 3.3 Adversarial Dialectic
 
-Origami has a formal thesis/antithesis/synthesis quality validation pattern with Shadow personas (Challenger, Abyss, Bulwark, Specter). OmO has Momus (a "ruthless reviewer" prompt) and Metis (a "gap analyzer" prompt). These are single-pass reviews, not multi-round dialectics with structured confidence scoring.
+Origami has a formal thesis/antithesis/synthesis quality validation pattern with Antithesis personas (Challenger, Abyss, Bulwark, Specter). OmO has Momus (a "ruthless reviewer" prompt) and Metis (a "gap analyzer" prompt). These are single-pass reviews, not multi-round dialectics with structured confidence scoring.
 
 **Why it matters:** Single-pass review catches surface issues. Adversarial dialectic forces the system to defend its conclusions against opposition, producing calibrated confidence and identifying genuine uncertainty.
 

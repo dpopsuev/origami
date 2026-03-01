@@ -35,7 +35,7 @@ var personaDocs = map[string]string{
 	"arbiter":  "Diamond persona. Adversarial reviewer. \"The evidence is inconclusive.\"",
 	"catalyst": "Lightning persona. Pipeline orchestrator. \"New failure incoming! All units respond!\"",
 	"oracle":   "Void persona. Pattern recognizer across time. Sees trends invisible to others.",
-	"phantom":  "Shadow persona. The adversarial counterpart used in the Dialectic system.",
+	"phantom":  "Antithesis persona. The adversarial counterpart used in the Dialectic system.",
 }
 
 var exprContextDocs = map[string]string{

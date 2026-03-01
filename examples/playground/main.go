@@ -150,10 +150,10 @@ func elementColor(e fw.Element) string {
 
 func showPersonas() {
 	fmt.Printf("Personas are perennial agent identities — stable across model releases. Each has a %scolor%s,\n", bold, reset)
-	fmt.Printf("an %selement%s, a dialectic %sposition%s, and either %sLight%s or %sShadow%s alignment.\n\n", bold, reset, bold, reset, green, reset, red, reset)
+	fmt.Printf("an %selement%s, a dialectic %sposition%s, and either %sThesis%s or %sAntithesis%s alignment.\n\n", bold, reset, bold, reset, green, reset, red, reset)
 
-	fmt.Printf("  %sLight (Cadai) — the investigation team:%s\n", green, reset)
-	for _, p := range fw.LightPersonas() {
+	fmt.Printf("  %sThesis (Cadai) — the investigation team:%s\n", green, reset)
+	for _, p := range fw.ThesisPersonas() {
 		id := p.Identity
 		fmt.Printf("    %s%-12s%s %-10s %-10s %-12s %s\n",
 			elementColor(id.Element), id.PersonaName, reset,
@@ -161,8 +161,8 @@ func showPersonas() {
 	}
 
 	fmt.Println()
-	fmt.Printf("  %sShadow (Cytharai) — the adversarial dialectic:%s\n", red, reset)
-	for _, p := range fw.ShadowPersonas() {
+	fmt.Printf("  %sAntithesis (Cytharai) — the adversarial dialectic:%s\n", red, reset)
+	for _, p := range fw.AntithesisPersonas() {
 		id := p.Identity
 		fmt.Printf("    %s%-12s%s %-10s %-10s %-12s %s\n",
 			elementColor(id.Element), id.PersonaName, reset,
@@ -449,8 +449,8 @@ func showMasks() {
 	fmt.Printf("  Masks are detachable middleware that grant powers at specific nodes.\n")
 	fmt.Printf("  They wrap a node's processing: %spre -> node -> post%s.\n\n", bold, reset)
 
-	masks := fw.DefaultLightMasks()
-	fmt.Printf("  %s4 Light Masks:%s\n", bold, reset)
+	masks := fw.DefaultThesisMasks()
+	fmt.Printf("  %s4 Thesis Masks:%s\n", bold, reset)
 	for name, mask := range masks {
 		nodes := strings.Join(mask.ValidNodes(), ", ")
 		fmt.Printf("    %-24s at %-14s %s%s%s\n",
@@ -513,7 +513,7 @@ func showCycles() {
 // ---------------------------------------------------------------------------
 
 func showDialectic() {
-	fmt.Printf("  When the Light pipeline's confidence is uncertain (0.50-0.85),\n")
+	fmt.Printf("  When the Thesis pipeline's confidence is uncertain (0.50-0.85),\n")
 	fmt.Printf("  the adversarial dialectic activates for thesis-antithesis-synthesis review.\n\n")
 
 	cfg := fw.DefaultDialecticConfig()
@@ -559,7 +559,7 @@ func showDialectic() {
 		{"affirm", "Original classification stands"},
 		{"amend", "Classification changed based on evidence"},
 		{"acquit", "Insufficient evidence — produce gap brief"},
-		{"remand", "Send back to Light path for reinvestigation"},
+		{"remand", "Send back to Thesis path for reinvestigation"},
 		{"unresolved", "Irreconcilable contradiction — turn limit or arbiter declares"},
 	}
 	for _, d := range decisions {
@@ -569,7 +569,7 @@ func showDialectic() {
 	fmt.Println()
 	fmt.Printf("  %sThe dialectic uses typed artifacts (ThesisChallenge, AntithesisResponse,\n", dim)
 	fmt.Printf("  DialecticRecord, Synthesis) and HD1-HD12 heuristic edges — the same Edge\n")
-	fmt.Printf("  interface used by the Light pipeline. Shadow is just another graph walk.%s\n", reset)
+	fmt.Printf("  interface used by the Thesis pipeline. Antithesis is just another graph walk.%s\n", reset)
 }
 
 // ---------------------------------------------------------------------------

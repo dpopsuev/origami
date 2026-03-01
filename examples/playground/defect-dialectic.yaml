@@ -1,5 +1,5 @@
 # D0-D4 Adversarial Dialectic pipeline.
-# Shadow path activates when Light F5 confidence is in the uncertain range.
+# Antithesis path activates when Thesis F5 confidence is in the uncertain range.
 # Edge evaluation logic is registered via BuildDialecticEdgeFactory in Go.
 pipeline: defect-dialectic
 description: "D0-D4 adversarial dialectic review pipeline"

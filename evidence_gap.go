@@ -11,8 +11,8 @@ const (
 )
 
 // EvidenceGap represents a single missing piece of evidence that prevented
-// the pipeline from reaching high confidence. Shared between the Light path
-// (evidence-gap-brief) and the Shadow path (dialectic unresolved contradiction).
+// the pipeline from reaching high confidence. Shared between the Thesis path
+// (evidence-gap-brief) and the Antithesis path (dialectic unresolved contradiction).
 type EvidenceGap struct {
 	Description     string      `json:"description"`
 	Source          string      `json:"source"`

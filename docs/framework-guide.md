@@ -184,9 +184,9 @@ Iron represents a system that has been tuned — it's more efficient than Earth 
 
 ## Personas
 
-Personas are perennial agent identities — stable across model releases while the transient models behind them shift. Each combines a **color** (personality), an **element** (behavioral archetype), a **position** (structural role), and an **alignment** (Light or Shadow). Ouroboros measures the model; Personas provide the enduring role.
+Personas are perennial agent identities — stable across model releases while the transient models behind them shift. Each combines a **color** (personality), an **element** (behavioral archetype), a **position** (structural role), and an **alignment** (Thesis or Antithesis). Ouroboros measures the model; Personas provide the enduring role.
 
-### Light Personas (Cadai) — The Investigation Team
+### Thesis Personas (Cadai) — The Investigation Team
 
 | Persona | Color | Element | Position | Description |
 |---------|-------|---------|----------|-------------|
@@ -195,7 +195,7 @@ Personas are perennial agent identities — stable across model releases while t
 | **Sentinel** | Cobalt | Earth | PF | Steady resolver. Follows proven paths toward convergence. |
 | **Weaver** | Amber | Air | SG | Holistic closer. Synthesizes all findings into a narrative. |
 
-### Shadow Personas (Cytharai) — The Adversarial Dialectic
+### Antithesis Personas (Cytharai) — The Adversarial Dialectic
 
 | Persona | Color | Element | Position | Description |
 |---------|-------|---------|----------|-------------|
@@ -206,7 +206,7 @@ Personas are perennial agent identities — stable across model releases while t
 
 ### Why 8?
 
-The 4+4 structure mirrors the Light and Shadow pipelines. Light personas handle the F0-F6 investigation; Shadow personas staff the D0-D4 adversarial dialectic. Each persona has a `PromptPreamble` that shapes how the underlying model behaves — giving the same LLM different "behavioral skins."
+The 4+4 structure mirrors the Thesis and Antithesis pipelines. Thesis personas handle the F0-F6 investigation; Antithesis personas staff the D0-D4 adversarial dialectic. Each persona has a `PromptPreamble` that shapes how the underlying model behaves — giving the same LLM different "behavioral skins."
 
 Each persona also carries a `StepAffinity` map: a float64 score per pipeline step indicating how well-suited the persona is for that step. The Herald's recall affinity is 0.9; its investigate affinity is 0.2. This enables intelligent routing: assign the agent with the highest affinity for the current step.
 
@@ -526,7 +526,7 @@ MaskA.pre → MaskB.pre → Node.Process → MaskB.post → MaskA.post
 
 First equipped = outermost wrapper.
 
-### The 4 Light Masks
+### The 4 Thesis Masks
 
 | Mask | Valid Node | What it injects |
 |------|-----------|-----------------|
@@ -547,7 +547,7 @@ Why masks instead of just putting the logic in the node? Because:
 
 ## Adversarial Dialectic
 
-When the Light pipeline's confidence lands in the uncertain range (configurable, default 0.50-0.85), the Adversarial Dialectic activates. It's a second pipeline — `defect-dialectic.yaml` — that subjects the Light path's conclusion to adversarial review.
+When the Thesis pipeline's confidence lands in the uncertain range (configurable, default 0.50-0.85), the Adversarial Dialectic activates. It's a second pipeline — `defect-dialectic.yaml` — that subjects the Thesis path's conclusion to adversarial review.
 
 ### Dialectic pipeline (D0-D4)
 
@@ -575,12 +575,12 @@ Each step produces a typed artifact:
 | **Affirm** | Original classification stands. Case closed. |
 | **Amend** | Classification changed based on evidence. Case closed with new type. |
 | **Acquit** | Insufficient evidence. Produce an evidence gap brief. |
-| **Remand** | Send back to Light path for reinvestigation with specific feedback. |
+| **Remand** | Send back to Thesis path for reinvestigation with specific feedback. |
 | **Unresolved** | Irreconcilable contradiction — handoff limit exceeded or arbiter declares. |
 
 ### Edge heuristics (HD1-HD12)
 
-The dialectic uses the same `Edge` interface as the Light pipeline. HD1-HD12 are dialectic-specific heuristic edges:
+The dialectic uses the same `Edge` interface as the Thesis pipeline. HD1-HD12 are dialectic-specific heuristic edges:
 
 - **HD1** (fast-track): thesis-holder confidence >= 0.95 → skip to defend
 - **HD2** (concession): antithesis-holder concedes → skip to synthesis
@@ -699,9 +699,9 @@ The framework provides `github.com/dpopsuev/origami/mcp` with **Server** (NewSer
 | `dsl.go` | ~200 | PipelineDef, LoadPipeline, Validate, BuildGraph |
 | `render.go` | ~70 | Mermaid flowchart renderer |
 | `element.go` | ~130 | 7 elements, ElementTraits, IronFromEarth |
-| `persona.go` | ~200 | 8 personas (4 Light + 4 Shadow) |
+| `persona.go` | ~200 | 8 personas (4 Thesis + 4 Antithesis) |
 | `identity.go` | ~150 | AgentIdentity, Color, Position, Alignment |
-| `mask.go` | ~170 | Mask interface, 4 Light masks, EquipMask |
+| `mask.go` | ~170 | Mask interface, 4 Thesis masks, EquipMask |
 | `dialectic.go` | ~310 | Dialectic types, HD1-HD12 edge factory |
 | `cycle.go` | ~90 | Generative/destructive element interactions |
 | `evidence_gap.go` | ~60 | EvidenceGap, GapBrief types |
