@@ -20,7 +20,7 @@
 - Scoring: `internal/calibrate/` — `scoreCaseResult()` scores one case against ground truth; `computeMetrics()` computes M1–M20.
 - Transcript: `internal/calibrate/transcript.go` — `WeaveTranscripts()`, `RenderRCATranscript()`, `TranscriptSlug()`.
 - TokiMeter: `internal/calibrate/` — `BuildTokiMeterBill()`, `FormatTokiMeter()`.
-- Depends on: `mcp-pipeline-tools.md` (Contract 2 must be complete — investigation tools exist).
+- Depends on: `mcp-circuit-tools.md` (Contract 2 must be complete — investigation tools exist).
 
 ## Execution strategy
 

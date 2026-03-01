@@ -44,31 +44,31 @@ Oh My OpenCode is a multi-model agent orchestration harness built on top of Open
 | OmO Concept | Origami Equivalent | Comparison |
 |-------------|-------------------|------------|
 | **Named agents** (Sisyphus, Atlas, etc.) | `Persona` (Herald, Seeker, Sentinel, Weaver) with `StepAffinity`, `PromptPreamble`, `PersonalityTags` | Origami is **more formal** — quantified traits via Element dimensions, empirically profiled by Ouroboros. OmO agents are prompt templates with manual routing. |
-| **Intent Gate** (classify before routing) | No direct equivalent | **Gap.** Origami pipelines start at a fixed entry node. An "entry classifier" node pattern could serve this purpose declaratively. |
+| **Intent Gate** (classify before routing) | No direct equivalent | **Gap.** Origami circuits start at a fixed entry node. An "entry classifier" node pattern could serve this purpose declaratively. |
 | **Category system** (visual, ultrabrain, quick, deep) | `Element` system (Fire, Water, Earth, Air, Diamond, Lightning) | Origami is **richer** — 6 elements with quantified behavioral traits (`SpeedClass`, `MaxLoops`, `ConvergenceThreshold`, `ShortcutAffinity`, `EvidenceDepth`, `FailureMode`) vs 4 ad-hoc categories. Origami is **empirically grounded** (Ouroboros measures); OmO assigns manually. |
 | **Model matching** (category → model) | `ProviderRouter` + `DeriveStepAffinity` + `Ouroboros.ElementMatch` | Origami has the **infrastructure** but the loop is **not closed** — Ouroboros measures, DeriveStepAffinity suggests, but nothing auto-routes at walk time. |
 | **Parallel execution** (5+ background agents) | `WalkTeam` + `ParallelEdge` (fan-out via errgroup) | Origami is **more structured** (graph-based parallelism with fan-out/fan-in merge nodes) but **less ad-hoc** (can't fire arbitrary background agents outside the graph). |
-| **Accumulated wisdom** (cross-task learning) | `WalkerState` (partial) | **Gap.** Origami has per-walk state but no formal mechanism to carry learnings across separate pipeline walks. |
-| **Gap analysis** (Metis) | `Adversarial Dialectic` (D0-D4, Antithesis pipeline: indict → discover → defend → hearing → verdict) | Origami is **architecturally deeper** — thesis/antithesis/synthesis with formal Antithesis personas, quantified confidence, structured verdict. OmO's Metis is a single-pass review prompt. |
+| **Accumulated wisdom** (cross-task learning) | `WalkerState` (partial) | **Gap.** Origami has per-walk state but no formal mechanism to carry learnings across separate circuit walks. |
+| **Gap analysis** (Metis) | `Adversarial Dialectic` (D0-D4, Antithesis circuit: indict → discover → defend → hearing → verdict) | Origami is **architecturally deeper** — thesis/antithesis/synthesis with formal Antithesis personas, quantified confidence, structured verdict. OmO's Metis is a single-pass review prompt. |
 | **Discipline enforcement** (Todo enforcer, Ralph Loop) | `Element.MaxLoops`, `ConvergenceThreshold`, `FailureMode` | Origami has the **traits** but no dedicated **enforcement runtime**. Element traits constrain walk behavior; OmO has explicit loop-and-check agents. |
 | **Provider fallback chains** | No equivalent | **Gap.** `ProviderRouter` is static routing with no fallback. If the primary provider fails, the dispatch fails. |
-| **Skills with embedded MCPs** | `PipelineServer` with domain hooks, schema-validated `submit_step` | Origami is **more formal** (schema factory, step validation) but MCPs are not scoped per-task — one server per pipeline. |
+| **Skills with embedded MCPs** | `CircuitServer` with domain hooks, schema-validated `submit_step` | Origami is **more formal** (schema factory, step validation) but MCPs are not scoped per-task — one server per circuit. |
 
 ---
 
 ## 3. Competitive Advantages (Origami has, OmO lacks)
 
-### 3.1 Declarative Pipeline DSL
+### 3.1 Declarative Circuit DSL
 
-Origami defines pipelines as YAML with typed nodes, conditional edges (`when:` expressions), loops, shortcuts, parallel branches, and a `DONE` pseudo-node. OmO's "pipeline" is imperative delegation — Sisyphus calls Atlas which calls subagents. There is no replayable, inspectable, diffable pipeline artifact.
+Origami defines circuits as YAML with typed nodes, conditional edges (`when:` expressions), loops, shortcuts, parallel branches, and a `DONE` pseudo-node. OmO's "circuit" is imperative delegation — Sisyphus calls Atlas which calls subagents. There is no replayable, inspectable, diffable circuit artifact.
 
-**Why it matters:** Declarative pipelines are reviewable, testable, and reproducible. You can diff two pipeline versions. You can replay a pipeline with different data. You can visualize it (Kami). Imperative delegation chains are opaque.
+**Why it matters:** Declarative circuits are reviewable, testable, and reproducible. You can diff two circuit versions. You can replay a circuit with different data. You can visualize it (Kami). Imperative delegation chains are opaque.
 
 ### 3.2 Ouroboros Meta-Calibration
 
 Origami empirically profiles models on 6 behavioral dimensions (Speed, Persistence, ConvergenceThreshold, ShortcutAffinity, EvidenceDepth, FailureMode). OmO assigns models to categories manually via config files.
 
-**Why it matters:** Manual assignment doesn't scale. When a new model releases, OmO users must manually test and reconfigure. Ouroboros re-profiles automatically. The Seed Pipeline redesign (dichotomous probing with AI-generated questions) makes this even more robust.
+**Why it matters:** Manual assignment doesn't scale. When a new model releases, OmO users must manually test and reconfigure. Ouroboros re-profiles automatically. The Seed Circuit redesign (dichotomous probing with AI-generated questions) makes this even more robust.
 
 ### 3.3 Adversarial Dialectic
 
@@ -84,7 +84,7 @@ Origami's Mask system attaches/detaches behavioral modifications to walkers at r
 
 ### 3.5 Zones and Stickiness
 
-Origami partitions pipeline nodes into zones with configurable stickiness (0-3) and work-stealing. OmO has no spatial concept — agents are assigned by category, not by pipeline region.
+Origami partitions circuit nodes into zones with configurable stickiness (0-3) and work-stealing. OmO has no spatial concept — agents are assigned by category, not by circuit region.
 
 **Why it matters:** Zones enable context locality. A walker that enters the "Investigation" zone stays there (stickiness) until the work is done, accumulating context. Work-stealing lets idle walkers pick up tasks from other zones when needed.
 
@@ -102,7 +102,7 @@ Origami has two structured event systems (walk events + coordination signals) be
 
 ### 3.8 Kami Live Debugger
 
-Origami's upcoming Kami debugger (triple-homed: MCP + HTTP/SSE + WS) provides live pipeline visualization, debug control (pause/resume/breakpoints), session recording, and replay. OmO has no equivalent.
+Origami's upcoming Kami debugger (triple-homed: MCP + HTTP/SSE + WS) provides live circuit visualization, debug control (pause/resume/breakpoints), session recording, and replay. OmO has no equivalent.
 
 **Why it matters:** This is the presentation differentiator. Seeing agents traverse a graph in real-time, with cooperation dialogs and evidence accumulation, is something prompt-template orchestration cannot produce.
 
@@ -112,19 +112,19 @@ Origami's upcoming Kami debugger (triple-homed: MCP + HTTP/SSE + WS) provides li
 
 ### Gap 1: The routing loop is not closed
 
-OmO's category system is simplistic (4 manual categories) but it **works at runtime**. When a task comes in, OmO routes it to the right model immediately. Origami has all the pieces — Ouroboros profiles models, ElementMatch scores element affinity, DeriveStepAffinity maps steps to preferred traits, ProviderRouter routes to dispatchers — but they're not wired end-to-end. The PersonaSheet (from `ouroboros-seed-pipeline` Phase 7) is the missing connector.
+OmO's category system is simplistic (4 manual categories) but it **works at runtime**. When a task comes in, OmO routes it to the right model immediately. Origami has all the pieces — Ouroboros profiles models, ElementMatch scores element affinity, DeriveStepAffinity maps steps to preferred traits, ProviderRouter routes to dispatchers — but they're not wired end-to-end. The PersonaSheet (from `ouroboros-seed-circuit` Phase 7) is the missing connector.
 
 **Actionable:** Wire PersonaSheet into ProviderRouter via an `AutoRouteOption` RunOption. At walk start, load the PersonaSheet for the current model(s), derive provider hints per step, and configure the router accordingly. This is OmO's category system done empirically instead of manually.
 
 ### Gap 2: No provider fallback chains
 
-OmO configures fallback chains per provider — if Anthropic is down, try OpenAI, then Cursor. Origami's ProviderRouter is static: one route per provider, no fallback. A dispatch failure is a pipeline failure.
+OmO configures fallback chains per provider — if Anthropic is down, try OpenAI, then Cursor. Origami's ProviderRouter is static: one route per provider, no fallback. A dispatch failure is a circuit failure.
 
 **Actionable:** Add `Fallbacks map[string][]string` to ProviderRouter. On dispatch error from the primary provider, iterate fallbacks in order. Emit `EventProviderFallback` for observability. Small change, high resilience.
 
 ### Gap 3: No entry classifier pattern
 
-OmO's Intent Gate classifies user requests before routing — research, implementation, investigation, fix. Origami pipelines start at a fixed entry node. There is no documented pattern for "classify first, then branch."
+OmO's Intent Gate classifies user requests before routing — research, implementation, investigation, fix. Origami circuits start at a fixed entry node. There is no documented pattern for "classify first, then branch."
 
 **Actionable:** This is not a code gap — Origami's DSL already supports it. A classifier node can set `vars.intent`, and downstream edges can use `when: vars.intent == "investigation"`. The gap is documentation. Create a `testdata/patterns/intent-classifier.yaml` example and document the pattern.
 
@@ -136,7 +136,7 @@ OmO and Origami operate at fundamentally different architectural levels.
 
 **OmO is prompt engineering + glue code.** Named agents are system prompts. The category system is a JSON config mapping. Provider fallback is a retry loop. Parallel execution is "fire a subagent." There is no formal graph, no typed artifacts, no schema validation, no calibration, no observability. The value is in the prompt craft and the pragmatic wiring.
 
-**Origami is a formal graph-based framework.** Pipelines are declarative YAML. Nodes and edges are typed Go interfaces. Artifacts have schemas. Walkers have quantified behavioral traits. Meta-calibration empirically profiles models. Adversarial dialectic validates conclusions. Masks compose behavior. Zones partition context. Observers stream events. The value is in the architecture — it enables things prompt templates structurally cannot.
+**Origami is a formal graph-based framework.** Circuits are declarative YAML. Nodes and edges are typed Go interfaces. Artifacts have schemas. Walkers have quantified behavioral traits. Meta-calibration empirically profiles models. Adversarial dialectic validates conclusions. Masks compose behavior. Zones partition context. Observers stream events. The value is in the architecture — it enables things prompt templates structurally cannot.
 
 **The gap that matters:** OmO ships the "right model for the right task" experience today, despite crude infrastructure, because they close the loop. Origami has superior infrastructure but hasn't closed the loop. The arms race is won by whichever side closes their gaps first.
 
@@ -165,4 +165,4 @@ OmO and Origami operate at fundamentally different architectural levels.
 - Origami ProviderRouter: `dispatch/provider.go` (Routes map, static routing)
 - Origami Ouroboros: `ouroboros/suggest.go` (ElementMatch, DeriveStepAffinity)
 - Origami AffinityScheduler: `scheduler.go` (Select by StepAffinity + Element)
-- Related contracts: `ouroboros-seed-pipeline` (Phase 7: PersonaSheet), `kami-live-debugger` (observability advantage), `consumer-ergonomics` (API polish)
+- Related contracts: `ouroboros-seed-circuit` (Phase 7: PersonaSheet), `kami-live-debugger` (observability advantage), `consumer-ergonomics` (API polish)

@@ -12,7 +12,7 @@
 #   - zones + stickiness → specialist affinity to their domain
 #   - walkers          → named agents with element/persona assignments
 #   - merge node       → collects parallel results into final output
-pipeline: hierarchical-delegation
+circuit: hierarchical-delegation
 description: "Coordinator fans out to specialists, merges results"
 
 zones:

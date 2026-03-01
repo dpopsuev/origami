@@ -7,7 +7,7 @@ import (
 )
 
 // StepAccuracy captures per-step performance from calibration results.
-// It identifies which pipeline steps are performing well and which are
+// It identifies which circuit steps are performing well and which are
 // dragging down overall accuracy.
 type StepAccuracy struct {
 	Step     string  `json:"step"`
@@ -76,7 +76,7 @@ func (a *StepAnalyzer) Analyze(results []StepResult) []StepAccuracy {
 	return out
 }
 
-// TuningProposal recommends a prompt change for a specific pipeline step.
+// TuningProposal recommends a prompt change for a specific circuit step.
 type TuningProposal struct {
 	Step          string  `json:"step"`
 	CurrentHash   string  `json:"current_hash"`

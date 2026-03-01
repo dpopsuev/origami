@@ -87,7 +87,7 @@ func runExprProgram(program *vm.Program, ctx ExprContext) (any, error) {
 }
 
 // buildExprContext creates the evaluation context from artifact and walker state.
-// config is populated by pipeline vars (C3); nil defaults to empty map.
+// config is populated by circuit vars (C3); nil defaults to empty map.
 func buildExprContext(artifact Artifact, state *WalkerState, config map[string]any) ExprContext {
 	output := artifactToMap(artifact)
 

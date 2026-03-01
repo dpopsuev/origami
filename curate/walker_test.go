@@ -53,7 +53,7 @@ func testSchema() Schema {
 	}
 }
 
-func TestCurationWalker_FullPipeline(t *testing.T) {
+func TestCurationWalker_FullCircuit(t *testing.T) {
 	src := &stubSource{
 		recordID: "R01",
 		data:     []byte(`{"title": "test case", "category": "bug"}`),
@@ -84,7 +84,7 @@ func TestCurationWalker_FullPipeline(t *testing.T) {
 	}
 
 	if !walker.Promoted() {
-		t.Error("record should be promoted after walking complete pipeline")
+		t.Error("record should be promoted after walking complete circuit")
 	}
 
 	rec := walker.Record()
@@ -144,7 +144,7 @@ func TestCurationWalker_IncompleteRecord(t *testing.T) {
 	}
 
 	if !walker.Promoted() {
-		t.Error("incomplete record should still be promoted (pipeline always completes)")
+		t.Error("incomplete record should still be promoted (circuit always completes)")
 	}
 
 	rec := walker.Record()

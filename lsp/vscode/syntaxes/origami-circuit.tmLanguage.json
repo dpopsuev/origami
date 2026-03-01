@@ -1,0 +1,68 @@
+{
+  "scopeName": "source.origami-circuit",
+  "name": "Origami Circuit",
+  "fileTypes": ["yaml", "yml"],
+  "patterns": [
+    { "include": "#circuit-key" },
+    { "include": "#section-keys" },
+    { "include": "#element-values" },
+    { "include": "#persona-values" },
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" }
+  ],
+  "repository": {
+    "circuit-key": {
+      "match": "^(circuit):\\s*(.+)$",
+      "captures": {
+        "1": { "name": "keyword.control.circuit.origami" },
+        "2": { "name": "entity.name.tag.circuit.origami" }
+      }
+    },
+    "section-keys": {
+      "match": "^(nodes|edges|walkers|zones|start|done|imports|vars|description):",
+      "captures": {
+        "1": { "name": "keyword.other.section.origami" }
+      }
+    },
+    "element-values": {
+      "match": "\\b(element):\\s*(fire|water|earth|air|diamond|lightning|iron)\\b",
+      "captures": {
+        "1": { "name": "support.type.property-name.origami" },
+        "2": { "name": "entity.name.type.element.origami" }
+      }
+    },
+    "persona-values": {
+      "match": "\\b(persona):\\s*(herald|seeker|sentinel|weaver|arbiter|catalyst|oracle|phantom)\\b",
+      "captures": {
+        "1": { "name": "support.type.property-name.origami" },
+        "2": { "name": "entity.name.type.persona.origami" }
+      }
+    },
+    "comments": {
+      "match": "#.*$",
+      "name": "comment.line.number-sign.origami"
+    },
+    "strings": {
+      "patterns": [
+        {
+          "match": "\"[^\"]*\"",
+          "name": "string.quoted.double.origami"
+        },
+        {
+          "match": "'[^']*'",
+          "name": "string.quoted.single.origami"
+        }
+      ]
+    },
+    "numbers": {
+      "match": "\\b\\d+(\\.\\d+)?\\b",
+      "name": "constant.numeric.origami"
+    },
+    "booleans": {
+      "match": "\\b(true|false)\\b",
+      "name": "constant.language.boolean.origami"
+    }
+  }
+}

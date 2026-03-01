@@ -15,7 +15,7 @@ func structuralRules() []Rule {
 		&DuplicateEdgeCondition{},
 		&EmptyPrompt{},
 		&InvalidCacheTTL{},
-		&MissingPipelineDescription{},
+		&MissingCircuitDescription{},
 		&UnnamedNode{},
 		&InvalidWalkerElement{},
 		&InvalidWalkerPersona{},
@@ -43,7 +43,7 @@ func bestPracticeRules() []Rule {
 		&NameYourEdges{},
 		&TerminalEdgeToDone{},
 		&ZoneStickinessWithoutProvider{},
-		&LargePipelineNoZones{},
+		&LargeCircuitNoZones{},
 		&ElementAffinityChain{},
 	}
 }

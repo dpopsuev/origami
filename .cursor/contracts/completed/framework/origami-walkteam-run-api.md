@@ -54,7 +54,7 @@ Phase 1: Add `WithTeam(*Team) RunOption`. Phase 2: Update `Run()` to dispatch to
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | `Run()` with `WithTeam()` dispatches to `WalkTeam` |
-| **Integration** | yes | Full pipeline walk with team of 2 walkers |
+| **Integration** | yes | Full circuit walk with team of 2 walkers |
 | **Contract** | yes | `WithTeam` RunOption accepted; `Run` API backward compatible |
 | **E2E** | no | Achilles doesn't use teams yet |
 | **Concurrency** | yes | Team walk involves multiple walkers — verify with `-race` |

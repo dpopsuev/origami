@@ -9,8 +9,8 @@ import (
 
 func minimalYAML() []byte {
 	return []byte(`
-pipeline: test
-description: a test pipeline
+circuit: test
+description: a test circuit
 nodes:
   - name: recall
     element: fire
@@ -34,7 +34,7 @@ done: _done
 `)
 }
 
-func TestRun_CleanPipeline_ZeroFindings(t *testing.T) {
+func TestRun_CleanCircuit_ZeroFindings(t *testing.T) {
 	findings, err := Run(minimalYAML(), "test.yaml", WithProfile(ProfileStrict))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
@@ -43,13 +43,13 @@ func TestRun_CleanPipeline_ZeroFindings(t *testing.T) {
 		for _, f := range findings {
 			t.Logf("  %s", f)
 		}
-		t.Fatalf("expected 0 findings on clean pipeline, got %d", len(findings))
+		t.Fatalf("expected 0 findings on clean circuit, got %d", len(findings))
 	}
 }
 
 func TestRun_InvalidElement(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: recall
@@ -86,7 +86,7 @@ done: _done
 
 func TestRun_InvalidMergeStrategy(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: a
@@ -126,7 +126,7 @@ done: _done
 
 func TestRun_MissingEdgeName(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: a
@@ -155,7 +155,7 @@ done: _done
 
 func TestRun_InvalidCacheTTL(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: a
@@ -187,7 +187,7 @@ done: _done
 
 func TestRun_MissingDescription(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 nodes:
   - name: a
     element: fire
@@ -205,18 +205,18 @@ done: _done
 	}
 	found := false
 	for _, f := range findings {
-		if f.RuleID == "S8/missing-pipeline-description" {
+		if f.RuleID == "S8/missing-circuit-description" {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("expected S8/missing-pipeline-description finding")
+		t.Error("expected S8/missing-circuit-description finding")
 	}
 }
 
 func TestRun_OrphanNode(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: start_node
@@ -251,7 +251,7 @@ done: _done
 
 func TestRun_UnreachableDone(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: a
@@ -287,7 +287,7 @@ done: _done
 
 func TestRun_PreferWhenOverCondition(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: a
@@ -318,7 +318,7 @@ done: _done
 
 func TestRun_ProfileMin_OnlyErrors(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 nodes:
   - name: a
     element: fyre
@@ -346,7 +346,7 @@ done: _done
 
 func TestRun_InvalidWalkerPersona(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: a
@@ -380,7 +380,7 @@ done: _done
 
 func TestRun_FanInWithoutMerge(t *testing.T) {
 	yml := []byte(`
-pipeline: test
+circuit: test
 description: test
 nodes:
   - name: a
@@ -435,14 +435,14 @@ func TestLintContext_LineNumbers(t *testing.T) {
 	if line := ctx.EdgeLine("e1"); line == 0 {
 		t.Error("expected non-zero line for edge 'e1'")
 	}
-	if line := ctx.TopLevelLine("pipeline"); line == 0 {
-		t.Error("expected non-zero line for top-level 'pipeline'")
+	if line := ctx.TopLevelLine("circuit"); line == 0 {
+		t.Error("expected non-zero line for top-level 'circuit'")
 	}
 }
 
 func TestNewLintContextFromDef(t *testing.T) {
-	def := &framework.PipelineDef{
-		Pipeline: "test",
+	def := &framework.CircuitDef{
+		Circuit: "test",
 		Nodes:    []framework.NodeDef{{Name: "a", Element: "fire"}},
 		Edges:    []framework.EdgeDef{{ID: "e1", Name: "e1", From: "a", To: "_done"}},
 		Start:    "a",
@@ -453,7 +453,7 @@ func TestNewLintContextFromDef(t *testing.T) {
 	findings := runner.Run(ctx, WithProfile(ProfileStrict))
 	// Should not crash; line numbers will be 0
 	for _, f := range findings {
-		if f.RuleID == "S8/missing-pipeline-description" && f.Line != 0 {
+		if f.RuleID == "S8/missing-circuit-description" && f.Line != 0 {
 			t.Error("expected line=0 for def-only context")
 		}
 	}
@@ -464,11 +464,11 @@ func TestFinding_String(t *testing.T) {
 		RuleID:   "S2/invalid-element",
 		Severity: SeverityError,
 		Message:  `unknown element "fyre"`,
-		File:     "pipeline.yaml",
+		File:     "circuit.yaml",
 		Line:     12,
 	}
 	s := f.String()
-	if !strings.Contains(s, "pipeline.yaml:12") {
+	if !strings.Contains(s, "circuit.yaml:12") {
 		t.Errorf("expected file:line, got %q", s)
 	}
 	if !strings.Contains(s, "error") {
@@ -505,7 +505,7 @@ func TestHasErrors(t *testing.T) {
 }
 
 func TestApplyFixes_InvalidElement(t *testing.T) {
-	yml := []byte(`pipeline: test
+	yml := []byte(`circuit: test
 description: test
 nodes:
   - name: a
@@ -531,7 +531,7 @@ done: _done
 }
 
 func TestApplyFixes_ConditionToWhen(t *testing.T) {
-	yml := []byte(`pipeline: test
+	yml := []byte(`circuit: test
 description: test
 nodes:
   - name: a

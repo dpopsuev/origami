@@ -6,14 +6,14 @@
 
 In origami, a fold transforms flat paper into a shaped form. `origami fold` transforms a flat YAML project into a shaped binary.
 
-Consumer repositories (Asterisk, Achilles) contain **zero Go files** — only YAML pipelines, scenarios, schemas, prompt templates, and configuration. The Go lives in Origami (the engine) and in Origami's adapters/marbles (the collections). `origami fold` compiles the YAML project into a standalone binary with a custom name.
+Consumer repositories (Asterisk, Achilles) contain **zero Go files** — only YAML circuits, scenarios, schemas, prompt templates, and configuration. The Go lives in Origami (the engine) and in Origami's adapters/marbles (the collections). `origami fold` compiles the YAML project into a standalone binary with a custom name.
 
 ## How it works
 
 ```
 asterisk/                          # Zero .go files
 ├── origami.yaml                   # Project manifest
-├── pipelines/
+├── circuits/
 │   ├── asterisk-rca.yaml
 │   ├── asterisk-ingest.yaml
 │   └── asterisk-calibration.yaml
@@ -38,16 +38,16 @@ imports:
 cli:
   commands:
     analyze:
-      pipeline: asterisk-rca
+      circuit: asterisk-rca
       flags:
         - {name: launch, type: string, required: true}
         - {name: adapter, type: string, default: llm}
     calibrate:
-      pipeline: asterisk-calibration
+      circuit: asterisk-calibration
       flags:
         - {name: scenario, type: string, required: true}
     ingest:
-      pipeline: asterisk-ingest
+      circuit: asterisk-ingest
       flags:
         - {name: project, type: string, required: true}
 ```
@@ -55,7 +55,7 @@ cli:
 Build: `origami fold --output bin/asterisk`
 
 The fold command:
-1. Parses the manifest — extracts imports, pipelines, CLI commands
+1. Parses the manifest — extracts imports, circuits, CLI commands
 2. Resolves adapter imports to Go package paths (FQCN resolution already exists)
 3. Generates a temp `main.go` that embeds all YAML and registers adapters
 4. Runs `go build` → outputs `bin/asterisk`
@@ -84,7 +84,7 @@ Total: ~3,400 LOC of Go wiring replaced by YAML configuration.
 - Adapter FQCN resolution (already exists)
 - CLI scaffold via `origami.NewCLI()` (already exists)
 - `origami.yaml` manifest spec (new)
-- CLI flag → pipeline var wiring (new)
+- CLI flag → circuit var wiring (new)
 - Go code generation template for `main.go` (new)
 - MCP server configuration from manifest (new)
 

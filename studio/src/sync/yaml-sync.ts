@@ -6,7 +6,7 @@
  * Both directions produce diffs that are applied to the other side.
  */
 
-export interface PipelineNode {
+export interface CircuitNode {
   name: string;
   element?: string;
   family?: string;
@@ -18,7 +18,7 @@ export interface PipelineNode {
   y?: number;
 }
 
-export interface PipelineEdge {
+export interface CircuitEdge {
   id: string;
   name?: string;
   from: string;
@@ -29,43 +29,43 @@ export interface PipelineEdge {
   condition?: string;
 }
 
-export interface PipelineWalker {
+export interface CircuitWalker {
   name: string;
   element?: string;
   persona?: string;
   preamble?: string;
 }
 
-export interface PipelineZone {
+export interface CircuitZone {
   name: string;
   nodes: string[];
   element?: string;
   stickiness?: number;
 }
 
-export interface PipelineDef {
-  pipeline: string;
+export interface CircuitDef {
+  circuit: string;
   description?: string;
-  nodes: PipelineNode[];
-  edges: PipelineEdge[];
-  walkers?: PipelineWalker[];
-  zones?: PipelineZone[];
+  nodes: CircuitNode[];
+  edges: CircuitEdge[];
+  walkers?: CircuitWalker[];
+  zones?: CircuitZone[];
   start?: string;
   done?: string;
   vars?: Record<string, unknown>;
 }
 
 /**
- * Parse YAML text into a PipelineDef.
+ * Parse YAML text into a CircuitDef.
  * Uses a simple line-based parser for the subset of YAML we generate.
  * Full YAML parsing would use js-yaml but this keeps the bundle small.
  */
-export function parseYAML(text: string): PipelineDef | null {
+export function parseYAML(text: string): CircuitDef | null {
   try {
-    // Simple structured parser for Origami pipeline YAML
+    // Simple structured parser for Origami circuit YAML
     const lines = text.split("\n");
-    const def: PipelineDef = {
-      pipeline: "",
+    const def: CircuitDef = {
+      circuit: "",
       nodes: [],
       edges: [],
     };
@@ -82,7 +82,7 @@ export function parseYAML(text: string): PipelineDef | null {
         const [key, ...rest] = trimmed.split(":");
         const val = rest.join(":").trim().replace(/^["']|["']$/g, "");
 
-        if (key === "pipeline") def.pipeline = val;
+        if (key === "circuit") def.circuit = val;
         else if (key === "description") def.description = val;
         else if (key === "start") def.start = val;
         else if (key === "done") def.done = val;
@@ -120,38 +120,38 @@ export function parseYAML(text: string): PipelineDef | null {
       pushItem(def, section, current);
     }
 
-    return def.pipeline ? def : null;
+    return def.circuit ? def : null;
   } catch {
     return null;
   }
 }
 
 function pushItem(
-  def: PipelineDef,
+  def: CircuitDef,
   section: string,
   item: Record<string, unknown>
 ) {
   switch (section) {
     case "nodes":
-      def.nodes.push(item as unknown as PipelineNode);
+      def.nodes.push(item as unknown as CircuitNode);
       break;
     case "edges":
-      def.edges.push(item as unknown as PipelineEdge);
+      def.edges.push(item as unknown as CircuitEdge);
       break;
     case "walkers":
       if (!def.walkers) def.walkers = [];
-      def.walkers.push(item as unknown as PipelineWalker);
+      def.walkers.push(item as unknown as CircuitWalker);
       break;
   }
 }
 
 /**
- * Serialize a PipelineDef back to YAML text.
+ * Serialize a CircuitDef back to YAML text.
  */
-export function toYAML(def: PipelineDef): string {
+export function toYAML(def: CircuitDef): string {
   const lines: string[] = [];
 
-  lines.push(`pipeline: ${def.pipeline}`);
+  lines.push(`circuit: ${def.circuit}`);
   if (def.description) lines.push(`description: "${def.description}"`);
   if (def.vars && Object.keys(def.vars).length > 0) {
     lines.push("vars:");
@@ -210,12 +210,12 @@ export function toYAML(def: PipelineDef): string {
 }
 
 /**
- * Apply a graph change (node move, edge create, etc.) to a PipelineDef.
+ * Apply a graph change (node move, edge create, etc.) to a CircuitDef.
  */
 export function applyGraphChange(
-  def: PipelineDef,
+  def: CircuitDef,
   change: GraphChange
-): PipelineDef {
+): CircuitDef {
   const next = structuredClone(def);
 
   switch (change.type) {
@@ -265,7 +265,7 @@ export interface GraphChange {
   type: GraphChangeType;
   nodeId?: string;
   edgeId?: string;
-  node?: PipelineNode;
-  edge?: PipelineEdge;
+  node?: CircuitNode;
+  edge?: CircuitEdge;
   updates?: Record<string, unknown>;
 }

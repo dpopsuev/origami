@@ -1,0 +1,36 @@
+name: gbwp-dialectic
+version: "1.0"
+dimensions: [gbwp, evidence_depth, convergence_threshold]
+category: SKILL
+
+poles:
+  accurate:
+    signal: "correct verdict with high confidence, cites all evidence items, brief justification"
+    element_affinity:
+      gbwp: 0.9
+      evidence_depth: 0.9
+      convergence_threshold: 0.8
+  hasty:
+    signal: "wrong verdict or low confidence, ignores evidence, no justification"
+    element_affinity:
+      gbwp: 0.2
+      evidence_depth: 0.2
+      convergence_threshold: 0.3
+
+context: |
+  A dialectic scenario with a claim supported by multiple evidence items.
+  The claim has a known correct verdict (CORRECT/INCORRECT) and expected
+  confidence range. Tests whether the model can accurately evaluate claims
+  against evidence at varying levels of deliberation.
+
+rubric: |
+  Evaluate whether the response arrives at the correct verdict with appropriate
+  confidence, citing supporting evidence. The GBWP dimension measures how
+  accuracy scales with the number of dialectic rounds allowed.
+
+generator_instructions: |
+  Create a test failure scenario with:
+  1. A clear claim about the root cause
+  2. 3-5 evidence items (some supporting, some ambiguous)
+  3. A known correct verdict
+  Ask the subject to evaluate the claim, provide a verdict, confidence, and justification.

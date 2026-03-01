@@ -10,7 +10,7 @@ import (
 )
 
 var topLevelKeys = []string{
-	"pipeline", "description", "imports", "vars", "zones",
+	"circuit", "description", "imports", "vars", "zones",
 	"nodes", "edges", "walkers", "start", "done",
 }
 

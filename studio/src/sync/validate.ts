@@ -1,4 +1,4 @@
-import type { PipelineDef } from "./yaml-sync";
+import type { CircuitDef } from "./yaml-sync";
 
 export interface ValidationError {
   severity: "error" | "warning" | "info";
@@ -6,11 +6,11 @@ export interface ValidationError {
   field?: string;
 }
 
-export function validatePipeline(def: PipelineDef): ValidationError[] {
+export function validateCircuit(def: CircuitDef): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  if (!def.pipeline) {
-    errors.push({ severity: "error", message: "Pipeline name is required", field: "pipeline" });
+  if (!def.circuit) {
+    errors.push({ severity: "error", message: "Circuit name is required", field: "circuit" });
   }
 
   if (def.nodes.length === 0) {

@@ -10,7 +10,7 @@ import (
 
 func TestStudioObserver_RecordsEvents(t *testing.T) {
 	store := NewEventStore()
-	obs := NewStudioObserver(store, "run-1", "test-pipeline")
+	obs := NewStudioObserver(store, "run-1", "test-circuit")
 
 	obs.OnEvent(framework.WalkEvent{
 		Type:   "node_enter",
@@ -64,12 +64,12 @@ func TestStudioObserver_RecordsErrors(t *testing.T) {
 
 func TestStudioObserver_Accessors(t *testing.T) {
 	store := NewEventStore()
-	obs := NewStudioObserver(store, "run-42", "my-pipeline")
+	obs := NewStudioObserver(store, "run-42", "my-circuit")
 
 	if obs.RunID() != "run-42" {
 		t.Errorf("RunID() = %q, want 'run-42'", obs.RunID())
 	}
-	if obs.Pipeline() != "my-pipeline" {
-		t.Errorf("Pipeline() = %q, want 'my-pipeline'", obs.Pipeline())
+	if obs.Circuit() != "my-circuit" {
+		t.Errorf("Circuit() = %q, want 'my-circuit'", obs.Circuit())
 	}
 }

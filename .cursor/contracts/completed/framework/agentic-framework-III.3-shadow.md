@@ -1,7 +1,7 @@
 # Contract — Agentic Framework III.3: Shadow
 
 **Status:** complete
-**Goal:** Define the adversarial pipeline pattern where Thesis and Antithesis agents contest uncertain cases, using the Wuxing destructive cycle for challenger selection. Absorb scope of `defect-court.md`.
+**Goal:** Define the adversarial circuit pattern where Thesis and Antithesis agents contest uncertain cases, using the Wuxing destructive cycle for challenger selection. Absorb scope of `defect-court.md`.
 **Serves:** Architecture evolution (Framework identity)
 
 ## Contract rules
@@ -10,15 +10,15 @@
 - Role separation is mandatory: prosecution, defense, and judge must use different agent identities with different Alignments.
 - Fast-track (plea deal) must exist so easy cases bypass full adversarial review.
 - Challenger selection uses the destructive cycle from II.2-cycles: the Antithesis agent's element challenges the Thesis agent's element.
-- The Antithesis path reuses the Framework ontology (Nodes, Edges, Walkers, Graph) -- it IS a second pipeline definition, not a special case.
+- The Antithesis path reuses the Framework ontology (Nodes, Edges, Walkers, Graph) -- it IS a second circuit definition, not a special case.
 - This contract absorbs the scope of `defect-court.md`. All D0-D4 steps, heuristics, and artifact types are preserved.
 - Inspired by: Warhammer (Loyal vs Traitor Primarchs), Inside Out (Joy needs Sadness), Hegelian Dialectic (thesis/antithesis/synthesis), Wuxing destructive cycle (ke).
 
 ## Context
 
-- `contracts/draft/defect-court.md` -- defines D0-D4 pipeline, HD1-HD12 heuristics, prosecution/defense/judge roles, remand feedback, TTL/handoff limits. All absorbed here.
+- `contracts/draft/defect-court.md` -- defines D0-D4 circuit, HD1-HD12 heuristics, prosecution/defense/judge roles, remand feedback, TTL/handoff limits. All absorbed here.
 - `contracts/draft/agentic-framework-I.1-ontology.md` -- Node, Edge, Walker, Graph interfaces.
-- `contracts/draft/agentic-framework-I.2-characteristica.md` -- DSL for declaring pipelines (the Antithesis path IS a second pipeline).
+- `contracts/draft/agentic-framework-I.2-characteristica.md` -- DSL for declaring circuits (the Antithesis path IS a second circuit).
 - `contracts/draft/agentic-framework-II.2-cycles.md` -- destructive cycle for challenger selection.
 - `contracts/draft/agentic-framework-III.1-personae.md` -- Antithesis personas (Challenger, Abyss, Bulwark, Specter).
 - `contracts/draft/agentic-framework-III.2-masks.md` -- Antithesis masks (Indictment, Discovery).
@@ -26,7 +26,7 @@
 
 ## Architecture
 
-### Pipeline paths
+### Circuit paths
 
 ```
 Thesis path: F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6
@@ -52,11 +52,11 @@ The Antithesis path activates based on the Thesis path's confidence:
 - 0.50 <= Confidence < 0.85: UNCERTAIN -- activate Antithesis
 - Confidence < 0.50: reject (Thesis agent already uncertain)
 
-### Antithesis pipeline definition (DSL)
+### Antithesis circuit definition (DSL)
 
 ```yaml
-pipeline: defect-court
-description: "D0-D4 adversarial court pipeline"
+circuit: defect-court
+description: "D0-D4 adversarial court circuit"
 
 zones:
   prosecution:
@@ -206,7 +206,7 @@ Antithesis personas with distinct system prompts via MCP.
 
 - [x] Define court artifact types: `Indictment`, `DefenseBrief`, `HearingRecord`, `Verdict`
 - [x] Define `CourtConfig` with TTL, MaxHandoffs, MaxRemands, ActivationThreshold
-- [x] Create `pipelines/defect-court.yaml` -- D0-D4 pipeline in Framework DSL (created in I.2)
+- [x] Create `circuits/defect-court.yaml` -- D0-D4 circuit in Framework DSL (created in I.2)
 - [x] Define court Edge evaluators (HD1-HD12) as Framework Edge implementations
 - [x] Define `CourtEvidenceGap` extending shared `EvidenceGap` type
 - [x] Wire Antithesis activation trigger: Thesis F5 confidence in uncertain range (`ShouldActivate`)
@@ -217,7 +217,7 @@ Antithesis personas with distinct system prompts via MCP.
 - [x] Implement Abyss persona as defense heuristic adapter
 - [x] Implement Bulwark persona as forensic expert heuristic adapter
 - [x] Implement Specter persona as summary judgment adapter
-- [x] Wire Antithesis pipeline into calibrate runner as post-F6 phase
+- [x] Wire Antithesis circuit into calibrate runner as post-F6 phase
 
 ### Phase 3 -- Metrics
 
@@ -234,13 +234,13 @@ Antithesis personas with distinct system prompts via MCP.
 
 ### Validation
 
-- [x] Validate (green) -- `go build ./...`, all tests pass, Thesis pipeline unchanged
+- [x] Validate (green) -- `go build ./...`, all tests pass, Thesis circuit unchanged
 - [x] Tune (blue) -- review activation thresholds, court heuristic rules
 - [x] Validate (green) -- all tests still pass after tuning
 
 ## Acceptance criteria
 
-- **Given** the Thesis pipeline produces a classification with confidence 0.65 (uncertain range),
+- **Given** the Thesis circuit produces a classification with confidence 0.65 (uncertain range),
 - **When** the Antithesis path activates,
 - **Then** Antithesis agents (Challenger, Abyss) contest the classification using the destructive cycle.
 
@@ -256,7 +256,7 @@ Antithesis personas with distinct system prompts via MCP.
 - **When** the case cannot reach a verdict,
 - **Then** a mistrial is declared with an Evidence Gap Brief.
 
-- **Given** the Antithesis pipeline YAML definition,
+- **Given** the Antithesis circuit YAML definition,
 - **When** it is loaded into the Framework DSL,
 - **Then** it produces a valid Graph with 5 nodes and 12 edges.
 
@@ -272,6 +272,6 @@ Antithesis personas with distinct system prompts via MCP.
 
 - 2026-02-22 -- Phase 1 complete: added BuildCourtEdgeFactory with HD1-HD12 court edge evaluators, CourtEvidenceGap type, updated defect-court.yaml to HD1-HD12 IDs. Fixed Artifact interface compliance: renamed Confidence struct fields to ConfidenceScore to resolve method/field clash (Confidence_() -> Confidence()). 15 court tests passing, compile-time interface assertions added. All Phase 1 tasks done.
 - 2026-02-21 20:30 -- Phase 1 partial: court artifact types (Indictment, DefenseBrief, HearingRecord, Verdict), CourtConfig with ShouldActivate, VerdictDecision constants, RemandFeedback. 9 court tests passing. Edge evaluators (HD1-HD12) and CourtEvidenceGap deferred to Phase 1 completion. Phases 2-4 require adapter/calibration/LLM integration outside framework layer. Contract moved to active.
-- 2026-02-20 -- Contract created. Absorbs `defect-court.md` scope. Reframed as a Framework pipeline instance (second Graph) rather than a special extension to F0-F6. Antithesis personas (from III.1) serve as court roles. Destructive cycle (from II.2) determines challenger selection. Court pipeline expressed in Framework DSL (from I.2).
-- The key insight from Hegel: the Antithesis is not opposition for its own sake -- it is the necessary counterforce that drives synthesis. Similarly, Antithesis agents are not trying to break the pipeline -- they are trying to make it honest.
+- 2026-02-20 -- Contract created. Absorbs `defect-court.md` scope. Reframed as a Framework circuit instance (second Graph) rather than a special extension to F0-F6. Antithesis personas (from III.1) serve as court roles. Destructive cycle (from II.2) determines challenger selection. Court circuit expressed in Framework DSL (from I.2).
+- The key insight from Hegel: the Antithesis is not opposition for its own sake -- it is the necessary counterforce that drives synthesis. Similarly, Antithesis agents are not trying to break the circuit -- they are trying to make it honest.
 - Depends on I.1-ontology, I.2-characteristica, II.2-cycles, III.1-personae, III.2-masks.

@@ -1,7 +1,7 @@
 # Contract -- Agentic Framework III.1: Personae
 
 **Status:** complete
-**Goal:** Define the complete agent identity as a composite of four axes (Color, Element, Position, Alignment) and declare 4 Thesis + 4 Antithesis personas for the PoC pipeline. Absorb scope of agent-adapter-overloading.md.
+**Goal:** Define the complete agent identity as a composite of four axes (Color, Element, Position, Alignment) and declare 4 Thesis + 4 Antithesis personas for the PoC circuit. Absorb scope of agent-adapter-overloading.md.
 **Serves:** Architecture evolution (Framework identity)
 
 ## Contract rules
@@ -87,7 +87,7 @@ const (
     PositionC  Position = "C"
 )
 
-// MetaPhase represents a zone in the pipeline graph.
+// MetaPhase represents a zone in the circuit graph.
 type MetaPhase string
 
 const (
@@ -222,8 +222,8 @@ func HomeZoneFor(p Position) MetaPhase
 ## Notes
 
 - 2026-02-21 19:30 -- Contract complete. AgentIdentity expanded from placeholder to 5-axis struct (Color, Element, Position, Alignment, Model). 8 personas defined (4 Thesis: Herald/Seeker/Sentinel/Weaver, 4 Antithesis: Challenger/Abyss/Bulwark/Specter). Color palette with 8 hex-coded colors. 21 persona tests passing. Single-adapter mode unaffected. Moved to `completed/framework/`.
-- 2026-02-21 14:30 -- DSL design principles diffusion (P3, P7): persona definitions could be expressed in YAML as a progressive disclosure extension. A `personas.yaml` file declaring the 8 curated personas (color, element, position, alignment, step affinity, prompt preamble) would complement the pipeline YAML files from I.2-characteristica. This is a future extension -- the current contract defines personas as Go registry functions. The YAML layer can be added once I.2's DSL and `LoadPipeline` patterns are proven and stable.
+- 2026-02-21 14:30 -- DSL design principles diffusion (P3, P7): persona definitions could be expressed in YAML as a progressive disclosure extension. A `personas.yaml` file declaring the 8 curated personas (color, element, position, alignment, step affinity, prompt preamble) would complement the circuit YAML files from I.2-characteristica. This is a future extension -- the current contract defines personas as Go registry functions. The YAML layer can be added once I.2's DSL and `LoadCircuit` patterns are proven and stable.
 - 2026-02-20 21:30 -- Agent identification diffusion: added Axis 5 (Model) to AgentIdentity. `ModelIdentity`, `KnownModels`, `KnownWrappers`, and `Identifiable` are already implemented. Live probes confirmed `claude-sonnet-4-20250514/Anthropic (via Cursor)`. This contract must preserve the existing `ModelIdentity` type when replacing the `AgentIdentity` placeholder, and add a `Model` field so every persona carries its ghost identity.
 - 2026-02-20 -- Contract created. Absorbs agent-adapter-overloading.md Phase 1 scope. The AdapterTraits struct from that contract is replaced by AgentIdentity here, which adds Element and Alignment axes on top of the existing Color and Position axes.
-- Antithesis personas are not implemented in the pipeline until III.3-shadow is complete. This contract defines their identity; III.3 activates them.
+- Antithesis personas are not implemented in the circuit until III.3-shadow is complete. This contract defines their identity; III.3 activates them.
 - Depends on I.1-ontology for AgentIdentity placeholder location, II.1-elements for Element type.

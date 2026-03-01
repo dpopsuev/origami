@@ -8,7 +8,7 @@
 
 - The case study document is the primary deliverable. Code changes are secondary.
 - Competitive analysis must be evidence-based — cite specific OmO source files and Origami equivalents.
-- Actionable tasks must not duplicate work in existing contracts (`ouroboros-seed-pipeline`, `consumer-ergonomics`). Cross-reference explicitly.
+- Actionable tasks must not duplicate work in existing contracts (`ouroboros-seed-circuit`, `consumer-ergonomics`). Cross-reference explicitly.
 - No blind feature copying. Every proposed improvement must justify why Origami's existing architecture is the better foundation.
 
 ## Context
@@ -16,7 +16,7 @@
 - **Oh My OpenCode (OmO):** Multi-model agent orchestration harness for OpenCode/Cursor. Named agents (Sisyphus, Prometheus, Atlas, Oracle, Metis, Momus) with category-based model routing, parallel execution, provider fallback chains, and discipline enforcement. Source: `github.com/code-yeongyu/oh-my-opencode`.
 - **Agentic Arms Race:** The competitive landscape for AI agent orchestration is accelerating. OmO represents the "prompt engineering + glue code" approach. Origami represents the "formal graph-based framework" approach. Understanding the tradeoffs sharpens both the product and the pitch.
 - **Existing Origami contracts with overlap:**
-  - `ouroboros-seed-pipeline` — Phase 7 (Persona Sheet) is the output that would feed auto-routing
+  - `ouroboros-seed-circuit` — Phase 7 (Persona Sheet) is the output that would feed auto-routing
   - `consumer-ergonomics` — API polish that improves the developer experience OmO competes on
   - `kami-live-debugger` — observability advantage OmO completely lacks
 
@@ -35,13 +35,13 @@ flowchart TD
     Cat --> Models["Model Pool\n(Claude, GPT, Gemini, Haiku)"]
 ```
 
-Imperative delegation chain. Named agents are prompt templates with routing rules. Categories abstract model selection. Provider fallback chains add resilience. No formal pipeline, no calibration, no observability.
+Imperative delegation chain. Named agents are prompt templates with routing rules. Categories abstract model selection. Provider fallback chains add resilience. No formal circuit, no calibration, no observability.
 
 ### Origami architecture (relevant subset)
 
 ```mermaid
 flowchart TD
-    YAML["Pipeline YAML\n(declarative DSL)"] --> Graph["Graph Walk\n(nodes, edges, conditions)"]
+    YAML["Circuit YAML\n(declarative DSL)"] --> Graph["Graph Walk\n(nodes, edges, conditions)"]
     Graph --> Sched["AffinityScheduler\n(Element + StepAffinity)"]
     Sched --> Team["WalkTeam\n(multi-walker)"]
     Team --> PR["ProviderRouter\n(provider → dispatcher)"]
@@ -73,7 +73,7 @@ Part 1 writes the case study document (analysis + concept mapping). Part 2 imple
 | **Unit** | yes | ProviderRouter fallback logic, EventProviderFallback signal |
 | **Integration** | no | No cross-boundary changes; ProviderRouter is in-process |
 | **Contract** | yes | ProviderRouter API addition must be backward-compatible |
-| **E2E** | no | Pattern documentation, not pipeline behavior change |
+| **E2E** | no | Pattern documentation, not circuit behavior change |
 | **Concurrency** | no | Fallback is synchronous per-dispatch |
 | **Security** | no | No trust boundaries affected |
 
@@ -89,7 +89,7 @@ Part 1 writes the case study document (analysis + concept mapping). Part 2 imple
 
 Implementation tasks extracted to dedicated feature contracts:
 
-- **Gap 1 (Auto-routing)** → `ouroboros-seed-pipeline` Phase 10
+- **Gap 1 (Auto-routing)** → `ouroboros-seed-circuit` Phase 10
 - **Gap 2 (Provider fallback chains) + Gap 3 (Entry classifier pattern)** → `provider-resilience` contract
 
 ### Part 3 — Validate and tune
@@ -113,7 +113,7 @@ Implementation tasks extracted to dedicated feature contracts:
 **Then** the "investigate" step dispatches to the "anthropic" provider and "triage" dispatches to "openai" without explicit `NodeDef.Provider` configuration.
 
 **Given** `testdata/patterns/intent-classifier.yaml`,  
-**When** loaded with `LoadPipeline` and built with `BuildGraphWith`,  
+**When** loaded with `LoadCircuit` and built with `BuildGraphWith`,  
 **Then** the graph has a classifier node, 2+ branching edges with `when: vars.intent == "..."` conditions, and all target nodes are reachable.
 
 ## Security assessment
@@ -122,6 +122,6 @@ No trust boundaries affected. Provider fallback chains route to already-configur
 
 ## Notes
 
-2026-02-25 — Part 2 implementation tasks extracted. Gap 1 (auto-routing) → `ouroboros-seed-pipeline` Phase 10. Gaps 2-3 (fallback chains, entry classifier) → `provider-resilience` contract. Part 1 (case study document) complete. Case study contract is now analysis-only with cross-references.
+2026-02-25 — Part 2 implementation tasks extracted. Gap 1 (auto-routing) → `ouroboros-seed-circuit` Phase 10. Gaps 2-3 (fallback chains, entry classifier) → `provider-resilience` contract. Part 1 (case study document) complete. Case study contract is now analysis-only with cross-references.
 
 2026-02-25 — Contract created from competitive analysis of Oh My OpenCode (`github.com/code-yeongyu/oh-my-opencode`). OmO is a multi-model orchestration harness built on prompt engineering + glue code. Its key innovation — closing the model-to-task routing loop at runtime — is something Origami has all the pieces for (Ouroboros, ElementMatch, ProviderRouter, StepAffinity) but hasn't wired end-to-end. This contract closes the loop. The architectural class difference is stark: OmO is imperative prompt templates; Origami is a formal graph framework with empirical calibration. Origami's advantages (DSL, Ouroboros, Dialectic, Masks, Zones, Calibration, Kami) are not something OmO can replicate by adding more prompt templates. But OmO's "just wire it up" pragmatism is a useful reminder to close the feedback loops we've built the infrastructure for.

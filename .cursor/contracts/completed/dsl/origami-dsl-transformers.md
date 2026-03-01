@@ -8,7 +8,7 @@
 
 Global rules only, plus:
 
-- **Part of a 5-contract series.** Contract 2 of 5. Depends on `origami-dsl-expression-engine` (C1). Required by `origami-dsl-pipeline-vars` (C3).
+- **Part of a 5-contract series.** Contract 2 of 5. Depends on `origami-dsl-expression-engine` (C1). Required by `origami-dsl-circuit-vars` (C3).
 - **Extractor evolves, not replaced.** The existing `Extractor` interface is the foundation. `Transformer` may be a rename or a wrapper adding schema validation and data flow. Design decision made during execution.
 - **Walker remains as escape hatch.** For nodes that need custom walk logic (like Ansible's `raw` module), `Walker.Handle()` still works. The `transformer:` path is the default, not the only option.
 - **Built-in transformers are batteries-included.** They require zero custom code. Domain transformers implement the same interface.
@@ -37,7 +37,7 @@ Phase 1: Design `Transformer` interface and `TransformerRegistry`. Phase 2: Impl
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | Each built-in transformer: happy path, error cases, edge inputs |
-| **Integration** | yes | Pipeline walk invokes transformer, validates schema, evaluates edges |
+| **Integration** | yes | Circuit walk invokes transformer, validates schema, evaluates edges |
 | **Contract** | yes | `Transformer` interface compliance across all implementations |
 | **E2E** | yes | Asterisk stub calibration via transformer-based nodes |
 | **Concurrency** | no | Transformers are stateless |
@@ -50,7 +50,7 @@ All tasks complete.
 ## Acceptance criteria
 
 **Given** the Origami framework with `NodeDef.Transformer` support,  
-**When** a pipeline YAML declares `transformer: llm` and `prompt: prompts/recall.md` on a node,  
+**When** a circuit YAML declares `transformer: llm` and `prompt: prompts/recall.md` on a node,  
 **Then**:
 - The framework resolves the transformer from the registry at build time
 - The framework calls the transformer directly during Walk (no Walker.Handle required)
@@ -65,7 +65,7 @@ All tasks complete.
 |-------|---------|------------|
 | A03 Injection | `llm` transformer renders prompt templates with user-controlled data. Potential prompt injection. | Template rendering uses text/template (no HTML escaping issues). Prompt content is domain-controlled, not user-facing. |
 | A10 SSRF | `http` transformer makes outbound requests to URLs specified in YAML. | URL allowlist validation. Only HTTPS by default. Configurable allowed hosts. |
-| A01 Path Traversal | `file` transformer reads from disk paths specified in YAML. | Path must be relative to pipeline directory. Reject `..` components. Configurable root directory. |
+| A01 Path Traversal | `file` transformer reads from disk paths specified in YAML. | Path must be relative to circuit directory. Reject `..` components. Configurable root directory. |
 
 ## Notes
 

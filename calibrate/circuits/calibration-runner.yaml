@@ -1,0 +1,106 @@
+# Calibration Runner Circuit
+#
+# Generic calibration circuit that any Origami consumer can use.
+# Consumers supply domain-specific behavior via CalibrationInput:
+#   - CaseRunner: runs a single case through the domain circuit
+#   - CaseScorer: scores a case result against ground truth
+#   - ScoreCard:  declarative metric definitions and thresholds
+#
+# The circuit is visible in Kami for live debugging of calibration runs.
+# Set breakpoints on score_case to inspect per-case scoring,
+# or on aggregate to see the final metric evaluation.
+circuit: calibration-runner
+description: "Run domain calibration against ground truth scenarios"
+
+zones:
+  setup:
+    nodes: [load_scenario, fan_out]
+    element: earth
+    stickiness: 0
+  execution:
+    nodes: [walk_case, score_case]
+    element: fire
+    stickiness: 2
+  collection:
+    nodes: [fan_in, aggregate]
+    element: water
+    stickiness: 1
+  output:
+    nodes: [report]
+    element: air
+    stickiness: 0
+
+nodes:
+  - name: load_scenario
+    element: earth
+    family: calibrate.load
+
+  - name: fan_out
+    element: water
+    family: calibrate.fan_out
+
+  - name: walk_case
+    element: fire
+    family: calibrate.walk_case
+
+  - name: score_case
+    element: earth
+    family: calibrate.score_case
+
+  - name: fan_in
+    element: water
+    family: calibrate.fan_in
+
+  - name: aggregate
+    element: earth
+    family: calibrate.aggregate
+
+  - name: report
+    element: air
+    family: calibrate.report
+
+edges:
+  - id: E1
+    name: scenario loaded
+    from: load_scenario
+    to: fan_out
+    condition: "always"
+
+  - id: E2
+    name: cases distributed
+    from: fan_out
+    to: walk_case
+    condition: "always"
+
+  - id: E3
+    name: cases walked
+    from: walk_case
+    to: score_case
+    condition: "always"
+
+  - id: E4
+    name: cases scored
+    from: score_case
+    to: fan_in
+    condition: "always"
+
+  - id: E5
+    name: results collected
+    from: fan_in
+    to: aggregate
+    condition: "always"
+
+  - id: E6
+    name: metrics aggregated
+    from: aggregate
+    to: report
+    condition: "always"
+
+  - id: E7
+    name: report complete
+    from: report
+    to: _done
+    condition: "always (terminal)"
+
+start: load_scenario
+done: _done

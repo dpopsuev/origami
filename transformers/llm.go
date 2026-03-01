@@ -15,7 +15,7 @@ import (
 
 // LLMTransformer sends a prompt to an external agent via a Dispatcher and
 // parses the JSON response. This is the primary transformer for AI-driven
-// pipeline nodes.
+// circuit nodes.
 type LLMTransformer struct {
 	dispatcher dispatch.Dispatcher
 	baseDir    string // base directory for resolving prompt/artifact paths

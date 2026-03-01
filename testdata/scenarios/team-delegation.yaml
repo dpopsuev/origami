@@ -1,4 +1,4 @@
-pipeline: team-delegation
+circuit: team-delegation
 description: "Parallel fan-out from coordinator to specialists, merge at synthesis"
 
 zones:

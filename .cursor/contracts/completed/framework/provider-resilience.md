@@ -12,12 +12,12 @@
 
 ## Context
 
-- **Origin:** OmO case study (`docs/case-studies/omo-agentic-arms-race.md`) identified three gaps. Gap 1 (auto-routing) was injected into `ouroboros-seed-pipeline` Phase 10 (depends on PersonaSheet). Gaps 2-3 are housed here.
-- **OmO provider fallback:** OmO configures fallback chains per provider — if Anthropic is down, try OpenAI, then Cursor. Origami's ProviderRouter is static: one route per provider, no fallback. A dispatch failure is a pipeline failure.
-- **OmO Intent Gate:** OmO classifies user requests before routing (research, implementation, investigation, fix). Origami pipelines start at a fixed entry node. There is no documented pattern for "classify first, then branch."
+- **Origin:** OmO case study (`docs/case-studies/omo-agentic-arms-race.md`) identified three gaps. Gap 1 (auto-routing) was injected into `ouroboros-seed-circuit` Phase 10 (depends on PersonaSheet). Gaps 2-3 are housed here.
+- **OmO provider fallback:** OmO configures fallback chains per provider — if Anthropic is down, try OpenAI, then Cursor. Origami's ProviderRouter is static: one route per provider, no fallback. A dispatch failure is a circuit failure.
+- **OmO Intent Gate:** OmO classifies user requests before routing (research, implementation, investigation, fix). Origami circuits start at a fixed entry node. There is no documented pattern for "classify first, then branch."
 - **Cross-references:**
   - `case-study-omo-agentic-arms-race` — Analysis source. Implementation extracted here.
-  - `ouroboros-seed-pipeline` Phase 10 — Auto-routing (Gap 1) lives there, consumes PersonaSheet.
+  - `ouroboros-seed-circuit` Phase 10 — Auto-routing (Gap 1) lives there, consumes PersonaSheet.
 
 ### Current ProviderRouter
 
@@ -66,7 +66,7 @@ Phase 1 adds fallback chains to ProviderRouter. Phase 2 documents the entry clas
 | **Unit** | yes | ProviderRouter fallback logic, EventProviderFallback signal |
 | **Integration** | no | No cross-boundary changes; ProviderRouter is in-process |
 | **Contract** | yes | ProviderRouter API addition must be backward-compatible |
-| **E2E** | no | Pattern documentation, not pipeline behavior change |
+| **E2E** | no | Pattern documentation, not circuit behavior change |
 | **Concurrency** | no | Fallback is synchronous per-dispatch call |
 | **Security** | no | No trust boundaries affected — fallbacks route to already-configured dispatchers |
 
@@ -82,8 +82,8 @@ Phase 1 adds fallback chains to ProviderRouter. Phase 2 documents the entry clas
 
 ### Phase 2 — Entry classifier pattern
 
-- [ ] **EC1** Create `testdata/patterns/intent-classifier.yaml` — example pipeline where the first node classifies input type and sets `vars.intent`, downstream edges use `when: vars.intent == "investigation"` etc.
-- [ ] **EC2** Document the pattern: how to build an Intent Gate as a standard Origami pipeline node, equivalent to OmO's category system but declarative
+- [ ] **EC1** Create `testdata/patterns/intent-classifier.yaml` — example circuit where the first node classifies input type and sets `vars.intent`, downstream edges use `when: vars.intent == "investigation"` etc.
+- [ ] **EC2** Document the pattern: how to build an Intent Gate as a standard Origami circuit node, equivalent to OmO's category system but declarative
 - [ ] **EC3** Verify the YAML parses and the graph builds with `BuildGraphWith`
 
 ### Phase 3 — Validate and tune
@@ -103,7 +103,7 @@ Phase 1 adds fallback chains to ProviderRouter. Phase 2 documents the entry clas
 **Then** the error is returned directly — existing behavior is unchanged.
 
 **Given** `testdata/patterns/intent-classifier.yaml`,  
-**When** loaded with `LoadPipeline` and built with `BuildGraphWith`,  
+**When** loaded with `LoadCircuit` and built with `BuildGraphWith`,  
 **Then** the graph has a classifier node, 2+ branching edges with `when: vars.intent == "..."` conditions, and all target nodes are reachable.
 
 ## Security assessment
@@ -112,4 +112,4 @@ No trust boundaries affected. Provider fallback chains route to already-configur
 
 ## Notes
 
-2026-02-25 — Contract extracted from `case-study-omo-agentic-arms-race` Part 2 (Gaps 2-3). Gap 1 (auto-routing) was injected into `ouroboros-seed-pipeline` Phase 10 because it depends on PersonaSheet output. Fallback chains are OmO's pragmatic resilience pattern applied to Origami's typed ProviderRouter. The entry classifier requires no code — it's a documentation gap showing how Origami's existing DSL supports OmO's Intent Gate pattern declaratively.
+2026-02-25 — Contract extracted from `case-study-omo-agentic-arms-race` Part 2 (Gaps 2-3). Gap 1 (auto-routing) was injected into `ouroboros-seed-circuit` Phase 10 because it depends on PersonaSheet output. Fallback chains are OmO's pragmatic resilience pattern applied to Origami's typed ProviderRouter. The entry classifier requires no code — it's a documentation gap showing how Origami's existing DSL supports OmO's Intent Gate pattern declaratively.

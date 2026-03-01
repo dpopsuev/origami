@@ -11,18 +11,18 @@
 - The `core` adapter (built-in transformers: llm, http, jq, file) ships with Origami. It is not a separate Go module.
 - Adapter manifest (`adapter.yaml`) is descriptive, not prescriptive. The Go type system is the authority; the manifest is for CLI tooling and discovery.
 - Name collisions across adapters are errors, not silent overwrites.
-- Adapters do NOT provide nodes or pipeline YAMLs. Reusable graph nodes are Marbles (see `origami-marbles.md`).
+- Adapters do NOT provide nodes or circuit YAMLs. Reusable graph nodes are Marbles (see `origami-marbles.md`).
 
 ## Context
 
-- **Origin:** Ansible Collections case study (`docs/case-studies/ansible-collections.md`) identified the duplication problem: Asterisk and Achilles independently build the same patterns (JSON extraction, hook wiring, pipeline embedding). As consumer count grows (N operators across RAN, Core, edge, platform), this becomes O(N) duplicated work.
+- **Origin:** Ansible Collections case study (`docs/case-studies/ansible-collections.md`) identified the duplication problem: Asterisk and Achilles independently build the same patterns (JSON extraction, hook wiring, circuit embedding). As consumer count grows (N operators across RAN, Core, edge, platform), this becomes O(N) duplicated work.
 - **Taxonomy split:** The original `origami-collections` contract mixed plumbing (hooks, extractors, transformers) with graph nodes (SubgraphNode). This contract covers only the plumbing — helper bundles that connect the graph to external systems. Reusable graph nodes are covered by the sibling `origami-marbles` contract.
 - **Current state:** All registries (`TransformerRegistry`, `ExtractorRegistry`, `HookRegistry`) are simple Go maps with flat string keys. No namespacing, no packaging, no discovery, no merge helpers.
-- **ResolvePipelinePath:** Already supports embedded registry (`RegisterEmbeddedPipeline`), env var (`$ORIGAMI_PIPELINES`), search dirs, and CWD. Adapters can register content via `init()`.
+- **ResolveCircuitPath:** Already supports embedded registry (`RegisterEmbeddedCircuit`), env var (`$ORIGAMI_PIPELINES`), search dirs, and CWD. Adapters can register content via `init()`.
 - **Cross-references:**
   - `origami-lsp` — LSP resolves FQCNs for completion and validation
   - `origami-marbles` — Marbles are the sibling concept for reusable graph nodes. `imports:` (Phase 3) loads both adapters and marbles.
-  - `consumer-ergonomics` — `ResolvePipelinePath` is the pipeline discovery primitive
+  - `consumer-ergonomics` — `ResolveCircuitPath` is the circuit discovery primitive
   - `e2e-dsl-testing` — scenario YAMLs can test FQCN resolution
 
 ### Current architecture
@@ -30,8 +30,8 @@
 ```mermaid
 flowchart LR
     subgraph consumers [Consumers — isolated]
-        Ast["Asterisk\nHookRegistry\nStoreHooks\npipeline YAML"]
-        Ach["Achilles\nExtractorRegistry\nGovulncheck\npipeline YAML"]
+        Ast["Asterisk\nHookRegistry\nStoreHooks\ncircuit YAML"]
+        Ach["Achilles\nExtractorRegistry\nGovulncheck\ncircuit YAML"]
         FutureN["Consumer N\n(duplicate everything)"]
     end
 
@@ -75,16 +75,16 @@ flowchart TB
 
 ## Execution strategy
 
-Phase 1 defines the Adapter struct and manifest parser. Phase 2 adds FQCN resolution to all registries. Phase 3 adds `imports:` to PipelineDef (shared with Marbles). Phase 4 extracts the `core` adapter from existing `transformers/` package. Phase 5 adds CLI commands. Phase 6 validates and tunes.
+Phase 1 defines the Adapter struct and manifest parser. Phase 2 adds FQCN resolution to all registries. Phase 3 adds `imports:` to CircuitDef (shared with Marbles). Phase 4 extracts the `core` adapter from existing `transformers/` package. Phase 5 adds CLI commands. Phase 6 validates and tunes.
 
 ## Coverage matrix
 
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | Manifest parsing, FQCN resolution, MergeAdapters collision detection |
-| **Integration** | yes | Load pipeline YAML with `imports:`, resolve FQCNs, build graph |
+| **Integration** | yes | Load circuit YAML with `imports:`, resolve FQCNs, build graph |
 | **Contract** | yes | Adapter manifest schema, FQCN format, registry merge semantics |
-| **E2E** | yes | Walk pipeline using adapter-provided transformers |
+| **E2E** | yes | Walk circuit using adapter-provided transformers |
 | **Concurrency** | no | Adapters are registered at startup, not concurrently |
 | **Security** | yes | `origami adapter install` wraps `go get` — supply chain trust |
 
@@ -105,11 +105,11 @@ Phase 1 defines the Adapter struct and manifest parser. Phase 2 adds FQCN resolu
 - [ ] **F3** Backward compatibility: unqualified names resolve exactly as today (no namespace prefix required)
 - [ ] **F4** Unit tests: FQCN lookup succeeds, unqualified lookup still works, unknown namespace produces error
 
-### Phase 3 — `imports:` in PipelineDef
+### Phase 3 — `imports:` in CircuitDef
 
-- [ ] **I1** Add `Imports []string yaml:"imports,omitempty"` to `PipelineDef`
-- [ ] **I2** `LoadPipeline` + `BuildGraphWith` resolve `imports` → load adapter manifests → auto-register adapter content → FQCN shorthand (imported adapters' namespace can be omitted)
-- [ ] **I3** Unit tests: pipeline with `imports:` resolves FQCNs without namespace prefix
+- [ ] **I1** Add `Imports []string yaml:"imports,omitempty"` to `CircuitDef`
+- [ ] **I2** `LoadCircuit` + `BuildGraphWith` resolve `imports` → load adapter manifests → auto-register adapter content → FQCN shorthand (imported adapters' namespace can be omitted)
+- [ ] **I3** Unit tests: circuit with `imports:` resolves FQCNs without namespace prefix
 
 ### Phase 4 — Core adapter
 
@@ -129,12 +129,12 @@ Phase 1 defines the Adapter struct and manifest parser. Phase 2 adds FQCN resolu
 
 ## Acceptance criteria
 
-**Given** a pipeline YAML with `extractor: achilles.govulncheck-v1`,  
+**Given** a circuit YAML with `extractor: achilles.govulncheck-v1`,  
 **When** the `achilles` adapter is merged into the registry via `MergeAdapters`,  
 **Then** `resolveNode` finds the extractor and builds the node successfully.
 
-**Given** a pipeline YAML with `imports: [achilles.vuln-tools]` and `extractor: govulncheck-v1`,  
-**When** the pipeline is loaded and built,  
+**Given** a circuit YAML with `imports: [achilles.vuln-tools]` and `extractor: govulncheck-v1`,  
+**When** the circuit is loaded and built,  
 **Then** the unqualified name `govulncheck-v1` resolves via the imported adapter's namespace.
 
 **Given** two adapters both providing a transformer named `llm`,  
@@ -150,7 +150,7 @@ Phase 1 defines the Adapter struct and manifest parser. Phase 2 adds FQCN resolu
 | OWASP | Finding | Mitigation |
 |-------|---------|------------|
 | A08 | `origami adapter install` wraps `go get` — supply chain risk | Adapters are Go modules. `go.sum` provides integrity verification. No custom package format. |
-| A05 | Adapters register code that runs in the pipeline | Same trust model as Go dependencies. Adapters are imported at build time, reviewed via code review. |
+| A05 | Adapters register code that runs in the circuit | Same trust model as Go dependencies. Adapters are imported at build time, reviewed via code review. |
 
 ## Reference Adapter Inventory
 
@@ -162,10 +162,10 @@ The following adapters are identified from the Asterisk and Achilles codebases. 
 |------|-------------|----------|
 | `asterisk.rp-source` | `internal/rp/` (client, fetcher, pusher, envelope) | ReportPortal API client, launch fetcher, defect pusher. The external data source. |
 | `asterisk.model-adapters` | `internal/calibrate/adapt/` (StubAdapter, BasicAdapter, LLMAdapter) | Model adapter implementations for calibration. Wrap different AI backends. |
-| `asterisk.step-extractors` | `internal/calibrate/extractor.go` | Step-specific artifact extractors for F0-F6 pipeline stages. Parse LLM responses into typed artifacts. |
+| `asterisk.step-extractors` | `internal/calibrate/extractor.go` | Step-specific artifact extractors for F0-F6 circuit stages. Parse LLM responses into typed artifacts. |
 | `asterisk.display` | `internal/display/display.go` | Human-readable name registry (defect types, symptom categories, metric names). Codes for machines, words for humans. |
-| `asterisk.store-hooks` | `internal/orchestrate/hooks.go` | Pipeline lifecycle hooks: persist artifacts to store on node completion. |
-| `asterisk.prompt-params` | `internal/orchestrate/params.go` + `template.go` | Prompt template parameter assembly. Builds `{{variable}}` context for each pipeline step. |
+| `asterisk.store-hooks` | `internal/orchestrate/hooks.go` | Circuit lifecycle hooks: persist artifacts to store on node completion. |
+| `asterisk.prompt-params` | `internal/orchestrate/params.go` + `template.go` | Prompt template parameter assembly. Builds `{{variable}}` context for each circuit step. |
 | `asterisk.report-formatters` | `internal/calibrate/report.go` + `rca_report.go` | Calibration report formatting (table, markdown, summary). RCA output formatting. |
 | `asterisk.observability` | `internal/calibrate/transcript.go` + `internal/display/display.go` (StepNameFunc) | Per-step transcript generation and `StepNameFunc` adapter mapping step IDs to display names. TokiMeter cost bill has migrated to `origami/dispatch/cost_bill.go` (see `principled-calibration-scorecard` Phase 2.5) — lives in `dispatch/` because every agent dispatch produces a cost bill, not just calibration. |
 
@@ -179,7 +179,7 @@ The following adapters are identified from the Asterisk and Achilles codebases. 
 
 | FQCN | Current Code | Provides |
 |------|-------------|----------|
-| `origami.artifact-io` | `asterisk/internal/orchestrate/artifact.go` (to migrate) | Case-scoped artifact I/O: `ReadArtifact[T]`, `WriteArtifact`, `CaseDir`, `EnsureCaseDir`, `ListCaseDirs`. Generic case-dir layout for any case-based pipeline. Complements `JSONCheckpointer` with per-case path scoping. Any consumer running case-based calibration or analysis needs this pattern. |
+| `origami.artifact-io` | `asterisk/internal/orchestrate/artifact.go` (to migrate) | Case-scoped artifact I/O: `ReadArtifact[T]`, `WriteArtifact`, `CaseDir`, `EnsureCaseDir`, `ListCaseDirs`. Generic case-dir layout for any case-based circuit. Complements `JSONCheckpointer` with per-case path scoping. Any consumer running case-based calibration or analysis needs this pattern. |
 | `origami.display-registry` | Pattern from `asterisk/internal/display/display.go` (to extract) | Generic `DisplayRegistry[T]` type: maps `ID -> DisplayName` with `WithCode(id)` variants. The "codes for machines, words for humans" pattern as a framework utility. Consumers register domain-specific mappings (defect types, stages, metrics); the registry pattern itself is framework-level. |
 
 ### Core adapter additions

@@ -7,8 +7,8 @@
 ## Contract rules
 
 - CLIDispatcher MUST implement the `Dispatcher` interface — same as Stdin, HTTP, Mux.
-- Skill scaffolding MUST produce a valid SKILL.md from a pipeline YAML without manual editing.
-- Provider routing MUST be optional — pipelines without `provider:` fields work unchanged.
+- Skill scaffolding MUST produce a valid SKILL.md from a circuit YAML without manual editing.
+- Provider routing MUST be optional — circuits without `provider:` fields work unchanged.
 - All new code MUST have unit tests. No untested dispatcher.
 - The BYO principle applies: Origami provides interfaces and batteries, consumers bring implementations.
 
@@ -57,7 +57,7 @@ graph LR
     subgraph Origami CLI
         Scaffold[origami skill scaffold]
     end
-    subgraph Pipeline YAML
+    subgraph Circuit YAML
         Provider[provider: codex/claude/cursor/auto]
     end
     Stdin -->|Dispatcher| Runner
@@ -85,15 +85,15 @@ graph LR
 Three phases, ordered by dependency:
 
 1. **Phase 2 — CLIDispatcher** (`dispatch/cli.go`): Shell out to CLI-based LLM tools (Codex, Claude). Read prompt from file, pipe to CLI, capture output. Timeout + context cancellation.
-2. **Phase 3 — Skill scaffolding** (`cmd/origami/cmd_skill.go` + `docs/cursor-skill-guide.md`): Parse pipeline YAML, generate SKILL.md template with MCP tools, node-to-step mapping, artifact schemas.
-3. **Phase 4 — Provider routing**: Add optional `provider:` field to pipeline YAML node definitions. Route each step to the appropriate dispatcher based on provider config.
+2. **Phase 3 — Skill scaffolding** (`cmd/origami/cmd_skill.go` + `docs/cursor-skill-guide.md`): Parse circuit YAML, generate SKILL.md template with MCP tools, node-to-step mapping, artifact schemas.
+3. **Phase 4 — Provider routing**: Add optional `provider:` field to circuit YAML node definitions. Route each step to the appropriate dispatcher based on provider config.
 
 ## Coverage matrix
 
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | CLIDispatcher: mock command execution, timeout, error paths. Scaffold: parse YAML, generate SKILL.md. |
-| **Integration** | yes | CLIDispatcher + real `echo` command as smoke test. Scaffold + example pipeline YAML. |
+| **Integration** | yes | CLIDispatcher + real `echo` command as smoke test. Scaffold + example circuit YAML. |
 | **Contract** | yes | `Dispatcher` interface compliance for CLIDispatcher. |
 | **E2E** | N/A | Consumer-level E2E (Asterisk/Achilles) validates the full chain. |
 | **Concurrency** | N/A | CLIDispatcher is stateless; one process per dispatch. |
@@ -104,7 +104,7 @@ Three phases, ordered by dependency:
 - [x] Implement `CLIDispatcher` in `dispatch/cli.go` with `exec.CommandContext`, timeout, stderr capture.
 - [x] Write `dispatch/cli_test.go` — 8 tests: valid/invalid command, options, echo, args, missing prompt, failure, timeout, empty output.
 - [x] Implement `origami skill scaffold` command in `cmd/origami/cmd_skill.go`.
-- [x] Write `docs/cursor-skill-guide.md` — developer guide for building Cursor Skills from Origami pipelines.
+- [x] Write `docs/cursor-skill-guide.md` — developer guide for building Cursor Skills from Origami circuits.
 - [x] Add optional `provider:` field to `NodeDef` in `dsl.go`, propagate through `transformerNode.Process` into `TransformerContext.Meta["provider"]`.
 - [x] Implement `ProviderRouter` dispatcher in `dispatch/provider.go` — routes by provider name, falls back to default.
 - [x] Write `dispatch/provider_test.go` — 5 tests: default route, named route, unknown, register, empty provider.
@@ -118,22 +118,22 @@ Three phases, ordered by dependency:
 
 ```gherkin
 # CLIDispatcher
-Given a pipeline step configured with provider: codex
+Given a circuit step configured with provider: codex
   And the CODEX_CLI environment variable points to a valid binary
 When the dispatcher executes the step
 Then it shells out to the CLI, pipes the prompt, and returns the artifact JSON
   And respects context cancellation and timeout
 
 # Skill scaffold
-Given a pipeline YAML file with 4 nodes (scan, classify, assess, report)
-When the user runs "origami skill scaffold pipeline.yaml"
+Given a circuit YAML file with 4 nodes (scan, classify, assess, report)
+When the user runs "origami skill scaffold circuit.yaml"
 Then it generates a SKILL.md with MCP tool call instructions for each node
   And includes artifact schemas derived from node output types
   And includes subagent delegation instructions per the agent bus protocol
 
 # Provider routing
-Given a pipeline YAML with nodes using different provider: values
-When the pipeline runs
+Given a circuit YAML with nodes using different provider: values
+When the circuit runs
 Then each node dispatches to the correct backend (cursor -> Mux, codex -> CLI, openai -> HTTP)
   And nodes without provider: use the default dispatcher
 ```

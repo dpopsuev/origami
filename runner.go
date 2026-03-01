@@ -35,21 +35,21 @@ func AsInterrupt(err error) (Interrupt, bool) {
 	return i, ok
 }
 
-// Runner drives a pipeline graph with automatic artifact schema validation
-// and after-hooks. Domain tools create a Runner from a PipelineDef and their
+// Runner drives a circuit graph with automatic artifact schema validation
+// and after-hooks. Domain tools create a Runner from a CircuitDef and their
 // registries, then call Walk with a domain Walker.
 type Runner struct {
-	Pipeline  *PipelineDef
+	Circuit  *CircuitDef
 	Graph     Graph
-	Schemas   map[string]*ArtifactSchema // node name -> schema (from PipelineDef)
+	Schemas   map[string]*ArtifactSchema // node name -> schema (from CircuitDef)
 	NodeHooks map[string][]string        // node name -> hook names (from NodeDef.After)
 	Hooks     HookRegistry               // resolved hooks
 	Logger    *slog.Logger
 }
 
-// NewRunner constructs a Runner from a pipeline definition and registries.
+// NewRunner constructs a Runner from a circuit definition and registries.
 // Backward-compatible: accepts (NodeRegistry, EdgeFactory, ...ExtractorRegistry).
-func NewRunner(def *PipelineDef, nodes NodeRegistry, edges EdgeFactory, extractors ...ExtractorRegistry) (*Runner, error) {
+func NewRunner(def *CircuitDef, nodes NodeRegistry, edges EdgeFactory, extractors ...ExtractorRegistry) (*Runner, error) {
 	var extReg ExtractorRegistry
 	if len(extractors) > 0 {
 		extReg = extractors[0]
@@ -62,7 +62,7 @@ func NewRunner(def *PipelineDef, nodes NodeRegistry, edges EdgeFactory, extracto
 }
 
 // NewRunnerWith constructs a Runner using the full registries bundle.
-func NewRunnerWith(def *PipelineDef, reg GraphRegistries) (*Runner, error) {
+func NewRunnerWith(def *CircuitDef, reg GraphRegistries) (*Runner, error) {
 	graph, err := def.BuildGraph(reg)
 	if err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
@@ -100,7 +100,7 @@ func NewRunnerWith(def *PipelineDef, reg GraphRegistries) (*Runner, error) {
 	}
 
 	return &Runner{
-		Pipeline:  def,
+		Circuit:  def,
 		Graph:     graph,
 		Schemas:   schemas,
 		NodeHooks: nodeHooks,
@@ -141,13 +141,9 @@ type validatingWalker struct {
 	log     *slog.Logger
 }
 
-func (vw *validatingWalker) Identity() AgentIdentity {
-	return vw.inner.Identity()
-}
-
-func (vw *validatingWalker) State() *WalkerState {
-	return vw.inner.State()
-}
+func (vw *validatingWalker) Identity() AgentIdentity      { return vw.inner.Identity() }
+func (vw *validatingWalker) SetIdentity(id AgentIdentity)  { vw.inner.SetIdentity(id) }
+func (vw *validatingWalker) State() *WalkerState           { return vw.inner.State() }
 
 func (vw *validatingWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
 	artifact, err := vw.inner.Handle(ctx, node, nc)
@@ -183,8 +179,9 @@ type hookingWalker struct {
 	log       *slog.Logger
 }
 
-func (hw *hookingWalker) Identity() AgentIdentity { return hw.inner.Identity() }
-func (hw *hookingWalker) State() *WalkerState     { return hw.inner.State() }
+func (hw *hookingWalker) Identity() AgentIdentity      { return hw.inner.Identity() }
+func (hw *hookingWalker) SetIdentity(id AgentIdentity)  { hw.inner.SetIdentity(id) }
+func (hw *hookingWalker) State() *WalkerState           { return hw.inner.State() }
 
 func (hw *hookingWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
 	artifact, err := hw.inner.Handle(ctx, node, nc)
@@ -218,8 +215,9 @@ type checkpointingWalker struct {
 	cp    Checkpointer
 }
 
-func (cw *checkpointingWalker) Identity() AgentIdentity { return cw.inner.Identity() }
-func (cw *checkpointingWalker) State() *WalkerState     { return cw.inner.State() }
+func (cw *checkpointingWalker) Identity() AgentIdentity      { return cw.inner.Identity() }
+func (cw *checkpointingWalker) SetIdentity(id AgentIdentity)  { cw.inner.SetIdentity(id) }
+func (cw *checkpointingWalker) State() *WalkerState           { return cw.inner.State() }
 
 func (cw *checkpointingWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
 	artifact, err := cw.inner.Handle(ctx, node, nc)

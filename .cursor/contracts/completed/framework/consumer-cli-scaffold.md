@@ -1,15 +1,15 @@
 # Contract — Consumer CLI Scaffold
 
 **Status:** draft  
-**Goal:** Provide an `origami.NewCLI()` builder API that gives every Origami consumer tool 8 standard CLI commands — `analyze`, `dataset`, `calibrate`, `pipeline`, `consume`, `serve`, `demo`, `profile` — replacing ~780 lines of bespoke Cobra code per consumer with ~30 lines of builder calls.  
+**Goal:** Provide an `origami.NewCLI()` builder API that gives every Origami consumer tool 8 standard CLI commands — `analyze`, `dataset`, `calibrate`, `circuit`, `consume`, `serve`, `demo`, `profile` — replacing ~780 lines of bespoke Cobra code per consumer with ~30 lines of builder calls.  
 **Serves:** System Refinement (should)
 
 ## Contract rules
 
 - The scaffold is a Go API in Origami, not a code generator. Consumers call `origami.NewCLI()` and register their domain-specific implementations.
 - `analyze` is the only command the consumer MUST implement from scratch. Every other command has a framework-provided default behavior that the consumer configures.
-- Tier 1 commands (`analyze`, `dataset`, `calibrate`, `pipeline`) are required for any production-grade tool. Tier 2 (`consume`, `serve`) and Tier 3 (`demo`, `profile`) are opt-in.
-- `replay` is a subcommand of `pipeline`, not a top-level command. It uses the Kami Replayer under the hood.
+- Tier 1 commands (`analyze`, `dataset`, `calibrate`, `circuit`) are required for any production-grade tool. Tier 2 (`consume`, `serve`) and Tier 3 (`demo`, `profile`) are opt-in.
+- `replay` is a subcommand of `circuit`, not a top-level command. It uses the Kami Replayer under the hood.
 - The scaffold does NOT impose a project layout. It provides Cobra commands; consumers wire them into their own `main.go`.
 - Commands share a common flag vocabulary: `--verbose`, `--debug`, `--output` (json/table/markdown), `--config`.
 
@@ -19,8 +19,8 @@
 - **Current state:** Each consumer builds their own `cmd_*.go` files with custom flag parsing, help text, and subcommand wiring. No shared infrastructure beyond Cobra itself.
 - **Cross-references:**
   - `principled-calibration-scorecard` — the `calibrate` command uses `ScoreCard` YAML and the generic scorer
-  - `origami-adapters` — the `pipeline` command resolves adapter FQCNs when rendering/validating
-  - `kami-live-debugger` — `pipeline replay` uses the Kami Replayer
+  - `origami-adapters` — the `circuit` command resolves adapter FQCNs when rendering/validating
+  - `kami-live-debugger` — `circuit replay` uses the Kami Replayer
   - `kabuki-presentation-engine` — the `demo` command uses Kabuki
   - `migrate-ouroboros-to-marshaller` — the `profile` command uses Ouroboros MCP server
   - `origami-observability` — `WithObservability()` builder method wires OTel + Prometheus into the CLI
@@ -58,7 +58,7 @@ flowchart TB
 flowchart TB
     subgraph origami [Origami -- CLI scaffold]
         Builder["origami.NewCLI(name, desc)\nBuilder pattern"]
-        T1["Tier 1: analyze, dataset, calibrate, pipeline"]
+        T1["Tier 1: analyze, dataset, calibrate, circuit"]
         T2["Tier 2: consume, serve"]
         T3["Tier 3: demo, profile"]
         Flags["Common flags: --verbose, --debug, --output, --config"]
@@ -70,7 +70,7 @@ flowchart TB
     end
 
     subgraph achilles2 [Achilles -- ~30 lines]
-        main_b["main.go\norigami.NewCLI('achilles', ...)\n.WithAnalyze(scanFunc)\n.WithPipeline(defs)\n.Build().Execute()"]
+        main_b["main.go\norigami.NewCLI('achilles', ...)\n.WithAnalyze(scanFunc)\n.WithCircuit(defs)\n.Build().Execute()"]
     end
 
     Builder --> T1 & T2 & T3
@@ -86,8 +86,8 @@ flowchart TB
 |---|---------|-------------|-------------|
 | 1 | **analyze** | The domain function. The reason the tool exists. | *(domain-defined)* |
 | 2 | **dataset** | Manage datasets: list, status, import, export, review, promote | `list`, `status <name>`, `import <path>`, `export <path>`, `review`, `promote <case-id>` |
-| 3 | **calibrate** | Run scorecard evaluation against a dataset. Uses `DefaultScoreCard()` when no custom scorecard path is provided. `report` subcommand includes `CostBill` output (from `dispatch.FormatCostBill`). Note: `CostBill` is a dispatch-level concern — `pipeline run` also emits a cost bill for every dispatch, not just calibration. | `run <scenario>`, `report <scenario>`, `compare <a> <b>` |
-| 4 | **pipeline** | Pipeline operations (including replay) | `render <pipeline>`, `validate <pipeline>`, `list`, `replay <recording.jsonl> [--speed] [--port]` |
+| 3 | **calibrate** | Run scorecard evaluation against a dataset. Uses `DefaultScoreCard()` when no custom scorecard path is provided. `report` subcommand includes `CostBill` output (from `dispatch.FormatCostBill`). Note: `CostBill` is a dispatch-level concern — `circuit run` also emits a cost bill for every dispatch, not just calibration. | `run <scenario>`, `report <scenario>`, `compare <a> <b>` |
+| 4 | **circuit** | Circuit operations (including replay) | `render <circuit>`, `validate <circuit>`, `list`, `replay <recording.jsonl> [--speed] [--port]` |
 
 ### Tier 2 — Infrastructure (most tools need)
 
@@ -117,8 +117,8 @@ func NewCLI(name, description string) *CLIBuilder
 func (b *CLIBuilder) WithAnalyze(fn AnalyzeFunc) *CLIBuilder
 func (b *CLIBuilder) WithDataset(store DatasetStore) *CLIBuilder
 func (b *CLIBuilder) WithCalibrate(scorecard string, runner CalibrateRunner) *CLIBuilder
-func (b *CLIBuilder) WithPipeline(defs ...string) *CLIBuilder
-func (b *CLIBuilder) WithConsume(pipeline string) *CLIBuilder
+func (b *CLIBuilder) WithCircuit(defs ...string) *CLIBuilder
+func (b *CLIBuilder) WithConsume(circuit string) *CLIBuilder
 func (b *CLIBuilder) WithServe(config MCPConfig) *CLIBuilder
 func (b *CLIBuilder) WithDemo(config KabukiConfig) *CLIBuilder
 func (b *CLIBuilder) WithProfile() *CLIBuilder
@@ -164,7 +164,7 @@ type KabukiConfig interface {
 | `cmd_calibrate.go` | ~150 | `origami.WithCalibrate(scorecard, runner)` |
 | `cmd_serve.go` | ~80 | `origami.WithServe(mcpConfig)` |
 | `cmd_demo.go` | ~100 | `origami.WithDemo(kabukiConfig)` |
-| `cmd_status.go` | ~60 | `origami.WithPipeline(defs)` subcommand |
+| `cmd_status.go` | ~60 | `origami.WithCircuit(defs)` subcommand |
 | `cmd_analyze.go` | ~120 | `origami.WithAnalyze(analyzeFunc)` |
 | `cmd_cursor.go` | ~80 | absorbed into `analyze --interactive` |
 | `cmd_push.go` | ~100 | domain-specific, stays |
@@ -190,7 +190,7 @@ Phase 1 defines the builder API types and interfaces (`CLIBuilder`, `AnalyzeFunc
 | **Unit** | yes | Builder pattern, command registration, flag parsing, interface compliance |
 | **Integration** | yes | Build CLI, run `--help`, verify subcommand tree matches spec |
 | **Contract** | yes | Interface definitions (`DatasetStore`, `CalibrateRunner`, `AnalyzeFunc`), command names, flag vocabulary |
-| **E2E** | yes | `asterisk dataset list` and `achilles pipeline render` both work after migration |
+| **E2E** | yes | `asterisk dataset list` and `achilles circuit render` both work after migration |
 | **Concurrency** | no | CLI is single-threaded startup |
 | **Security** | no | No trust boundaries — CLI wiring only |
 
@@ -212,15 +212,15 @@ Phase 1 defines the builder API types and interfaces (`CLIBuilder`, `AnalyzeFunc
 - [ ] **T1A** `analyze` command: delegates to `AnalyzeFunc`, passes remaining args
 - [ ] **T1B** `dataset` command tree: `list`, `status`, `import`, `export`, `review`, `promote` — all delegate to `DatasetStore` interface
 - [ ] **T1C** `calibrate` command tree: `run <scenario>`, `report <scenario>`, `compare <a> <b>` — loads `ScoreCard` YAML, delegates to `CalibrateRunner`
-- [ ] **T1D** `pipeline` command tree: `render` (graphviz DOT), `validate` (schema check), `list` (registered pipelines), `replay <file>` (Kami Replayer with `--speed`, `--port`)
+- [ ] **T1D** `circuit` command tree: `render` (graphviz DOT), `validate` (schema check), `list` (registered circuits), `replay <file>` (Kami Replayer with `--speed`, `--port`)
 - [ ] **T1E** Common flags on root: `--verbose`, `--debug`, `--output` (json/table/markdown), `--config`
-- [ ] **T1F** Unit tests: each subcommand registered, `--help` output matches spec, `pipeline replay` wires Kami Replayer
+- [ ] **T1F** Unit tests: each subcommand registered, `--help` output matches spec, `circuit replay` wires Kami Replayer
 
 ### Phase 3 — Tier 2 commands (Origami)
 
-- [ ] **T2A** `consume` command: `run` (walks ingestion pipeline), `status` (shows last run)
+- [ ] **T2A** `consume` command: `run` (walks ingestion circuit), `status` (shows last run)
 - [ ] **T2B** `serve` command: starts MCP server with provided tools and options
-- [ ] **T2C** Unit tests: `serve` registers tools, `consume run` walks pipeline
+- [ ] **T2C** Unit tests: `serve` registers tools, `consume run` walks circuit
 
 ### Phase 4 — Tier 3 commands (Origami)
 
@@ -242,7 +242,7 @@ Phase 1 defines the builder API types and interfaces (`CLIBuilder`, `AnalyzeFunc
 
 - [ ] **AC1** Create `main.go` using `origami.NewCLI("achilles", ...)` builder
 - [ ] **AC2** Wire existing scan logic into `AnalyzeFunc`
-- [ ] **AC3** Wire existing render/validate into `WithPipeline()`
+- [ ] **AC3** Wire existing render/validate into `WithCircuit()`
 - [ ] **AC4** Integration test: `achilles --help` shows expected command tree
 
 ### Phase 7 — Validate and tune
@@ -257,8 +257,8 @@ Phase 1 defines the builder API types and interfaces (`CLIBuilder`, `AnalyzeFunc
 **When** the user runs `asterisk dataset list`,  
 **Then** the framework-provided `dataset list` command invokes `store.List()` and formats the output.
 
-**Given** a consumer calling `.WithPipeline("pipelines/asterisk-rca.yaml")`,  
-**When** the user runs `asterisk pipeline replay recording.jsonl --speed 2.0 --port 3001`,  
+**Given** a consumer calling `.WithCircuit("circuits/asterisk-rca.yaml")`,  
+**When** the user runs `asterisk circuit replay recording.jsonl --speed 2.0 --port 3001`,  
 **Then** the Kami Replayer starts on port 3001 at 2x speed with the given recording.
 
 **Given** a consumer that does NOT call `.WithDemo()`,  
@@ -281,4 +281,4 @@ Phase 1 defines the builder API types and interfaces (`CLIBuilder`, `AnalyzeFunc
 
 ## Notes
 
-2026-02-26 — Contract created. Motivated by the observation that Asterisk has ~780 lines of bespoke Cobra commands that Achilles would duplicate. "dataset" replaces "gt" (ground truth is jargon; dataset is universal). `replay` is a subcommand of `pipeline` (not a top-level command). The builder pattern (`NewCLI().With*().Build()`) follows the same ergonomic pattern as `kami.NewServer()`. Domain-specific commands (`push`, `save`) stay via `WithExtraCommand()`.
+2026-02-26 — Contract created. Motivated by the observation that Asterisk has ~780 lines of bespoke Cobra commands that Achilles would duplicate. "dataset" replaces "gt" (ground truth is jargon; dataset is universal). `replay` is a subcommand of `circuit` (not a top-level command). The builder pattern (`NewCLI().With*().Build()`) follows the same ergonomic pattern as `kami.NewServer()`. Domain-specific commands (`push`, `save`) stay via `WithExtraCommand()`.

@@ -1,5 +1,5 @@
 // Package curate provides domain-agnostic types and interfaces for
-// curation pipelines: consuming unstructured data from heterogeneous
+// curation circuits: consuming unstructured data from heterogeneous
 // sources and producing structured, validated, promotable records.
 //
 // This package has zero consumer-domain imports.

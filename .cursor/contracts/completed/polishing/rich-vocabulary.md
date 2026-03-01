@@ -18,11 +18,11 @@ Three disconnected display-name mechanisms exist today:
 |-----------|----------|----------|------------|
 | `Vocabulary.Name()` | `vocabulary.go` | `NarrationObserver` | Single string — no short/long/description distinction |
 | `Theme.NodeDescriptions()` | `kami/theme.go` | Kami hover, Kabuki cards | Hardcoded per consumer theme, not adapter-driven |
-| LSP `elementDocs`/`personaDocs` | `lsp/hover.go` | LSP hover | Framework-level only, no pipeline-level vocabulary |
+| LSP `elementDocs`/`personaDocs` | `lsp/hover.go` | LSP hover | Framework-level only, no circuit-level vocabulary |
 
-Asterisk's `display/` package (221 lines) is a parallel code-to-name registry that maps defect codes, pipeline stages, metrics, and heuristics to human names. This duplicates what `Vocabulary` should provide at the framework level.
+Asterisk's `display/` package (221 lines) is a parallel code-to-name registry that maps defect codes, circuit stages, metrics, and heuristics to human names. This duplicates what `Vocabulary` should provide at the framework level.
 
-The user identified the gap: "We could have shortname:longname:description, which would allow us to have a great hover display on node/pipeline in the UI."
+The user identified the gap: "We could have shortname:longname:description, which would allow us to have a great hover display on node/circuit in the UI."
 
 ### Current architecture
 
@@ -69,7 +69,7 @@ Bottom-up: define types first, then implement concrete vocabulary, then wire int
 | **Unit** | yes | `VocabEntry`, `RichMapVocabulary`, `RichChainVocabulary` — all need unit tests |
 | **Integration** | yes | Kami hover with vocabulary, LSP hover with vocabulary |
 | **Contract** | yes | `RichVocabulary` interface compliance for all implementations |
-| **E2E** | no | No pipeline walk behavior changes |
+| **E2E** | no | No circuit walk behavior changes |
 | **Concurrency** | yes | `RichMapVocabulary` must be thread-safe (concurrent reads during walk + hover) |
 | **Security** | no | No trust boundaries affected — display metadata only |
 
@@ -78,7 +78,7 @@ Bottom-up: define types first, then implement concrete vocabulary, then wire int
 - [ ] **P1: Define types and implement** — Add `VocabEntry` struct and `RichVocabulary` interface to `vocabulary.go`. Implement `RichMapVocabulary` (with `RegisterEntry`, `RegisterEntries`) and `RichChainVocabulary`. `RichMapVocabulary` embeds backward-compatible `Name()` that returns `Long` (falling back to `Short`, then code). Update `NameWithCode` to use `Short` when available via type assertion. Unit tests for all new types.
 - [ ] **P2: YAML vocabulary loading** — Add optional `vocabulary:` section to adapter manifest schema. Each entry: `code`, `short`, `long`, `description`. Loader produces a `RichMapVocabulary`. When adapters are merged via `MergeAdapters`, vocabularies chain.
 - [ ] **P3: Wire into Kami** — `KamiServer` accepts optional `RichVocabulary`. Node hover tooltip: try `RichVocabulary.Description(code)` first, fall back to `Theme.NodeDescriptions()`, then raw node ID. Node label: use `RichVocabulary.Short(code)` if available.
-- [ ] **P4: Wire into LSP** — `hover.go` checks `RichVocabulary` for node name hover. Supplements existing `elementDocs`/`personaDocs` with pipeline-level descriptions. Inlay hints can show `Short` names.
+- [ ] **P4: Wire into LSP** — `hover.go` checks `RichVocabulary` for node name hover. Supplements existing `elementDocs`/`personaDocs` with circuit-level descriptions. Inlay hints can show `Short` names.
 - [ ] **P5: Wire into Kabuki** — `presentation.go` passes `RichVocabulary` entries to frontend via `/api/theme` or `/api/vocabulary` endpoint. Cards show `Long` as label, `Description` as body. Falls back to `Theme.NodeDescriptions()` when no vocabulary is registered.
 - [ ] Validate (green) — all tests pass, acceptance criteria met.
 - [ ] Tune (blue) — refactor for quality. No behavior changes.

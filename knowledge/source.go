@@ -10,11 +10,11 @@ const (
 	SourceKindAPI  SourceKind = "api"
 )
 
-// ReadPolicy controls when a source is included in pipeline routing.
+// ReadPolicy controls when a source is included in circuit routing.
 type ReadPolicy string
 
 const (
-	// ReadAlways means the source is included in every pipeline run
+	// ReadAlways means the source is included in every circuit run
 	// regardless of tag matching or routing rules — mandatory prerequisite knowledge.
 	ReadAlways ReadPolicy = "always"
 
@@ -35,7 +35,7 @@ const (
 )
 
 // Source is a single knowledge source — a repository, specification document,
-// API endpoint, or other information resource available to the pipeline.
+// API endpoint, or other information resource available to the circuit.
 type Source struct {
 	Name       string            `json:"name" yaml:"name"`
 	Kind       SourceKind        `json:"kind" yaml:"kind"`
@@ -52,12 +52,12 @@ type Source struct {
 }
 
 // IsAlwaysRead returns true if this source should be included in every
-// pipeline run regardless of routing rules.
+// circuit run regardless of routing rules.
 func (s Source) IsAlwaysRead() bool {
 	return s.ReadPolicy == ReadAlways
 }
 
-// KnowledgeSourceCatalog holds all knowledge sources available to a pipeline.
+// KnowledgeSourceCatalog holds all knowledge sources available to a circuit.
 type KnowledgeSourceCatalog struct {
 	Sources []Source `json:"sources" yaml:"sources"`
 }

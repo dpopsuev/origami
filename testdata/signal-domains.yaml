@@ -1,6 +1,6 @@
-# Signal Domains test pipeline — exercises renderer:, domain:, and context_filter:.
-pipeline: signal-domains-test
-description: "Test pipeline for Renderer interface, zone domain annotations, and context filtering"
+# Signal Domains test circuit — exercises renderer:, domain:, and context_filter:.
+circuit: signal-domains-test
+description: "Test circuit for Renderer interface, zone domain annotations, and context filtering"
 
 zones:
   ingestion:

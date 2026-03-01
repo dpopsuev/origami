@@ -82,6 +82,13 @@ func NewProbeRegistryWith(stimuli probes.StimuliSet) *ProbeRegistry {
 		Score:          probes.ScorePersistence,
 		NeedsCodeBlock: false,
 	})
+	r.Register(&ProbeHandler{
+		ID:             "gbwp-v1",
+		Stimulus:       get("gbwp"),
+		BuildPrompt:    probes.BuildGBWPPrompt,
+		Score:          probes.ScoreGBWP,
+		NeedsCodeBlock: false,
+	})
 
 	return r
 }

@@ -1,7 +1,7 @@
 # Contract -- Agentic Framework III.2: Masks
 
 **Status:** complete
-**Goal:** Define masks as detachable capability modifiers that agents can equip at specific pipeline nodes, inspired by Bionicle Kanohi masks and Jungian persona theory. Implement as middleware wrapping Node.Process.
+**Goal:** Define masks as detachable capability modifiers that agents can equip at specific circuit nodes, inspired by Bionicle Kanohi masks and Jungian persona theory. Implement as middleware wrapping Node.Process.
 **Serves:** Architecture evolution (Framework identity)
 
 ## Contract rules
@@ -27,8 +27,8 @@
 | Mask of the Forge | Access to workspace repos | F3 (Investigate) | Injects repo file trees, commit history, and code search into NodeContext. |
 | Mask of Correlation | Cross-case pattern matching | F4 (Correlate) | Injects other cases' artifacts for duplicate detection and cross-version matching. |
 | Mask of Judgment | Authority to approve/reject/reassess | F5 (Review) | Grants the agent authority to issue ReviewDecision. Without this mask, an agent can only recommend. |
-| Mask of Indictment | Prosecution brief construction | D0 (Indict) | Formats investigation artifacts into formal charges with evidence weights. Antithesis pipeline only. |
-| Mask of Discovery | Raw data access (bypassing conclusions) | D1 (Discover) | Strips prior conclusions, provides only raw failure data. Antithesis pipeline only. |
+| Mask of Indictment | Prosecution brief construction | D0 (Indict) | Formats investigation artifacts into formal charges with evidence weights. Antithesis circuit only. |
+| Mask of Discovery | Raw data access (bypassing conclusions) | D1 (Discover) | Strips prior conclusions, provides only raw failure data. Antithesis circuit only. |
 
 ## Go types
 
@@ -105,9 +105,9 @@ func (mn *MaskedNode) Process(ctx context.Context, nc NodeContext) (Artifact, er
 
 1. Define the Mask interface and MaskedNode type.
 2. Implement EquipMask and EquipMasks with node validation.
-3. Implement the 4 Thesis pipeline masks (Recall, Forge, Correlation, Judgment) as skeleton implementations.
+3. Implement the 4 Thesis circuit masks (Recall, Forge, Correlation, Judgment) as skeleton implementations.
 4. Write tests: mask wrapping, middleware chain ordering, invalid node rejection.
-5. Defer Antithesis pipeline masks (Indictment, Discovery) to III.3-shadow contract.
+5. Defer Antithesis circuit masks (Indictment, Discovery) to III.3-shadow contract.
 
 ## Tasks
 
@@ -144,5 +144,5 @@ func (mn *MaskedNode) Process(ctx context.Context, nc NodeContext) (Artifact, er
 
 - 2026-02-21 20:00 -- Contract complete. Mask interface, MaskedNode (middleware chain), EquipMask/EquipMasks with node validation, 4 Thesis masks (Recall, Forge, Correlation, Judgment), DefaultThesisMasks registry. 10 mask tests including middleware ordering. NodeContext.Meta widened from `map[string]string` to `map[string]any` for richer context injection. Moved to `completed/framework/`.
 - 2026-02-20 -- Contract created. Masks are the Kanohi of the Framework -- they grant specific powers at specific nodes without changing the agent's core identity. This maps to Jung's concept of persona: the mask we wear for specific social contexts.
-- Antithesis pipeline masks (Indictment, Discovery) are listed for completeness but implemented in III.3-shadow.
+- Antithesis circuit masks (Indictment, Discovery) are listed for completeness but implemented in III.3-shadow.
 - Depends on I.1-ontology for Node, Artifact, NodeContext interfaces. Depends on III.1-personae for AgentIdentity (masks don't change identity, but identity determines which masks are available).

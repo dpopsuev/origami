@@ -105,7 +105,7 @@ Origami's 6 elements must render using RH-approved colors. The mapping uses **Co
 
 ### Zone backgrounds
 
-Pipeline zones use the **tint column** as background fill. This provides sufficient contrast for text and node shapes while maintaining visual separation between zones.
+Circuit zones use the **tint column** as background fill. This provides sufficient contrast for text and node shapes while maintaining visual separation between zones.
 
 ### Node shapes
 
@@ -179,7 +179,7 @@ The demo is a **single interactive web app** (React + Vite + Tailwind) that IS t
 | **Hero** | Hero | Full-viewport, animated Origami logo, "Asterisk: AI-Driven Root-Cause Analysis", presenter info |
 | **Agenda** | Navigator | Interactive section navigator with `▸` markers, click-to-jump between sections |
 | **Problem** | SplitPane | CI failure stats left, animated counter right |
-| **Solution** | IconGrid | Pipeline graph preview (static Mermaid render), 7 nodes, 3 zones |
+| **Solution** | IconGrid | Circuit graph preview (static Mermaid render), 7 nodes, 3 zones |
 | **Agent Intros** | CardCarousel | 3D CSS polyhedra per agent, name, element, personality tags, model identity |
 | **Transition** | Divider | Full-screen animated text: "Time to investigate some crimes against CI" |
 | **Live Demo** | EmbeddedKami | Kami graph visualization embedded directly, SSE-driven animation (the centerpiece) |
@@ -199,14 +199,14 @@ Each RH slide type maps to a reusable React component pattern. These patterns fo
 | Divider | `<Transition>` | Full-screen, CSS text animation (typewriter or slide-in). Background: solid red-50 or purple-70. |
 | Agenda | `<Navigator>` | Sticky sidebar or horizontal nav strip. `▸` markers highlight current section. Click-to-jump scrolls smoothly. |
 | Content (image+text) | `<SplitPane>` | Two-column layout: text/stats left, image/animation right. Responsive stacking on mobile. |
-| Content (icons) | `<IconGrid>` | Grid of icon+label cards. Each card has element-colored border. Used for pipeline node overview. |
+| Content (icons) | `<IconGrid>` | Grid of icon+label cards. Each card has element-colored border. Used for circuit node overview. |
 | Content (split columns) | `<CardCarousel>` | Horizontal card strip with CSS 3D transforms. Each card shows an agent with element-colored polyhedron. |
 | Data / Chart | `<MetricCard>` / `<BarChart>` | Animated on scroll-into-view (IntersectionObserver). Numbers count up, bars grow. Source citation footer. |
 | Table | `<InteractiveTable>` | Row/column hover highlights. Responsive: horizontal scroll on mobile. Header max 2 lines, cells max 2 lines. |
 | Timeline | `<HorizontalTimeline>` | Animated milestone progression (dots connect left-to-right on scroll). Year markers in 20XX format. Max 5 milestones visible. |
 | Quote | `<MonologuePanel>` | Agent personality panel with element-colored left border. Persona avatar + quoted text. Used in Act 3 monologues. |
 | Thank You | `<Closing>` | RH boilerplate layout: logo, social links row, CTA button (red-50). Centered, minimal. |
-| Full-bleed Photo | `<EmbeddedKami>` | The live pipeline visualization. Full-width, no padding. Receives SSE events and renders the Kami graph in real-time. |
+| Full-bleed Photo | `<EmbeddedKami>` | The live circuit visualization. Full-width, no padding. Receives SSE events and renders the Kami graph in real-time. |
 
 ### 5.2 Kami frontend
 

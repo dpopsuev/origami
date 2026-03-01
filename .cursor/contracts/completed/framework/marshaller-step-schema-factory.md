@@ -45,7 +45,7 @@ Code only — no FSC artifacts.
 ## Execution strategy
 
 1. Enrich `StepSchema` with `FieldDef` (name, type, required) and `ValidateFields` method.
-2. Add `FindSchema` on `PipelineConfig` for step name lookup.
+2. Add `FindSchema` on `CircuitConfig` for step name lookup.
 3. Register `submit_step` tool with schema-validated handler.
 4. Deprecate `submit_artifact` with warning log (keep for backward compat).
 5. Move `CleanArtifactJSON` out of the session's `SubmitArtifact` into deprecated handler only.
@@ -66,7 +66,7 @@ Code only — no FSC artifacts.
 ## Tasks
 
 - [x] Enrich `StepSchema` with `FieldDef` and `ValidateFields` method
-- [x] Add `FindSchema` on `PipelineConfig`
+- [x] Add `FindSchema` on `CircuitConfig`
 - [x] Register `submit_step` tool with schema-validated handler
 - [x] Deprecate `submit_artifact` with warning log
 - [x] Move `CleanArtifactJSON` out of session path into deprecated handler

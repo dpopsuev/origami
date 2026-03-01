@@ -1,10 +1,10 @@
-// Package kami provides a live agentic pipeline debugger for Origami.
+// Package kami provides a live agentic circuit debugger for Origami.
 //
-// Kami (神) — "divine spirit" in Shinto. The agents walking the pipeline
+// Kami (神) — "divine spirit" in Shinto. The agents walking the circuit
 // graph are the kami inhabiting the nodes.
 //
 // Kami follows the Demiurge pattern: triple-homed process bridging
-// AI (MCP stdio), browser (HTTP/SSE), and pipeline (WalkObserver + SignalBus).
+// AI (MCP stdio), browser (HTTP/SSE), and circuit (WalkObserver + SignalBus).
 package kami
 
 import "time"

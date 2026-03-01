@@ -32,27 +32,27 @@ func skillScaffold(args []string) error {
 	}
 
 	if fs.NArg() < 1 {
-		return fmt.Errorf("usage: origami skill scaffold [--tool NAME] [--out DIR] <pipeline.yaml>")
+		return fmt.Errorf("usage: origami skill scaffold [--tool NAME] [--out DIR] <circuit.yaml>")
 	}
-	pipelinePath := fs.Arg(0)
+	circuitPath := fs.Arg(0)
 
-	data, err := os.ReadFile(pipelinePath)
+	data, err := os.ReadFile(circuitPath)
 	if err != nil {
-		return fmt.Errorf("read pipeline: %w", err)
+		return fmt.Errorf("read circuit: %w", err)
 	}
 
-	def, err := framework.LoadPipeline(data)
+	def, err := framework.LoadCircuit(data)
 	if err != nil {
-		return fmt.Errorf("parse pipeline: %w", err)
+		return fmt.Errorf("parse circuit: %w", err)
 	}
 
 	if err := def.Validate(); err != nil {
-		return fmt.Errorf("validate pipeline: %w", err)
+		return fmt.Errorf("validate circuit: %w", err)
 	}
 
 	tool := *toolName
 	if tool == "" {
-		tool = def.Pipeline
+		tool = def.Circuit
 	}
 
 	dir := *outDir
@@ -68,8 +68,8 @@ func skillScaffold(args []string) error {
 
 	ctx := scaffoldContext{
 		Tool:         tool,
-		PipelineName: def.Pipeline,
-		PipelinePath: pipelinePath,
+		CircuitName: def.Circuit,
+		CircuitPath: circuitPath,
 		Nodes:        def.Nodes,
 		Edges:        def.Edges,
 		Start:        def.Start,
@@ -92,8 +92,8 @@ func skillScaffold(args []string) error {
 
 type scaffoldContext struct {
 	Tool         string
-	PipelineName string
-	PipelinePath string
+	CircuitName string
+	CircuitPath string
 	Nodes        []framework.NodeDef
 	Edges        []framework.EdgeDef
 	Start        string
@@ -109,7 +109,7 @@ var skillTemplate = template.Must(template.New("skill").Funcs(funcMap).Parse(`--
 name: {{ .Tool }}-calibrate
 description: >
   Run calibration for {{ .Tool }} via MCP. The Cursor agent supervises the
-  {{ .PipelineName }} pipeline: starts a session, launches worker subagents
+  {{ .CircuitName }} circuit: starts a session, launches worker subagents
   that independently pull steps and submit artifacts, monitors progress via
   signals, and presents the metrics report. Papercup v2 choreography pattern.
 ---
@@ -132,7 +132,7 @@ Run calibration against a ground-truth scenario using the MCP server.
 
 ---
 
-## Pipeline Steps
+## Circuit Steps
 
 | # | Node | Element | Transformer |
 |---|------|---------|-------------|
@@ -176,7 +176,7 @@ that each run an independent pull-process-submit loop. Do NOT call
 ` + "`" + `get_next_step` + "`" + ` or ` + "`" + `submit_artifact` + "`" + ` yourself — workers own those.
 
 Launch up to 4 Task subagents in a **single message**. Each worker receives
-the ` + "`" + `session_id` + "`" + ` and runs the worker loop below until the pipeline completes.
+the ` + "`" + `session_id` + "`" + ` and runs the worker loop below until the circuit completes.
 
 ### Worker loop (each subagent runs this independently)
 

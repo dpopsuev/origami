@@ -108,7 +108,7 @@ flowchart TB
 - **Given** `MetricSet` with 10 metrics (3 passing), **when** `PassCount()` is called, **then** it returns 3.
 - **Given** 3 run metric sets, **when** `AggregateRunMetrics` is called, **then** each metric value is the mean across runs with variance in Detail.
 - **Given** a `CalibrationReport` with metrics and case results, **when** `FormatReport` is called, **then** it produces a human-readable table with pass/fail indicators.
-- **Given** Asterisk's `ModelAdapter` has `SendPrompt(caseID string, step PipelineStep, prompt string)`, **when** the interface is changed to `step string`, **then** it satisfies `calibrate.ModelAdapter` (verified by Asterisk companion contract).
+- **Given** Asterisk's `ModelAdapter` has `SendPrompt(caseID string, step CircuitStep, prompt string)`, **when** the interface is changed to `step string`, **then** it satisfies `calibrate.ModelAdapter` (verified by Asterisk companion contract).
 
 ## Security assessment
 

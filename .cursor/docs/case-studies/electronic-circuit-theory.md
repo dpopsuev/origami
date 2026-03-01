@@ -1,9 +1,9 @@
-# Case Study: Electronic Circuit Theory — Signal Processing as Pipeline Orchestration
+# Case Study: Electronic Circuit Theory — Signal Processing as Circuit Orchestration
 
 **Date:** 2026-03-01
 **Subject:** Electronic circuit theory — analog, digital, and mixed-signal design principles
 **Source:** `en.wikipedia.org/wiki/Electronic_circuit`, classical EE textbooks (Jaeger, Horowitz & Hill, Sedra & Smith)
-**Purpose:** Cross-domain pattern study. Electronic circuits and agentic pipelines solve the same fundamental problem: transforming, routing, and conditioning signals through a graph of processing elements. Map circuit theory onto Origami's architecture. Identify patterns the framework could formalize or adapt. The central analogy — analog-to-digital conversion mirrors unstructured-to-structured extraction — opens into a deeper structural isomorphism.
+**Purpose:** Cross-domain pattern study. Electronic circuits and agentic circuits solve the same fundamental problem: transforming, routing, and conditioning signals through a graph of processing elements. Map circuit theory onto Origami's architecture. Identify patterns the framework could formalize or adapt. The central analogy — analog-to-digital conversion mirrors unstructured-to-structured extraction — opens into a deeper structural isomorphism.
 
 ---
 
@@ -33,11 +33,11 @@ The ADC parameters map precisely:
 
 | ADC Parameter | Origami Equivalent | Implication |
 |---|---|---|
-| **Sampling rate** (samples/sec) | Extraction attempts / retries | Too few samples = missed information. Too many = wasted compute. The Nyquist rate sets the minimum: sample at least 2x the highest-frequency component to avoid aliasing. In pipeline terms: the extraction schema must capture at least the essential structure of the LLM output, or the result is a distorted representation. |
+| **Sampling rate** (samples/sec) | Extraction attempts / retries | Too few samples = missed information. Too many = wasted compute. The Nyquist rate sets the minimum: sample at least 2x the highest-frequency component to avoid aliasing. In circuit terms: the extraction schema must capture at least the essential structure of the LLM output, or the result is a distorted representation. |
 | **Resolution** (bit depth) | Schema granularity | 8-bit ADC captures 256 levels; 16-bit captures 65,536. A coarse schema (`{category: string, confidence: float}`) is 8-bit. A fine schema (`{category, subcategory, evidence[], confidence, reasoning, alternatives[], caveats[]}`) is 16-bit. More resolution = more faithful representation = more downstream utility. |
 | **Quantization error** | Information loss during extraction | The irreducible gap between the continuous input and its discrete representation. A 3-paragraph LLM analysis reduced to `{confidence: 0.72}` has high quantization error. The `Raw()` method on `Artifact` is Origami's way of preserving the original signal alongside the quantized version — analogous to storing both the digital samples and the original analog waveform. |
-| **Anti-aliasing filter** | Prompt engineering / persona preamble | Before an ADC samples, an anti-aliasing low-pass filter removes frequencies above Nyquist to prevent aliasing (high-frequency content masquerading as low-frequency). In pipelines, the prompt preamble and persona instructions shape the LLM output *before* extraction, ensuring it falls within the extractor's "bandwidth." A poorly prompted LLM produces output the extractor cannot faithfully represent — aliasing. |
-| **Oversampling** | Multiple extraction with voting | Some ADCs sample at many times the Nyquist rate, then downsample with digital filtering for better effective resolution. A pipeline could extract multiple times from the same LLM output using different schema projections, then merge — trading compute for fidelity. |
+| **Anti-aliasing filter** | Prompt engineering / persona preamble | Before an ADC samples, an anti-aliasing low-pass filter removes frequencies above Nyquist to prevent aliasing (high-frequency content masquerading as low-frequency). In circuits, the prompt preamble and persona instructions shape the LLM output *before* extraction, ensuring it falls within the extractor's "bandwidth." A poorly prompted LLM produces output the extractor cannot faithfully represent — aliasing. |
+| **Oversampling** | Multiple extraction with voting | Some ADCs sample at many times the Nyquist rate, then downsample with digital filtering for better effective resolution. A circuit could extract multiple times from the same LLM output using different schema projections, then merge — trading compute for fidelity. |
 
 ### The DAC side: Prompt Renderer
 
@@ -47,7 +47,7 @@ A DAC converts discrete digital values back into a continuous analog signal. In 
 |---|---|---|
 | **Reconstruction filter** | Prompt template smoothing | Raw DAC output is a staircase waveform (discrete steps). A reconstruction filter interpolates between steps to produce a smooth signal. A raw template (`Category: {{.category}}, Confidence: {{.confidence}}`) is a staircase. A well-crafted prompt that weaves structured data into natural narrative is a smooth reconstruction. |
 | **Dynamic range** | Prompt expressiveness | The range of output voltages a DAC can produce. A rigid template has low dynamic range. A template system with conditionals, loops, and context-aware sections has high dynamic range — it can express a wider variety of structured inputs as coherent prompts. |
-| **Glitch energy** | Prompt artifacts | When a DAC transitions between values, brief voltage spikes (glitches) appear. In prompts, poorly interpolated structured data creates artifacts: dangling references, contradictory instructions, formatting breaks. A deglitcher (sample-and-hold) in circuits; prompt validation in pipelines. |
+| **Glitch energy** | Prompt artifacts | When a DAC transitions between values, brief voltage spikes (glitches) appear. In prompts, poorly interpolated structured data creates artifacts: dangling references, contradictory instructions, formatting breaks. A deglitcher (sample-and-hold) in circuits; prompt validation in circuits. |
 
 ### The symmetry insight
 
@@ -78,7 +78,7 @@ flowchart LR
     end
 ```
 
-The cycle is continuous: each node receives unstructured input (from an LLM or prior rendering), extracts structure (ADC), processes the structured data, then renders it back to unstructured form (DAC) for the next LLM call. The quality of both conversions determines the pipeline's overall signal fidelity.
+The cycle is continuous: each node receives unstructured input (from an LLM or prior rendering), extracts structure (ADC), processes the structured data, then renders it back to unstructured form (DAC) for the next LLM call. The quality of both conversions determines the circuit's overall signal fidelity.
 
 ---
 
@@ -93,14 +93,14 @@ The cycle is continuous: each node receives unstructured input (from an LLM or p
 | **Inductor** (resists change) | `Mask` (pre/post hooks) | Opposes sudden changes in current / processing behavior. An inductor smooths transients; a mask's pre-hook normalizes input and post-hook validates output, smoothing the signal around the node. Both add stability at the cost of latency. |
 | **Diode** (one-way valve) | Shortcut edge | Allows current in one direction only, with a threshold voltage. A shortcut edge allows traversal only when confidence exceeds a threshold. Both implement conditional, one-directional flow. |
 | **Op-amp** (differential amplifier) | Adversarial Dialectic | Takes two inputs (inverting and non-inverting), amplifies the difference. The Dialectic takes thesis and antithesis, amplifies their disagreement into a resolved synthesis. Both produce a single output from two competing inputs. High open-loop gain (unchecked dialectic) causes saturation; negative feedback (convergence criteria) stabilizes the output. |
-| **Ground** (reference / sink) | `_done` node | The universal reference point and signal sink. All circuits reference to ground; all pipeline walks terminate at `_done`. |
+| **Ground** (reference / sink) | `_done` node | The universal reference point and signal sink. All circuits reference to ground; all circuit walks terminate at `_done`. |
 | **Power supply** (VCC/VDD) | Input context + Walker identity | The energy source that powers every component. Without VCC, nothing operates. Without input context and a walker, no node can process. |
 | **Bus** (data + address + control) | Papercup signal bus | Shared communication channel with structured protocol. A data bus carries payloads (artifacts), an address bus carries routing (dispatch IDs), a control bus carries status signals (waiting/processing/done). Papercup's three-part protocol mirrors this exactly. |
 | **Clock signal** | Scheduler tick / dispatch cycle | Synchronization pulse for sequential operations. Digital circuits advance on clock edges; the dispatcher advances on poll cycles. Both ensure orderly, synchronized progression. |
 | **Test point** | `WalkObserver` | Designated measurement insertion point. A test point lets an oscilloscope probe the signal without affecting it; `WalkObserver` lets Kami observe walk events without affecting execution. Both are designed-in observability. |
-| **PCB / schematic** | Pipeline YAML (DSL) | Declarative design artifact describing the circuit topology. A schematic shows components and connections; pipeline YAML shows nodes and edges. Both are the source of truth that gets "compiled" into an executable form (fabricated PCB / `BuildGraph`). |
-| **Breadboard** | Stub calibration | Rapid prototyping platform. A breadboard lets you wire components without soldering for quick verification; stub calibration lets you verify pipeline machinery without LLM calls. Both validate structure before committing to production. |
-| **Production PCB** | `origami fold` | The final, optimized, manufactured form. A PCB is the breadboard prototype compiled into a production artifact. `origami fold` is the YAML pipeline compiled into a standalone binary. |
+| **PCB / schematic** | Circuit YAML (DSL) | Declarative design artifact describing the circuit topology. A schematic shows components and connections; circuit YAML shows nodes and edges. Both are the source of truth that gets "compiled" into an executable form (fabricated PCB / `BuildGraph`). |
+| **Breadboard** | Stub calibration | Rapid prototyping platform. A breadboard lets you wire components without soldering for quick verification; stub calibration lets you verify circuit machinery without LLM calls. Both validate structure before committing to production. |
+| **Production PCB** | `origami fold` | The final, optimized, manufactured form. A PCB is the breadboard prototype compiled into a production artifact. `origami fold` is the YAML circuit compiled into a standalone binary. |
 | **Component library** | Registries (`NodeRegistry`, `ExtractorRegistry`, `TransformerRegistry`) | Catalog of reusable, characterized parts. Component libraries specify every part's parameters; registries map names to implementations. Both enable design by composition from known building blocks. |
 
 ---
@@ -153,7 +153,7 @@ flowchart TB
     end
 ```
 
-A capacitor that never discharges bloats the circuit. A context that grows without bound bloats the prompt window. Both need periodic discharge — in circuits via a bleed resistor, in pipelines via context filtering at zone boundaries (Pattern 6).
+A capacitor that never discharges bloats the circuit. A context that grows without bound bloats the prompt window. Both need periodic discharge — in circuits via a bleed resistor, in circuits via context filtering at zone boundaries (Pattern 6).
 
 ### Diode and Shortcut Edge
 
@@ -303,7 +303,7 @@ These translate directly to Dialectic design rules:
 
 **3. Shared-assumption detection (CMRR).** The most dangerous failure mode in a dialectic isn't that thesis and antithesis disagree — it's that they agree on something wrong. High CMRR means the system detects and challenges premises shared by both sides. A CMRR check in the dialectic would explicitly ask: "What assumptions do thesis and antithesis share? Are any of them unwarranted?" This is the one place where agreement should raise suspicion, not confidence.
 
-**4. Quality-speed product as a model constant.** GBWP is fixed for a given op-amp. For a given model, the product of confidence calibration and convergence speed may be approximately constant. Ouroboros could measure this empirically: run the same dialectic at different MaxTurns values and plot confidence accuracy vs. rounds. The resulting curve characterizes the model's GBWP equivalent — pipeline designers can then choose the right operating point on the curve for their latency/quality tradeoff.
+**4. Quality-speed product as a model constant.** GBWP is fixed for a given op-amp. For a given model, the product of confidence calibration and convergence speed may be approximately constant. Ouroboros could measure this empirically: run the same dialectic at different MaxTurns values and plot confidence accuracy vs. rounds. The resulting curve characterizes the model's GBWP equivalent — circuit designers can then choose the right operating point on the curve for their latency/quality tradeoff.
 
 **5. Compensation for oscillation prevention.** MaxNegations is the dominant pole capacitor. Without it, a dialectic between two strong personas can oscillate: thesis refuted, antithesis refuted, thesis reinstated, antithesis reinstated. MaxNegations breaks this oscillation by forcing a decision after N rejections. The value should be tuned per element pair: Water vs Fire (high conflict = needs more compensation) vs Earth vs Air (low conflict = less compensation needed).
 
@@ -317,11 +317,11 @@ These translate directly to Dialectic design rules:
 
 **Circuit principle:** Raw analog signals are never fed directly into an ADC. A signal conditioning chain — filter (remove noise), amplify (boost weak signals), level-shift (match voltage range) — prepares the signal for faithful conversion.
 
-**Origami mapping:** The Mask pipeline (`MaskA.pre -> MaskB.pre -> Node.Process -> MaskB.post -> MaskA.post`) already implements signal conditioning. Masks before an extraction node are **anti-aliasing filters**: they shape the input to fall within the extractor's representable range.
+**Origami mapping:** The Mask circuit (`MaskA.pre -> MaskB.pre -> Node.Process -> MaskB.post -> MaskA.post`) already implements signal conditioning. Masks before an extraction node are **anti-aliasing filters**: they shape the input to fall within the extractor's representable range.
 
-**Insight:** This vocabulary helps pipeline designers reason about *why* certain masks exist. A `RecallMask` on an investigation node isn't just "adding context" — it's **amplifying a weak signal** so the extractor downstream can resolve it. A `CorrelationMask` isn't just "cross-referencing" — it's **filtering noise** by removing uncorrelated evidence. The signal conditioning metaphor makes mask placement a principled design decision rather than ad-hoc attachment.
+**Insight:** This vocabulary helps circuit designers reason about *why* certain masks exist. A `RecallMask` on an investigation node isn't just "adding context" — it's **amplifying a weak signal** so the extractor downstream can resolve it. A `CorrelationMask` isn't just "cross-referencing" — it's **filtering noise** by removing uncorrelated evidence. The signal conditioning metaphor makes mask placement a principled design decision rather than ad-hoc attachment.
 
-**Possible adaptation:** Document mask placement guidelines using signal conditioning vocabulary. A pipeline design checklist: "Before every extraction boundary, verify the signal conditioning chain: noise filtered? signal amplified? level-shifted to match schema range?"
+**Possible adaptation:** Document mask placement guidelines using signal conditioning vocabulary. A circuit design checklist: "Before every extraction boundary, verify the signal conditioning chain: noise filtered? signal amplified? level-shifted to match schema range?"
 
 ```mermaid
 flowchart LR
@@ -329,7 +329,7 @@ flowchart LR
         sensor["Sensor"] --> lpf["Filter"] --> amp["Amplifier"] --> ls["Level Shift"] --> adc["ADC"] --> digital["Digital Out"]
     end
 
-    subgraph origami ["Mask Pipeline"]
+    subgraph origami ["Mask Circuit"]
         llmOut["LLM Output"] --> m1["CorrelationMask .pre"] --> m2["RecallMask .pre"] --> proc["Node.Process"] --> m2post["RecallMask .post"] --> m1post["CorrelationMask .post"] --> ext["Extractor"] --> typed["Typed Artifact"]
     end
 ```
@@ -338,16 +338,16 @@ flowchart LR
 
 **Circuit principle:** Real-world systems are almost never pure analog or pure digital. They are **mixed-signal**: analog sections for interfacing with the physical world, digital sections for computation, and converters (ADC/DAC) at the boundaries. Each domain has different design rules. Analog design cares about noise, bandwidth, impedance. Digital design cares about timing, logic correctness, propagation delay. The boundary between domains is the most critical design point.
 
-**Origami mapping:** Origami pipelines are hybrid systems. Early pipeline stages (recall, investigation) operate in the **unstructured** domain — they deal with natural language, free-form JSON, noisy LLM output. Later stages (judgment, synthesis) operate in the **structured** domain — they work with typed artifacts, validated schemas, boolean decisions. The `Extractor` sits at the unstructured-to-structured boundary; `RenderPrompt` sits at the structured-to-unstructured boundary.
+**Origami mapping:** Origami circuits are hybrid systems. Early circuit stages (recall, investigation) operate in the **unstructured** domain — they deal with natural language, free-form JSON, noisy LLM output. Later stages (judgment, synthesis) operate in the **structured** domain — they work with typed artifacts, validated schemas, boolean decisions. The `Extractor` sits at the unstructured-to-structured boundary; `RenderPrompt` sits at the structured-to-unstructured boundary.
 
 **Zones** map naturally to data domains:
 - **Unstructured zones** — Nodes that primarily consume and produce free-form data (backcourt / intake)
 - **Structured zones** — Nodes that primarily consume and produce typed artifacts (frontcourt / synthesis)
 - **Hybrid zones** — Nodes that convert between domains (the extraction / rendering boundary)
 
-**Insight:** Treating zones as data domains changes how pipeline designers think about node placement. Moving a schema-validated node into an unstructured zone is like putting a digital IC on an analog board without proper decoupling — it will work, but suboptimally. The framework could warn when a node with `schema:` (structured) is placed in a zone dominated by free-form processing (unstructured), or vice versa.
+**Insight:** Treating zones as data domains changes how circuit designers think about node placement. Moving a schema-validated node into an unstructured zone is like putting a digital IC on an analog board without proper decoupling — it will work, but suboptimally. The framework could warn when a node with `schema:` (structured) is placed in a zone dominated by free-form processing (unstructured), or vice versa.
 
-**Possible adaptation:** An optional `domain:` annotation on zones (`unstructured`, `structured`, `hybrid`) that feeds into pipeline linting. The linter checks that extraction nodes sit at unstructured-to-structured zone boundaries, and prompt rendering happens at structured-to-unstructured boundaries.
+**Possible adaptation:** An optional `domain:` annotation on zones (`unstructured`, `structured`, `hybrid`) that feeds into circuit linting. The linter checks that extraction nodes sit at unstructured-to-structured zone boundaries, and prompt rendering happens at structured-to-unstructured boundaries.
 
 ```mermaid
 flowchart LR
@@ -377,7 +377,7 @@ The zone boundary is the most critical design point. Placing an extractor inside
 **Insight:** Circuit theory quantifies mismatch as a ratio, not a boolean. The `AffinityScheduler` currently picks the "best" match, but doesn't quantify *how much* quality degrades from a suboptimal match. An **impedance mismatch score** (0.0 = perfect match, 1.0 = total mismatch) on each walker-node assignment would let the framework:
 - Log mismatch warnings when assignments exceed a threshold
 - Feed mismatch data into calibration metrics (does high mismatch correlate with lower M1?)
-- Let pipeline designers tune `stickiness` based on empirical mismatch data
+- Let circuit designers tune `stickiness` based on empirical mismatch data
 
 **Possible adaptation:** Add a `Mismatch(walker, node) float64` method to `AffinityScheduler` that returns a quantified impedance ratio. Expose it via `WalkObserver` events so Kami can visualize mismatched assignments in the graph.
 
@@ -403,10 +403,10 @@ A Water walker assigned to a Fire node is like connecting a high-impedance sourc
 **Origami mapping:** Loop edges with convergence thresholds are negative feedback circuits. Each iteration through the loop compares the current output (confidence, completeness) against a target. If the output hasn't converged, the loop iterates again with corrective input. `Element.ConvergenceThreshold` is the feedback fraction β: it determines how much "error" (distance from target) is tolerable before the loop exits.
 
 **Insight:** Circuit theory provides precise vocabulary for loop tuning:
-- **Underdamped** (β too low, gain too high): the loop oscillates — successive iterations swing between overconfident and underconfident without converging. This is a pipeline that loops 3 times and produces wildly different answers each time.
-- **Overdamped** (β too high, gain too low): the loop converges too slowly — it takes many iterations to reach an adequate answer, wasting compute. This is a pipeline with overly strict convergence criteria.
+- **Underdamped** (β too low, gain too high): the loop oscillates — successive iterations swing between overconfident and underconfident without converging. This is a circuit that loops 3 times and produces wildly different answers each time.
+- **Overdamped** (β too high, gain too low): the loop converges too slowly — it takes many iterations to reach an adequate answer, wasting compute. This is a circuit with overly strict convergence criteria.
 - **Critically damped** (β optimal): the loop converges in the minimum number of iterations without oscillation. This is the calibration target.
-- **Instability** (positive feedback): if the loop amplifies rather than corrects errors, the system runs away. This is a pipeline where each iteration makes the output *worse* — a signal to break the loop and escalate to the Dialectic.
+- **Instability** (positive feedback): if the loop amplifies rather than corrects errors, the system runs away. This is a circuit where each iteration makes the output *worse* — a signal to break the loop and escalate to the Dialectic.
 
 **Possible adaptation:** Track convergence trajectory across loop iterations. If confidence oscillates (increases then decreases then increases), flag as underdamped. If confidence barely changes per iteration, flag as overdamped. Log these as calibration signals.
 
@@ -418,9 +418,9 @@ A Water walker assigned to a Fire node is like connecting a high-impedance sourc
 
 **Insight:** KCL is not enforced in Origami today. A node can silently drop evidence. The `ArtifactSchema` validates output structure but not output completeness relative to input. Circuit theory says this is a fundamental gap: every junction must conserve current.
 
-The pipeline equivalent of KCL: for every evidence item in a node's input, the output artifact must either (a) reference it, (b) transform it into a new form, or (c) explicitly declare it irrelevant with rationale. Option (c) is the "evidence drain" — current flowing to ground. It's legitimate, but it must be explicit.
+The circuit equivalent of KCL: for every evidence item in a node's input, the output artifact must either (a) reference it, (b) transform it into a new form, or (c) explicitly declare it irrelevant with rationale. Option (c) is the "evidence drain" — current flowing to ground. It's legitimate, but it must be explicit.
 
-**Possible adaptation:** An optional `evidence_conservation: strict` flag on nodes that activates input/output evidence tracking. The framework counts evidence items in and evidence items out (referenced + transformed + explicitly drained). A conservation violation triggers a warning via `WalkObserver`. Not a hard gate (too rigid for early pipeline stages), but a measurable signal for calibration tuning.
+**Possible adaptation:** An optional `evidence_conservation: strict` flag on nodes that activates input/output evidence tracking. The framework counts evidence items in and evidence items out (referenced + transformed + explicitly drained). A conservation violation triggers a warning via `WalkObserver`. Not a hard gate (too rigid for early circuit stages), but a measurable signal for calibration tuning.
 
 ```mermaid
 flowchart LR
@@ -440,7 +440,7 @@ flowchart LR
     end
 ```
 
-In the circuit: 3A + 2A in = 2A + 3A out. Conservation holds. In the pipeline: 3 + 2 = 5 evidence items in = 2 referenced + 1 transformed + 2 explicitly drained = 5 accounted. The "drained" items are current flowing to ground — legitimate, but the drain must be explicit, not silent.
+In the circuit: 3A + 2A in = 2A + 3A out. Conservation holds. In the circuit: 3 + 2 = 5 evidence items in = 2 referenced + 1 transformed + 2 explicitly drained = 5 accounted. The "drained" items are current flowing to ground — legitimate, but the drain must be explicit, not silent.
 
 ### Pattern 6: Decoupling Capacitors — Context Isolation
 
@@ -492,17 +492,17 @@ A `Renderer` interface symmetric to `Extractor` would:
 - Be named and registered (`RendererRegistry`)
 - Be DSL-wirable (`renderer: narrative-v1` on node definitions)
 - Have built-in implementations (`TemplateRenderer`, `StructuredRenderer`, `NarrativeRenderer`)
-- Participate in pipeline validation (`Validate()` checks renderer references)
+- Participate in circuit validation (`Validate()` checks renderer references)
 
-This closes the ADC/DAC symmetry gap and elevates prompt construction from ad-hoc string formatting to a principled, testable, swappable pipeline component.
+This closes the ADC/DAC symmetry gap and elevates prompt construction from ad-hoc string formatting to a principled, testable, swappable circuit component.
 
 ### Gap 2: No signal integrity metric
 
 Circuits measure **signal-to-noise ratio** (SNR) at every stage. A signal chain with 60dB SNR at the input and 20dB SNR at the output has lost 40dB of signal quality — something is wrong.
 
-Origami has `Confidence()` on artifacts, but no measure of **evidence preservation** through the pipeline. A node might output high confidence while silently discarding half the input evidence. Confidence measures the node's self-assessed certainty; SNR would measure how much of the input signal survived processing.
+Origami has `Confidence()` on artifacts, but no measure of **evidence preservation** through the circuit. A node might output high confidence while silently discarding half the input evidence. Confidence measures the node's self-assessed certainty; SNR would measure how much of the input signal survived processing.
 
-A pipeline-level evidence SNR metric would track: (evidence items referenced in output) / (evidence items available in input). Monotonically decreasing SNR across the pipeline is expected (each stage focuses the signal). A sudden drop at a specific node flags it as a lossy stage worth investigating.
+A circuit-level evidence SNR metric would track: (evidence items referenced in output) / (evidence items available in input). Monotonically decreasing SNR across the circuit is expected (each stage focuses the signal). A sudden drop at a specific node flags it as a lossy stage worth investigating.
 
 ### Gap 3: No power budget equivalent
 
@@ -527,11 +527,11 @@ These patterns are standard in distributed systems (Hystrix, resilience4j) and u
 
 ## 6. Architectural Reflection
 
-Electronic circuits and agentic pipelines are different instances of the same abstract architecture: **signal processing graphs**. Both route signals through active processing elements connected by conditional paths, with feedback loops for stability and converters at domain boundaries.
+Electronic circuits and agentic circuits are different instances of the same abstract architecture: **signal processing graphs**. Both route signals through active processing elements connected by conditional paths, with feedback loops for stability and converters at domain boundaries.
 
 The key differences:
 
-| Dimension | Electronic Circuit | Origami Pipeline |
+| Dimension | Electronic Circuit | Origami Circuit |
 |---|---|---|
 | Signal type | Electrical (voltage/current) | Informational (artifacts/context) |
 | Processing | Deterministic (physics) | Stochastic (LLM) |
@@ -546,7 +546,7 @@ The stochastic nature of LLM processing is the fundamental difference. A resisto
 - Convergence becomes statistical trend, not monotonic decrease
 - Signal conditioning becomes prompt shaping, not precise filtering
 
-Despite this, the structural patterns transfer remarkably well. The mixed-signal architecture pattern in particular reframes pipeline design: stop thinking of pipelines as uniform processing chains and start thinking of them as systems with distinct signal domains, critical conversion boundaries, and domain-specific design rules.
+Despite this, the structural patterns transfer remarkably well. The mixed-signal architecture pattern in particular reframes circuit design: stop thinking of circuits as uniform processing chains and start thinking of them as systems with distinct signal domains, critical conversion boundaries, and domain-specific design rules.
 
 ---
 
@@ -564,7 +564,7 @@ Despite this, the structural patterns transfer remarkably well. The mixed-signal
 
 6. **Evidence SNR metric** — Track evidence item counts at node input and output boundaries. Compute per-node and per-walk SNR. Surface in calibration reports alongside confidence scores. This makes evidence preservation measurable rather than assumed.
 
-7. **Signal conditioning vocabulary in docs** — Adopt circuit conditioning vocabulary (anti-aliasing, amplification, level-shifting, impedance matching) in mask and pipeline design documentation. No code change needed — purely a conceptual framework that helps pipeline designers make principled mask placement decisions.
+7. **Signal conditioning vocabulary in docs** — Adopt circuit conditioning vocabulary (anti-aliasing, amplification, level-shifting, impedance matching) in mask and circuit design documentation. No code change needed — purely a conceptual framework that helps circuit designers make principled mask placement decisions.
 
 8. **Gap-closure convergence check** — Change dialectic convergence from "did we exhaust MaxTurns?" to "did the thesis-antithesis gap close?" (Op-amp Golden Rule 1). Measure remaining disagreement between the final thesis and antithesis. A dialectic that runs MaxTurns rounds but leaves major contradictions is like an op-amp that hasn't settled — still in transient.
 
@@ -572,9 +572,36 @@ Despite this, the structural patterns transfer remarkably well. The mixed-signal
 
 10. **Shared-assumption detection (CMRR check)** — Add a dedicated challenge step that surfaces premises shared by both thesis and antithesis. Shared agreement in a dialectic should raise suspicion (potential shared bias), not confidence. This is the one place where consensus is a warning signal.
 
-11. **Quality-speed product measurement** — Use Ouroboros to empirically measure each model's GBWP equivalent: run the same dialectic at varying MaxTurns and plot confidence accuracy vs. rounds. The resulting curve lets pipeline designers choose the optimal operating point for their latency/quality tradeoff.
+11. **Quality-speed product measurement** — Use Ouroboros to empirically measure each model's GBWP equivalent: run the same dialectic at varying MaxTurns and plot confidence accuracy vs. rounds. The resulting curve lets circuit designers choose the optimal operating point for their latency/quality tradeoff.
 
 12. **Persona offset compensation** — When Ouroboros measures a persona's behavioral bias (offset voltage), inject a corrective preamble instruction to trim it. This is the dialectic equivalent of adjusting an op-amp's offset null potentiometer.
+
+---
+
+## 8. The Duck Test: Circuit or Pipeline?
+
+> If it has feedback loops, impedance matching, mixed-signal domains, and a circuit breaker — it's not a pipeline.
+
+This table applies the taxonomic duck test to Origami. For each capability, we ask: does a pipeline framework have this? Does a circuit framework have this? Does Origami have it?
+
+| Capability | Pipeline? | Circuit? | Origami? |
+|---|---|---|---|
+| Feedback loops with convergence thresholds | No (DAGs only) | Yes | Yes — loop edges, `ConvergenceThreshold`, `ClassifyTrajectory` |
+| Characterized components with quantified behavioral traits | No (uniform stages) | Yes | Yes — 7 Elements with 6 quantified dimensions each |
+| Mixed-signal domains with explicit converters | No (homogeneous data) | Yes | Yes — Extractor (ADC), Renderer (DAC), zone `domain:` annotation |
+| Impedance matching between agent and processing stage | No | Yes | Yes — `AffinityScheduler`, `ImpedanceMismatch` score |
+| Signal integrity metrics (SNR, CMRR) | No | Yes | Yes — `EvidenceSNR`, CMRR check, GBWP probe |
+| Feedback stability classification (damping analysis) | No | Yes | Yes — `ClassifyTrajectory` (underdamped, overdamped, critically damped, unstable) |
+| Differential amplifier (two competing inputs to one output) | No | Yes | Yes — Adversarial Dialectic (thesis + antithesis = synthesis) |
+| Offset compensation from measured bias | No | Yes | Yes — `OffsetCompensator`, `SetIdentity`, `offset_preamble` DSL field |
+| Circuit breaker (state machine: closed/open/half-open) | No | Yes | Yes — `CircuitBreakerDispatcher` |
+| Thermal budget (cumulative latency ceiling) | No | Yes | Yes — `WithThermalBudget`, `EventThermalWarning` |
+| Rate limiting (token bucket) | No | Yes | Yes — `RateLimitDispatcher` |
+| Context filtering at domain boundaries (decoupling capacitor) | No | Yes | Yes — `context_filter` on zones |
+| Designed-in test points for non-invasive observation | No | Yes | Yes — `WalkObserver`, Kami debugger |
+| Schematic compiled to executable (PCB from schematic) | No | Yes | Yes — YAML DSL compiled via `BuildGraph`, `origami fold` |
+
+**Result: 14/14 circuit, 0/14 pipeline.** Origami is a circuit framework that was historically named as a pipeline framework. The name change to "agentic circuit framework" aligns the label with the architecture.
 
 ---
 
@@ -599,4 +626,4 @@ Despite this, the structural patterns transfer remarkably well. The mixed-signal
 - Origami AffinityScheduler: `scheduler.go` (walker-node matching)
 - Origami WalkObserver: `observer.go` (observability events)
 - Origami Adversarial Dialectic: `dialectic.go` (D0-D4, thesis-antithesis-synthesis)
-- Related case studies: `langgraph-graph-duality.md` (graph philosophy), `cloud-native-pipeline-tools.md` (infrastructure patterns)
+- Related case studies: `langgraph-graph-duality.md` (graph philosophy), `cloud-native-circuit-tools.md` (infrastructure patterns)

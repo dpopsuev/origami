@@ -1,4 +1,4 @@
-// Package lint provides rule-based static analysis for Origami pipeline YAML.
+// Package lint provides rule-based static analysis for Origami circuit YAML.
 // It catches structural, semantic, and best-practice issues before runtime.
 //
 // The linter is designed for embedding: lint.Run() works without CLI, filesystem,
@@ -92,7 +92,7 @@ type Fixable interface {
 
 // LintContext holds all data available to lint rules during checking.
 type LintContext struct {
-	Def          *framework.PipelineDef
+	Def          *framework.CircuitDef
 	Raw          []byte
 	File         string
 	Registries   *framework.GraphRegistries
@@ -101,12 +101,12 @@ type LintContext struct {
 }
 
 // NewLintContext creates a LintContext from raw YAML bytes.
-// It parses both the typed PipelineDef and the raw yaml.Node tree
+// It parses both the typed CircuitDef and the raw yaml.Node tree
 // for line-number resolution.
 func NewLintContext(raw []byte, file string) (*LintContext, error) {
-	def, err := framework.LoadPipeline(raw)
+	def, err := framework.LoadCircuit(raw)
 	if err != nil {
-		return nil, fmt.Errorf("parse pipeline: %w", err)
+		return nil, fmt.Errorf("parse circuit: %w", err)
 	}
 
 	var doc yaml.Node
@@ -126,9 +126,9 @@ func NewLintContext(raw []byte, file string) (*LintContext, error) {
 	return ctx, nil
 }
 
-// NewLintContextFromDef creates a LintContext from an already-parsed PipelineDef.
+// NewLintContextFromDef creates a LintContext from an already-parsed CircuitDef.
 // Line numbers are unavailable (all zero).
-func NewLintContextFromDef(def *framework.PipelineDef, file string) *LintContext {
+func NewLintContextFromDef(def *framework.CircuitDef, file string) *LintContext {
 	return &LintContext{Def: def, File: file}
 }
 
@@ -247,7 +247,7 @@ func WithRegistries(reg *framework.GraphRegistries) Option {
 	return func(c *runConfig) { c.registries = reg }
 }
 
-// Runner holds a set of rules and executes them against pipeline definitions.
+// Runner holds a set of rules and executes them against circuit definitions.
 type Runner struct {
 	rules []Rule
 }

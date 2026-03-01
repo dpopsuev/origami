@@ -29,7 +29,7 @@ Work repo by repo: Origami first (upstream), then Asterisk, then Achilles. Build
 | **Unit** | yes | Existing tests must stay green; provider rename touches identity_test.go |
 | **Integration** | yes | CLI consolidation requires metacal subcommand test |
 | **Contract** | no | No API schema changes |
-| **E2E** | no | No pipeline behavior changes |
+| **E2E** | no | No circuit behavior changes |
 | **Concurrency** | no | No shared state changes |
 | **Security** | no | No trust boundaries affected |
 

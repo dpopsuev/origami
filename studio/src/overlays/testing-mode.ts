@@ -9,7 +9,7 @@ export interface NodeTestResult {
 }
 
 export interface TestRunResult {
-  pipeline: string;
+  circuit: string;
   startedAt: string;
   finishedAt?: string;
   nodes: NodeTestResult[];

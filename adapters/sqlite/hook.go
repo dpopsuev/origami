@@ -14,7 +14,7 @@ import (
 // The query and parameters are read from NodeDef.Meta and support Go template
 // variables: {{ .NodeName }}, {{ .ArtifactField }}.
 //
-// Usage in pipeline YAML:
+// Usage in circuit YAML:
 //
 //	nodes:
 //	  - name: recall

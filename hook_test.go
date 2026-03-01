@@ -75,8 +75,8 @@ func TestHookingWalker_FiresHooks(t *testing.T) {
 	}))
 
 	trans := &echoTransformer{}
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{Name: "a", Element: "fire", Transformer: "echo", After: []string{"h1", "h2"}},
 			{Name: "b", Element: "water", Transformer: "echo", After: []string{"h1"}},
@@ -116,8 +116,8 @@ func TestHookingWalker_FiresHooks(t *testing.T) {
 func TestHookingWalker_MissingHookContinues(t *testing.T) {
 	hooks := HookRegistry{}
 	trans := &echoTransformer{}
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{Name: "a", Element: "fire", Transformer: "echo", After: []string{"nonexistent"}},
 		},
@@ -146,8 +146,8 @@ func TestFileWriteHook_WritesArtifact(t *testing.T) {
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "recall.json")
 
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{
 				Name:        "recall",
@@ -193,8 +193,8 @@ func TestFileWriteHook_TemplatedPath(t *testing.T) {
 	dir := t.TempDir()
 	pathTmpl := filepath.Join(dir, "{{ .NodeName }}.json")
 
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{
 				Name:        "triage",
@@ -246,8 +246,8 @@ func TestFileWriteHook_AutoRegisteredByRunner(t *testing.T) {
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "auto.json")
 
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{
 				Name:        "a",
@@ -280,8 +280,8 @@ func TestFileWriteHook_AutoRegisteredByRunner(t *testing.T) {
 
 func TestHookingWalker_NoHooksNoWrap(t *testing.T) {
 	trans := &echoTransformer{}
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes:    []NodeDef{{Name: "a", Element: "fire", Transformer: "echo"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "_done", When: "true"}},
 		Start:    "a",

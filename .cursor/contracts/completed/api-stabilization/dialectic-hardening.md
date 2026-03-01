@@ -9,7 +9,7 @@
 - Gap-closure replaces turn-count as the primary convergence criterion. `MaxTurns` becomes a safety ceiling, not the convergence signal.
 - Evidence immutability is enforced by providing a read-only view of `WalkerState.Context` during D0-D4, not by deep-copying.
 - CMRR is a new challenge step, not a modification of existing thesis/antithesis steps.
-- All three changes are backward-compatible: existing dialectic pipelines gain better convergence behavior without YAML changes.
+- All three changes are backward-compatible: existing dialectic circuits gain better convergence behavior without YAML changes.
 - Derived from: [electronic-circuit-theory.md](../../docs/case-studies/electronic-circuit-theory.md), Takeaways 8-10.
 
 ## Context
@@ -56,14 +56,14 @@ flowchart TD
 3. Implement read-only context view: `ReadOnlyContext(ctx map[string]any) map[string]any` returns a copy or a wrapper that panics on write.
 4. Wire read-only context into dialectic walker during D0-D4 node processing.
 5. Define `CMRRCheck` type: identifies premises shared by both thesis and antithesis, flags consensus as suspicious.
-6. Add CMRR as an optional step in the dialectic pipeline (between antithesis response and hearing).
+6. Add CMRR as an optional step in the dialectic circuit (between antithesis response and hearing).
 
 ## Coverage matrix
 
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | GapClosure computation, read-only context enforcement, CMRR detection |
-| **Integration** | yes | Dialectic pipeline walk with gap-closure convergence |
+| **Integration** | yes | Dialectic circuit walk with gap-closure convergence |
 | **Contract** | yes | DialecticConfig interface, Synthesis artifact shape |
 | **E2E** | yes | defect-dialectic.yaml walk converges on gap closure |
 | **Concurrency** | no | Dialectic is single-walker |

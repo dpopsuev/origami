@@ -6,8 +6,8 @@ import (
 )
 
 func TestRender_FlatGraph(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "flat",
+	def := &CircuitDef{
+		Circuit: "flat",
 		Nodes: []NodeDef{
 			{Name: "a"},
 			{Name: "b"},
@@ -37,8 +37,8 @@ func TestRender_FlatGraph(t *testing.T) {
 }
 
 func TestRender_WithZones(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "zoned",
+	def := &CircuitDef{
+		Circuit: "zoned",
 		Nodes: []NodeDef{
 			{Name: "recall"},
 			{Name: "triage"},
@@ -74,8 +74,8 @@ func TestRender_WithZones(t *testing.T) {
 }
 
 func TestRender_EdgeLabelFallback(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "fallback",
+	def := &CircuitDef{
+		Circuit: "fallback",
 		Nodes:    []NodeDef{{Name: "a"}, {Name: "b"}},
 		Edges: []EdgeDef{
 			{ID: "E1", From: "a", To: "b"},
@@ -89,8 +89,8 @@ func TestRender_EdgeLabelFallback(t *testing.T) {
 }
 
 func TestRender_HyphenatedNodes(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "hyphens",
+	def := &CircuitDef{
+		Circuit: "hyphens",
 		Nodes:    []NodeDef{{Name: "cross-examine"}, {Name: "counter-investigate"}},
 		Edges: []EdgeDef{
 			{ID: "D1", Name: "proceed", From: "cross-examine", To: "counter-investigate"},

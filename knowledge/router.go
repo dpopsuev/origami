@@ -1,6 +1,6 @@
 package knowledge
 
-// RouteRequest describes what the pipeline is looking for — a component under
+// RouteRequest describes what the circuit is looking for — a component under
 // investigation, a hypothesis being tested, the current step, and any
 // additional tag constraints.
 type RouteRequest struct {

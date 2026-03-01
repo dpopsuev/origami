@@ -1,7 +1,7 @@
 # Contract — Agentic Framework II.1: Elements
 
 **Status:** complete  
-**Goal:** Define the six elements (Fire, Lightning, Earth, Diamond, Water, Air) as Go types with quantified behavioral traits that govern how agents move through a pipeline graph. Add Iron as an evolved form of Earth.  
+**Goal:** Define the six elements (Fire, Lightning, Earth, Diamond, Water, Air) as Go types with quantified behavioral traits that govern how agents move through a circuit graph. Add Iron as an evolved form of Earth.  
 **Serves:** Architecture evolution (Framework physics)
 
 ## Contract rules
@@ -37,7 +37,7 @@
 package framework
 
 // Element represents a behavioral archetype governing how an agent
-// moves through a pipeline graph.
+// moves through a circuit graph.
 type Element string
 
 const (

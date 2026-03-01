@@ -8,12 +8,12 @@ import (
 
 const maxMarbleDepth = 8
 
-// Marble is a reusable pipeline component that wraps a Node with additional
+// Marble is a reusable circuit component that wraps a Node with additional
 // metadata about its composability. Atomic marbles wrap a single node;
 // composite marbles contain a sub-graph that is walked when the marble is processed.
 type Marble interface {
 	Node
-	PipelineDef() *PipelineDef
+	CircuitDef() *CircuitDef
 	IsComposite() bool
 }
 
@@ -33,7 +33,7 @@ func NewAtomicMarble(inner Node) *AtomicMarble {
 func (m *AtomicMarble) Name() string                                                          { return m.inner.Name() }
 func (m *AtomicMarble) ElementAffinity() Element                                              { return m.inner.ElementAffinity() }
 func (m *AtomicMarble) Process(ctx context.Context, nc NodeContext) (Artifact, error)          { return m.inner.Process(ctx, nc) }
-func (m *AtomicMarble) PipelineDef() *PipelineDef                                             { return nil }
+func (m *AtomicMarble) CircuitDef() *CircuitDef                                             { return nil }
 func (m *AtomicMarble) IsComposite() bool                                                     { return false }
 
 // CompositeMarble wraps a compiled sub-graph. When processed, it walks the
@@ -41,7 +41,7 @@ func (m *AtomicMarble) IsComposite() bool                                       
 type CompositeMarble struct {
 	name      string
 	element   Element
-	def       *PipelineDef
+	def       *CircuitDef
 	reg       GraphRegistries
 	depth     int
 	inputMap  func(Artifact) any
@@ -63,8 +63,8 @@ func WithOutputMapper(fn func(Artifact) Artifact) CompositeMarbleOption {
 	return func(m *CompositeMarble) { m.outputMap = fn }
 }
 
-// NewCompositeMarble creates a composite marble from a pipeline definition.
-func NewCompositeMarble(name string, elem Element, def *PipelineDef, reg GraphRegistries, opts ...CompositeMarbleOption) *CompositeMarble {
+// NewCompositeMarble creates a composite marble from a circuit definition.
+func NewCompositeMarble(name string, elem Element, def *CircuitDef, reg GraphRegistries, opts ...CompositeMarbleOption) *CompositeMarble {
 	m := &CompositeMarble{
 		name:    name,
 		element: elem,
@@ -79,7 +79,7 @@ func NewCompositeMarble(name string, elem Element, def *PipelineDef, reg GraphRe
 
 func (m *CompositeMarble) Name() string            { return m.name }
 func (m *CompositeMarble) ElementAffinity() Element { return m.element }
-func (m *CompositeMarble) PipelineDef() *PipelineDef { return m.def }
+func (m *CompositeMarble) CircuitDef() *CircuitDef { return m.def }
 func (m *CompositeMarble) IsComposite() bool         { return true }
 
 func (m *CompositeMarble) Process(ctx context.Context, nc NodeContext) (Artifact, error) {
@@ -170,7 +170,7 @@ func checkCycle(marble Marble, registry MarbleRegistry, visited map[string]bool,
 		return nil
 	}
 
-	def := marble.PipelineDef()
+	def := marble.CircuitDef()
 	if def == nil {
 		return nil
 	}

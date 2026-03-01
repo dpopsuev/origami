@@ -5,7 +5,7 @@
 export type OverlayType =
   | "heatmap"
   | "walker-trace"
-  | "pipeline-diff"
+  | "circuit-diff"
   | "persona-cards"
   | "dialectic"
   | "node-health"
@@ -56,7 +56,7 @@ export interface WalkerTrace {
   }>;
 }
 
-export interface PipelineDiff {
+export interface CircuitDiff {
   added: { nodes: string[]; edges: string[] };
   removed: { nodes: string[]; edges: string[] };
   modified: { nodes: string[]; edges: string[] };

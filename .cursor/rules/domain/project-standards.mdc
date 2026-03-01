@@ -1,5 +1,5 @@
 ---
-description: Project standards for the Origami agentic pipeline framework
+description: Project standards for the Origami agentic circuit framework
 alwaysApply: true
 ---
 
@@ -7,8 +7,8 @@ alwaysApply: true
 
 ## Product definition
 
-- Origami is a **Go library** (`github.com/dpopsuev/origami`) providing graph-based agentic pipeline orchestration.
-- Purpose: enable domain-specific tools to define, walk, and observe pipelines via a YAML DSL, typed Node/Edge/Graph interfaces, and AI-powered Extractors.
+- Origami is a **Go library** (`github.com/dpopsuev/origami`) providing graph-based agentic circuit orchestration.
+- Purpose: enable domain-specific tools to define, walk, and observe circuits via a YAML DSL, typed Node/Edge/Graph interfaces, and AI-powered Extractors.
 - Core primitives: Node, Edge, Graph, Walker, Extractor, Element, Persona, Mask, Adversarial Dialectic, Ouroboros (metacalibration).
 - Design philosophy: low floor, high ceiling, wide walls (Papert Paradigm).
 

@@ -7,7 +7,7 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Ouroboros — behavioral dimensions and probe pipeline
+// Ouroboros — behavioral dimensions and probe circuit
 // ---------------------------------------------------------------------------
 
 // Dimension represents a behavioral axis measured by Ouroboros probes.
@@ -21,35 +21,42 @@ const (
 	DimShortcutAffinity     Dimension = "shortcut_affinity"
 	DimEvidenceDepth        Dimension = "evidence_depth"
 	DimFailureMode          Dimension = "failure_mode"
+	DimGBWP                 Dimension = "gbwp"
 )
 
-// AllDimensions returns the six behavioral dimensions in canonical order.
+// AllDimensions returns the seven behavioral dimensions in canonical order.
 func AllDimensions() []Dimension {
 	return []Dimension{
 		DimSpeed, DimPersistence, DimConvergenceThreshold,
 		DimShortcutAffinity, DimEvidenceDepth, DimFailureMode,
+		DimGBWP,
 	}
 }
 
 // ModelProfile is the empirical output of one Ouroboros cycle for one model.
 // Append-only: historical profiles are never overwritten.
 type ModelProfile struct {
-	Model            framework.ModelIdentity        `json:"model"`
-	BatteryVersion   string                         `json:"battery_version"`
-	Timestamp        time.Time                      `json:"timestamp"`
-	Dimensions       map[Dimension]float64          `json:"dimensions"`
-	ElementMatch     framework.Element              `json:"element_match"`
-	ElementScores    map[framework.Element]float64  `json:"element_scores"`
-	SuggestedPersonas []string                      `json:"suggested_personas,omitempty"`
-	CostProfile      framework.CostProfile          `json:"cost_profile"`
-	RawResults       []ProbeResult                  `json:"raw_results"`
+	Model             framework.ModelIdentity        `json:"model"`
+	BatteryVersion    string                         `json:"battery_version"`
+	Timestamp         time.Time                      `json:"timestamp"`
+	Dimensions        map[Dimension]float64          `json:"dimensions"`
+	ElementMatch      framework.Element              `json:"element_match"`
+	ElementScores     map[framework.Element]float64  `json:"element_scores"`
+	SuggestedPersonas []string                       `json:"suggested_personas,omitempty"`
+	OffsetPreamble    string                         `json:"offset_preamble,omitempty"`
+	CostProfile       framework.CostProfile          `json:"cost_profile"`
+	RawResults        []ProbeResult                  `json:"raw_results"`
 }
 
 // DiscoveryConfig controls the recursive discovery loop.
+// When ProbeIDs is set, the session iterates over each probe in sequence,
+// running MaxIterations per probe. ProbeID is used as fallback when ProbeIDs
+// is empty (single-probe backward compatibility).
 type DiscoveryConfig struct {
-	MaxIterations      int    `json:"max_iterations"`
-	ProbeID            string `json:"probe_id"`
-	TerminateOnRepeat  bool   `json:"terminate_on_repeat"`
+	MaxIterations     int      `json:"max_iterations"`
+	ProbeID           string   `json:"probe_id"`
+	ProbeIDs          []string `json:"probe_ids,omitempty"`
+	TerminateOnRepeat bool     `json:"terminate_on_repeat"`
 }
 
 // DefaultConfig returns a sensible starting configuration.

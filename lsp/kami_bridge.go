@@ -15,7 +15,7 @@ import (
 )
 
 // KamiBridge connects to a Kami server's SSE stream and maintains
-// live pipeline state for inlay hint overlays.
+// live circuit state for inlay hint overlays.
 type KamiBridge struct {
 	mu      sync.RWMutex
 	enabled bool
@@ -25,11 +25,11 @@ type KamiBridge struct {
 	cancel context.CancelFunc
 	done   chan struct{}
 
-	state PipelineState
+	state CircuitState
 }
 
-// PipelineState tracks live node/edge state from Kami events.
-type PipelineState struct {
+// CircuitState tracks live node/edge state from Kami events.
+type CircuitState struct {
 	ActiveNode  string            `json:"active_node,omitempty"`
 	ActiveAgent string            `json:"active_agent,omitempty"`
 	Paused      bool              `json:"paused,omitempty"`
@@ -48,7 +48,7 @@ func NewKamiBridge(port int) *KamiBridge {
 	return &KamiBridge{
 		port:    port,
 		baseURL: fmt.Sprintf("http://localhost:%d", port),
-		state: PipelineState{
+		state: CircuitState{
 			Visited:     make(map[string]VisitInfo),
 			Transitions: make(map[string]time.Time),
 		},
@@ -84,8 +84,8 @@ func (kb *KamiBridge) Stop() {
 	<-kb.done
 }
 
-// State returns a snapshot of the current pipeline state.
-func (kb *KamiBridge) State() PipelineState {
+// State returns a snapshot of the current circuit state.
+func (kb *KamiBridge) State() CircuitState {
 	kb.mu.RLock()
 	defer kb.mu.RUnlock()
 
@@ -98,7 +98,7 @@ func (kb *KamiBridge) State() PipelineState {
 		transitions[k] = v
 	}
 
-	return PipelineState{
+	return CircuitState{
 		ActiveNode:  kb.state.ActiveNode,
 		ActiveAgent: kb.state.ActiveAgent,
 		Paused:      kb.state.Paused,
@@ -233,7 +233,7 @@ func (kb *KamiBridge) processEvent(payload string) {
 	}
 }
 
-// LiveInlayHints returns inlay hints for live pipeline state overlaid on
+// LiveInlayHints returns inlay hints for live circuit state overlaid on
 // the document. These augment the static hints from computeInlayHints.
 func (kb *KamiBridge) LiveInlayHints(doc *document) []InlayHint {
 	if doc == nil || doc.Def == nil {

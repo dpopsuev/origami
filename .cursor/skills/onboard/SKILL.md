@@ -10,7 +10,7 @@ disable-model-invocation: true
 Teach newcomers the repo purpose, architecture, build/test flow, and safe change zones.
 
 ## Outputs
-- Summary of Origami as an agentic pipeline framework.
+- Summary of Origami as an agentic circuit framework.
 - Architecture overview: Node/Edge/Graph, DSL, Extractors, Elements, Personas, Masks, Adversarial Dialectic, Ouroboros (metacalibration).
 - Build/test/run commands (`go build ./...`, `go test ./...`, `go run ./examples/playground/`).
 - Safe vs risky areas to modify.

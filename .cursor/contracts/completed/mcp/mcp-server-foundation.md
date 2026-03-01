@@ -9,7 +9,7 @@
 
 - Use the official Go MCP SDK: `github.com/modelcontextprotocol/go-sdk` (v1.3.0+).
 - Stdio transport only (what Cursor uses by default for local MCP servers).
-- No pipeline logic in this contract — placeholder tools only. Pipeline tools come in `mcp-pipeline-tools.md`.
+- No circuit logic in this contract — placeholder tools only. Circuit tools come in `mcp-circuit-tools.md`.
 - The existing `calibrate` command and all dispatchers remain untouched.
 
 ## Context

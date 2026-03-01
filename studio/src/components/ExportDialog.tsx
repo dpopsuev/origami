@@ -3,7 +3,7 @@ import { useState } from "react";
 type ExportFormat = "svg" | "png" | "mermaid" | "yaml";
 
 interface ExportDialogProps {
-  pipelineName: string;
+  circuitName: string;
   onExport: (format: ExportFormat) => void;
   onClose: () => void;
 }
@@ -12,17 +12,17 @@ const FORMATS: { id: ExportFormat; label: string; description: string }[] = [
   { id: "svg", label: "SVG", description: "Editable vector — design tools, docs" },
   { id: "png", label: "PNG", description: "Raster image — includes current overlay state" },
   { id: "mermaid", label: "Mermaid", description: "Pasteable diagram code for markdown" },
-  { id: "yaml", label: "YAML", description: "Pipeline definition file" },
+  { id: "yaml", label: "YAML", description: "Circuit definition file" },
 ];
 
-export function ExportDialog({ pipelineName, onExport, onClose }: ExportDialogProps) {
+export function ExportDialog({ circuitName, onExport, onClose }: ExportDialogProps) {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("svg");
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl w-[360px]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <h2 className="text-sm font-semibold">Export: {pipelineName}</h2>
+          <h2 className="text-sm font-semibold">Export: {circuitName}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-white">
             ✕
           </button>

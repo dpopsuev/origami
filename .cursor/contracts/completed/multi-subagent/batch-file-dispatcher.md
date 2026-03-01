@@ -1,7 +1,7 @@
 # Contract — batch-file-dispatcher
 
 **Status:** complete (2026-02-17)  
-**Goal:** Implement `BatchFileDispatcher` in Go — write N signals concurrently, generate batch manifest and briefing, poll N artifact paths in parallel — so the parallel pipeline can drive multiple Cursor subagents simultaneously.
+**Goal:** Implement `BatchFileDispatcher` in Go — write N signals concurrently, generate batch manifest and briefing, poll N artifact paths in parallel — so the parallel circuit can drive multiple Cursor subagents simultaneously.
 
 ## Contract rules
 

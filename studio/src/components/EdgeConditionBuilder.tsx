@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { PipelineEdge } from "../sync/yaml-sync";
+import type { CircuitEdge } from "../sync/yaml-sync";
 
 interface EdgeConditionBuilderProps {
-  edge: PipelineEdge;
-  onUpdate: (updates: Partial<PipelineEdge>) => void;
+  edge: CircuitEdge;
+  onUpdate: (updates: Partial<CircuitEdge>) => void;
   onClose: () => void;
 }
 

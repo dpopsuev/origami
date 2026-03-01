@@ -178,7 +178,7 @@ export function buildBreadcrumbs(
   zones: ZoneInfo[]
 ): Array<{ id: string | null; label: string }> {
   const crumbs: Array<{ id: string | null; label: string }> = [
-    { id: null, label: "Pipeline" },
+    { id: null, label: "Circuit" },
   ];
   if (currentZone) {
     const zone = zones.find((z) => z.name === currentZone);

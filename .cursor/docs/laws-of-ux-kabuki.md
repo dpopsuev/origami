@@ -32,7 +32,7 @@ panels, animated graph. Closing gets a cinematic feel with generous whitespace.
 
 > When multiple similar objects are present, the one that differs is remembered.
 
-The active pipeline node must stand out through *multiple* channels: color, animation
+The active circuit node must stand out through *multiple* channels: color, animation
 (pulse), size, and border weight. Don't rely on color alone (accessibility concern).
 Red Hat brand concurs: "Use pops of red to highlight key elements."
 
@@ -85,10 +85,10 @@ visual rhythm that signals "new context" vs "continuing context."
 
 > Visually connected elements are perceived as more related.
 
-Pipeline graph edges with directional arrows are required — without them, nodes feel
+Circuit graph edges with directional arrows are required — without them, nodes feel
 isolated. Color-coded edges connecting same-element nodes reinforce relationships.
 
-**Kabuki implication:** PipelineGraph uses dagre layout with SVG arrows. Edge color
+**Kabuki implication:** CircuitGraph uses dagre layout with SVG arrows. Edge color
 matches the source node's element color.
 
 ### Fitts's Law

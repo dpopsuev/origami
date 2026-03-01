@@ -1,4 +1,4 @@
-// Package sqlite provides a YAML-defined SQLite adapter for Origami pipelines.
+// Package sqlite provides a YAML-defined SQLite adapter for Origami circuits.
 //
 // The adapter replaces hand-written SQL DDL strings with declarative YAML schema
 // definitions. It provides:

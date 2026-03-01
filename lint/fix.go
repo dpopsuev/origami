@@ -186,12 +186,12 @@ func (r *MissingEdgeName) Fix(ctx *LintContext) []Fix {
 	return fixes
 }
 
-// Fix for S8/missing-pipeline-description: insert description placeholder.
-func (r *MissingPipelineDescription) Fix(ctx *LintContext) []Fix {
+// Fix for S8/missing-circuit-description: insert description placeholder.
+func (r *MissingCircuitDescription) Fix(ctx *LintContext) []Fix {
 	if ctx.Def.Description != "" {
 		return nil
 	}
-	line := ctx.TopLevelLine("pipeline")
+	line := ctx.TopLevelLine("circuit")
 	if line == 0 {
 		return nil
 	}

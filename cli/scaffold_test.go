@@ -44,7 +44,7 @@ func TestBuild_AllTiers(t *testing.T) {
 		WithAnalyze(func(_ context.Context, _ []string) error { return nil }).
 		WithDataset(&mockDataset{}).
 		WithCalibrate(&mockCalibrate{}).
-		WithPipeline("a.yaml", "b.yaml").
+		WithCircuit("a.yaml", "b.yaml").
 		WithConsume("ingest.yaml").
 		WithServe(ServeConfig{StartFunc: func(_ context.Context) error { return nil }}).
 		WithDemo(DemoConfig{StartFunc: func(_ context.Context, _ int, _ float64) error { return nil }}).
@@ -61,7 +61,7 @@ func TestBuild_AllTiers(t *testing.T) {
 
 	root := c.Root()
 	expected := []string{
-		"analyze", "dataset", "calibrate", "pipeline",
+		"analyze", "dataset", "calibrate", "circuit",
 		"consume", "serve", "demo", "profile", "push",
 	}
 	for _, name := range expected {
@@ -115,24 +115,24 @@ func TestBuild_CalibrateSubcommands(t *testing.T) {
 	}
 }
 
-func TestBuild_PipelineSubcommands(t *testing.T) {
+func TestBuild_CircuitSubcommands(t *testing.T) {
 	c, err := NewCLI("test", "test").
 		WithAnalyze(func(_ context.Context, _ []string) error { return nil }).
-		WithPipeline("rca.yaml").
+		WithCircuit("rca.yaml").
 		Build()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pl := findSubcommand(c.Root(), "pipeline")
+	pl := findSubcommand(c.Root(), "circuit")
 	if pl == nil {
-		t.Fatal("missing pipeline command")
+		t.Fatal("missing circuit command")
 	}
 
 	subs := []string{"list", "validate", "render", "replay"}
 	for _, name := range subs {
 		if findSubcommand(pl, name) == nil {
-			t.Errorf("missing pipeline subcommand %q", name)
+			t.Errorf("missing circuit subcommand %q", name)
 		}
 	}
 }
@@ -188,7 +188,7 @@ func TestBuild_OptionalCommandsNotRegistered(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	absent := []string{"dataset", "calibrate", "pipeline", "consume", "serve", "demo", "profile"}
+	absent := []string{"dataset", "calibrate", "circuit", "consume", "serve", "demo", "profile"}
 	for _, name := range absent {
 		if findSubcommand(c.Root(), name) != nil {
 			t.Errorf("command %q should not be registered", name)

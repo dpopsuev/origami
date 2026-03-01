@@ -15,7 +15,7 @@ type TokenTracker interface {
 	Summary() TokenSummary
 }
 
-// TokenRecord captures token usage for a single pipeline step dispatch.
+// TokenRecord captures token usage for a single circuit step dispatch.
 type TokenRecord struct {
 	CaseID         string    `json:"case_id"`
 	Step           string    `json:"step"`

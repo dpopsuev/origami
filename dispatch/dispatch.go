@@ -39,7 +39,7 @@ type Dispatcher interface {
 type DispatchContext struct {
 	DispatchID    int64  // unique ID assigned by the dispatcher for artifact routing
 	CaseID        string // ground-truth case ID, e.g. "C1"
-	Step          string // pipeline step name, e.g. "F0_RECALL"
+	Step          string // circuit step name, e.g. "F0_RECALL"
 	PromptPath    string // absolute path to the filled prompt file
 	PromptContent string // inline prompt text (preferred over PromptPath when set)
 	ArtifactPath  string // absolute path where artifact JSON should appear
@@ -57,7 +57,7 @@ type PullHints struct {
 
 // ExternalDispatcher is the agent-facing side of a mux dispatcher.
 // Any external agent (MCP server, CLI AI, HTTP API) uses this interface
-// to pull pipeline steps and submit artifacts with correct routing.
+// to pull circuit steps and submit artifacts with correct routing.
 type ExternalDispatcher interface {
 	GetNextStep(ctx context.Context) (DispatchContext, error)
 	GetNextStepWithHints(ctx context.Context, hints PullHints) (DispatchContext, error)

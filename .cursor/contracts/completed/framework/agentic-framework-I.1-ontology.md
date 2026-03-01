@@ -1,7 +1,7 @@
 # Contract — Agentic Framework I.1: Ontology
 
 **Status:** complete  
-**Goal:** Define `Node`, `Edge`, `Walker`, `Graph` as generic Go interfaces in `internal/framework/`, making the implicit relationships between existing `orchestrate` types (`HeuristicRule`, `PipelineStep`, `CaseState`) and graph concepts explicit. Absorb scope of `agentmux-decoupling.md`.  
+**Goal:** Define `Node`, `Edge`, `Walker`, `Graph` as generic Go interfaces in `internal/framework/`, making the implicit relationships between existing `orchestrate` types (`HeuristicRule`, `CircuitStep`, `CaseState`) and graph concepts explicit. Absorb scope of `agentmux-decoupling.md`.  
 **Serves:** Architecture evolution (Framework foundation)
 
 ## Contract rules
@@ -9,14 +9,14 @@
 - The `internal/framework/` package tree must have **zero imports** from Asterisk domain packages (`internal/orchestrate`, `internal/store`, `internal/workspace`, `internal/rp`, `internal/calibrate`).
 - Existing `orchestrate` types remain untouched. This contract defines the generic layer; adaptation is a separate migration step.
 - All Framework types must be interface-first: concrete implementations come in domain adapter packages, not in `internal/framework/`.
-- Backward compatibility: the existing F0-F6 pipeline must work identically. The Framework layer is additive.
+- Backward compatibility: the existing F0-F6 circuit must work identically. The Framework layer is additive.
 - This contract absorbs the scope of `agentmux-decoupling.md`. The generic `Agent` interface from that contract becomes the `Walker` interface here. The `Task` and `Result` types map to `NodeContext` and `Artifact`.
 
 ## Context
 
-- `internal/orchestrate/types.go` — `PipelineStep` (IS a Node identifier), `CaseState` (IS walker state), `HeuristicRule` (IS an Edge), `HeuristicAction` (IS a Transition).
+- `internal/orchestrate/types.go` — `CircuitStep` (IS a Node identifier), `CaseState` (IS walker state), `HeuristicRule` (IS an Edge), `HeuristicAction` (IS a Transition).
 - `internal/orchestrate/heuristics.go` — 17 heuristic rules that ARE edges in the F0-F6 graph.
-- `internal/orchestrate/runner.go` — the pipeline engine that IS a graph walker.
+- `internal/orchestrate/runner.go` — the circuit engine that IS a graph walker.
 - `contracts/draft/agentmux-decoupling.md` — defines generic `Agent`, `Task`, `Result`, `AgentPool`, `Scheduler`, `ResultCollector`. These concepts fold into the Framework ontology.
 - `internal/framework/identity.go` — `ModelIdentity` (already implemented). Records which foundation LLM ("ghost") is behind an adapter ("shell"). Includes `Wrapper` field for hosting environments (Cursor, Azure). `AgentIdentity` (placeholder) and `ModelIdentity` are siblings: identity = who the persona is + which model powers it.
 - `internal/framework/known_models.go` — `KnownModels` registry, `KnownWrappers` set, `IsWrapperName()` validation. Foundation models are registered here; wrappers are rejected.
@@ -28,7 +28,7 @@
 
 | Framework Type | Existing Orchestrate Type | Relationship |
 |----------------|--------------------------|--------------|
-| `Node` | `PipelineStep` | A `PipelineStep` is the identifier of a Node. The Node wraps the step with processing logic and elemental affinity. |
+| `Node` | `CircuitStep` | A `CircuitStep` is the identifier of a Node. The Node wraps the step with processing logic and elemental affinity. |
 | `Edge` | `HeuristicRule` | A `HeuristicRule` IS an Edge: it connects two Nodes with a conditional transition. `Evaluate()` IS the edge weight function. |
 | `Transition` | `HeuristicAction` | A `HeuristicAction` IS a Transition: the result of evaluating an Edge, containing the next Node and context additions. |
 | `Walker` | `CaseState` + `Agent` | A Walker combines walker state (`CaseState`) with agent identity and processing capability. |
@@ -45,7 +45,7 @@ package framework
 
 import "context"
 
-// Node is a processing stage in a pipeline graph.
+// Node is a processing stage in a circuit graph.
 type Node interface {
     Name() string
     ElementAffinity() Element
@@ -143,7 +143,7 @@ type Element string
 
 ```
 internal/
-  framework/                     # Generic agent pipeline framework
+  framework/                     # Generic agent circuit framework
     node.go                      # Node, Artifact, NodeContext interfaces
     edge.go                      # Edge, Transition interfaces
     walker.go                    # Walker, WalkerState, StepRecord
@@ -172,7 +172,7 @@ internal/
 - [x] Create `internal/framework/errors.go` — `ErrNoEdge`, `ErrNodeNotFound`, `ErrMaxLoops`
 - [x] Write `internal/framework/graph_test.go` — build 3-node graph, walk it, verify edge evaluation and transitions
 - [x] Write `internal/framework/walker_test.go` — walker state transitions, history accumulation, loop counting
-- [x] Validate (green) — `go build ./...`, all tests pass, existing pipeline unchanged
+- [x] Validate (green) — `go build ./...`, all tests pass, existing circuit unchanged
 - [x] Tune (blue) — review interfaces for minimality, ensure zero domain imports
 - [x] Validate (green) — all tests still pass after tuning
 
@@ -182,7 +182,7 @@ internal/
 - **When** the output is inspected,
 - **Then** no Asterisk domain packages appear (`internal/orchestrate`, `internal/store`, `internal/workspace`, `internal/rp`, `internal/calibrate`).
 
-- **Given** the F0-F6 pipeline is run after this contract is complete,
+- **Given** the F0-F6 circuit is run after this contract is complete,
 - **When** the full test suite runs,
 - **Then** behavior is identical to pre-contract (the Framework layer is additive).
 

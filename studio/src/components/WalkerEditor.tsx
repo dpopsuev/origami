@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { PipelineWalker } from "../sync/yaml-sync";
+import type { CircuitWalker } from "../sync/yaml-sync";
 
 interface WalkerEditorProps {
-  walkers: PipelineWalker[];
-  onUpdate: (walkers: PipelineWalker[]) => void;
+  walkers: CircuitWalker[];
+  onUpdate: (walkers: CircuitWalker[]) => void;
 }
 
 const ELEMENTS = ["fire", "water", "earth", "air", "diamond", "lightning", "iron"];
@@ -26,7 +26,7 @@ export function WalkerEditor({ walkers, onUpdate }: WalkerEditorProps) {
     if (editing === name) setEditing(null);
   };
 
-  const updateWalker = (name: string, updates: Partial<PipelineWalker>) => {
+  const updateWalker = (name: string, updates: Partial<CircuitWalker>) => {
     onUpdate(walkers.map((w) => (w.name === name ? { ...w, ...updates } : w)));
   };
 

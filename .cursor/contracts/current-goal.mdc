@@ -5,18 +5,18 @@ description: Active goal manifest — single-read orientation for agents to know
 # Current Goal
 
 **Goal:** API Stabilization  
-**Summary:** Origami is a graph-based agentic pipeline framework with Elements, Personas, Masks, Adversarial Dialectic, and a declarative YAML DSL. The framework is feature-complete. The goal is now API stabilization: freeze the public surface, harden documentation, and ensure the playground and README tell a coherent standalone story. Breaking changes require migration windows.
+**Summary:** Origami is a graph-based agentic circuit framework with Elements, Personas, Masks, Adversarial Dialectic, and a declarative YAML DSL. The framework is feature-complete. The goal is now API stabilization: freeze the public surface, harden documentation, and ensure the playground and README tell a coherent standalone story. Breaking changes require migration windows.
 
 ## Open Checklist
 
 - [x] Gate contracts complete — `signal-domains`, `signal-integrity`, `dialectic-hardening`
-- [ ] Quick-win contracts complete — `resilience`, `ouroboros-signal-analysis`
+- [x] Quick-win contracts complete — `resilience`, `ouroboros-signal-analysis`
 - [ ] Public API surface is stable — no breaking changes pending (blocked by gate contracts)
 - [ ] Test coverage on public interfaces is solid
 - [ ] Root `README.md` positions Origami as a standalone framework (does not exist yet)
 - [x] `examples/playground/` demonstrates all 9 concepts (Elements, Personas, DSL, Mermaid, Walk, Masks, Cycles, Dialectic, Team Walk)
 - [x] `docs/framework-guide.md` covers Three CLIs, Extractors, Elements, Personas, DSL, Walk
-- [x] `testdata/` contains canonical pipeline YAMLs: `defect-dialectic.yaml`, `defect-court.yaml`, `rca-investigation.yaml`; curation in `curate/testdata/`
+- [x] `testdata/` contains canonical circuit YAMLs: `defect-dialectic.yaml`, `defect-court.yaml`, `rca-investigation.yaml`; curation in `curate/testdata/`
 - [x] `RichVocabulary` interface with `VocabEntry` wired into Kami, LSP, Kabuki
 - [x] Thesis/Antithesis rename — terminology aligned with Hegelian dialectic model
 
@@ -46,14 +46,12 @@ Phase 4 — Vision (post-stabilization)
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
-| `resilience` | quick-win | 2 | Circuit breaker, rate limiting, thermal budget for dispatch and walk layers. |
-| `ouroboros-signal-analysis` | quick-win | 2 | Quality-speed product (GBWP) measurement, persona offset compensation. |
-| `origami-lsp` | vision | 4 | LSP server: validation, completion, hover docs for pipeline YAML. |
-| `washi` | vision | 4 | Enterprise pipeline management UI. Shared ODS with Kabuki. |
+| `origami-lsp` | vision | 4 | LSP server: validation, completion, hover docs for circuit YAML. |
+| `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
 
 ## Completed Work
 
-71 contracts across 11 phases — all complete. Includes Thesis/Antithesis rename (polishing) and Phase 1 API Stabilization gates.
+73 contracts across 11 phases — all complete. Includes Thesis/Antithesis rename (polishing), Phase 1 API Stabilization gates, and Phase 2 quick-wins (resilience, ouroboros-signal-analysis).
 
 Full contract list: see git history of this file.
 

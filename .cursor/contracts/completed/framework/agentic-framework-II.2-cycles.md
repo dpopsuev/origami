@@ -15,8 +15,8 @@
 
 - `contracts/draft/agentic-framework-II.1-elements.md` -- defines the six elements and their traits.
 - `contracts/draft/agentic-framework-III.1-personae.md` -- defines agent identity with element axis.
-- `contracts/draft/agentic-framework-III.3-shadow.md` -- uses the destructive cycle for adversarial pipeline routing.
-- `internal/orchestrate/heuristics.go` -- the F0-F6 pipeline already implicitly follows a generative cycle: Fire(classify) -> Earth(stabilize) -> Water(deepen) -> Air(synthesize).
+- `contracts/draft/agentic-framework-III.3-shadow.md` -- uses the destructive cycle for adversarial circuit routing.
+- `internal/orchestrate/heuristics.go` -- the F0-F6 circuit already implicitly follows a generative cycle: Fire(classify) -> Earth(stabilize) -> Water(deepen) -> Air(synthesize).
 - Plan reference: `agentic_framework_contracts_2daf3e14.plan.md` -- Tome II: Elementa.
 
 ## Cycle definitions
@@ -29,7 +29,7 @@ The generative cycle describes the natural flow of investigation, where each ele
 Fire(classify) -> Earth(stabilize) -> Water(deepen) -> Air(synthesize) -> Fire(re-classify)
 ```
 
-| From | To | Interaction | Pipeline example |
+| From | To | Interaction | Circuit example |
 |------|----|-------------|------------------|
 | Fire | Earth | Classification provides structure for steady investigation | F1 Triage -> F2 Resolve |
 | Earth | Water | Stable repo selection enables deep code investigation | F2 Resolve -> F3 Investigate |
@@ -116,7 +116,7 @@ The cycles inform the `AffinityScheduler` (from III.1-personae) as tiebreakers:
 - [x] Implement `ChallengedBy(Element) Element` -- reverse lookup
 - [x] Write `internal/framework/cycle_test.go` -- verify all cycle rules, lookup functions, cycle completeness
 - [x] Validate (green) -- `go build ./...`, all tests pass
-- [x] Tune (blue) -- verify cycle rules match F0-F6 pipeline flow
+- [x] Tune (blue) -- verify cycle rules match F0-F6 circuit flow
 - [x] Validate (green) -- all tests still pass after tuning
 
 ## Acceptance criteria
@@ -136,7 +136,7 @@ The cycles inform the `AffinityScheduler` (from III.1-personae) as tiebreakers:
 ## Notes
 
 - 2026-02-21 19:00 -- Contract complete. CycleType, CycleRule, GenerativeCycle (6 rules), DestructiveCycle (6 rules), NextGenerative, Challenges, ChallengedBy implemented. 8 tests including cycle completeness and symmetry verification. Moved to `completed/framework/`.
-- 2026-02-21 14:30 -- DSL design principles diffusion (P2, P5): cycle rules could be expressed as edge annotations in the pipeline DSL (I.2-characteristica). An edge with `cycle: generative` or `cycle: destructive` would declare which interaction pattern it follows. This is a future extension -- the current contract defines cycles as Go lookup functions; the DSL annotation layer can be added once I.2 is implemented and the annotation mechanism is proven.
+- 2026-02-21 14:30 -- DSL design principles diffusion (P2, P5): cycle rules could be expressed as edge annotations in the circuit DSL (I.2-characteristica). An edge with `cycle: generative` or `cycle: destructive` would declare which interaction pattern it follows. This is a future extension -- the current contract defines cycles as Go lookup functions; the DSL annotation layer can be added once I.2 is implemented and the annotation mechanism is proven.
 - 2026-02-20 -- Contract created. The cycles are not just metaphors -- they encode real routing preferences. The generative cycle maps to the natural F0-F6 flow. The destructive cycle maps to the Defect Court's adversarial pattern.
 - Depends on II.1-elements for Element type and traits.
 - Used by III.3-shadow for adversarial agent selection.

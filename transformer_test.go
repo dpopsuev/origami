@@ -60,8 +60,8 @@ func TestTransformerNode_NilInput(t *testing.T) {
 
 func TestBuildGraphWith_TransformerNode(t *testing.T) {
 	trans := &echoTransformer{}
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{Name: "a", Element: "fire", Transformer: "echo"},
 			{Name: "b", Element: "water", Transformer: "echo"},
@@ -96,8 +96,8 @@ func TestBuildGraphWith_TransformerNode(t *testing.T) {
 
 func TestBuildGraphWith_MixedTransformerAndWalker(t *testing.T) {
 	trans := &echoTransformer{}
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{Name: "a", Element: "fire", Transformer: "echo"},
 			{Name: "b", Element: "water", Family: "legacy"},
@@ -275,7 +275,7 @@ func TestTransformerNode_MetaFromNodeDef(t *testing.T) {
 
 func TestNodeDef_MetaParsedFromYAML(t *testing.T) {
 	yaml := `
-pipeline: test-meta
+circuit: test-meta
 nodes:
   - name: recall
     element: earth
@@ -301,9 +301,9 @@ edges:
 start: recall
 done: _done
 `
-	def, err := LoadPipeline([]byte(yaml))
+	def, err := LoadCircuit([]byte(yaml))
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 
 	recallDef := def.Nodes[0]
@@ -333,8 +333,8 @@ func TestBuildGraph_MetaReachesTransformerContext(t *testing.T) {
 		return map[string]any{"ok": true}, nil
 	})
 
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{
 				Name:        "a",
@@ -374,8 +374,8 @@ func TestBuildGraph_MetaReachesTransformerContext(t *testing.T) {
 }
 
 func TestBuiltinGoTemplate_RendersPrompt(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{
 				Name:        "render",
@@ -417,8 +417,8 @@ func TestBuiltinGoTemplate_RendersPrompt(t *testing.T) {
 }
 
 func TestBuiltinPassthrough_ReturnsInput(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{Name: "source", Element: "earth", Transformer: "go-template", Prompt: "data"},
 			{Name: "pass", Element: "fire", Transformer: "passthrough"},
@@ -457,8 +457,8 @@ func TestBuiltinPassthrough_ReturnsInput(t *testing.T) {
 }
 
 func TestBuiltinGoTemplate_NoRegistry(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{Name: "a", Element: "fire", Transformer: "go-template"},
 		},
@@ -482,8 +482,8 @@ func TestBuiltinGoTemplate_WithMeta(t *testing.T) {
 		return tc.Prompt, nil
 	})
 
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{
 				Name:        "a",

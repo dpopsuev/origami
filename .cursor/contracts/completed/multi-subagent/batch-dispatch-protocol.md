@@ -59,7 +59,7 @@ The **batch manifest** is the coordination file between the Go CLI and the Curso
 |-------|------|-------------|
 | `batch_id` | int64 | Monotonic batch counter within a calibration run |
 | `status` | string | Batch lifecycle: `pending`, `in_progress`, `done`, `error` |
-| `phase` | string | Pipeline phase: `triage` (F0+F1) or `investigation` (F2-F6) |
+| `phase` | string | Circuit phase: `triage` (F0+F1) or `investigation` (F2-F6) |
 | `created_at` | string | ISO 8601 timestamp of batch creation |
 | `updated_at` | string | ISO 8601 timestamp of last status change |
 | `total` | int | Number of signals in this batch |
@@ -134,7 +134,7 @@ Each case already has an isolated signal directory. The batch manifest adds a co
 4. **Skill spawns up to K subagents** (K <= min(N, 4) in current Cursor). Each subagent receives:
    - The briefing file path
    - One signal file path
-   - The pipeline step and case context
+   - The circuit step and case context
 5. **Each subagent reads its signal** (existing protocol), reads the prompt, reads the briefing, analyzes, writes the artifact (existing protocol).
 6. **Skill parent waits** for all K subagents to return.
 7. **Skill parent updates manifest** — marks processed signals as `done` or `error`.
@@ -146,7 +146,7 @@ Each case already has an isolated signal directory. The batch manifest adds a co
 Each Task subagent receives a self-contained prompt with:
 
 ```
-You are analyzing case {case_id} at pipeline step {step}.
+You are analyzing case {case_id} at circuit step {step}.
 
 1. Read the briefing at {briefing_path} for shared context.
 2. Read the signal at {signal_path} to find the prompt and artifact paths.

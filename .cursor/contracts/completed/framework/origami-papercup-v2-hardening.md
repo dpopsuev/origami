@@ -13,7 +13,7 @@
 
 ## Context
 
-- `docs/cursor-skill-guide.md` — Developer guide for building Cursor Skills from Origami pipelines. Agent Bus Protocol section (lines 89-118) previously described v1 orchestration.
+- `docs/cursor-skill-guide.md` — Developer guide for building Cursor Skills from Origami circuits. Agent Bus Protocol section (lines 89-118) previously described v1 orchestration.
 - `rules/domain/agent-bus.mdc` — Papercup v2 protocol specification (already v2).
 - `contracts/active/papercup-protocol-maturity.md` — Parent contract for the full Papercup evolution.
 

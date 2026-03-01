@@ -45,7 +45,7 @@ func WithCLILogger(l *slog.Logger) CLIOption {
 }
 
 // NewCLIDispatcher creates a dispatcher that invokes the given command for
-// each pipeline step. The command must accept the prompt on stdin and write
+// each circuit step. The command must accept the prompt on stdin and write
 // the artifact JSON to stdout.
 //
 // The command path is validated at construction time; an error is returned

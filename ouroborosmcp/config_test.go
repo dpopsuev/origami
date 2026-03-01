@@ -14,26 +14,26 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func newTestServer(t *testing.T) *fwmcp.PipelineServer {
+func newTestServer(t *testing.T) *fwmcp.CircuitServer {
 	t.Helper()
 	runsDir := t.TempDir()
 	cfg := ouroborosmcp.NewOuroborosConfig(runsDir)
-	srv := fwmcp.NewPipelineServer(cfg)
+	srv := fwmcp.NewCircuitServer(cfg)
 	ouroborosmcp.RegisterExtraTools(srv, runsDir)
 	t.Cleanup(srv.Shutdown)
 	return srv
 }
 
-func newTestServerWithDir(t *testing.T, runsDir string) *fwmcp.PipelineServer {
+func newTestServerWithDir(t *testing.T, runsDir string) *fwmcp.CircuitServer {
 	t.Helper()
 	cfg := ouroborosmcp.NewOuroborosConfig(runsDir)
-	srv := fwmcp.NewPipelineServer(cfg)
+	srv := fwmcp.NewCircuitServer(cfg)
 	ouroborosmcp.RegisterExtraTools(srv, runsDir)
 	t.Cleanup(srv.Shutdown)
 	return srv
 }
 
-func connectInMemory(t *testing.T, ctx context.Context, srv *fwmcp.PipelineServer) *sdkmcp.ClientSession {
+func connectInMemory(t *testing.T, ctx context.Context, srv *fwmcp.CircuitServer) *sdkmcp.ClientSession {
 	t.Helper()
 	t1, t2 := sdkmcp.NewInMemoryTransports()
 	if _, err := srv.MCPServer.Connect(ctx, t1, nil); err != nil {
@@ -100,13 +100,13 @@ func callToolExpectError(t *testing.T, ctx context.Context, session *sdkmcp.Clie
 
 func startDiscovery(t *testing.T, ctx context.Context, session *sdkmcp.ClientSession, extra map[string]any) string {
 	t.Helper()
-	result := callTool(t, ctx, session, "start_pipeline", map[string]any{
+	result := callTool(t, ctx, session, "start_circuit", map[string]any{
 		"parallel": 1,
 		"extra":    extra,
 	})
 	sessionID, ok := result["session_id"].(string)
 	if !ok || sessionID == "" {
-		t.Fatal("start_pipeline did not return session_id")
+		t.Fatal("start_circuit did not return session_id")
 	}
 	return sessionID
 }
@@ -190,7 +190,7 @@ func TestOuroboros_ToolDiscovery(t *testing.T) {
 	}
 
 	expected := map[string]bool{
-		"start_pipeline":    false,
+		"start_circuit":    false,
 		"get_next_step":     false,
 		"submit_step":       false,
 		"get_report":        false,
@@ -419,7 +419,7 @@ func TestOuroboros_DoubleStart_Error(t *testing.T) {
 
 	startDiscovery(t, ctx, session, map[string]any{})
 
-	errMsg := callToolExpectError(t, ctx, session, "start_pipeline", map[string]any{
+	errMsg := callToolExpectError(t, ctx, session, "start_circuit", map[string]any{
 		"parallel": 1,
 		"extra":    map[string]any{},
 	})
@@ -437,7 +437,7 @@ func TestOuroboros_ForceStart(t *testing.T) {
 
 	id1 := startDiscovery(t, ctx, session, map[string]any{})
 
-	result := callTool(t, ctx, session, "start_pipeline", map[string]any{
+	result := callTool(t, ctx, session, "start_circuit", map[string]any{
 		"parallel": 1,
 		"force":    true,
 		"extra":    map[string]any{},

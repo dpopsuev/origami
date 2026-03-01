@@ -31,7 +31,7 @@ const (
 	PositionC  Position = "C"
 )
 
-// MetaPhase represents a zone in the pipeline graph.
+// MetaPhase represents a zone in the circuit graph.
 type MetaPhase string
 
 const (

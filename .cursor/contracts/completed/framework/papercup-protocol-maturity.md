@@ -32,7 +32,7 @@ Papercup v1 — Orchestration. Parent is the exclusive switchboard for `get_next
 
 ```mermaid
 sequenceDiagram
-    participant Go as GoPipeline
+    participant Go as GoCircuit
     participant Mux as MuxDispatcher
     participant MCP as MCPServer
     participant Parent as ParentAgent
@@ -76,7 +76,7 @@ Papercup v2 — Choreography. Workers own the full loop. Parent is supervisor. S
 
 ```mermaid
 sequenceDiagram
-    participant Go as GoPipeline
+    participant Go as GoCircuit
     participant Mux as MuxDispatcher
     participant MCP as MCPServer
     participant Parent as Supervisor
@@ -191,7 +191,7 @@ report = get_report(session_id)
 
 **Go code impact:** None for `MuxDispatcher` or `session.go`. Infrastructure already supports concurrent `GetNextStep` callers (`peakPullers`). Capacity gate validates `peakPullers >= desiredCapacity`.
 
-**Cursor platform note:** Parent launches all workers in one message and blocks until all 4 Tasks return. But each worker runs its own loop until `done=true`, so the parent blocks once for the entire pipeline duration. Workers self-terminate. This is acceptable — the parent has nothing to do while workers run.
+**Cursor platform note:** Parent launches all workers in one message and blocks until all 4 Tasks return. But each worker runs its own loop until `done=true`, so the parent blocks once for the entire circuit duration. Workers self-terminate. This is acceptable — the parent has nothing to do while workers run.
 
 ### Phase 2 — Zone-Aware Stickiness
 
@@ -337,7 +337,7 @@ Decouple the signal bus from MCP so CLI and HTTP agents get full Papercup power.
 - **Then** the supervisor launches a replacement worker Task.
 
 - **Given** a `CLIWorkerDispatcher` configured with `echo` as the CLI command,
-- **When** the Go pipeline produces 3 steps,
+- **When** the Go circuit produces 3 steps,
 - **Then** the dispatcher processes all 3 by piping prompts to `echo` stdin and submitting the stdout as artifacts.
 
 - **Given** a `NetworkClient` connected to a `NetworkServer`,

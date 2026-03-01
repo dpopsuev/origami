@@ -101,7 +101,7 @@ const (
 
 // JSONSchemaExtractor is a built-in extractor that unmarshals JSON input
 // and validates it against an ArtifactSchema. No Go code required from
-// consumers — just `extractor: json-schema` + `schema:` in the pipeline YAML.
+// consumers — just `extractor: json-schema` + `schema:` in the circuit YAML.
 type JSONSchemaExtractor struct {
 	schema *ArtifactSchema
 }

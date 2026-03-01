@@ -9,7 +9,7 @@ import (
 
 func TestWalkerDefParsesFromYAML(t *testing.T) {
 	raw := `
-pipeline: test
+circuit: test
 description: walker def test
 nodes:
   - name: start_node
@@ -35,7 +35,7 @@ walkers:
 start: start_node
 done: done
 `
-	var def PipelineDef
+	var def CircuitDef
 	if err := yaml.Unmarshal([]byte(raw), &def); err != nil {
 		t.Fatalf("parse YAML: %v", err)
 	}
@@ -64,7 +64,7 @@ done: done
 
 func TestWalkerDefEmptyIsBackwardCompatible(t *testing.T) {
 	raw := `
-pipeline: test
+circuit: test
 nodes:
   - name: n1
     family: stub
@@ -76,12 +76,12 @@ edges:
 start: n1
 done: done
 `
-	var def PipelineDef
+	var def CircuitDef
 	if err := yaml.Unmarshal([]byte(raw), &def); err != nil {
 		t.Fatalf("parse YAML: %v", err)
 	}
 	if len(def.Walkers) != 0 {
-		t.Errorf("expected 0 walkers for pipeline without walkers section, got %d", len(def.Walkers))
+		t.Errorf("expected 0 walkers for circuit without walkers section, got %d", len(def.Walkers))
 	}
 }
 
@@ -205,17 +205,17 @@ func TestHierarchicalDelegationPatternParsesAndBuilds(t *testing.T) {
 		t.Fatalf("read pattern YAML: %v", err)
 	}
 
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 
 	if err := def.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
 
-	if def.Pipeline != "hierarchical-delegation" {
-		t.Errorf("pipeline name = %q, want %q", def.Pipeline, "hierarchical-delegation")
+	if def.Circuit != "hierarchical-delegation" {
+		t.Errorf("circuit name = %q, want %q", def.Circuit, "hierarchical-delegation")
 	}
 	if len(def.Walkers) != 3 {
 		t.Errorf("expected 3 walkers, got %d", len(def.Walkers))

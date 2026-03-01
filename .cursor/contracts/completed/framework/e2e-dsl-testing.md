@@ -14,7 +14,7 @@
 ## Context
 
 - **Gap inventory:** 8 features have no E2E walk coverage (parallel edges, extractors, WalkerDef, MemoryStore, ArtifactSchema, OutputCapture, Adversarial Dialectic, real-YAML walks).
-- **Existing E2E:** `run_test.go` walks trivial inline YAML (2-node echo pipelines). `curate/walker_test.go` walks `curation.yaml`. No other testdata YAML is walked.
+- **Existing E2E:** `run_test.go` walks trivial inline YAML (2-node echo circuits). `curate/walker_test.go` walks `curation.yaml`. No other testdata YAML is walked.
 - **Existing parse-only:** `dsl_test.go` loads `rca-investigation.yaml`, `defect-dialectic.yaml` -- validates structure, never walks.
 
 ### Current architecture
@@ -73,14 +73,14 @@ No phased execution -- all scenarios are created together and run at every CHECK
 1. Four scenario YAML files covering all gaps
 2. Walk tests for three existing real-world YAMLs
 3. One test file (`e2e_test.go`) containing all E2E tests
-4. Injected tasks in `ouroboros-seed-pipeline` and `kami-live-debugger` for sprint-specific E2E
+4. Injected tasks in `ouroboros-seed-circuit` and `kami-live-debugger` for sprint-specific E2E
 
 ## Coverage matrix
 
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | no | This contract is about integration, not units |
-| **Integration** | yes | Full YAML to build to walk to verify pipeline |
+| **Integration** | yes | Full YAML to build to walk to verify circuit |
 | **Contract** | yes | ArtifactSchema validation, registry resolution |
 | **E2E** | yes | This IS the E2E contract |
 | **Concurrency** | yes | Parallel fan-out scenario, MemoryStore concurrent access |
@@ -90,10 +90,10 @@ No phased execution -- all scenarios are created together and run at every CHECK
 
 ### Scenario YAMLs
 
-- [ ] **S1** Create `testdata/scenarios/kitchen-sink.yaml` -- zones, `when:` expressions, shortcuts, loops, transformers, hooks (`after:`), input resolution (`${node.output}`), prompt rendering (`{{.Config.var}}`), pipeline vars, artifact schema
+- [ ] **S1** Create `testdata/scenarios/kitchen-sink.yaml` -- zones, `when:` expressions, shortcuts, loops, transformers, hooks (`after:`), input resolution (`${node.output}`), prompt rendering (`{{.Config.var}}`), circuit vars, artifact schema
 - [ ] **S2** Create `testdata/scenarios/team-delegation.yaml` -- WalkerDef (walkers section with persona, element, step_affinity), BuildWalkersFromDef, parallel fan-out edges, team walk with AffinityScheduler, zone stickiness
-- [ ] **S3** Create `testdata/scenarios/memory-across-walks.yaml` -- simple 2-node pipeline for MemoryStore testing. Walk 1 sets key, walk 2 reads key. Verifies cross-walk persistence scoped by walker identity.
-- [ ] **S4** Create `testdata/scenarios/schema-validated.yaml` -- pipeline with `schema:` on every node. Walk with WithOutputCapture. Verify all captured artifacts match declared schemas.
+- [ ] **S3** Create `testdata/scenarios/memory-across-walks.yaml` -- simple 2-node circuit for MemoryStore testing. Walk 1 sets key, walk 2 reads key. Verifies cross-walk persistence scoped by walker identity.
+- [ ] **S4** Create `testdata/scenarios/schema-validated.yaml` -- circuit with `schema:` on every node. Walk with WithOutputCapture. Verify all captured artifacts match declared schemas.
 
 ### E2E walk tests
 
@@ -110,13 +110,13 @@ No phased execution -- all scenarios are created together and run at every CHECK
 
 ### Injected tasks (other contracts)
 
-- [ ] **I1** Inject into `ouroboros-seed-pipeline` Phase 2: E2E walk test for `ouroboros-probe.yaml` -- verify Generator to Subject to Judge path walks to _done with stub transformers
+- [ ] **I1** Inject into `ouroboros-seed-circuit` Phase 2: E2E walk test for `ouroboros-probe.yaml` -- verify Generator to Subject to Judge path walks to _done with stub transformers
 - [ ] **I2** Inject into `kami-live-debugger` Phase 1: Verify EventBridge receives WalkEvents from an E2E scenario walk
 
 ## Acceptance criteria
 
 **Given** `testdata/scenarios/kitchen-sink.yaml` with 4 nodes, 3 zones, expression edges, and shortcuts,  
-**When** the pipeline is loaded, built with stub registries, and walked,  
+**When** the circuit is loaded, built with stub registries, and walked,  
 **Then** the walk completes at `_done` with the correct path (shortcut or loop depending on stub output), hooks fire, artifacts match schema, input resolution and prompt rendering produce expected values.
 
 **Given** `testdata/scenarios/team-delegation.yaml` with 3 WalkerDefs and parallel edges,  
@@ -133,4 +133,4 @@ No trust boundaries affected. All test data is local. No external calls. No secr
 
 ## Notes
 
-2026-02-25 -- Contract created. Addresses 8 E2E coverage gaps identified during Sprint 2 retrospective. No dedicated sprint -- tests are CHECKPOINT gates. Injections into `ouroboros-seed-pipeline` (task I1) and `kami-live-debugger` (task I2).
+2026-02-25 -- Contract created. Addresses 8 E2E coverage gaps identified during Sprint 2 retrospective. No dedicated sprint -- tests are CHECKPOINT gates. Injections into `ouroboros-seed-circuit` (task I1) and `kami-live-debugger` (task I2).

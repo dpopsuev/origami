@@ -1,12 +1,12 @@
 import { type Page, expect } from "@playwright/test";
-import type { OrigamiBridge, PipelineSnapshot } from "../src/bridge";
+import type { OrigamiBridge, CircuitSnapshot } from "../src/bridge";
 
 /**
  * Wait for the __origami bridge to be available and return a snapshot.
  */
 export async function getBridgeSnapshot(
   page: Page
-): Promise<PipelineSnapshot> {
+): Promise<CircuitSnapshot> {
   return page.evaluate(() => window.__origami.snapshot());
 }
 

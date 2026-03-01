@@ -10,8 +10,9 @@ type affinityWalker struct {
 	state    *WalkerState
 }
 
-func (w *affinityWalker) Identity() AgentIdentity { return w.identity }
-func (w *affinityWalker) State() *WalkerState     { return w.state }
+func (w *affinityWalker) Identity() AgentIdentity      { return w.identity }
+func (w *affinityWalker) SetIdentity(id AgentIdentity)  { w.identity = id }
+func (w *affinityWalker) State() *WalkerState           { return w.state }
 func (w *affinityWalker) Handle(_ context.Context, node Node, nc NodeContext) (Artifact, error) {
 	return node.Process(context.Background(), nc)
 }

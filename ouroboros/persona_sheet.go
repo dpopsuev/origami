@@ -9,7 +9,7 @@ import (
 )
 
 // PersonaSheet is a per-model routing document combining ModelProfile with
-// pipeline step affinity. It is the output artifact that the AffinityScheduler
+// circuit step affinity. It is the output artifact that the AffinityScheduler
 // and agent router consume for performance optimization.
 type PersonaSheet struct {
 	Model             string                         `yaml:"model"              json:"model"`
@@ -21,10 +21,10 @@ type PersonaSheet struct {
 	GeneratedAt       time.Time                      `yaml:"generated_at"       json:"generated_at"`
 }
 
-// EmitPersonaSheet combines a ModelProfile with a pipeline definition to produce
-// a per-model routing document. The pipeline steps determine which persona
+// EmitPersonaSheet combines a ModelProfile with a circuit definition to produce
+// a per-model routing document. The circuit steps determine which persona
 // suggestions to include based on step affinity scores.
-func EmitPersonaSheet(profile ModelProfile, pipeline framework.PipelineDef) (*PersonaSheet, error) {
+func EmitPersonaSheet(profile ModelProfile, circuit framework.CircuitDef) (*PersonaSheet, error) {
 	if profile.Model.ModelName == "" {
 		return nil, fmt.Errorf("model identity is empty")
 	}
@@ -32,7 +32,7 @@ func EmitPersonaSheet(profile ModelProfile, pipeline framework.PipelineDef) (*Pe
 	stepAffinity := DeriveStepAffinity(profile)
 
 	suggestions := make(map[string]string)
-	for _, node := range pipeline.Nodes {
+	for _, node := range circuit.Nodes {
 		if node.Name == "_done" || node.Name == "" {
 			continue
 		}
@@ -44,8 +44,8 @@ func EmitPersonaSheet(profile ModelProfile, pipeline framework.PipelineDef) (*Pe
 		suggestions[node.Name] = string(element) + "-specialist"
 	}
 
-	if len(pipeline.Nodes) > 0 && len(suggestions) == 0 {
-		for _, node := range pipeline.Nodes {
+	if len(circuit.Nodes) > 0 && len(suggestions) == 0 {
+		for _, node := range circuit.Nodes {
 			if node.Name == "_done" || node.Name == "" {
 				continue
 			}
@@ -64,7 +64,7 @@ func EmitPersonaSheet(profile ModelProfile, pipeline framework.PipelineDef) (*Pe
 	}, nil
 }
 
-// suggestElementForStep returns the best element for a pipeline step based on
+// suggestElementForStep returns the best element for a circuit step based on
 // the step's dimensional requirements and the model's measured profile.
 func suggestElementForStep(step string, profile ModelProfile) framework.Element {
 	stepDimMap := map[string][]Dimension{
@@ -90,7 +90,7 @@ func suggestElementForStep(step string, profile ModelProfile) framework.Element 
 	return ElementMatch(stepProfile)
 }
 
-// ProviderHints returns a map of pipeline step names to preferred provider
+// ProviderHints returns a map of circuit step names to preferred provider
 // names, derived from element affinity and known provider-element mappings.
 // Consumers (e.g., ProviderRouter) use this for empirical routing.
 func (ps *PersonaSheet) ProviderHints(providerElements map[string]framework.Element) map[string]string {

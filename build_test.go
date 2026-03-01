@@ -7,8 +7,8 @@ import (
 )
 
 func TestBuildGraph_SimpleWalk(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "simple",
+	def := &CircuitDef{
+		Circuit: "simple",
 		Nodes: []NodeDef{
 			{Name: "a", Family: "stub"},
 			{Name: "b", Family: "stub"},
@@ -56,8 +56,8 @@ func TestBuildGraph_SimpleWalk(t *testing.T) {
 }
 
 func TestBuildGraph_WithZones(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "zoned",
+	def := &CircuitDef{
+		Circuit: "zoned",
 		Nodes: []NodeDef{
 			{Name: "a", Family: "stub"},
 			{Name: "b", Family: "stub"},
@@ -88,8 +88,8 @@ func TestBuildGraph_WithZones(t *testing.T) {
 }
 
 func TestBuildGraph_CustomEdgeFactory(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "custom-edges",
+	def := &CircuitDef{
+		Circuit: "custom-edges",
 		Nodes: []NodeDef{
 			{Name: "a", Family: "stub"},
 			{Name: "b", Family: "stub"},
@@ -134,8 +134,8 @@ func TestBuildGraph_CustomEdgeFactory(t *testing.T) {
 }
 
 func TestBuildGraph_MissingNodeFactory(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "missing",
+	def := &CircuitDef{
+		Circuit: "missing",
 		Nodes:    []NodeDef{{Name: "a", Family: "nonexistent"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "_done"}},
 		Start:    "a",
@@ -152,9 +152,9 @@ func TestBuildGraph_RealF0F6_Structure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read YAML: %v", err)
 	}
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 
 	nodeReg := NodeRegistry{
@@ -213,11 +213,13 @@ func (a *stubBuildArtifact) Confidence() float64 { return 1.0 }
 func (a *stubBuildArtifact) Raw() any            { return nil }
 
 type stubBuildWalker struct {
-	state *WalkerState
+	identity AgentIdentity
+	state    *WalkerState
 }
 
-func (w *stubBuildWalker) Identity() AgentIdentity { return AgentIdentity{PersonaName: "test"} }
-func (w *stubBuildWalker) State() *WalkerState     { return w.state }
+func (w *stubBuildWalker) Identity() AgentIdentity      { return w.identity }
+func (w *stubBuildWalker) SetIdentity(id AgentIdentity)  { w.identity = id }
+func (w *stubBuildWalker) State() *WalkerState           { return w.state }
 func (w *stubBuildWalker) Handle(_ context.Context, node Node, nc NodeContext) (Artifact, error) {
 	return node.Process(context.Background(), nc)
 }

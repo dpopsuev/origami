@@ -48,7 +48,7 @@ Alignment names match dialectic structure: `AlignmentThesis` / `AlignmentAntithe
 | **Unit** | yes | persona_test.go, mask_test.go — renamed functions and assertions |
 | **Integration** | yes | `go build ./...` on both repos with updated dependency |
 | **Contract** | no | No API schema changes beyond the alignment string values |
-| **E2E** | no | No pipeline behavior change, only names |
+| **E2E** | no | No circuit behavior change, only names |
 | **Concurrency** | no | No shared state affected |
 | **Security** | no | No trust boundaries affected |
 
@@ -71,7 +71,7 @@ Alignment names match dialectic structure: `AlignmentThesis` / `AlignmentAntithe
 - `go build ./...` passes in both Origami and Asterisk.
 - `go test ./...` passes in both Origami and Asterisk.
 - Zero occurrences of `AlignmentLight`, `AlignmentShadow`, `LightPersonas`, `ShadowPersonas`, `DefaultLightMasks` in Go code.
-- Zero occurrences of "Light path", "Shadow path", "Light pipeline", "Shadow pipeline" in Go comments.
+- Zero occurrences of "Light path", "Shadow path", "Light circuit", "Shadow circuit" in Go comments.
 - Glossary entries updated to reflect Thesis/Antithesis as alignment terms.
 - Achilles requires zero changes (verified by search).
 

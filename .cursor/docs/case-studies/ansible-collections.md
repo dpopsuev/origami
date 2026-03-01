@@ -29,7 +29,7 @@ Today, Origami has two consumers (Asterisk, Achilles) and a third planned (futur
 |---------|----------|----------|---------|
 | JSON artifact extraction | `StepExtractor[T]` (generic) | `GovulncheckExtractor` (domain) | No — same pattern, different implementations |
 | Node registry wiring | `buildNodeRegistry()` — 7 passthrough nodes | `NodeRegistry(repoPath)` — 4 real nodes | No — same ceremony, different factories |
-| Pipeline YAML embedding | `//go:embed pipeline_rca.yaml` | `pipelinePath()` via `runtime.Caller` | No — different embed strategies |
+| Circuit YAML embedding | `//go:embed circuit_rca.yaml` | `circuitPath()` via `runtime.Caller` | No — different embed strategies |
 | Edge routing | `when:` expressions in YAML | `when:` expressions in YAML | Yes — both use the framework's expr-lang engine |
 | Store/persistence hooks | `StoreHooks(st, caseData)` — 5 hooks | None | No — Achilles has no persistence |
 | MCP server wiring | `mcpconfig.NewServer()` with domain hooks | None | No — Achilles has no MCP |
@@ -41,7 +41,7 @@ As the consumer count grows (N operators across RAN, Core, edge, platform per th
 2. A JSON extractor for their artifact types
 3. A persistence hook pattern for their store
 4. A MCP server configuration for their calibration
-5. A pipeline YAML for their domain graph
+5. A circuit YAML for their domain graph
 
 Without a sharing mechanism, this is O(N) duplicated work. Collections reduce it to O(1) shared + O(N) domain-specific.
 
@@ -52,7 +52,7 @@ Without a sharing mechanism, this is O(N) duplicated work. Collections reduce it
 | Ansible Concept | Origami Equivalent | Status |
 |----------------|-------------------|--------|
 | **Module** (task action) | `Transformer`, `Extractor`, `Node` factory | Exist as Go interfaces. No packaging. |
-| **Role** (reusable task bundle) | Pipeline YAML (reusable graph pattern) | Exist as files. No distribution. |
+| **Role** (reusable task bundle) | Circuit YAML (reusable graph pattern) | Exist as files. No distribution. |
 | **Plugin** (callback, filter, lookup) | `Hook`, `EdgeFactory`, `Mask` | Exist as Go interfaces. No packaging. |
 | **Collection** (distribution bundle) | **Missing** — no bundle format | |
 | **galaxy.yml** (manifest) | **Missing** — no manifest | |
@@ -80,7 +80,7 @@ type Collection struct {
     Extractors   ExtractorRegistry
     Nodes        NodeRegistry
     Hooks        HookRegistry
-    Pipelines    map[string][]byte // name → embedded YAML
+    Circuits    map[string][]byte // name → embedded YAML
 }
 ```
 
@@ -90,13 +90,13 @@ type Collection struct {
 collection: vuln-tools
 namespace: achilles
 version: 0.1.0
-description: "Vulnerability scanning pipeline, extractors, and nodes"
+description: "Vulnerability scanning circuit, extractors, and nodes"
 
 provides:
-  pipelines:
+  circuits:
     - name: vuln-scan
-      path: pipelines/achilles.yaml
-      description: "4-node scan→classify→assess→report pipeline"
+      path: circuits/achilles.yaml
+      description: "4-node scan→classify→assess→report circuit"
   extractors:
     - name: govulncheck-v1
       description: "Parses govulncheck JSON streaming output"
@@ -112,7 +112,7 @@ requires:
   origami: ">=0.3.0"
 ```
 
-### 4.3 FQCNs in pipeline YAML
+### 4.3 FQCNs in circuit YAML
 
 ```yaml
 nodes:
@@ -166,14 +166,14 @@ Since Origami is Go, "install" means `go get` the module. The CLI wraps `go get`
 | Transformer | `jq` | `transformers/jq.go` |
 | Transformer | `file` | `transformers/file.go` |
 | Extractor | `step-extractor` | Generic JSON → typed struct (from Asterisk's `StepExtractor`) |
-| Pipeline | `ouroboros-probe` | `ouroboros/pipelines/ouroboros-probe.yaml` |
+| Circuit | `ouroboros-probe` | `ouroboros/circuits/ouroboros-probe.yaml` |
 
 ### 5.2 `rca-tools` (from Asterisk)
 
 | Type | Name | Source |
 |------|------|--------|
-| Pipeline | `rca-investigation` | `pipeline_rca.yaml` |
-| Pipeline | `defect-dialectic` | `defect-dialectic.yaml` |
+| Circuit | `rca-investigation` | `circuit_rca.yaml` |
+| Circuit | `defect-dialectic` | `defect-dialectic.yaml` |
 | Hook pattern | `store-hooks` | `StoreHooks` — per-step persistence |
 | Node pattern | `passthrough-bridge` | `passthroughNode` for external runner delegation |
 
@@ -181,10 +181,10 @@ Since Origami is Go, "install" means `go get` the module. The CLI wraps `go get`
 
 | Type | Name | Source |
 |------|------|--------|
-| Pipeline | `vuln-scan` | `pipelines/achilles.yaml` |
+| Circuit | `vuln-scan` | `circuits/achilles.yaml` |
 | Extractor | `govulncheck-v1` | `GovulncheckExtractor` |
 | Extractor | `classify-v1` | `ClassifyExtractor` |
-| Node pattern | `scan-classify-assess-report` | 4-node vuln pipeline pattern |
+| Node pattern | `scan-classify-assess-report` | 4-node vuln circuit pattern |
 
 ---
 
@@ -196,7 +196,7 @@ Ansible Collections require a custom distribution format (tarballs + Galaxy API)
 
 ### 6.2 Compile-time type safety
 
-Ansible Collections discover modules at runtime (Python import). Origami collections are compiled — a missing transformer or extractor is caught at build time, not at pipeline walk time. FQCN resolution can be validated statically.
+Ansible Collections discover modules at runtime (Python import). Origami collections are compiled — a missing transformer or extractor is caught at build time, not at circuit walk time. FQCN resolution can be validated statically.
 
 ### 6.3 Single binary
 
@@ -204,7 +204,7 @@ Collections are compiled into the consumer binary. No runtime dependency on coll
 
 ### 6.4 LSP integration
 
-The planned `origami-lsp` can resolve FQCNs, validate collection references, and provide completion for collection-provided transformers, extractors, and node families — all in the editor, before running the pipeline.
+The planned `origami-lsp` can resolve FQCNs, validate collection references, and provide completion for collection-provided transformers, extractors, and node families — all in the editor, before running the circuit.
 
 ---
 
@@ -240,7 +240,7 @@ Go is compiled — collections can't be loaded at runtime from disk. Ansible mod
 
 4. **Core collection** — Extract Origami's built-in transformers (llm, http, jq, file) into a `core` collection that ships with the framework.
 
-5. **`imports:` in PipelineDef** — Add `Imports []string` field to `PipelineDef` for FQCN shorthand. `omitempty` ensures backward compatibility.
+5. **`imports:` in CircuitDef** — Add `Imports []string` field to `CircuitDef` for FQCN shorthand. `omitempty` ensures backward compatibility.
 
 6. **CLI** — `origami collection list/install/inspect/validate` wrapping `go get` + manifest parsing.
 
@@ -255,6 +255,6 @@ Go is compiled — collections can't be loaded at runtime from disk. Ansible mod
 - Ansible Galaxy: `galaxy.ansible.com`
 - Red Hat Automation Hub: `console.redhat.com/ansible/automation-hub`
 - Origami registries: `dsl.go` (NodeRegistry, EdgeFactory), `transformer.go` (TransformerRegistry), `extractor.go` (ExtractorRegistry), `hook.go` (HookRegistry)
-- Origami pipeline resolution: `resolve.go` (ResolvePipelinePath, RegisterEmbeddedPipeline)
+- Origami circuit resolution: `resolve.go` (ResolveCircuitPath, RegisterEmbeddedCircuit)
 - Origami built-in transformers: `transformers/` (llm, http, jq, file)
 - Related contracts: `origami-lsp` (IDE intelligence), `consumer-ergonomics` (API polish), `e2e-dsl-testing` (E2E coverage)

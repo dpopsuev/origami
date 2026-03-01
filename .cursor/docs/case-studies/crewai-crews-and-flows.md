@@ -37,10 +37,10 @@ CrewAI's core architectural decision is separating **agent autonomy** from **wor
 
 1. Agent definitions are scattered — some in YAML (for Crews), some in Python (inside Flow listeners).
 2. The routing logic is imperative — `@router` returns a string, not a declarative condition.
-3. State passes between Flows and Crews via Python variables, not a typed pipeline.
+3. State passes between Flows and Crews via Python variables, not a typed circuit.
 4. There is no single artifact that describes the full system (agents + tasks + routing + conditions).
 
-**Origami's answer:** One unified graph. The pipeline YAML describes nodes (tasks), edges (routing with `when:` conditions), zones (agent territory), and fan-out (parallelism). Walkers with Personas provide agent autonomy within the graph. There is no separate "Crew" and "Flow" — the graph is both. The full system is one YAML file.
+**Origami's answer:** One unified graph. The circuit YAML describes nodes (tasks), edges (routing with `when:` conditions), zones (agent territory), and fan-out (parallelism). Walkers with Personas provide agent autonomy within the graph. There is no separate "Crew" and "Flow" — the graph is both. The full system is one YAML file.
 
 ---
 
@@ -52,7 +52,7 @@ CrewAI's core architectural decision is separating **agent autonomy** from **wor
 | **Task** (description/expected_output/agent) | `Node` (family, element, prompt, schema, transformer) | CrewAI: task assigned to agent by name. Origami: node assigned to walker by `AffinityScheduler` based on quantified element match + step affinity. |
 | **Process** (sequential or hierarchical) | **Graph topology** (linear edges, fan-out, zone stickiness, loop edges, shortcuts) | CrewAI: two fixed process modes. Origami: arbitrary graph topology — any combination of sequential, parallel, conditional, and looping execution. |
 | **Flows** (@start/@listen/@router decorators) | **Edge conditions** (`when:` expressions, conditional routing, loop edges, shortcuts) | CrewAI: imperative Python code with decorators. Origami: declarative `when:` expressions in YAML evaluated by expr-lang. Origami's approach is reviewable, diffable, and reproducible. |
-| **Flow State** (Pydantic BaseModel) | **Pipeline vars** (`vars:` in DSL, `input:` per node) | Both typed. CrewAI uses Python runtime typing; Origami uses Go compile-time typing + `ArtifactSchema` validation at node boundaries. |
+| **Flow State** (Pydantic BaseModel) | **Circuit vars** (`vars:` in DSL, `input:` per node) | Both typed. CrewAI uses Python runtime typing; Origami uses Go compile-time typing + `ArtifactSchema` validation at node boundaries. |
 | **Router** (@router returning string labels) | **Conditional edges** (`when: output.confidence >= 0.8`) | CrewAI: imperative (Python function returns a route string). Origami: declarative (YAML expression evaluated against artifact fields). |
 | **Delegation** (hierarchical process, auto-manager) | `AffinityScheduler` (element-match, StepAffinity-based walker selection per node) | CrewAI: one manager agent delegates. Origami: scheduler assigns optimal walker per node based on quantified fit. No single point of failure. |
 | **Memory** (agent remembers across tasks) | **Gap** — `WalkerState` is per-walk only | CrewAI agents carry memory across tasks within a crew. Origami walkers reset state between walks. Cross-walk memory is not yet a framework primitive. |
@@ -65,11 +65,11 @@ CrewAI's core architectural decision is separating **agent autonomy** from **wor
 
 ### 4.1 Unified architecture
 
-Origami solves agent autonomy and workflow control in one system. CrewAI requires two systems (Crews + Flows) plus Python glue code. One YAML file describes the full Origami pipeline; CrewAI requires `agents.yaml` + `tasks.yaml` + `crew.py` + `main.py` + Flow Python classes.
+Origami solves agent autonomy and workflow control in one system. CrewAI requires two systems (Crews + Flows) plus Python glue code. One YAML file describes the full Origami circuit; CrewAI requires `agents.yaml` + `tasks.yaml` + `crew.py` + `main.py` + Flow Python classes.
 
 ### 4.2 Declarative over imperative
 
-Origami's pipeline is YAML — reviewable, diffable, reproducible. CrewAI's Flows are Python decorators — powerful but opaque. Two engineers reviewing an Origami pipeline see the same graph. Two engineers reviewing a CrewAI Flow must trace Python execution paths.
+Origami's circuit is YAML — reviewable, diffable, reproducible. CrewAI's Flows are Python decorators — powerful but opaque. Two engineers reviewing an Origami circuit see the same graph. Two engineers reviewing a CrewAI Flow must trace Python execution paths.
 
 ### 4.3 Quantified agent traits
 
@@ -81,7 +81,7 @@ Origami empirically profiles models on behavioral dimensions. CrewAI has no meta
 
 ### 4.5 Adversarial Dialectic
 
-Origami has thesis/antithesis/synthesis quality validation (D0-D4 shadow pipeline). CrewAI has no built-in quality validation pattern. CrewAI tasks produce output; there is no adversarial challenge.
+Origami has thesis/antithesis/synthesis quality validation (D0-D4 shadow circuit). CrewAI has no built-in quality validation pattern. CrewAI tasks produce output; there is no adversarial challenge.
 
 ### 4.6 Graph-based parallelism
 
@@ -101,9 +101,9 @@ Go compile-time type checking prevents entire classes of errors that Python catc
 
 ### Gap 1: Agent-in-YAML
 
-CrewAI defines agents in YAML (`agents.yaml`), making agent configuration accessible to non-programmers and reviewable alongside task definitions. Origami's personas are Go code — inaccessible to YAML-pipeline authors.
+CrewAI defines agents in YAML (`agents.yaml`), making agent configuration accessible to non-programmers and reviewable alongside task definitions. Origami's personas are Go code — inaccessible to YAML-circuit authors.
 
-**Actionable:** Add `WalkerDef` to the pipeline DSL. A `walkers:` section in pipeline YAML would define walker element, persona, preamble, and step affinity. This matches CrewAI's DX while retaining Origami's quantified Element system.
+**Actionable:** Add `WalkerDef` to the circuit DSL. A `walkers:` section in circuit YAML would define walker element, persona, preamble, and step affinity. This matches CrewAI's DX while retaining Origami's quantified Element system.
 
 ### Gap 2: Cross-walk memory
 
@@ -137,7 +137,7 @@ The fundamental difference is **architectural unity**:
 
 ## 7. Actionable Takeaways
 
-1. **Agent-in-YAML (WalkerDef)** — The single most impactful DX improvement. Define walkers in pipeline YAML alongside nodes. CrewAI proved this is what users want. Origami can do it better because WalkerDef includes quantified Element traits, not just freeform text.
+1. **Agent-in-YAML (WalkerDef)** — The single most impactful DX improvement. Define walkers in circuit YAML alongside nodes. CrewAI proved this is what users want. Origami can do it better because WalkerDef includes quantified Element traits, not just freeform text.
 
 2. **Cross-walk memory** — Framework primitive for walker identity-scoped persistence. Small interface, high value. Enables patterns like "build knowledge across multiple analysis passes" that CrewAI supports natively.
 
@@ -152,9 +152,9 @@ The fundamental difference is **architectural unity**:
 - CrewAI repository: `github.com/crewAIInc/crewAI` (44.6k stars, MIT license)
 - CrewAI documentation: `docs.crewai.com`
 - CrewAI Flows guide: `docs.crewai.com/concepts/flows`
-- Origami DSL: `dsl.go` (PipelineDef, NodeDef, EdgeDef, ZoneDef)
+- Origami DSL: `dsl.go` (CircuitDef, NodeDef, EdgeDef, ZoneDef)
 - Origami Personas: `persona.go` (8 personas, StepAffinity, PromptPreamble)
 - Origami Elements: `element.go` (6 elements, quantified traits)
 - Origami AffinityScheduler: `scheduler.go` (Select by StepAffinity + Element)
 - Origami WalkerState: `walker.go` (per-walk state, resets between walks)
-- Related contracts: `kami-live-debugger` (observability), `ouroboros-seed-pipeline` (meta-calibration), `consumer-ergonomics` (API polish), `case-study-omo-agentic-arms-race` (prior case study)
+- Related contracts: `kami-live-debugger` (observability), `ouroboros-seed-circuit` (meta-calibration), `consumer-ergonomics` (API polish), `case-study-omo-agentic-arms-race` (prior case study)

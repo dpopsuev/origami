@@ -8,15 +8,15 @@
 
 Global rules only, plus:
 
-- **Rename only, no behavior change.** The adversarial pipeline logic is unchanged. This is a terminology migration to align code with the dialectic model described in `strategy/origami-vision.mdc`.
+- **Rename only, no behavior change.** The adversarial circuit logic is unchanged. This is a terminology migration to align code with the dialectic model described in `strategy/origami-vision.mdc`.
 - **All references.** Code, tests, FSC docs, glossary, comments, struct names, function names, file names.
 
 ## Context
 
 - `strategy/origami-vision.mdc` — Defines the dialectic model and terminology mapping.
 - `glossary/glossary.mdc` — Already updated with dialectic terms; old "Shadow Court" entry replaced.
-- `court.go` — Current implementation of adversarial pipeline logic.
-- `court_test.go` — Tests for adversarial pipeline.
+- `court.go` — Current implementation of adversarial circuit logic.
+- `court_test.go` — Tests for adversarial circuit.
 - `identity.go` — May reference Court-related types.
 - `completed/framework/agentic-framework-III.3-shadow.md` — Historical contract that introduced the Court.
 - `completed/framework/defect-court.md` — Historical contract.

@@ -91,7 +91,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("POST /events/selection", s.handleBrowserEvent("selection"))
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
-	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
+	mux.HandleFunc("GET /api/circuit", s.handleCircuitAPI)
 	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
 	mux.HandleFunc("GET /api/marble/", s.handleMarbleAPI)
 
@@ -226,7 +226,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-// handleMarbleAPI returns the inner PipelineDef for a composite marble node.
+// handleMarbleAPI returns the inner CircuitDef for a composite marble node.
 // GET /api/marble/NODE_NAME
 func (s *Server) handleMarbleAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -254,9 +254,9 @@ func (s *Server) handleMarbleAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	def := marble.PipelineDef()
+	def := marble.CircuitDef()
 	if def == nil {
-		http.Error(w, `{"error":"composite marble has no pipeline definition"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"composite marble has no circuit definition"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -270,7 +270,7 @@ func (s *Server) handleMarbleAPI(w http.ResponseWriter, r *http.Request) {
 		To   string `json:"to"`
 	}
 	type marblePayload struct {
-		Pipeline string       `json:"pipeline"`
+		Circuit string       `json:"circuit"`
 		Nodes    []marbleNode `json:"nodes"`
 		Edges    []marbleEdge `json:"edges"`
 		Start    string       `json:"start"`
@@ -278,7 +278,7 @@ func (s *Server) handleMarbleAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := marblePayload{
-		Pipeline: def.Pipeline,
+		Circuit: def.Circuit,
 		Start:    def.Start,
 		Done:     def.Done,
 	}
@@ -307,7 +307,7 @@ func (s *Server) StartOnAvailablePort(ctx context.Context) (httpAddr, wsAddr str
 	mux.HandleFunc("POST /events/selection", s.handleBrowserEvent("selection"))
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
-	mux.HandleFunc("GET /api/pipeline", s.handlePipelineAPI)
+	mux.HandleFunc("GET /api/circuit", s.handleCircuitAPI)
 	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
 	mux.HandleFunc("GET /api/marble/", s.handleMarbleAPI)
 

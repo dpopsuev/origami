@@ -8,22 +8,22 @@
 ## Contract rules
 
 - Each problem domain owns its calibration: ground truth, metrics, runner, and acceptance thresholds.
-- Domain calibration measures the **pipeline's** accuracy on the **problem**, not the model's generic capabilities (that is meta-calibration's job).
+- Domain calibration measures the **circuit's** accuracy on the **problem**, not the model's generic capabilities (that is meta-calibration's job).
 - Domain calibration may consume `ModelProfile` data from meta-calibration for routing optimization, but must not depend on it for correctness.
 - New domain calibrations follow the same pattern: ground truth, metrics, runner, scorer.
 
 ## Context
 
-The project currently has one calibration system (`internal/calibrate/`) which is implicitly Asterisk-specific. It measures F0-F6 pipeline accuracy against RCA ground truth (M1-M20 metrics, `calibrate.Scenario`, `GroundTruthCase`, `GroundTruthRCA`).
+The project currently has one calibration system (`internal/calibrate/`) which is implicitly Asterisk-specific. It measures F0-F6 circuit accuracy against RCA ground truth (M1-M20 metrics, `calibrate.Scenario`, `GroundTruthCase`, `GroundTruthRCA`).
 
-With Origami emerging as a second pipeline (curation: fetch-extract-validate-enrich-promote), there is no calibration system for information extraction quality. This contract scopes the distinction clearly and lays groundwork for Origami's domain calibration.
+With Origami emerging as a second circuit (curation: fetch-extract-validate-enrich-promote), there is no calibration system for information extraction quality. This contract scopes the distinction clearly and lays groundwork for Origami's domain calibration.
 
 ### Domain calibration taxonomy
 
-| Domain | Product | Pipeline | Ground truth | Metrics | Package |
+| Domain | Product | Circuit | Ground truth | Metrics | Package |
 |--------|---------|----------|-------------|---------|---------|
 | **Asterisk** | Root Cause Analysis | F0-F6 (Light) + D0-D4 (Shadow) | `calibrate.Scenario` (GroundTruthCase, GroundTruthRCA, GroundTruthSymptom) | M1-M20 (defect type accuracy, evidence recall, convergence, etc.) | `internal/calibrate/` |
-| **Origami** | Information Extraction | Curation pipeline (fetch-extract-validate-enrich-promote) | `curate.Dataset` + `curate.Schema` (known-correct records with verified fields) | Extraction recall, field accuracy, completeness score, source coverage | `internal/curate/eval/` (new) |
+| **Origami** | Information Extraction | Curation circuit (fetch-extract-validate-enrich-promote) | `curate.Dataset` + `curate.Schema` (known-correct records with verified fields) | Extraction recall, field accuracy, completeness score, source coverage | `internal/curate/eval/` (new) |
 | **Achilles** | Vulnerability Discovery | scan-classify-assess-report (4-node) | Known CVEs in target repos (RHEL, OCP govulncheck results) | Detection rate, false positive rate, severity accuracy, novel finding plausibility | `achilles/calibrate/` (new) |
 
 ### Key insight: domain calibration consumes meta-calibration
@@ -31,7 +31,7 @@ With Origami emerging as a second pipeline (curation: fetch-extract-validate-enr
 When running domain calibration, the system can optionally:
 1. Look up the `ModelProfile` for the adapter's model (from meta-calibration)
 2. Use the model's `ElementMatch` and `CostProfile` to optimize routing (e.g. assign a Water-affinity model to investigation-heavy steps)
-3. Domain calibration then measures pipeline output quality, not model capability
+3. Domain calibration then measures circuit output quality, not model capability
 
 Dependency: `domain calibration --optionally uses--> ModelProfile --from--> meta-calibration`
 
@@ -40,9 +40,9 @@ Dependency: `domain calibration --optionally uses--> ModelProfile --from--> meta
 ```
 internal/calibrate/
 ├── types.go          # Scenario, GroundTruthCase, MetricSet, CaseResult
-├── runner.go         # RunCalibration, runSingleCalibration, runCasePipeline
+├── runner.go         # RunCalibration, runSingleCalibration, runCaseCircuit
 ├── metrics.go        # computeMetrics (M1-M20)
-├── court_runner.go   # RunCourt (D0-D4 shadow pipeline)
+├── court_runner.go   # RunCourt (D0-D4 shadow circuit)
 ├── court_metrics.go  # CourtMetrics
 ├── tuning.go         # TuningRunner, QuickWin
 ├── adapt/            # StubAdapter, BasicAdapter, CursorAdapter
@@ -82,8 +82,8 @@ Phase 0 establishes MCP naming convention (`origami-{purpose}` pattern). Phase 1
 
 ### Phase 0 — MCP server naming convention
 
-- [ ] **N1** Establish naming convention: all Origami MCP servers use `origami-{purpose}` pattern (e.g. `origami-pipeline-marshaller`, `origami-kami-debugger`)
-- [ ] **N2** Update `mcp/pipeline_server.go` documentation to recommend `origami-pipeline-marshaller` as the canonical MCP server name for pipeline orchestration
+- [ ] **N1** Establish naming convention: all Origami MCP servers use `origami-{purpose}` pattern (e.g. `origami-circuit-marshaller`, `origami-kami-debugger`)
+- [ ] **N2** Update `mcp/circuit_server.go` documentation to recommend `origami-circuit-marshaller` as the canonical MCP server name for circuit orchestration
 - [ ] **N3** Update Ouroboros MCP server name to follow convention (currently unnamed or generic)
 - [ ] **N4** Validate — `go build ./...`, `go test ./...`
 
@@ -104,9 +104,9 @@ Phase 0 establishes MCP naming convention (`origami-{purpose}` pattern). Phase 1
 ### Phase 3 — Origami evaluation runner
 
 - [ ] Implement `RunEvaluation(ctx, scenario, walker, graph) EvaluationReport`
-- [ ] Walk each case through the curation pipeline, compare extracted fields to ground truth
+- [ ] Walk each case through the curation circuit, compare extracted fields to ground truth
 - [ ] Compute aggregate metrics: mean extraction recall, field accuracy, completeness
-- [ ] Score source coverage: did the pipeline find all available sources?
+- [ ] Score source coverage: did the circuit find all available sources?
 - [ ] Score promotion rate: what fraction of records were promoted?
 - [ ] Integration test with stub source/extractor walking the curation graph
 
@@ -150,7 +150,7 @@ Phase 0 establishes MCP naming convention (`origami-{purpose}` pattern). Phase 1
 **Then** the model's profile is logged alongside calibration results (informational only, no behavioral change).
 
 **Given** a `VulnScenario` with 5 known CVEs in a target repo,  
-**When** Achilles runs its scan-classify-assess-report pipeline,  
+**When** Achilles runs its scan-classify-assess-report circuit,  
 **Then** a `VulnResult` is produced with: detection rate, false positive rate, severity accuracy, and per-CVE evidence.
 
 ## Security assessment
@@ -161,4 +161,4 @@ No trust boundaries affected. Domain calibration operates on ground truth datase
 
 2026-02-25 14:00 — Injected Achilles as third calibration domain (vulnerability discovery). Added Phase 5 scoping Achilles calibration types (VulnScenario, VulnMetrics, VulnResult) with ground truth from known CVEs. Taxonomy table expanded. Renumbered validate phase to Phase 6.
 
-2026-02-21 12:00 — Contract created to formally distinguish meta-calibration (model assessment) from domain calibration (pipeline quality). Asterisk's existing `internal/calibrate/` is the reference implementation for domain calibration. Origami's `internal/curate/eval/` is the second instance.
+2026-02-21 12:00 — Contract created to formally distinguish meta-calibration (model assessment) from domain calibration (circuit quality). Asterisk's existing `internal/calibrate/` is the reference implementation for domain calibration. Origami's `internal/curate/eval/` is the second instance.

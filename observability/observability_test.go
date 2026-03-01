@@ -22,7 +22,7 @@ func TestOTelObserver_SpanTree(t *testing.T) {
 	tracer := tp.Tracer("test")
 	obs := NewOTelObserver(tracer)
 
-	obs.StartWalk("test-pipeline", attribute.String("element", "fire"))
+	obs.StartWalk("test-circuit", attribute.String("element", "fire"))
 
 	obs.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "recall", Walker: "w1"})
 	obs.OnEvent(framework.WalkEvent{Type: framework.EventNodeExit, Node: "recall", Elapsed: 100 * time.Millisecond})
@@ -39,7 +39,7 @@ func TestOTelObserver_SpanTree(t *testing.T) {
 	var walkSpan, recallSpan, triageSpan *tracetest.SpanStub
 	for i := range spans {
 		switch spans[i].Name {
-		case "pipeline.walk":
+		case "circuit.walk":
 			walkSpan = &spans[i]
 		case "node.visit":
 			for _, a := range spans[i].Attributes {
@@ -56,7 +56,7 @@ func TestOTelObserver_SpanTree(t *testing.T) {
 	}
 
 	if walkSpan == nil {
-		t.Fatal("missing pipeline.walk root span")
+		t.Fatal("missing circuit.walk root span")
 	}
 	if recallSpan == nil {
 		t.Fatal("missing recall node span")
@@ -93,7 +93,7 @@ func TestOTelObserver_WalkError(t *testing.T) {
 	tracer := tp.Tracer("test")
 	obs := NewOTelObserver(tracer)
 
-	obs.StartWalk("error-pipeline")
+	obs.StartWalk("error-circuit")
 	obs.OnEvent(framework.WalkEvent{
 		Type:  framework.EventWalkError,
 		Error: fmt.Errorf("node failed"),
@@ -119,7 +119,7 @@ func TestPrometheusCollector_Metrics(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	col := NewPrometheusCollector(reg)
 
-	col.StartWalk("my-pipeline")
+	col.StartWalk("my-circuit")
 
 	col.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "recall"})
 	col.OnEvent(framework.WalkEvent{Type: framework.EventNodeExit, Node: "recall", Elapsed: 150 * time.Millisecond})
@@ -187,7 +187,7 @@ func TestPrometheusCollector_ErrorStatus(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	col := NewPrometheusCollector(reg)
 
-	col.StartWalk("fail-pipeline")
+	col.StartWalk("fail-circuit")
 	col.OnEvent(framework.WalkEvent{
 		Type:  framework.EventWalkError,
 		Error: fmt.Errorf("boom"),
@@ -233,7 +233,7 @@ func TestPrometheusCollector_TokenMetrics(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	col := NewPrometheusCollector(reg)
 
-	col.StartWalk("rca-pipeline")
+	col.StartWalk("rca-circuit")
 	col.RecordTokens("recall", "recall_node", 500, 200, 0.0045)
 	col.RecordTokens("triage", "triage_node", 300, 100, 0.0024)
 
@@ -329,7 +329,7 @@ func TestPrometheusCollector_AllNineMetrics(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	col := NewPrometheusCollector(reg)
 
-	col.StartWalk("test-pipeline")
+	col.StartWalk("test-circuit")
 	col.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "a"})
 	col.OnEvent(framework.WalkEvent{Type: framework.EventNodeExit, Node: "a", Elapsed: 100 * time.Millisecond})
 	col.OnEvent(framework.WalkEvent{Type: framework.EventTransition, Node: "a",
@@ -338,7 +338,7 @@ func TestPrometheusCollector_AllNineMetrics(t *testing.T) {
 	col.RecordTokens("a", "node_a", 100, 50, 0.001)
 	col.RecordDispatch("default", "a", 100*time.Millisecond, nil)
 	col.RecordDispatch("default", "a", 50*time.Millisecond, fmt.Errorf("fail"))
-	col.LoopsTotal.WithLabelValues("test-pipeline", "a").Inc()
+	col.LoopsTotal.WithLabelValues("test-circuit", "a").Inc()
 
 	families, err := reg.Gather()
 	if err != nil {

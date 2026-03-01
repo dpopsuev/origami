@@ -6,7 +6,7 @@ test.describe("Studio Smoke Tests", () => {
     await page.goto("/");
   });
 
-  test("graph renders with demo pipeline", async ({ page }) => {
+  test("graph renders with demo circuit", async ({ page }) => {
     await waitForGraph(page);
     const snap = await getBridgeSnapshot(page);
     expect(snap.nodeCount).toBeGreaterThanOrEqual(4);
@@ -30,7 +30,7 @@ test.describe("Studio Smoke Tests", () => {
   test("graph has correct structure", async ({ page }) => {
     await waitForGraph(page);
     const snap = await getBridgeSnapshot(page);
-    expect(snap.pipeline).toBe("demo");
+    expect(snap.circuit).toBe("demo");
   });
 
   test("minimap is visible", async ({ page }) => {

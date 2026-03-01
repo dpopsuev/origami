@@ -15,7 +15,7 @@
 
 ## Current Architecture
 
-The dispatch package is already nearly generic (zero domain imports except one `internal/format` reference in `token.go`). The coupling point is the `ModelAdapter` interface in `adapter.go`, which takes `orchestrate.PipelineStep` — an RCA-specific typed enum.
+The dispatch package is already nearly generic (zero domain imports except one `internal/format` reference in `token.go`). The coupling point is the `ModelAdapter` interface in `adapter.go`, which takes `orchestrate.CircuitStep` — an RCA-specific typed enum.
 
 ```mermaid
 flowchart TD
@@ -35,7 +35,7 @@ flowchart TD
     end
 
     generic -.->|"zero imports"| boundary
-    boundary -->|"orchestrate.PipelineStep\nstore.Store\nworkspace.Workspace"| domain_pkg
+    boundary -->|"orchestrate.CircuitStep\nstore.Store\nworkspace.Workspace"| domain_pkg
 ```
 
 ### Coupling audit
@@ -44,7 +44,7 @@ flowchart TD
 |----------|-----------------|----------|
 | `dispatch/token.go` | Imports `internal/format` for table rendering | Trivial — move formatting to caller |
 | `dispatch/*.go` (all others) | Zero domain imports | Already clean |
-| `adapter.go` | `orchestrate.PipelineStep` in `SendPrompt` signature | The primary coupling seam |
+| `adapter.go` | `orchestrate.CircuitStep` in `SendPrompt` signature | The primary coupling seam |
 | `adapter.go` | `store.Store`, `store.Case`, `workspace.Workspace` in `StoreAware` | Domain-specific optional interfaces |
 | `adapt/*.go` | Full domain imports (`orchestrate.*`, `store.*`, etc.) | Expected — these are domain adapters |
 | `runner.go` | Calls `cfg.Adapter.SendPrompt()` directly | Caller side of the seam |
@@ -90,12 +90,12 @@ flowchart TD
 ## Context
 
 - `internal/calibrate/dispatch/` — 7 files, zero domain imports (except `internal/format` in `token.go`). Already generic.
-- `internal/calibrate/adapter.go` — `ModelAdapter` interface with `orchestrate.PipelineStep` coupling.
+- `internal/calibrate/adapter.go` — `ModelAdapter` interface with `orchestrate.CircuitStep` coupling.
 - `internal/calibrate/adapt/` — Stub, Basic, Cursor adapter implementations. Full domain imports.
 - `internal/calibrate/runner.go` — Calls `cfg.Adapter.SendPrompt()`. Uses `dispatch.TokenTracker`.
 - `contracts/draft/agent-adapter-overloading.md` — Defines `AdapterPool`, `Scheduler`, `ResultCollector`, `AdapterTraits`, color system. All generic concepts.
 - `contracts/draft/phase-5a-mitigation.md` — Item 2: color-coded subagent identity. Generic concept.
-- `contracts/draft/defect-court.md` — Role-separated adapters (prosecution/defense/judge). Uses generic routing, domain-specific pipeline steps.
+- `contracts/draft/defect-court.md` — Role-separated adapters (prosecution/defense/judge). Uses generic routing, domain-specific circuit steps.
 
 ## Execution strategy
 
@@ -138,7 +138,7 @@ Asterisk bridges the domain to this interface:
 ```go
 // In calibrate/adapter.go
 func (a *adapterBridge) Handle(ctx context.Context, task agentmux.Task) (agentmux.Result, error) {
-    step := orchestrate.PipelineStepFromString(task.Step)
+    step := orchestrate.CircuitStepFromString(task.Step)
     raw, err := a.inner.SendPrompt(task.ID, step, task.Prompt)
     return agentmux.Result{Payload: raw}, err
 }
@@ -219,6 +219,6 @@ internal/
 ## Notes
 
 - 2026-02-20 — **Absorbed by `agentic-framework-I.1-ontology.md`.** The generic Agent interface becomes Walker; Task becomes NodeContext; Result becomes Artifact. Package target changed from `internal/agentmux/` to `internal/framework/`. This contract's scope is fully covered by the Framework ontology contract.
-- 2026-02-19 05:00 — Contract created from architectural coupling assessment. Key finding: `dispatch/` package already has zero domain imports. The coupling seam is exactly one type: `orchestrate.PipelineStep` in the `ModelAdapter.SendPrompt` signature. Only 2 files need signature changes (`adapter.go`, `runner.go`). Classified as NICE-to-have: the refactoring enables reuse but does not block PoC.
-- The concept of color-coded multi-agent orchestration with personality-based routing, confidence escalation, and tournament consensus is domain-agnostic. Use cases beyond RCA: code review, test generation, document analysis, any heterogeneous AI pipeline.
+- 2026-02-19 05:00 — Contract created from architectural coupling assessment. Key finding: `dispatch/` package already has zero domain imports. The coupling seam is exactly one type: `orchestrate.CircuitStep` in the `ModelAdapter.SendPrompt` signature. Only 2 files need signature changes (`adapter.go`, `runner.go`). Classified as NICE-to-have: the refactoring enables reuse but does not block PoC.
+- The concept of color-coded multi-agent orchestration with personality-based routing, confidence escalation, and tournament consensus is domain-agnostic. Use cases beyond RCA: code review, test generation, document analysis, any heterogeneous AI circuit.
 - Phase 2 extraction target: `github.com/redhat-qe/agentmux` or similar. Deferred until API stabilizes post-PoC and at least one other project expresses interest.

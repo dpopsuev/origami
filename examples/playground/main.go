@@ -1,4 +1,4 @@
-// Framework Playground — a self-contained demo of the Origami agentic pipeline framework.
+// Framework Playground — a self-contained demo of the Origami agentic circuit framework.
 //
 // Run it:
 //
@@ -28,14 +28,14 @@ func main() {
 	section("2. PERSONAS — Agent Identities")
 	showPersonas()
 
-	section("3. PIPELINE DSL — Load and Validate YAML")
-	triageDef := loadTriagePipeline()
+	section("3. CIRCUIT DSL — Load and Validate YAML")
+	triageDef := loadTriageCircuit()
 
-	section("4. MERMAID — Render Pipeline as Diagram")
-	showMermaid("Bug Triage Pipeline", triageDef)
+	section("4. MERMAID — Render Circuit as Diagram")
+	showMermaid("Bug Triage Circuit", triageDef)
 
-	section("5. GRAPH WALK — Walker Traverses the Pipeline")
-	walkTriagePipeline(triageDef)
+	section("5. GRAPH WALK — Walker Traverses the Circuit")
+	walkTriageCircuit(triageDef)
 
 	section("6. MASKS — Middleware Capabilities")
 	showMasks()
@@ -43,7 +43,7 @@ func main() {
 	section("7. ELEMENT CYCLES — Generative and Destructive Interactions")
 	showCycles()
 
-	section("8. ADVERSARIAL DIALECTIC — Thesis-Antithesis-Synthesis Pipeline")
+	section("8. ADVERSARIAL DIALECTIC — Thesis-Antithesis-Synthesis Circuit")
 	showDialectic()
 
 	section("9. TEAM WALK — Multi-Persona Scheduling with Live Trace")
@@ -72,7 +72,7 @@ func printHeader() {
 	fmt.Println()
 	fmt.Printf("%s%s=== Origami Framework Playground ===%s\n", bold, cyan, reset)
 	fmt.Println()
-	fmt.Printf("%sThis program demonstrates the Origami agentic pipeline framework.%s\n", dim, reset)
+	fmt.Printf("%sThis program demonstrates the Origami agentic circuit framework.%s\n", dim, reset)
 	fmt.Printf("%sNo AI, no external services — pure graph-driven agent orchestration.%s\n\n", dim, reset)
 }
 
@@ -171,10 +171,10 @@ func showPersonas() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Pipeline DSL
+// 3. Circuit DSL
 // ---------------------------------------------------------------------------
 
-func loadTriagePipeline() *fw.PipelineDef {
+func loadTriageCircuit() *fw.CircuitDef {
 	_, thisFile, _, _ := runtime.Caller(0)
 	yamlPath := filepath.Join(filepath.Dir(thisFile), "triage.yaml")
 	data, err := os.ReadFile(yamlPath)
@@ -183,9 +183,9 @@ func loadTriagePipeline() *fw.PipelineDef {
 		os.Exit(1)
 	}
 
-	def, err := fw.LoadPipeline(data)
+	def, err := fw.LoadCircuit(data)
 	if err != nil {
-		fmt.Printf("  %sError parsing pipeline: %v%s\n", red, err, reset)
+		fmt.Printf("  %sError parsing circuit: %v%s\n", red, err, reset)
 		os.Exit(1)
 	}
 
@@ -194,7 +194,7 @@ func loadTriagePipeline() *fw.PipelineDef {
 		os.Exit(1)
 	}
 
-	fmt.Printf("  Loaded pipeline: %s%s%s\n", bold, def.Pipeline, reset)
+	fmt.Printf("  Loaded circuit: %s%s%s\n", bold, def.Circuit, reset)
 	fmt.Printf("  Description:     %s\n", def.Description)
 	fmt.Printf("  Nodes:           %d\n", len(def.Nodes))
 	fmt.Printf("  Edges:           %d\n", len(def.Edges))
@@ -230,22 +230,22 @@ func loadTriagePipeline() *fw.PipelineDef {
 // 4. Mermaid rendering
 // ---------------------------------------------------------------------------
 
-func showMermaid(title string, def *fw.PipelineDef) {
+func showMermaid(title string, def *fw.CircuitDef) {
 	mermaid := fw.Render(def)
 	fmt.Printf("  %sPaste this into any Mermaid viewer (https://mermaid.live):%s\n\n", dim, reset)
 	fmt.Println(indent(mermaid))
 
-	dialecticData, err := os.ReadFile(findPipelinesDir() + "/defect-dialectic.yaml")
+	dialecticData, err := os.ReadFile(findCircuitsDir() + "/defect-dialectic.yaml")
 	if err == nil {
-		dialecticDef, err := fw.LoadPipeline(dialecticData)
+		dialecticDef, err := fw.LoadCircuit(dialecticData)
 		if err == nil {
-			fmt.Printf("\n  %sBonus — the Adversarial Dialectic pipeline:%s\n\n", dim, reset)
+			fmt.Printf("\n  %sBonus — the Adversarial Dialectic circuit:%s\n\n", dim, reset)
 			fmt.Println(indent(fw.Render(dialecticDef)))
 		}
 	}
 }
 
-func findPipelinesDir() string {
+func findCircuitsDir() string {
 	_, thisFile, _, _ := runtime.Caller(0)
 	return filepath.Dir(thisFile)
 }
@@ -254,8 +254,8 @@ func findPipelinesDir() string {
 // 5. Graph Walk
 // ---------------------------------------------------------------------------
 
-func walkTriagePipeline(def *fw.PipelineDef) {
-	fmt.Printf("  Building a graph from the pipeline DSL, then walking it with a Herald.\n\n")
+func walkTriageCircuit(def *fw.CircuitDef) {
+	fmt.Printf("  Building a graph from the circuit DSL, then walking it with a Herald.\n\n")
 
 	nodeReg := fw.NodeRegistry{
 		"classify":    func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
@@ -353,8 +353,9 @@ type demoWalker struct {
 	scenario *demoScenario
 }
 
-func (w *demoWalker) Identity() fw.AgentIdentity { return w.identity }
-func (w *demoWalker) State() *fw.WalkerState     { return w.state }
+func (w *demoWalker) Identity() fw.AgentIdentity      { return w.identity }
+func (w *demoWalker) SetIdentity(id fw.AgentIdentity)  { w.identity = id }
+func (w *demoWalker) State() *fw.WalkerState           { return w.state }
 
 func (w *demoWalker) Handle(ctx context.Context, node fw.Node, nc fw.NodeContext) (fw.Artifact, error) {
 	color := elementColor(node.ElementAffinity())
@@ -436,7 +437,7 @@ func (e *demoEdge) Evaluate(a fw.Artifact, s *fw.WalkerState) *fw.Transition {
 		}
 		return nil
 	case "E7": // done
-		return &fw.Transition{NextNode: e.def.To, Explanation: "pipeline complete"}
+		return &fw.Transition{NextNode: e.def.To, Explanation: "circuit complete"}
 	}
 	return nil
 }
@@ -513,7 +514,7 @@ func showCycles() {
 // ---------------------------------------------------------------------------
 
 func showDialectic() {
-	fmt.Printf("  When the Thesis pipeline's confidence is uncertain (0.50-0.85),\n")
+	fmt.Printf("  When the Thesis circuit's confidence is uncertain (0.50-0.85),\n")
 	fmt.Printf("  the adversarial dialectic activates for thesis-antithesis-synthesis review.\n\n")
 
 	cfg := fw.DefaultDialecticConfig()
@@ -531,20 +532,20 @@ func showDialectic() {
 		fmt.Printf("    confidence=%.2f  needs antithesis? %s\n", conf, marker)
 	}
 
-	dialecticData, err := os.ReadFile(findPipelinesDir() + "/defect-dialectic.yaml")
+	dialecticData, err := os.ReadFile(findCircuitsDir() + "/defect-dialectic.yaml")
 	if err != nil {
 		fmt.Printf("\n  %sCould not load defect-dialectic.yaml: %v%s\n", dim, err, reset)
 		return
 	}
 
-	dialecticDef, err := fw.LoadPipeline(dialecticData)
+	dialecticDef, err := fw.LoadCircuit(dialecticData)
 	if err != nil {
-		fmt.Printf("\n  %sCould not parse dialectic pipeline: %v%s\n", dim, err, reset)
+		fmt.Printf("\n  %sCould not parse dialectic circuit: %v%s\n", dim, err, reset)
 		return
 	}
 
 	fmt.Println()
-	fmt.Printf("  %sAdversarial Dialectic pipeline (D0-D4):%s\n", bold, reset)
+	fmt.Printf("  %sAdversarial Dialectic circuit (D0-D4):%s\n", bold, reset)
 	for _, n := range dialecticDef.Nodes {
 		fmt.Printf("    %s%-14s%s element=%-10s\n",
 			elementColor(fw.Element(n.Element)), n.Name, reset, n.Element)
@@ -569,15 +570,15 @@ func showDialectic() {
 	fmt.Println()
 	fmt.Printf("  %sThe dialectic uses typed artifacts (ThesisChallenge, AntithesisResponse,\n", dim)
 	fmt.Printf("  DialecticRecord, Synthesis) and HD1-HD12 heuristic edges — the same Edge\n")
-	fmt.Printf("  interface used by the Thesis pipeline. Antithesis is just another graph walk.%s\n", reset)
+	fmt.Printf("  interface used by the Thesis circuit. Antithesis is just another graph walk.%s\n", reset)
 }
 
 // ---------------------------------------------------------------------------
 // 9. Team Walk — multi-persona scheduling with live trace
 // ---------------------------------------------------------------------------
 
-func teamWalkDemo(def *fw.PipelineDef) {
-	fmt.Printf("  The same pipeline, but now %smultiple agents%s collaborate.\n", bold, reset)
+func teamWalkDemo(def *fw.CircuitDef) {
+	fmt.Printf("  The same circuit, but now %smultiple agents%s collaborate.\n", bold, reset)
 	fmt.Printf("  A %sScheduler%s picks the best walker per node based on affinity.\n", bold, reset)
 	fmt.Printf("  An %sObserver%s traces every event in real time.\n\n", bold, reset)
 

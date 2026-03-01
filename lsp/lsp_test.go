@@ -17,7 +17,7 @@ func newLintContextForTest(raw []byte, file string) (*lint.LintContext, error) {
 }
 
 func TestComputeDiagnostics_ValidYAML(t *testing.T) {
-	raw := `pipeline: test
+	raw := `circuit: test
 description: "A simple test"
 nodes:
   - name: start
@@ -50,7 +50,7 @@ done: DONE`
 }
 
 func TestComputeDiagnostics_InvalidElement(t *testing.T) {
-	raw := `pipeline: test
+	raw := `circuit: test
 nodes:
   - name: start
     element: fyre
@@ -101,7 +101,7 @@ func TestCompletion_TopLevel(t *testing.T) {
 	for _, item := range items {
 		labels[item.Label] = true
 	}
-	for _, key := range []string{"pipeline", "nodes", "edges", "start", "done"} {
+	for _, key := range []string{"circuit", "nodes", "edges", "start", "done"} {
 		if !labels[key] {
 			t.Errorf("missing top-level completion: %s", key)
 		}
@@ -161,7 +161,7 @@ func TestHover_Persona(t *testing.T) {
 }
 
 func TestDefinition_EdgeToNode(t *testing.T) {
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
   - name: triage
@@ -241,7 +241,7 @@ func TestServerHandler_Initialize(t *testing.T) {
 }
 
 func TestSemanticTokens_ElementValues(t *testing.T) {
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
     element: fire
@@ -291,17 +291,17 @@ done: DONE`
 func TestSemanticTokens_Empty(t *testing.T) {
 	doc := &document{
 		URI:     uri.URI("file:///empty.yaml"),
-		Content: "pipeline: test\nnodes:\n  - name: start\nstart: start\ndone: DONE",
+		Content: "circuit: test\nnodes:\n  - name: start\nstart: start\ndone: DONE",
 	}
 
 	data := computeSemanticTokens(doc)
 	if len(data) != 0 {
-		t.Errorf("expected no semantic tokens for pipeline without elements, got %d values", len(data))
+		t.Errorf("expected no semantic tokens for circuit without elements, got %d values", len(data))
 	}
 }
 
 func TestSemanticTokens_AllElements(t *testing.T) {
-	content := `pipeline: elements
+	content := `circuit: elements
 nodes:
   - name: n1
     element: fire
@@ -378,7 +378,7 @@ func TestSemanticTokensProvider(t *testing.T) {
 }
 
 func TestInlayHints_ElementTraits(t *testing.T) {
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
     element: fire
@@ -403,7 +403,7 @@ done: DONE`
 }
 
 func TestInlayHints_PersonaDescription(t *testing.T) {
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
 walkers:
@@ -427,7 +427,7 @@ done: DONE`
 }
 
 func TestInlayHints_ExpressionValidity(t *testing.T) {
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
   - name: triage
@@ -465,7 +465,7 @@ done: DONE`
 }
 
 func TestInlayHints_EdgeFlow(t *testing.T) {
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
     element: fire
@@ -498,7 +498,7 @@ done: DONE`
 }
 
 func TestInlayHints_StartNode(t *testing.T) {
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
     element: fire
@@ -529,7 +529,7 @@ done: DONE`
 func TestInlayHints_Empty(t *testing.T) {
 	doc := &document{
 		URI:     uri.URI("file:///test.yaml"),
-		Content: "pipeline: test",
+		Content: "circuit: test",
 	}
 	hints := computeInlayHints(doc)
 	if len(hints) != 0 {
@@ -604,7 +604,7 @@ func TestKamiBridge_ProcessEvents(t *testing.T) {
 func TestKamiBridge_LiveInlayHints(t *testing.T) {
 	kb := NewKamiBridge(0)
 
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
     element: fire
@@ -649,7 +649,7 @@ done: DONE`
 func TestKamiBridge_PausedHint(t *testing.T) {
 	kb := NewKamiBridge(0)
 
-	content := `pipeline: test
+	content := `circuit: test
 nodes:
   - name: recall
 start: recall
@@ -667,7 +667,7 @@ done: DONE`
 		}
 	}
 	if !found {
-		t.Error("expected PAUSED hint when pipeline is paused on active node")
+		t.Error("expected PAUSED hint when circuit is paused on active node")
 	}
 }
 

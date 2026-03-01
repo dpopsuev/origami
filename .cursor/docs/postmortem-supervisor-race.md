@@ -119,7 +119,7 @@ All four healthy, productive workers are flagged for replacement. The supervisor
 5. The tracker never sees the new workers
 6. After 2 more minutes: "all workers silent, replace again"
 
-**Result: infinite replacement loop.** The system burns through LLM tokens spawning and killing workers while actual pipeline progress stalls.
+**Result: infinite replacement loop.** The system burns through LLM tokens spawning and killing workers while actual circuit progress stalls.
 
 ### Phase 5: Error Count Inflation (Intermittent)
 
@@ -146,7 +146,7 @@ If budget-based shutdown is implemented, the system terminates early thinking it
 
 ## Why Tests Didn't Catch It Earlier
 
-The test `TestV2Workers_FullDrain_Deterministic` exercises the exact production code path — 4 workers, concurrent `get_next_step`, full pipeline drain. But:
+The test `TestV2Workers_FullDrain_Deterministic` exercises the exact production code path — 4 workers, concurrent `get_next_step`, full circuit drain. But:
 
 1. **Without `-race`**: The Go runtime's goroutine scheduler often happens to serialize the concurrent `Process()` calls just enough to avoid the overshoot. The starvation check (`workLog[i] == 0`) never fires because channel fairness is adequate for 8 steps / 4 workers.
 

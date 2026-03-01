@@ -29,6 +29,7 @@ var knownDimensions = map[Dimension]bool{
 	DimSpeed: true, DimPersistence: true,
 	DimConvergenceThreshold: true, DimShortcutAffinity: true,
 	DimEvidenceDepth: true, DimFailureMode: true,
+	DimGBWP: true,
 }
 
 // Pole represents one end of a dichotomous behavioral spectrum.

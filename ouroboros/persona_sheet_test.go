@@ -31,9 +31,9 @@ func testProfile() ModelProfile {
 	}
 }
 
-func testPipeline() framework.PipelineDef {
-	return framework.PipelineDef{
-		Pipeline: "rca-investigation",
+func testCircuit() framework.CircuitDef {
+	return framework.CircuitDef{
+		Circuit: "rca-investigation",
 		Nodes: []framework.NodeDef{
 			{Name: "recall"},
 			{Name: "triage"},
@@ -48,9 +48,9 @@ func testPipeline() framework.PipelineDef {
 
 func TestEmitPersonaSheet_AllStepsHavePersonas(t *testing.T) {
 	profile := testProfile()
-	pipeline := testPipeline()
+	circuit := testCircuit()
 
-	sheet, err := EmitPersonaSheet(profile, pipeline)
+	sheet, err := EmitPersonaSheet(profile, circuit)
 	if err != nil {
 		t.Fatalf("EmitPersonaSheet: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestEmitPersonaSheet_AllStepsHavePersonas(t *testing.T) {
 		t.Error("dimension scores are empty")
 	}
 
-	for _, node := range pipeline.Nodes {
+	for _, node := range circuit.Nodes {
 		if node.Name == "_done" {
 			continue
 		}
@@ -81,10 +81,10 @@ func TestEmitPersonaSheet_AllStepsHavePersonas(t *testing.T) {
 	}
 }
 
-func TestEmitPersonaSheet_3StepPipeline(t *testing.T) {
+func TestEmitPersonaSheet_3StepCircuit(t *testing.T) {
 	profile := testProfile()
-	pipeline := framework.PipelineDef{
-		Pipeline: "ouroboros-probe",
+	circuit := framework.CircuitDef{
+		Circuit: "ouroboros-probe",
 		Nodes: []framework.NodeDef{
 			{Name: "generate"},
 			{Name: "subject"},
@@ -92,7 +92,7 @@ func TestEmitPersonaSheet_3StepPipeline(t *testing.T) {
 		},
 	}
 
-	sheet, err := EmitPersonaSheet(profile, pipeline)
+	sheet, err := EmitPersonaSheet(profile, circuit)
 	if err != nil {
 		t.Fatalf("EmitPersonaSheet: %v", err)
 	}
@@ -110,9 +110,9 @@ func TestEmitPersonaSheet_3StepPipeline(t *testing.T) {
 
 func TestEmitPersonaSheet_EmptyModel_Error(t *testing.T) {
 	profile := ModelProfile{}
-	pipeline := testPipeline()
+	circuit := testCircuit()
 
-	_, err := EmitPersonaSheet(profile, pipeline)
+	_, err := EmitPersonaSheet(profile, circuit)
 	if err == nil {
 		t.Fatal("expected error for empty model, got nil")
 	}
@@ -120,9 +120,9 @@ func TestEmitPersonaSheet_EmptyModel_Error(t *testing.T) {
 
 func TestPersonaSheet_MarshalYAML(t *testing.T) {
 	profile := testProfile()
-	pipeline := testPipeline()
+	circuit := testCircuit()
 
-	sheet, err := EmitPersonaSheet(profile, pipeline)
+	sheet, err := EmitPersonaSheet(profile, circuit)
 	if err != nil {
 		t.Fatalf("EmitPersonaSheet: %v", err)
 	}
@@ -141,9 +141,9 @@ func TestPersonaSheet_MarshalYAML(t *testing.T) {
 
 func TestEmitPersonaSheet_WithNonZeroAffinityOnly(t *testing.T) {
 	profile := testProfile()
-	pipeline := testPipeline()
+	circuit := testCircuit()
 
-	sheet, err := EmitPersonaSheet(profile, pipeline)
+	sheet, err := EmitPersonaSheet(profile, circuit)
 	if err != nil {
 		t.Fatalf("EmitPersonaSheet: %v", err)
 	}

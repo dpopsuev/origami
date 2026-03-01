@@ -9,7 +9,7 @@
 Global rules only, plus:
 
 - **Close the gap, don't expand scope.** `ResolveInput` and `RenderPrompt` already exist and are tested in isolation (`vars.go`, `vars_test.go`). This contract wires them into the runtime path. No new features.
-- **CLI integration test is mandatory.** The `origami run` and `origami validate` commands must be validated by a test that exercises a real YAML pipeline through the binary.
+- **CLI integration test is mandatory.** The `origami run` and `origami validate` commands must be validated by a test that exercises a real YAML circuit through the binary.
 
 ## Context
 
@@ -58,25 +58,25 @@ Phase 1: Wire `ResolveInput` into the Walk loop so `transformerNode` receives re
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | `transformerNode.Process` with resolved input and rendered prompt |
-| **Integration** | yes | Full pipeline walk with `${node.output}` references resolving correctly |
+| **Integration** | yes | Full circuit walk with `${node.output}` references resolving correctly |
 | **Contract** | no | No new interfaces |
-| **E2E** | yes | `origami run` CLI integration test with a multi-node pipeline |
+| **E2E** | yes | `origami run` CLI integration test with a multi-node circuit |
 | **Concurrency** | no | Walk is sequential per case |
 | **Security** | no | No new trust boundaries |
 
 ## Tasks
 
 - [x] Wire `ResolveInput` into Walk loop: before calling `transformerNode.Process()`, resolve `NodeDef.Input` against `WalkerState.Outputs`
-- [x] Wire `RenderPrompt` into `transformerNode.Process()`: assemble `TemplateContext` from pipeline vars, resolved input, and outputs; render prompt template before passing to transformer
-- [x] Add CLI integration test: `origami run` with a multi-node YAML pipeline that uses `input:`, `prompt:`, `when:`, and `after:`
+- [x] Wire `RenderPrompt` into `transformerNode.Process()`: assemble `TemplateContext` from circuit vars, resolved input, and outputs; render prompt template before passing to transformer
+- [x] Add CLI integration test: `origami run` with a multi-node YAML circuit that uses `input:`, `prompt:`, `when:`, and `after:`
 - [x] Validate (green) — all tests pass, acceptance criteria met
 - [x] Tune (blue) — refactor for quality, no behavior changes
 - [x] Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 
-**Given** a pipeline YAML with nodes declaring `input: ${recall.output}` and `prompt: prompts/triage.md`,  
-**When** the pipeline is executed via `origami run` or `framework.Run()`,  
+**Given** a circuit YAML with nodes declaring `input: ${recall.output}` and `prompt: prompts/triage.md`,  
+**When** the circuit is executed via `origami run` or `framework.Run()`,  
 **Then**:
 - `${recall.output}` resolves to the recall node's actual output artifact from `WalkerState.Outputs`
 - The prompt template is rendered with `TemplateContext` containing vars, resolved input, and prior outputs

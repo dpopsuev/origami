@@ -57,7 +57,7 @@ func TestEventStore_RunLifecycle(t *testing.T) {
 	store := NewEventStore()
 	store.RegisterRun(RunInfo{
 		ID:        "r1",
-		Pipeline:  "test",
+		Circuit:  "test",
 		StartedAt: time.Now(),
 		Status:    "running",
 		NodeCount: 3,

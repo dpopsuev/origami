@@ -101,7 +101,7 @@ flowchart TD
 - **When** the SNR is computed,
 - **Then** `EvidenceSNR = 3/5 = 0.60`.
 
-- **Given** a pipeline walk with per-node token tracking enabled,
+- **Given** a circuit walk with per-node token tracking enabled,
 - **When** the walk completes,
 - **Then** `origami_tokens_total` has labels for each node name visited.
 

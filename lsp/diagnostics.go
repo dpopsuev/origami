@@ -18,7 +18,7 @@ func computeDiagnostics(doc *document) []protocol.Diagnostic {
 			Range:    zeroRange(),
 			Severity: protocol.DiagnosticSeverityError,
 			Source:   "origami-lint",
-			Message:  "Failed to parse pipeline YAML: " + err.Error(),
+			Message:  "Failed to parse circuit YAML: " + err.Error(),
 		}}
 	}
 

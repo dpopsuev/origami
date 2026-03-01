@@ -16,14 +16,14 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// NewOuroborosConfig returns a PipelineConfig that serves Ouroboros discovery
-// via the generic PipelineServer. The discovery loop runs as a serial RunFunc
+// NewOuroborosConfig returns a CircuitConfig that serves Ouroboros discovery
+// via the generic CircuitServer. The discovery loop runs as a serial RunFunc
 // (parallel=1): each iteration generates a probe prompt, dispatches it via
 // MuxDispatcher, and processes the response for identity/scoring/termination.
-func NewOuroborosConfig(runsDir string) fwmcp.PipelineConfig {
+func NewOuroborosConfig(runsDir string) fwmcp.CircuitConfig {
 	registry := NewProbeRegistry()
 
-	return fwmcp.PipelineConfig{
+	return fwmcp.CircuitConfig{
 		Name:    "ouroboros",
 		Version: "dev",
 		StepSchemas: []fwmcp.StepSchema{{
@@ -45,10 +45,10 @@ Submit via submit_step. Do NOT modify the probe prompt.`,
 	}
 }
 
-// RegisterExtraTools adds the assemble_profiles tool to a PipelineServer.
-// Call this after NewPipelineServer to register domain-specific tools
-// alongside the 6 generic pipeline tools.
-func RegisterExtraTools(srv *fwmcp.PipelineServer, runsDir string) {
+// RegisterExtraTools adds the assemble_profiles tool to a CircuitServer.
+// Call this after NewCircuitServer to register domain-specific tools
+// alongside the 6 generic circuit tools.
+func RegisterExtraTools(srv *fwmcp.CircuitServer, runsDir string) {
 	sdkmcp.AddTool(srv.MCPServer, &sdkmcp.Tool{
 		Name:        "assemble_profiles",
 		Description: "Assemble ModelProfiles from all persisted discovery runs. Groups results by model, aggregates dimension scores, computes element matching and persona suggestions.",
@@ -75,22 +75,42 @@ func createDiscoverySession(
 	if v, ok := params.Extra["probe_id"].(string); ok && v != "" {
 		config.ProbeID = v
 	}
+	if ids, ok := params.Extra["probe_ids"].([]any); ok && len(ids) > 0 {
+		config.ProbeIDs = make([]string, 0, len(ids))
+		for _, raw := range ids {
+			if s, ok := raw.(string); ok && s != "" {
+				config.ProbeIDs = append(config.ProbeIDs, s)
+			}
+		}
+	}
 	if v, ok := params.Extra["terminate_on_repeat"].(bool); ok {
 		config.TerminateOnRepeat = v
 	}
 
-	handler, err := registry.Get(config.ProbeID)
-	if err != nil {
-		return nil, fwmcp.SessionMeta{}, err
+	probeIDs := config.ProbeIDs
+	if len(probeIDs) == 0 {
+		probeIDs = []string{config.ProbeID}
+	}
+
+	handlers := make([]*ProbeHandler, 0, len(probeIDs))
+	for _, pid := range probeIDs {
+		h, err := registry.Get(pid)
+		if err != nil {
+			return nil, fwmcp.SessionMeta{}, err
+		}
+		handlers = append(handlers, h)
 	}
 
 	meta := fwmcp.SessionMeta{
-		TotalCases: config.MaxIterations,
-		Scenario:   fmt.Sprintf("discovery-%s", config.ProbeID),
+		TotalCases: config.MaxIterations * len(handlers),
+		Scenario:   fmt.Sprintf("discovery-%s", strings.Join(probeIDs, "+")),
 	}
 
 	runFn := func(ctx context.Context) (any, error) {
-		return runDiscovery(ctx, config, handler, disp, bus, runsDir)
+		if len(handlers) == 1 {
+			return runDiscovery(ctx, config, handlers[0], disp, bus, runsDir)
+		}
+		return runMultiProbeDiscovery(ctx, config, handlers, probeIDs, disp, bus, runsDir)
 	}
 
 	return runFn, meta, nil
@@ -248,6 +268,54 @@ func runDiscovery(
 	return report, nil
 }
 
+func runMultiProbeDiscovery(
+	ctx context.Context,
+	config ouroboros.DiscoveryConfig,
+	handlers []*ProbeHandler,
+	probeIDs []string,
+	disp *dispatch.MuxDispatcher,
+	bus *dispatch.SignalBus,
+	runsDir string,
+) (*ouroboros.RunReport, error) {
+	log := logging.New("ouroboros-multi-probe")
+	startTime := time.Now()
+	runID := fmt.Sprintf("mc-%d", time.Now().UnixNano())
+
+	var allResults []ouroboros.DiscoveryResult
+	var allModels []framework.ModelIdentity
+	var termReasons []string
+
+	for i, handler := range handlers {
+		if ctx.Err() != nil {
+			termReasons = append(termReasons, "cancelled")
+			break
+		}
+
+		probeConfig := config
+		probeConfig.ProbeID = probeIDs[i]
+		log.Info("starting probe", "probe_id", probeIDs[i], "index", i+1, "total", len(handlers))
+
+		report, err := runDiscovery(ctx, probeConfig, handler, disp, bus, runsDir)
+		if err != nil {
+			return nil, fmt.Errorf("probe %s: %w", probeIDs[i], err)
+		}
+
+		allResults = append(allResults, report.Results...)
+		allModels = append(allModels, report.UniqueModels...)
+		termReasons = append(termReasons, fmt.Sprintf("%s:%s", probeIDs[i], report.TermReason))
+	}
+
+	return &ouroboros.RunReport{
+		RunID:        runID,
+		StartTime:    startTime,
+		EndTime:      time.Now(),
+		Config:       config,
+		Results:      allResults,
+		UniqueModels: allModels,
+		TermReason:   strings.Join(termReasons, "; "),
+	}, nil
+}
+
 func formatDiscoveryReport(result any) (string, any, error) {
 	report, ok := result.(*ouroboros.RunReport)
 	if !ok {
@@ -354,6 +422,7 @@ func assembleProfilesFromStore(runsDir string) (assembleProfilesOutput, error) {
 		profile.ElementMatch = ouroboros.ElementMatch(profile)
 		profile.ElementScores = ouroboros.ElementScores(profile)
 		profile.SuggestedPersonas = ouroboros.SuggestPersona(profile)
+		profile.OffsetPreamble = ouroboros.DefaultOffsetCompensator().Compensate(profile.Dimensions)
 		profiles = append(profiles, profile)
 	}
 

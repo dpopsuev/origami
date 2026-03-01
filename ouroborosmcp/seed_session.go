@@ -13,11 +13,11 @@ import (
 	"github.com/dpopsuev/origami/ouroboros"
 )
 
-// NewSeedProfileConfig returns a PipelineConfig for seed-based model profiling.
-// Instead of the discovery loop, this walks the ouroboros-probe pipeline for
+// NewSeedProfileConfig returns a CircuitConfig for seed-based model profiling.
+// Instead of the discovery loop, this walks the ouroboros-probe circuit for
 // each seed, using PoleResult scoring instead of keyword matching.
-func NewSeedProfileConfig() fwmcp.PipelineConfig {
-	return fwmcp.PipelineConfig{
+func NewSeedProfileConfig() fwmcp.CircuitConfig {
+	return fwmcp.CircuitConfig{
 		Name:    "ouroboros-seed",
 		Version: "dev",
 		StepSchemas: []fwmcp.StepSchema{
@@ -57,7 +57,7 @@ func createSeedSession(
 	}
 
 	runFn := func(ctx context.Context) (any, error) {
-		return runSeedPipeline(ctx, seed, disp, bus)
+		return runSeedCircuit(ctx, seed, disp, bus)
 	}
 
 	return runFn, meta, nil
@@ -67,7 +67,7 @@ type seedArtifact struct {
 	Response string `json:"response"`
 }
 
-func runSeedPipeline(
+func runSeedCircuit(
 	ctx context.Context,
 	seed *ouroboros.Seed,
 	disp *dispatch.MuxDispatcher,
@@ -92,16 +92,16 @@ func runSeedPipeline(
 		return art.Response, nil
 	}
 
-	nodes := ouroboros.PipelineNodes(seed, dispatcher)
+	nodes := ouroboros.CircuitNodes(seed, dispatcher)
 
-	pipelineData, err := framework.ResolvePipelinePath("ouroboros/pipelines/ouroboros-probe.yaml")
+	circuitData, err := framework.ResolveCircuitPath("ouroboros/circuits/ouroboros-probe.yaml")
 	if err != nil {
-		return nil, fmt.Errorf("resolve pipeline: %w", err)
+		return nil, fmt.Errorf("resolve circuit: %w", err)
 	}
 
-	def, err := framework.LoadPipeline(pipelineData)
+	def, err := framework.LoadCircuit(circuitData)
 	if err != nil {
-		return nil, fmt.Errorf("load pipeline: %w", err)
+		return nil, fmt.Errorf("load circuit: %w", err)
 	}
 
 	g, err := def.BuildGraph(framework.GraphRegistries{Nodes: nodes})
@@ -117,7 +117,7 @@ func runSeedPipeline(
 	}
 
 	elapsed := time.Since(start)
-	log.Info("seed pipeline completed", "seed", seed.Name, "elapsed", elapsed)
+	log.Info("seed circuit completed", "seed", seed.Name, "elapsed", elapsed)
 
 	judgeArtifact := walker.State().Outputs["judge"]
 	if judgeArtifact == nil {

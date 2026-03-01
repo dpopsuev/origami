@@ -10,8 +10,8 @@ import (
 
 func TestAPI_ListRuns(t *testing.T) {
 	store := NewEventStore()
-	store.RegisterRun(RunInfo{ID: "r1", Pipeline: "test", StartedAt: time.Now(), Status: "running"})
-	store.RegisterRun(RunInfo{ID: "r2", Pipeline: "test", StartedAt: time.Now(), Status: "completed"})
+	store.RegisterRun(RunInfo{ID: "r1", Circuit: "test", StartedAt: time.Now(), Status: "running"})
+	store.RegisterRun(RunInfo{ID: "r2", Circuit: "test", StartedAt: time.Now(), Status: "completed"})
 
 	api := NewAPI(store)
 	req := httptest.NewRequest("GET", "/api/runs", nil)
@@ -31,7 +31,7 @@ func TestAPI_ListRuns(t *testing.T) {
 
 func TestAPI_GetRun(t *testing.T) {
 	store := NewEventStore()
-	store.RegisterRun(RunInfo{ID: "r1", Pipeline: "test", StartedAt: time.Now(), Status: "running"})
+	store.RegisterRun(RunInfo{ID: "r1", Circuit: "test", StartedAt: time.Now(), Status: "running"})
 
 	api := NewAPI(store)
 	req := httptest.NewRequest("GET", "/api/runs/r1", nil)
@@ -81,14 +81,14 @@ func TestAPI_RunEvents(t *testing.T) {
 	}
 }
 
-func TestAPI_ListPipelines(t *testing.T) {
+func TestAPI_ListCircuits(t *testing.T) {
 	store := NewEventStore()
-	store.RegisterRun(RunInfo{ID: "r1", Pipeline: "pipeline-a", StartedAt: time.Now(), Status: "running"})
-	store.RegisterRun(RunInfo{ID: "r2", Pipeline: "pipeline-b", StartedAt: time.Now(), Status: "running"})
-	store.RegisterRun(RunInfo{ID: "r3", Pipeline: "pipeline-a", StartedAt: time.Now(), Status: "completed"})
+	store.RegisterRun(RunInfo{ID: "r1", Circuit: "circuit-a", StartedAt: time.Now(), Status: "running"})
+	store.RegisterRun(RunInfo{ID: "r2", Circuit: "circuit-b", StartedAt: time.Now(), Status: "running"})
+	store.RegisterRun(RunInfo{ID: "r3", Circuit: "circuit-a", StartedAt: time.Now(), Status: "completed"})
 
 	api := NewAPI(store)
-	req := httptest.NewRequest("GET", "/api/pipelines", nil)
+	req := httptest.NewRequest("GET", "/api/circuits", nil)
 	w := httptest.NewRecorder()
 	api.Handler().ServeHTTP(w, req)
 
@@ -97,10 +97,10 @@ func TestAPI_ListPipelines(t *testing.T) {
 	}
 
 	var result struct {
-		Pipelines []string `json:"pipelines"`
+		Circuits []string `json:"circuits"`
 	}
 	json.NewDecoder(w.Body).Decode(&result)
-	if len(result.Pipelines) != 2 {
-		t.Errorf("expected 2 unique pipelines, got %d", len(result.Pipelines))
+	if len(result.Circuits) != 2 {
+		t.Errorf("expected 2 unique circuits, got %d", len(result.Circuits))
 	}
 }

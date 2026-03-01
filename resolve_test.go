@@ -7,14 +7,14 @@ import (
 	"testing"
 )
 
-func TestResolvePipelinePath_Embedded(t *testing.T) {
-	clearEmbeddedPipelines()
-	defer clearEmbeddedPipelines()
+func TestResolveCircuitPath_Embedded(t *testing.T) {
+	clearEmbeddedCircuits()
+	defer clearEmbeddedCircuits()
 
-	content := []byte("pipeline: test\nnodes: []\nedges: []")
-	RegisterEmbeddedPipeline("myPipeline", content)
+	content := []byte("circuit: test\nnodes: []\nedges: []")
+	RegisterEmbeddedCircuit("myCircuit", content)
 
-	got, err := ResolvePipelinePath("mypipeline")
+	got, err := ResolveCircuitPath("mycircuit")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -23,14 +23,14 @@ func TestResolvePipelinePath_Embedded(t *testing.T) {
 	}
 }
 
-func TestResolvePipelinePath_EmbeddedCaseInsensitive(t *testing.T) {
-	clearEmbeddedPipelines()
-	defer clearEmbeddedPipelines()
+func TestResolveCircuitPath_EmbeddedCaseInsensitive(t *testing.T) {
+	clearEmbeddedCircuits()
+	defer clearEmbeddedCircuits()
 
-	content := []byte("pipeline: ci")
-	RegisterEmbeddedPipeline("CI-Pipeline", content)
+	content := []byte("circuit: ci")
+	RegisterEmbeddedCircuit("CI-Circuit", content)
 
-	got, err := ResolvePipelinePath("ci-pipeline")
+	got, err := ResolveCircuitPath("ci-circuit")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -39,17 +39,17 @@ func TestResolvePipelinePath_EmbeddedCaseInsensitive(t *testing.T) {
 	}
 }
 
-func TestResolvePipelinePath_FilesystemFallback(t *testing.T) {
-	clearEmbeddedPipelines()
-	defer clearEmbeddedPipelines()
+func TestResolveCircuitPath_FilesystemFallback(t *testing.T) {
+	clearEmbeddedCircuits()
+	defer clearEmbeddedCircuits()
 
 	dir := t.TempDir()
-	content := []byte("pipeline: fs-test\nnodes: []\nedges: []")
+	content := []byte("circuit: fs-test\nnodes: []\nedges: []")
 	if err := os.WriteFile(filepath.Join(dir, "test.yaml"), content, 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := ResolvePipelinePath("test", WithSearchDirs(dir))
+	got, err := ResolveCircuitPath("test", WithSearchDirs(dir))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -58,19 +58,19 @@ func TestResolvePipelinePath_FilesystemFallback(t *testing.T) {
 	}
 }
 
-func TestResolvePipelinePath_EnvVar(t *testing.T) {
-	clearEmbeddedPipelines()
-	defer clearEmbeddedPipelines()
+func TestResolveCircuitPath_EnvVar(t *testing.T) {
+	clearEmbeddedCircuits()
+	defer clearEmbeddedCircuits()
 
 	dir := t.TempDir()
-	content := []byte("pipeline: env-test")
+	content := []byte("circuit: env-test")
 	if err := os.WriteFile(filepath.Join(dir, "envpipe.yaml"), content, 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	t.Setenv("ORIGAMI_PIPELINES", dir)
+	t.Setenv("ORIGAMI_CIRCUITS", dir)
 
-	got, err := ResolvePipelinePath("envpipe")
+	got, err := ResolveCircuitPath("envpipe")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -79,11 +79,11 @@ func TestResolvePipelinePath_EnvVar(t *testing.T) {
 	}
 }
 
-func TestResolvePipelinePath_NotFound(t *testing.T) {
-	clearEmbeddedPipelines()
-	defer clearEmbeddedPipelines()
+func TestResolveCircuitPath_NotFound(t *testing.T) {
+	clearEmbeddedCircuits()
+	defer clearEmbeddedCircuits()
 
-	_, err := ResolvePipelinePath("nonexistent-pipeline-xyz")
+	_, err := ResolveCircuitPath("nonexistent-circuit-xyz")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -95,17 +95,17 @@ func TestResolvePipelinePath_NotFound(t *testing.T) {
 	}
 }
 
-func TestResolvePipelinePath_AutoYamlSuffix(t *testing.T) {
-	clearEmbeddedPipelines()
-	defer clearEmbeddedPipelines()
+func TestResolveCircuitPath_AutoYamlSuffix(t *testing.T) {
+	clearEmbeddedCircuits()
+	defer clearEmbeddedCircuits()
 
 	dir := t.TempDir()
-	content := []byte("pipeline: suffix-test")
+	content := []byte("circuit: suffix-test")
 	if err := os.WriteFile(filepath.Join(dir, "myfile.yaml"), content, 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := ResolvePipelinePath("myfile", WithSearchDirs(dir))
+	got, err := ResolveCircuitPath("myfile", WithSearchDirs(dir))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

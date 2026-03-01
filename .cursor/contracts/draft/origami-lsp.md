@@ -1,7 +1,7 @@
 # Contract — Origami LSP
 
 **Status:** draft  
-**Goal:** Ship a Language Server for Origami pipeline YAML that provides validation, completion, hover docs, color coding, virtual text hints, and a Kami live connection -- making pipeline authoring a first-class IDE experience.  
+**Goal:** Ship a Language Server for Origami circuit YAML that provides validation, completion, hover docs, color coding, virtual text hints, and a Kami live connection -- making circuit authoring a first-class IDE experience.  
 **Serves:** Polishing & Presentation (vision)
 
 ## Contract rules
@@ -15,7 +15,7 @@
 ## Context
 
 - **Reference:** Ansible Language Server (`ansible-language-server.readthedocs.io`) -- domain-specific YAML LSP with syntax highlighting, validation (+ ansible-lint), auto-completion (module names, FQCNs), documentation on hover, go-to-definition. See `docs/case-studies/ansible-collections.md` for the full case study.
-- **DSL schema:** `dsl.go` defines `PipelineDef`, `NodeDef`, `EdgeDef`, `ZoneDef`, `WalkerDef`. All fields, valid values, and cross-reference rules are documented in the E2E DSL testing inventory.
+- **DSL schema:** `dsl.go` defines `CircuitDef`, `NodeDef`, `EdgeDef`, `ZoneDef`, `WalkerDef`. All fields, valid values, and cross-reference rules are documented in the E2E DSL testing inventory.
 - **Element palette:** Fire=Crimson (`#DC143C`), Water=Cerulean (`#007BA7`), Earth=Cobalt (`#0047AB`), Air=Amber (`#FFBF00`), Diamond=Sapphire (`#0F52BA`), Lightning (no persona color), Iron (`#48494B`).
 - **Kami EventBridge:** When `origami kami --port 3000` is running, SSE endpoint `/events/stream` emits `KamiEvent` structs with node enter/exit, transitions, walker positions.
 - **Dependencies:** Stable DSL (all sprints complete), `e2e-dsl-testing` scenario YAMLs as test fixtures.
@@ -24,9 +24,9 @@
 
 ```mermaid
 flowchart LR
-    Author["Pipeline author"]
+    Author["Circuit author"]
     Editor["Editor\n(no YAML intelligence)"]
-    YAML["pipeline.yaml"]
+    YAML["circuit.yaml"]
 
     Author --> Editor
     Editor --> YAML
@@ -37,10 +37,10 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    Author["Pipeline author"]
+    Author["Circuit author"]
     Editor["Editor + LSP"]
     LSP["origami-lsp\n(Go LSP server)"]
-    YAML["pipeline.yaml"]
+    YAML["circuit.yaml"]
     Kami["Kami server\n(optional)"]
 
     Author --> Editor
@@ -77,9 +77,9 @@ Phase 1 builds the LSP core (validation, completion, hover). Phase 2 adds elemen
 ### Phase 1 -- LSP core
 
 - [ ] **L1** Create `lsp/` package with Go LSP server using `go.lsp.dev/protocol`
-- [ ] **L2** YAML document model: parse pipeline YAML on `textDocument/didOpen` and `textDocument/didChange`, maintain in-memory AST
+- [ ] **L2** YAML document model: parse circuit YAML on `textDocument/didOpen` and `textDocument/didChange`, maintain in-memory AST
 - [ ] **L3** Validation diagnostics: required fields, node/edge/zone cross-references, element/persona enum values, `when:` expression compilation via expr-lang
-- [ ] **L4** Completion: top-level keys (`pipeline`, `nodes`, `edges`, etc.), node/edge/walker field keys, element values (7), persona values (8), node names in `from`/`to`/`start`/`zones.*.nodes`/`step_affinity`
+- [ ] **L4** Completion: top-level keys (`circuit`, `nodes`, `edges`, etc.), node/edge/walker field keys, element values (7), persona values (8), node names in `from`/`to`/`start`/`zones.*.nodes`/`step_affinity`
 - [ ] **L5** Hover documentation: element traits (speed, max loops, shortcut affinity, failure mode), persona descriptions, expression context (`output`, `state`, `config`)
 - [ ] **L6** Go-to-definition: node name from edge `from`/`to`, zone node lists, `start` field
 - [ ] **L7** Unit tests: validate E2E scenario YAMLs produce zero diagnostics, validate intentionally broken YAML produces correct diagnostics
@@ -110,7 +110,7 @@ Phase 1 builds the LSP core (validation, completion, hover). Phase 2 adds elemen
 ### Phase 5 -- CLI + packaging
 
 - [ ] **P1** `origami lsp` CLI command: starts the LSP server over stdio
-- [ ] **P2** VS Code extension scaffold in `lsp/vscode/`: `package.json`, `extension.ts` (launch `origami lsp`), language configuration for `.yaml` files matching `pipeline:` key
+- [ ] **P2** VS Code extension scaffold in `lsp/vscode/`: `package.json`, `extension.ts` (launch `origami lsp`), language configuration for `.yaml` files matching `circuit:` key
 - [ ] **P3** Installation guide in `docs/lsp-architecture.md`
 - [ ] Validate (green) -- `go build ./...`, `go test ./...` all pass. LSP starts, validates, completes.
 - [ ] Tune (blue) -- completion ranking, hover formatting, hint density.
@@ -118,15 +118,15 @@ Phase 1 builds the LSP core (validation, completion, hover). Phase 2 adds elemen
 
 ## Acceptance criteria
 
-**Given** a pipeline YAML with a misspelled element (`element: fyre`),  
+**Given** a circuit YAML with a misspelled element (`element: fyre`),  
 **When** opened in an editor with origami-lsp,  
 **Then** a diagnostic error appears: `unknown element "fyre" (valid: fire, lightning, earth, diamond, water, air, iron)`.
 
-**Given** a pipeline YAML with `element: earth` on a node,  
+**Given** a circuit YAML with `element: earth` on a node,  
 **When** viewed in an editor with origami-lsp,  
 **Then** the `earth` text has Cobalt semantic coloring and an inlay hint showing `steady | 1 loop | 0.1 shortcut`.
 
-**Given** a running Kami server at `localhost:3000` and a pipeline being walked,  
+**Given** a running Kami server at `localhost:3000` and a circuit being walked,  
 **When** the walk reaches node `triage`,  
 **Then** the `triage` node definition in the editor shows an inlay hint `ACTIVE [herald]` (or the active walker's persona).
 
@@ -142,8 +142,8 @@ Phase 1 builds the LSP core (validation, completion, hover). Phase 2 adds elemen
 
 | OWASP | Finding | Mitigation |
 |-------|---------|------------|
-| A01 | Kami SSE connection exposes pipeline state | Localhost-only by default. Configurable port. No sensitive data in inlay hints. |
-| A05 | LSP has read access to pipeline YAML files | Read-only -- LSP never modifies files. Standard LSP trust model. |
+| A01 | Kami SSE connection exposes circuit state | Localhost-only by default. Configurable port. No sensitive data in inlay hints. |
+| A05 | LSP has read access to circuit YAML files | Read-only -- LSP never modifies files. Standard LSP trust model. |
 
 ## Notes
 

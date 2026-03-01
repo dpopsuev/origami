@@ -28,9 +28,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   const clientOptions: LanguageClientOptions = {
     documentSelector: [
-      { scheme: "file", language: "origami-pipeline" },
-      { scheme: "file", language: "yaml", pattern: "**/pipelines/**/*.yaml" },
-      { scheme: "file", language: "yaml", pattern: "**/pipelines/**/*.yml" },
+      { scheme: "file", language: "origami-circuit" },
+      { scheme: "file", language: "yaml", pattern: "**/circuits/**/*.yaml" },
+      { scheme: "file", language: "yaml", pattern: "**/circuits/**/*.yml" },
     ],
     synchronize: {
       configurationSection: "origami",
@@ -39,7 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   client = new LanguageClient(
     "origami-lsp",
-    "Origami Pipeline LSP",
+    "Origami Circuit LSP",
     serverOptions,
     clientOptions
   );
@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
     100
   );
   statusBar.text = "$(symbol-misc) Origami LSP";
-  statusBar.tooltip = "Origami Pipeline Language Server";
+  statusBar.tooltip = "Origami Circuit Language Server";
   statusBar.show();
   context.subscriptions.push(statusBar);
 }

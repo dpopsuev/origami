@@ -35,13 +35,13 @@ func ResolveInput(input string, outputs map[string]Artifact) (Artifact, error) {
 type TemplateContext struct {
 	Output  any            // prior node's output (resolved from input: or prior artifact)
 	State   *WalkerState   // walker state (loops, history, context)
-	Config  map[string]any // pipeline vars
+	Config  map[string]any // circuit vars
 	Sources map[string]any // named outputs from prior nodes
 	Node    string         // current node name
 }
 
 // RenderPrompt renders a Go text/template string against a TemplateContext.
-// Used to fill prompt templates with pipeline data before sending to a transformer.
+// Used to fill prompt templates with circuit data before sending to a transformer.
 func RenderPrompt(tmplContent string, tc TemplateContext) (string, error) {
 	t, err := template.New("prompt").Option("missingkey=zero").Parse(tmplContent)
 	if err != nil {
@@ -55,7 +55,7 @@ func RenderPrompt(tmplContent string, tc TemplateContext) (string, error) {
 	return buf.String(), nil
 }
 
-// MergeVars merges CLI overrides into pipeline vars. Overrides take precedence.
+// MergeVars merges CLI overrides into circuit vars. Overrides take precedence.
 func MergeVars(base map[string]any, overrides map[string]any) map[string]any {
 	if base == nil {
 		base = make(map[string]any)

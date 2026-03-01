@@ -14,7 +14,7 @@ For every story, assess coverage across:
 - **Unit** — parsers, mappers, scorers, edge cases
 - **Integration** — MCP transport, YAML loading, external tool calls
 - **Contract** — API schemas, interface compliance
-- **E2E** — full pipeline graph walk, stub + real calibration
+- **E2E** — full circuit graph walk, stub + real calibration
 - **Concurrency** — race detector, deadlock-free channels, semaphore bounds
 - **Security** — OWASP Top 10 lens (`rules/universal/security-analysis.mdc`)
 

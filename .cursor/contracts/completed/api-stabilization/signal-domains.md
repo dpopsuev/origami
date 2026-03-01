@@ -75,7 +75,7 @@ flowchart LR
 | **Unit** | yes | Renderer interface, TemplateRenderer, context filter logic, lint rules |
 | **Integration** | yes | BuildGraph wiring of renderer: field, zone boundary filtering during Walk |
 | **Contract** | yes | Renderer interface shape must match Extractor symmetry |
-| **E2E** | yes | Pipeline YAML with renderer: and domain: fields must walk correctly |
+| **E2E** | yes | Circuit YAML with renderer: and domain: fields must walk correctly |
 | **Concurrency** | no | No shared state; renderers are stateless |
 | **Security** | no | No trust boundaries affected |
 
@@ -87,7 +87,7 @@ flowchart LR
 - [ ] Add `Domain` and `ContextFilter` fields to `ZoneDef`
 - [ ] Implement zone boundary context filtering in `Walk`/`WalkTeam`
 - [ ] Add lint rules: extractor nodes at unstructured-to-structured boundaries, renderer nodes at structured-to-unstructured boundaries
-- [ ] Add testdata pipeline YAML exercising renderer: and domain: fields
+- [ ] Add testdata circuit YAML exercising renderer: and domain: fields
 - [ ] Update `docs/framework-guide.md` with signal conditioning vocabulary (Takeaway 7)
 - [ ] Update glossary with Renderer, zone domain, context filter terms
 - [ ] Validate (green) — all tests pass, acceptance criteria met.
@@ -96,8 +96,8 @@ flowchart LR
 
 ## Acceptance criteria
 
-- **Given** a pipeline YAML with `renderer: narrative-v1` on a node,
-- **When** `BuildGraph` resolves the pipeline,
+- **Given** a circuit YAML with `renderer: narrative-v1` on a node,
+- **When** `BuildGraph` resolves the circuit,
 - **Then** the node delegates to the registered Renderer, symmetric to extractor resolution.
 
 - **Given** a ZoneDef with `domain: unstructured`,
@@ -108,8 +108,8 @@ flowchart LR
 - **When** a walker transitions from that zone to another zone,
 - **Then** the blocked keys are stripped from `WalkerState.Context`.
 
-- **Given** a pipeline with no `domain:` or `renderer:` annotations,
-- **When** the pipeline walks,
+- **Given** a circuit with no `domain:` or `renderer:` annotations,
+- **When** the circuit walks,
 - **Then** behavior is identical to the current framework (progressive disclosure).
 
 ## Security assessment

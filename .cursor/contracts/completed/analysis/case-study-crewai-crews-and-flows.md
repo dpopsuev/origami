@@ -56,7 +56,7 @@ Two systems, glued by Python code. Crews handle agent collaboration. Flows handl
 ```mermaid
 flowchart TD
     subgraph unified [One unified graph]
-        YAML["pipeline.yaml\n(nodes, edges, conditions,\nloops, fan-out, zones)"]
+        YAML["circuit.yaml\n(nodes, edges, conditions,\nloops, fan-out, zones)"]
         Personas["Personas\n(Element traits, StepAffinity,\nPromptPreamble, Masks)"]
         Scheduler["AffinityScheduler\n(quantified per-node assignment)"]
     end
@@ -117,8 +117,8 @@ Implementation tasks extracted to dedicated feature contract:
 **When** a reader familiar with CrewAI reads it,  
 **Then** they understand: how CrewAI's dual architecture maps to Origami's unified graph, where Origami is architecturally superior, where Origami has gaps, and what three improvements close those gaps.
 
-**Given** a pipeline YAML with a `walkers:` section defining two walkers (water/seeker and fire/herald),  
-**When** `LoadPipeline` and `BuildWalkersFromDef` are called,  
+**Given** a circuit YAML with a `walkers:` section defining two walkers (water/seeker and fire/herald),  
+**When** `LoadCircuit` and `BuildWalkersFromDef` are called,  
 **Then** two `Walker` instances are returned with correct element, persona, and preamble.
 
 **Given** a `MemoryStore` with a value set during walk 1 for walker "seeker",  
@@ -126,7 +126,7 @@ Implementation tasks extracted to dedicated feature contract:
 **Then** the value from walk 1 is returned. A different walker identity returns nothing.
 
 **Given** `testdata/patterns/hierarchical-delegation.yaml`,  
-**When** loaded with `LoadPipeline` and built with `BuildGraphWith`,  
+**When** loaded with `LoadCircuit` and built with `BuildGraphWith`,  
 **Then** the graph has a coordinator node, parallel fan-out edges to 2+ specialist nodes, and a merge node.
 
 ## Security assessment

@@ -9,7 +9,7 @@ Validated by two independent consumers (Asterisk, Achilles):
 
 | Capability | Proven by |
 |---|---|
-| YAML Pipeline DSL (`PipelineDef`, `NodeDef`, `EdgeDef`) | Both |
+| YAML Circuit DSL (`CircuitDef`, `NodeDef`, `EdgeDef`) | Both |
 | Directed graph walk (`Walk`, `WalkTeam`) | Both |
 | Expression edges (`when:` via expr-lang/expr) | Both |
 | Transformer interface + 4 built-in transformers (llm, http, jq, file) | Unit tests |
@@ -49,7 +49,7 @@ Not every BYO interface has a trivial implementation:
 
 ### 4. CLI integration test missing
 
-`origami run` and `origami validate` have unit tests but no end-to-end integration test that exercises a complete YAML pipeline through the CLI binary.
+`origami run` and `origami validate` have unit tests but no end-to-end integration test that exercises a complete YAML circuit through the CLI binary.
 
 **Contract:** `origami-green-border-integrity` (gate)
 

@@ -24,8 +24,8 @@ func TestAtomicMarble_Walk(t *testing.T) {
 	if marble.IsComposite() {
 		t.Fatal("atomic marble should not be composite")
 	}
-	if marble.PipelineDef() != nil {
-		t.Fatal("atomic marble should have nil PipelineDef")
+	if marble.CircuitDef() != nil {
+		t.Fatal("atomic marble should have nil CircuitDef")
 	}
 	if marble.Name() != "echo" {
 		t.Errorf("Name() = %q, want echo", marble.Name())
@@ -41,8 +41,8 @@ func TestAtomicMarble_Walk(t *testing.T) {
 }
 
 func TestCompositeMarble_SubWalk(t *testing.T) {
-	subDef := &PipelineDef{
-		Pipeline: "sub",
+	subDef := &CircuitDef{
+		Circuit: "sub",
 		Nodes: []NodeDef{
 			{Name: "a", Family: "a"},
 			{Name: "b", Family: "b"},
@@ -66,8 +66,8 @@ func TestCompositeMarble_SubWalk(t *testing.T) {
 	if !marble.IsComposite() {
 		t.Fatal("composite marble should be composite")
 	}
-	if marble.PipelineDef() != subDef {
-		t.Fatal("PipelineDef should return the sub definition")
+	if marble.CircuitDef() != subDef {
+		t.Fatal("CircuitDef should return the sub definition")
 	}
 
 	art, err := marble.Process(context.Background(), NodeContext{})
@@ -80,8 +80,8 @@ func TestCompositeMarble_SubWalk(t *testing.T) {
 }
 
 func TestCompositeMarble_DepthLimit(t *testing.T) {
-	subDef := &PipelineDef{
-		Pipeline: "deep",
+	subDef := &CircuitDef{
+		Circuit: "deep",
 		Nodes:    []NodeDef{{Name: "a", Family: "a"}},
 		Edges:    []EdgeDef{{ID: "e1", From: "a", To: "DONE", When: "true"}},
 		Start:    "a",
@@ -153,8 +153,8 @@ func TestDetectMarbleCycle_NoCycle(t *testing.T) {
 }
 
 func TestDetectMarbleCycle_DirectCycle(t *testing.T) {
-	subDef := &PipelineDef{
-		Pipeline: "cycle",
+	subDef := &CircuitDef{
+		Circuit: "cycle",
 		Nodes:    []NodeDef{{Name: "inner", Marble: "self"}},
 		Edges:    []EdgeDef{{ID: "e1", From: "inner", To: "DONE", When: "true"}},
 		Start:    "inner",
@@ -173,8 +173,8 @@ func TestDetectMarbleCycle_DirectCycle(t *testing.T) {
 }
 
 func TestBuildGraphWith_MarbleNode(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{Name: "start", Marble: "echo-marble"},
 		},

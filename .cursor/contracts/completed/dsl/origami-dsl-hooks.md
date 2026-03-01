@@ -8,13 +8,13 @@
 
 Global rules only, plus:
 
-- **Part of a 5-contract series.** Contract 4 of 5. Depends on `origami-dsl-pipeline-vars` (C3). Required by `origami-dsl-runner` (C5).
+- **Part of a 5-contract series.** Contract 4 of 5. Depends on `origami-dsl-circuit-vars` (C3). Required by `origami-dsl-runner` (C5).
 - **Hooks are side effects, not logic.** Hooks receive the validated artifact and can perform side effects (store writes, notifications). They do NOT affect routing (that's edges) or data flow (that's transformers). This separation is the Ansible `notify` / `handler` pattern.
 - **Hooks are the Go escape hatch for domain logic.** When a domain needs to do something that can't be expressed in YAML (database writes, custom API calls), it registers a hook. This is the "high ceiling" in the Papert model.
 
 ## Context
 
-- `origami-dsl-pipeline-vars` — Predecessor. Provides unified context that hooks can read.
+- `origami-dsl-circuit-vars` — Predecessor. Provides unified context that hooks can read.
 - `asterisk/internal/orchestrate/runner.go` — `ApplyStoreEffects` switch statement (5 step-specific side effects) that becomes registered hooks.
 - Ansible `notify` / `handler` pattern — inspiration for the design.
 
@@ -45,7 +45,7 @@ All tasks complete.
 
 ## Acceptance criteria
 
-**Given** a pipeline YAML with `after:` declarations on nodes,  
+**Given** a circuit YAML with `after:` declarations on nodes,  
 **When** a node completes and its artifact passes schema validation,  
 **Then**:
 - Each named hook in `after:` is invoked in order with the validated artifact
@@ -60,6 +60,6 @@ No new trust boundaries affected. Hooks are Go functions registered by the appli
 
 ## Notes
 
-2026-02-23 12:00 — Contract created. Depends on `origami-dsl-pipeline-vars`. This contract separates side effects from pipeline logic, following the Ansible notify/handler pattern.
+2026-02-23 12:00 — Contract created. Depends on `origami-dsl-circuit-vars`. This contract separates side effects from circuit logic, following the Ansible notify/handler pattern.
 
 2026-02-18 — Contract completed as part of DSL C1-C5 initiative. All phases executed, green gates passed across Origami, Asterisk, and Achilles.

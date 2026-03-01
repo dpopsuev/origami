@@ -8,7 +8,7 @@ import (
 
 // ModelAdapter is the interface for sending prompts and receiving responses
 // during calibration. The step parameter is a plain string so consumers
-// can use their own step type (e.g. PipelineStep) without coupling the
+// can use their own step type (e.g. CircuitStep) without coupling the
 // framework to a domain-specific enum.
 type ModelAdapter interface {
 	Name() string

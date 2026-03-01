@@ -5,7 +5,7 @@
 - `framework/` — completed framework-phase contracts
 - `mcp/` — completed MCP-phase contracts
 - `multi-subagent/` — completed multi-subagent-phase contracts
-- `pipeline/` — completed pipeline-phase contracts
+- `circuit/` — completed circuit-phase contracts
 - `poc-v2/` — completed PoC v2-phase contracts
 - `analysis/` — completed case study/analysis contracts
 - `absorbed/` — contracts whose scope was absorbed by other contracts

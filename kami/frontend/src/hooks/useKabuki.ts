@@ -21,7 +21,7 @@ export interface ThemeData {
   cooperation_dialogs: Dialog[]
 }
 
-export interface PipelineData {
+export interface CircuitData {
   nodes: Record<string, string>
 }
 
@@ -134,7 +134,7 @@ export type AppMode = 'kabuki' | 'debugger'
 
 export interface UseKabukiResult {
   theme: ThemeData | null
-  pipeline: PipelineData | null
+  circuit: CircuitData | null
   kabuki: KabukiData | null
   loading: boolean
   mode: AppMode
@@ -142,7 +142,7 @@ export interface UseKabukiResult {
 
 export function useKabuki(): UseKabukiResult {
   const [theme, setTheme] = useState<ThemeData | null>(null)
-  const [pipeline, setPipeline] = useState<PipelineData | null>(null)
+  const [circuit, setCircuit] = useState<CircuitData | null>(null)
   const [kabuki, setKabuki] = useState<KabukiData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -150,18 +150,18 @@ export function useKabuki(): UseKabukiResult {
     let cancelled = false
     async function load() {
       try {
-        const [themeRes, pipelineRes, kabukiRes] = await Promise.all([
+        const [themeRes, circuitRes, kabukiRes] = await Promise.all([
           fetch('/api/theme'),
-          fetch('/api/pipeline'),
+          fetch('/api/circuit'),
           fetch('/api/kabuki'),
         ])
         if (cancelled) return
         const themeJSON = await themeRes.json()
-        const pipelineJSON = await pipelineRes.json()
+        const circuitJSON = await circuitRes.json()
         const kabukiJSON = await kabukiRes.json()
         if (cancelled) return
         setTheme(themeJSON)
-        setPipeline(pipelineJSON)
+        setCircuit(circuitJSON)
         setKabuki(kabukiJSON)
       } catch {
         // API unavailable — fall back to debugger mode
@@ -179,7 +179,7 @@ export function useKabuki(): UseKabukiResult {
 
   return {
     theme,
-    pipeline,
+    circuit,
     kabuki,
     loading,
     mode: hasKabuki ? 'kabuki' : 'debugger',

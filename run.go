@@ -11,23 +11,25 @@ import (
 type RunOption func(*runConfig)
 
 type runConfig struct {
-	transformers TransformerRegistry
-	hooks        HookRegistry
-	extractors   ExtractorRegistry
-	nodes        NodeRegistry
-	edges        EdgeFactory
-	adapters     AdapterLoader
-	marbles      MarbleRegistry
-	overrides    map[string]any
-	walker       Walker
-	team         *Team
-	observer     WalkObserver
-	logger       *slog.Logger
-	memory       MemoryStore
-	nodeCache    NodeCache
-	checkpointer Checkpointer
-	resumeID     string
-	resumeInput  any
+	transformers   TransformerRegistry
+	hooks          HookRegistry
+	extractors     ExtractorRegistry
+	nodes          NodeRegistry
+	edges          EdgeFactory
+	adapters       AdapterLoader
+	marbles        MarbleRegistry
+	overrides      map[string]any
+	walker         Walker
+	team           *Team
+	observer       WalkObserver
+	logger         *slog.Logger
+	memory         MemoryStore
+	nodeCache      NodeCache
+	checkpointer   Checkpointer
+	resumeID       string
+	resumeInput       any
+	thermalBudget     *thermalConfig
+	offsetPreamble    string
 }
 
 // WithTransformers registers transformers for the run.
@@ -55,7 +57,7 @@ func WithEdges(reg EdgeFactory) RunOption {
 	return func(c *runConfig) { c.edges = reg }
 }
 
-// WithAdapters registers an adapter loader for the run. When the pipeline
+// WithAdapters registers an adapter loader for the run. When the circuit
 // YAML contains imports: [...], the loader is called for each import name
 // and the resulting adapters are merged into the registries.
 func WithAdapters(loader AdapterLoader) RunOption {
@@ -126,7 +128,7 @@ func WithCheckpointer(cp Checkpointer) RunOption {
 }
 
 // WithResume loads a previously saved checkpoint and continues the walk
-// from the last checkpointed node instead of the pipeline's start node.
+// from the last checkpointed node instead of the circuit's start node.
 // Requires WithCheckpointer to be set.
 func WithResume(walkerID string) RunOption {
 	return func(c *runConfig) { c.resumeID = walkerID }
@@ -142,28 +144,36 @@ func WithResumeInput(walkerID string, input any) RunOption {
 	}
 }
 
-// Run loads a pipeline YAML, builds a graph, and walks it.
-// This is the primary Go API for executing Origami pipelines.
+// WithOffsetCompensation prepends a corrective preamble to each walker's
+// PromptPreamble before the walk starts. Generate the preamble via
+// ouroboros.OffsetCompensator.Compensate() and pass the result here.
+// This avoids an import cycle between the root package and ouroboros.
+func WithOffsetCompensation(preamble string) RunOption {
+	return func(c *runConfig) { c.offsetPreamble = preamble }
+}
+
+// Run loads a circuit YAML, builds a graph, and walks it.
+// This is the primary Go API for executing Origami circuits.
 //
-//	err := framework.Run(ctx, "pipelines/rca.yaml", input,
+//	err := framework.Run(ctx, "circuits/rca.yaml", input,
 //	    framework.WithTransformers(reg),
 //	    framework.WithHooks(hooks),
 //	    framework.WithOverrides(map[string]any{"recall_hit": 0.9}),
 //	)
-func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption) error {
+func Run(ctx context.Context, circuitPath string, input any, opts ...RunOption) error {
 	cfg := &runConfig{}
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
-	data, err := os.ReadFile(pipelinePath)
+	data, err := os.ReadFile(circuitPath)
 	if err != nil {
-		return fmt.Errorf("read pipeline %s: %w", pipelinePath, err)
+		return fmt.Errorf("read circuit %s: %w", circuitPath, err)
 	}
 
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		return fmt.Errorf("parse pipeline %s: %w", pipelinePath, err)
+		return fmt.Errorf("parse circuit %s: %w", circuitPath, err)
 	}
 
 	if len(cfg.overrides) > 0 {
@@ -186,9 +196,22 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 	}
 	runner.Logger = cfg.logger
 
-	if cfg.observer != nil {
+	obs := cfg.observer
+	if cfg.thermalBudget != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithCancel(ctx)
+		defer cancel()
+		obs = &thermalObserver{
+			inner:   obs,
+			warning: cfg.thermalBudget.warning,
+			ceiling: cfg.thermalBudget.ceiling,
+			cancel:  cancel,
+		}
+	}
+
+	if obs != nil {
 		if dg, ok := runner.Graph.(*DefaultGraph); ok {
-			dg.observer = cfg.observer
+			dg.observer = obs
 		}
 	}
 
@@ -200,6 +223,9 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 			if cfg.memory != nil {
 				w.State().Context["memory"] = cfg.memory
 			}
+			if cfg.offsetPreamble != "" {
+				applyOffsetPreamble(w, cfg.offsetPreamble)
+			}
 		}
 		return runner.Graph.WalkTeam(ctx, cfg.team, def.Start)
 	}
@@ -207,6 +233,10 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 	walker := cfg.walker
 	if walker == nil {
 		walker = NewProcessWalker("run")
+	}
+
+	if cfg.offsetPreamble != "" {
+		applyOffsetPreamble(walker, cfg.offsetPreamble)
 	}
 
 	startNode := def.Start
@@ -258,27 +288,27 @@ func Run(ctx context.Context, pipelinePath string, input any, opts ...RunOption)
 	return err
 }
 
-// Validate loads and validates a pipeline YAML without executing it.
+// Validate loads and validates a circuit YAML without executing it.
 // Checks: YAML syntax, referential integrity, expression compilation,
 // transformer resolution, hook resolution.
-func Validate(pipelinePath string, opts ...RunOption) error {
+func Validate(circuitPath string, opts ...RunOption) error {
 	cfg := &runConfig{}
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
-	data, err := os.ReadFile(pipelinePath)
+	data, err := os.ReadFile(circuitPath)
 	if err != nil {
-		return fmt.Errorf("read pipeline %s: %w", pipelinePath, err)
+		return fmt.Errorf("read circuit %s: %w", circuitPath, err)
 	}
 
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		return fmt.Errorf("parse pipeline %s: %w", pipelinePath, err)
+		return fmt.Errorf("parse circuit %s: %w", circuitPath, err)
 	}
 
 	if err := def.Validate(); err != nil {
-		return fmt.Errorf("validate pipeline: %w", err)
+		return fmt.Errorf("validate circuit: %w", err)
 	}
 
 	reg := GraphRegistries{
@@ -308,4 +338,17 @@ func Validate(pipelinePath string, opts ...RunOption) error {
 	}
 
 	return nil
+}
+
+// applyOffsetPreamble appends a corrective preamble to a walker's
+// PromptPreamble via SetIdentity. This ensures the preamble lands
+// on the typed AgentIdentity field where prompt rendering consumes it.
+func applyOffsetPreamble(w Walker, offset string) {
+	id := w.Identity()
+	if id.PromptPreamble == "" {
+		id.PromptPreamble = offset
+	} else {
+		id.PromptPreamble = id.PromptPreamble + "\n\n" + offset
+	}
+	w.SetIdentity(id)
 }

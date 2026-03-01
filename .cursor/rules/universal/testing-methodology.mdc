@@ -17,7 +17,7 @@ Before writing or modifying production code, verify that each applicable layer h
 | **Unit** | Function-level branches and edge cases | Parsers, graph builders, scoring, error paths, nil/empty inputs |
 | **Integration** | Cross-boundary interactions | MCP transport, YAML loading, external tool calls |
 | **Contract** | API schemas and interface compliance | Node/Edge/Graph interface contracts, adapter compliance |
-| **E2E** | Full pipeline validation | Graph walk from start to done; stub and real calibration scenarios |
+| **E2E** | Full circuit validation | Graph walk from start to done; stub and real calibration scenarios |
 | **Concurrency** | Shared state and parallel paths | Race detector (`-race`), deadlock-free channels, `sync.WaitGroup`, semaphore bounds |
 | **Security** | Trust boundaries and external data | OWASP checklist (`rules/universal/security-analysis.mdc`), input validation |
 

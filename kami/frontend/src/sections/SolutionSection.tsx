@@ -101,7 +101,7 @@ export function SolutionSection({ nodes }: Props) {
       <div className="max-w-5xl w-full text-center">
         <h2 className="text-4xl font-bold text-fg mb-4">The Solution</h2>
         <p className="text-fg-muted text-lg mb-8 max-w-2xl mx-auto">
-          A {entries.length}-node AI pipeline that processes failures through
+          A {entries.length}-node AI circuit that processes failures through
           specialized stages, each with its own purpose and expertise.
         </p>
         <div className="w-full" style={{ height: graphHeight }}>

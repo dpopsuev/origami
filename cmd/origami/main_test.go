@@ -39,8 +39,8 @@ func getModuleRoot(t *testing.T) string {
 	return ""
 }
 
-const integrationPipeline = `
-pipeline: cli-integration
+const integrationCircuit = `
+circuit: cli-integration
 vars:
   greeting: hello
 nodes:
@@ -68,12 +68,12 @@ done: _done
 func TestCLI_Validate(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()
-	pipelinePath := filepath.Join(dir, "pipeline.yaml")
-	if err := os.WriteFile(pipelinePath, []byte(integrationPipeline), 0644); err != nil {
+	circuitPath := filepath.Join(dir, "circuit.yaml")
+	if err := os.WriteFile(circuitPath, []byte(integrationCircuit), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	cmd := exec.Command(bin, "validate", pipelinePath)
+	cmd := exec.Command(bin, "validate", circuitPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("origami validate failed: %v\n%s", err, out)
@@ -86,15 +86,15 @@ func TestCLI_Validate(t *testing.T) {
 func TestCLI_Validate_Invalid(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()
-	pipelinePath := filepath.Join(dir, "bad.yaml")
-	if err := os.WriteFile(pipelinePath, []byte("pipeline: bad\nnodes: []\n"), 0644); err != nil {
+	circuitPath := filepath.Join(dir, "bad.yaml")
+	if err := os.WriteFile(circuitPath, []byte("circuit: bad\nnodes: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	cmd := exec.Command(bin, "validate", pipelinePath)
+	cmd := exec.Command(bin, "validate", circuitPath)
 	err := cmd.Run()
 	if err == nil {
-		t.Fatal("expected validation to fail for invalid pipeline")
+		t.Fatal("expected validation to fail for invalid circuit")
 	}
 }
 
@@ -128,8 +128,8 @@ func TestCLI_Run(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pipelineYAML := `
-pipeline: cli-run-integration
+	circuitYAML := `
+circuit: cli-run-integration
 vars:
   mode: fast
 nodes:
@@ -156,12 +156,12 @@ edges:
 start: load
 done: _done
 `
-	pipelinePath := filepath.Join(dir, "pipeline.yaml")
-	if err := os.WriteFile(pipelinePath, []byte(pipelineYAML), 0644); err != nil {
+	circuitPath := filepath.Join(dir, "circuit.yaml")
+	if err := os.WriteFile(circuitPath, []byte(circuitYAML), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	cmd := exec.Command(bin, "run", pipelinePath)
+	cmd := exec.Command(bin, "run", circuitPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("origami run failed: %v\n%s", err, out)
@@ -238,8 +238,8 @@ func TestCLI_Skill_Scaffold(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()
 
-	pipelineYAML := `
-pipeline: test-scaffold
+	circuitYAML := `
+circuit: test-scaffold
 nodes:
   - name: scan
     element: fire
@@ -262,13 +262,13 @@ edges:
 start: scan
 done: _done
 `
-	pipelinePath := filepath.Join(dir, "pipeline.yaml")
-	if err := os.WriteFile(pipelinePath, []byte(pipelineYAML), 0644); err != nil {
+	circuitPath := filepath.Join(dir, "circuit.yaml")
+	if err := os.WriteFile(circuitPath, []byte(circuitYAML), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	outDir := filepath.Join(dir, "skill-out")
-	cmd := exec.Command(bin, "skill", "scaffold", "--tool", "mytest", "--out", outDir, pipelinePath)
+	cmd := exec.Command(bin, "skill", "scaffold", "--tool", "mytest", "--out", outDir, circuitPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("origami skill scaffold failed: %v\n%s", err, out)
@@ -302,8 +302,8 @@ func TestCLI_Skill_Scaffold_DefaultOut(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()
 
-	pipelineYAML := `
-pipeline: myapp
+	circuitYAML := `
+circuit: myapp
 nodes:
   - name: start
     element: fire
@@ -317,10 +317,10 @@ edges:
 start: start
 done: _done
 `
-	pipelinePath := filepath.Join(dir, "pipeline.yaml")
-	os.WriteFile(pipelinePath, []byte(pipelineYAML), 0644)
+	circuitPath := filepath.Join(dir, "circuit.yaml")
+	os.WriteFile(circuitPath, []byte(circuitYAML), 0644)
 
-	cmd := exec.Command(bin, "skill", "scaffold", pipelinePath)
+	cmd := exec.Command(bin, "skill", "scaffold", circuitPath)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {

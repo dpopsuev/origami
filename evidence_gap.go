@@ -11,7 +11,7 @@ const (
 )
 
 // EvidenceGap represents a single missing piece of evidence that prevented
-// the pipeline from reaching high confidence. Shared between the Thesis path
+// the circuit from reaching high confidence. Shared between the Thesis path
 // (evidence-gap-brief) and the Antithesis path (dialectic unresolved contradiction).
 type EvidenceGap struct {
 	Description     string      `json:"description"`
@@ -20,7 +20,7 @@ type EvidenceGap struct {
 	SuggestedAction string      `json:"suggested_action,omitempty"`
 }
 
-// EvidenceGapBrief aggregates gaps from a pipeline run that ended with
+// EvidenceGapBrief aggregates gaps from a circuit run that ended with
 // low or inconclusive confidence. It answers: "I don't know because X."
 type EvidenceGapBrief struct {
 	CaseID          string        `json:"case_id"`
@@ -33,7 +33,7 @@ func (b *EvidenceGapBrief) Type() string       { return "evidence_gap_brief" }
 func (b *EvidenceGapBrief) Confidence() float64 { return b.FinalConfidence }
 func (b *EvidenceGapBrief) Raw() any            { return b }
 
-// GapBriefThreshold defines when the pipeline should produce an EvidenceGapBrief
+// GapBriefThreshold defines when the circuit should produce an EvidenceGapBrief
 // instead of a confident classification.
 type GapBriefThreshold struct {
 	MinConfidence float64 `json:"min_confidence"`
@@ -49,7 +49,7 @@ func DefaultGapBriefThreshold() GapBriefThreshold {
 	}
 }
 
-// ShouldProduceGapBrief returns true when the pipeline's final confidence
+// ShouldProduceGapBrief returns true when the circuit's final confidence
 // is below the threshold, indicating an evidence gap brief should be emitted.
 func (t GapBriefThreshold) ShouldProduceGapBrief(confidence float64) bool {
 	return confidence < t.MinConfidence

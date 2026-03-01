@@ -2,7 +2,7 @@
 
 ## Overview
 
-Origami (`github.com/dpopsuev/origami`) is a graph-based agentic pipeline framework. It provides typed interfaces and a YAML DSL for defining, walking, and observing agent pipelines. Zero domain imports — all domain logic lives in consumer tools.
+Origami (`github.com/dpopsuev/origami`) is a graph-based agentic circuit framework. It provides typed interfaces and a YAML DSL for defining, walking, and observing agent circuits. Zero domain imports — all domain logic lives in consumer tools.
 
 ## Layer diagram
 
@@ -10,7 +10,7 @@ Origami (`github.com/dpopsuev/origami`) is a graph-based agentic pipeline framew
 flowchart TD
     subgraph origami ["github.com/dpopsuev/origami"]
         Interfaces["Node, Edge, Graph\nWalker, Artifact, Mask"]
-        DSL["Pipeline DSL\n(YAML → Graph)"]
+        DSL["Circuit DSL\n(YAML → Graph)"]
         Extractors["Extractors\n(JSON, Regex, CodeBlock, LineSplit)"]
         Elements["Elements + Traits"]
         Personas["Perennial Personas (8)"]
@@ -49,9 +49,9 @@ flowchart TD
 
 1. **Zero domain imports.** Origami never imports from consumer tools (Asterisk, Achilles, etc.).
 2. **Interface-driven.** Consumers implement `Node`, `Edge`, `Walker`, `Extractor` — the framework provides the orchestration.
-3. **DSL-first.** Pipelines are declared in YAML and compiled to executable graphs via `BuildGraph`.
-4. **Progressive disclosure.** A 10-line pipeline YAML is valid. Advanced features (zones, elements, extractors, masks) are opt-in.
-5. **Reviewable formats.** All configuration and pipeline definitions are git-diffable text.
+3. **DSL-first.** Circuits are declared in YAML and compiled to executable graphs via `BuildGraph`.
+4. **Progressive disclosure.** A 10-line circuit YAML is valid. Advanced features (zones, elements, extractors, masks) are opt-in.
+5. **Reviewable formats.** All configuration and circuit definitions are git-diffable text.
 
 ## Reference implementations
 

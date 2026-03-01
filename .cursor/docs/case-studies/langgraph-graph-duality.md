@@ -63,7 +63,7 @@ This is not a matter of one being better — they optimize for different ceiling
 
 | LangGraph Concept | Origami Equivalent | Comparison |
 |-------------------|-------------------|------------|
-| **StateGraph** (typed state schema) | `PipelineDef` (YAML pipeline definition) | LangGraph: programmatic Python builder. Origami: declarative YAML loaded from file. Origami is reviewable, diffable, reproducible. LangGraph is more flexible for dynamic graph construction. |
+| **StateGraph** (typed state schema) | `CircuitDef` (YAML circuit definition) | LangGraph: programmatic Python builder. Origami: declarative YAML loaded from file. Origami is reviewable, diffable, reproducible. LangGraph is more flexible for dynamic graph construction. |
 | **Node** (Python function) | `Node` interface (Go interface with `Process()`) | Both are units of computation. LangGraph nodes are plain functions; Origami nodes implement a typed interface with `ElementAffinity()` and return typed `Artifact`s. Origami nodes have identity. |
 | **Edge** (static or conditional) | `Edge` interface with `when:` expressions | LangGraph: `add_edge("a","b")` or `add_conditional_edges("a", func)`. Origami: `when: output.confidence >= 0.8` in YAML. LangGraph is imperative; Origami is declarative. |
 | **Reducers** (per-key state merge) | No equivalent | **Gap.** LangGraph's `Annotated[list, add]` pattern elegantly handles state merging from parallel nodes. Origami's fan-out merge relies on the merge node's logic, not framework-level reducers. |
@@ -89,9 +89,9 @@ This is not a matter of one being better — they optimize for different ceiling
 
 ## 4. Competitive Advantages (Origami over LangGraph)
 
-### 4.1 Declarative pipeline as a single artifact
+### 4.1 Declarative circuit as a single artifact
 
-Origami's entire pipeline — nodes, edges, conditions, zones, walkers — is one YAML file. LangGraph requires Python code: `StateGraph()`, `add_node()`, `add_edge()`, `add_conditional_edges()`, `compile()`. Two engineers reviewing an Origami pipeline see the same graph. Two engineers reviewing LangGraph code must trace Python execution paths, routing functions, and Command returns to reconstruct the graph.
+Origami's entire circuit — nodes, edges, conditions, zones, walkers — is one YAML file. LangGraph requires Python code: `StateGraph()`, `add_node()`, `add_edge()`, `add_conditional_edges()`, `compile()`. Two engineers reviewing an Origami circuit see the same graph. Two engineers reviewing LangGraph code must trace Python execution paths, routing functions, and Command returns to reconstruct the graph.
 
 ### 4.2 First-class agent identity
 
@@ -99,7 +99,7 @@ LangGraph has no concept of "who" is executing a node. Nodes are functions; any 
 
 ### 4.3 Adversarial quality validation
 
-LangGraph pipelines produce output. There is no built-in mechanism to challenge that output. Origami's Adversarial Dialectic (D0-D4) forces conclusions through thesis/antithesis/synthesis with Antithesis personas, multi-round argumentation, and structured verdicts. This produces calibrated confidence — not just answers.
+LangGraph circuits produce output. There is no built-in mechanism to challenge that output. Origami's Adversarial Dialectic (D0-D4) forces conclusions through thesis/antithesis/synthesis with Antithesis personas, multi-round argumentation, and structured verdicts. This produces calibrated confidence — not just answers.
 
 ### 4.4 Ouroboros meta-calibration
 
@@ -129,7 +129,7 @@ LangGraph's checkpointing is production-grade: 3 durability modes, multiple back
 
 ### Gap 2: Human-in-the-loop
 
-LangGraph's `interrupt()` + `Command(resume=...)` pattern is first-class: pause mid-node, persist state, wait for human input, resume exactly where execution stopped. Origami has no HITL primitive. A pipeline runs to completion or fails.
+LangGraph's `interrupt()` + `Command(resume=...)` pattern is first-class: pause mid-node, persist state, wait for human input, resume exactly where execution stopped. Origami has no HITL primitive. A circuit runs to completion or fails.
 
 **Actionable:** Define an `Interrupt` type that nodes can return to pause execution. The walker state is checkpointed. A `Resume(walkerID, input)` function loads the checkpoint and continues from the interrupted node. Wire this through the `WalkObserver` so Kami can visualize paused walks and inject human input.
 
@@ -181,13 +181,13 @@ LangGraph and Origami are the two most architecturally serious graph-based agent
 
 2. **Human-in-the-loop (Interrupt/Resume)** — Define an `Interrupt` return type for nodes and a `Resume` function. Wire through WalkObserver for Kami integration. LangGraph's `interrupt()` + `Command(resume=...)` pattern is the design to study.
 
-3. **Subgraph composition** — `SubgraphNode` wrapping a compiled `Graph` as a `Node`. Enables multi-team development and reusable pipeline components. Aligns with Origami Collections.
+3. **Subgraph composition** — `SubgraphNode` wrapping a compiled `Graph` as a `Node`. Enables multi-team development and reusable circuit components. Aligns with Origami Collections.
 
 4. **Node caching** — `CachePolicy` on `NodeDef` with TTL and key function. High value for LLM nodes where identical prompts waste tokens. LangGraph's implementation is clean and worth studying.
 
 5. **Rich memory** — Extend `MemoryStore` with namespaces and search. Add persistent backend. This upgrades memory from development convenience to production primitive.
 
-6. **Presentation narrative** — The "same foundation, different ceiling" framing is the sharpest angle. Both are graphs. LangGraph optimizes for infrastructure; Origami optimizes for intelligence. Show a LangGraph pipeline that runs reliably but has no agent personality, no quality validation, no calibration. Then show the same pipeline in Origami with Personas, Dialectic, and M19 scores. Let the audience decide which ceiling matters more.
+6. **Presentation narrative** — The "same foundation, different ceiling" framing is the sharpest angle. Both are graphs. LangGraph optimizes for infrastructure; Origami optimizes for intelligence. Show a LangGraph circuit that runs reliably but has no agent personality, no quality validation, no calibration. Then show the same circuit in Origami with Personas, Dialectic, and M19 scores. Let the audience decide which ceiling matters more.
 
 ---
 
@@ -199,12 +199,12 @@ LangGraph and Origami are the two most architecturally serious graph-based agent
 - LangGraph durable execution: `langchain-ai.github.io/langgraph/concepts/durable_execution/`
 - LangGraph memory: `langchain-ai.github.io/langgraph/concepts/memory/`
 - LangGraph subgraphs: `langchain-ai.github.io/langgraph/concepts/subgraphs/`
-- Origami DSL: `dsl.go` (PipelineDef, NodeDef, EdgeDef, ZoneDef, WalkerDef)
+- Origami DSL: `dsl.go` (CircuitDef, NodeDef, EdgeDef, ZoneDef, WalkerDef)
 - Origami Elements: `element.go` (6 elements, quantified traits)
 - Origami Personas: `persona.go` (8 personas, StepAffinity, PromptPreamble)
 - Origami Masks: `mask.go` (composable behavioral middleware)
-- Origami Dialectic: `dialectic.go` (D0-D4, Antithesis pipeline, SynthesisDecision)
+- Origami Dialectic: `dialectic.go` (D0-D4, Antithesis circuit, SynthesisDecision)
 - Origami Checkpointer: `checkpoint.go` (JSONCheckpointer)
 - Origami MemoryStore: `memory.go` (InMemoryStore)
 - Related case studies: `crewai-crews-and-flows.md`, `omo-agentic-arms-race.md`
-- Related contracts: `kami-live-debugger`, `ouroboros-seed-pipeline`, `origami-collections`, `visual-editor`
+- Related contracts: `kami-live-debugger`, `ouroboros-seed-circuit`, `origami-collections`, `visual-editor`

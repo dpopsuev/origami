@@ -10,14 +10,14 @@ interface TourStep {
 const DEFAULT_STEPS: TourStep[] = [
   {
     target: "[data-tour='graph']",
-    title: "Pipeline Graph",
-    content: "Your pipeline visualized as an interactive graph. Drag nodes, click to inspect, scroll to zoom.",
+    title: "Circuit Graph",
+    content: "Your circuit visualized as an interactive graph. Drag nodes, click to inspect, scroll to zoom.",
     position: "bottom",
   },
   {
     target: "[data-tour='yaml-editor']",
     title: "YAML Editor",
-    content: "Edit your pipeline YAML with LSP-powered completion, validation, and hover docs.",
+    content: "Edit your circuit YAML with LSP-powered completion, validation, and hover docs.",
     position: "left",
   },
   {
@@ -35,7 +35,7 @@ const DEFAULT_STEPS: TourStep[] = [
   {
     target: "[data-tour='overlays']",
     title: "Diagnostic Overlays",
-    content: "Toggle heatmaps, walker traces, diffs, and more to analyze your pipeline.",
+    content: "Toggle heatmaps, walker traces, diffs, and more to analyze your circuit.",
     position: "left",
   },
 ];

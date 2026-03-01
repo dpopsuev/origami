@@ -17,8 +17,8 @@ func TestHasPermission(t *testing.T) {
 		{RoleOperator, PermRunLaunch, true},
 		{RoleOperator, PermSettingsManage, false},
 		{RoleViewer, PermRunLaunch, false},
-		{RoleViewer, PermPipelineRead, true},
-		{Role("unknown"), PermPipelineRead, false},
+		{RoleViewer, PermCircuitRead, true},
+		{Role("unknown"), PermCircuitRead, false},
 	}
 
 	for _, tt := range tests {

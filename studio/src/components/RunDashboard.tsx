@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 interface RunInfo {
   id: string;
-  pipeline: string;
+  circuit: string;
   started_at: string;
   ended_at?: string;
   status: string;
@@ -59,7 +59,7 @@ export function RunDashboard({ onSelectRun }: RunDashboardProps) {
   if (runs.length === 0) {
     return (
       <div className="p-4 text-gray-500">
-        No pipeline runs yet. Start a pipeline to see runs here.
+        No circuit runs yet. Start a circuit to see runs here.
       </div>
     );
   }
@@ -67,7 +67,7 @@ export function RunDashboard({ onSelectRun }: RunDashboardProps) {
   return (
     <div className="p-4 space-y-2">
       <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">
-        Pipeline Runs
+        Circuit Runs
       </h2>
       {runs.map((run) => (
         <button
@@ -76,7 +76,7 @@ export function RunDashboard({ onSelectRun }: RunDashboardProps) {
           className="w-full text-left p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors border border-gray-700"
         >
           <div className="flex justify-between items-center">
-            <span className="font-mono text-sm">{run.pipeline}</span>
+            <span className="font-mono text-sm">{run.circuit}</span>
             <span className={`text-xs font-medium ${statusColor(run.status)}`}>
               {run.status}
             </span>

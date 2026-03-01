@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// DialecticConfig controls the adversarial dialectic pipeline activation and limits.
+// DialecticConfig controls the adversarial dialectic circuit activation and limits.
 // When the Thesis path's confidence falls below the contradiction threshold,
 // the adversarial path activates for thesis-antithesis-synthesis debate.
 type DialecticConfig struct {
@@ -19,7 +19,7 @@ type DialecticConfig struct {
 	ContextGuard           func(map[string]any) map[string]any `json:"-"`
 }
 
-// DefaultDialecticConfig returns conservative defaults for the dialectic pipeline.
+// DefaultDialecticConfig returns conservative defaults for the dialectic circuit.
 func DefaultDialecticConfig() DialecticConfig {
 	return DialecticConfig{
 		Enabled:                false,
@@ -155,7 +155,7 @@ func (c *CMRRCheck) Confidence() float64 { return 1.0 - c.SuspicionScore }
 func (c *CMRRCheck) Raw() any            { return c }
 
 // BuildDialecticEdgeFactory returns an EdgeFactory with skeleton dialectic
-// evaluators (HD1-HD13) for the adversarial dialectic pipeline. Each evaluator
+// evaluators (HD1-HD13) for the adversarial dialectic circuit. Each evaluator
 // checks the artifact type and dialectic-specific conditions.
 func BuildDialecticEdgeFactory(cfg DialecticConfig) EdgeFactory {
 	return EdgeFactory{

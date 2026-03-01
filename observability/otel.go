@@ -114,13 +114,13 @@ func (o *OTelObserver) onWalkError(e framework.WalkEvent) {
 	}
 }
 
-// StartWalk initializes the root span for a pipeline walk.
-func (o *OTelObserver) StartWalk(pipeline string, attrs ...attribute.KeyValue) {
+// StartWalk initializes the root span for a circuit walk.
+func (o *OTelObserver) StartWalk(circuit string, attrs ...attribute.KeyValue) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	all := append([]attribute.KeyValue{attribute.String("pipeline", pipeline)}, attrs...)
-	ctx, span := o.tracer.Start(context.Background(), "pipeline.walk", trace.WithAttributes(all...))
+	all := append([]attribute.KeyValue{attribute.String("circuit", circuit)}, attrs...)
+	ctx, span := o.tracer.Start(context.Background(), "circuit.walk", trace.WithAttributes(all...))
 	o.walkCtx = ctx
 	o.walkSpan = span
 }

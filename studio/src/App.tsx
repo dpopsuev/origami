@@ -1,5 +1,5 @@
 import { ReactFlowProvider } from "@xyflow/react";
-import { PipelineGraph } from "./components/PipelineGraph";
+import { CircuitGraph } from "./components/CircuitGraph";
 
 export function App() {
   return (
@@ -9,7 +9,7 @@ export function App() {
       </header>
       <main className="flex-1 overflow-hidden">
         <ReactFlowProvider>
-          <PipelineGraph />
+          <CircuitGraph />
         </ReactFlowProvider>
       </main>
     </div>

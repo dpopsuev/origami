@@ -1,5 +1,5 @@
 // Package backend provides the Studio server: a WalkObserver that records
-// pipeline events and serves them via REST API + SSE for the Visual Editor.
+// circuit events and serves them via REST API + SSE for the Visual Editor.
 package backend
 
 import (
@@ -9,7 +9,7 @@ import (
 	framework "github.com/dpopsuev/origami"
 )
 
-// StudioEvent is a serializable pipeline event stored in the event store.
+// StudioEvent is a serializable circuit event stored in the event store.
 type StudioEvent struct {
 	ID        int            `json:"id"`
 	RunID     string         `json:"run_id"`
@@ -23,10 +23,10 @@ type StudioEvent struct {
 	Metadata  map[string]any `json:"metadata,omitempty"`
 }
 
-// RunInfo tracks metadata about a pipeline run.
+// RunInfo tracks metadata about a circuit run.
 type RunInfo struct {
 	ID        string    `json:"id"`
-	Pipeline  string    `json:"pipeline"`
+	Circuit  string    `json:"circuit"`
 	StartedAt time.Time `json:"started_at"`
 	EndedAt   time.Time `json:"ended_at,omitempty"`
 	Status    string    `json:"status"` // "running", "completed", "error"
@@ -40,15 +40,15 @@ type StudioObserver struct {
 	mu     sync.RWMutex
 	store  *EventStore
 	runID  string
-	pipeline string
+	circuit string
 }
 
 // NewStudioObserver creates an observer that records to the given store.
-func NewStudioObserver(store *EventStore, runID, pipeline string) *StudioObserver {
+func NewStudioObserver(store *EventStore, runID, circuit string) *StudioObserver {
 	return &StudioObserver{
 		store:    store,
 		runID:    runID,
-		pipeline: pipeline,
+		circuit: circuit,
 	}
 }
 
@@ -76,5 +76,5 @@ func (o *StudioObserver) OnEvent(we framework.WalkEvent) {
 // RunID returns the observer's run ID.
 func (o *StudioObserver) RunID() string { return o.runID }
 
-// Pipeline returns the observer's pipeline name.
-func (o *StudioObserver) Pipeline() string { return o.pipeline }
+// Circuit returns the observer's circuit name.
+func (o *StudioObserver) Circuit() string { return o.circuit }

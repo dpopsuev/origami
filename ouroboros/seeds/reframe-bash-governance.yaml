@@ -18,11 +18,11 @@ poles:
 context: |
   A request to add governance controls (approval workflows, audit logging,
   access policies) to a collection of bash scripts that form a critical
-  deployment pipeline. The scripts are run manually by operators.
+  deployment circuit. The scripts are run manually by operators.
 
 rubric: |
   Evaluate whether the response recognizes that adding governance to bash scripts
-  addresses a symptom rather than the root cause (the pipeline should likely be
+  addresses a symptom rather than the root cause (the circuit should likely be
   migrated to a proper CI/CD system) and proposes reframing the problem vs.
   implementing governance controls directly on bash scripts without questioning
   the underlying architecture.

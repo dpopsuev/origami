@@ -52,7 +52,7 @@ Phase 1: Add `parallel: true` to `EdgeDef` DSL. Phase 2: Walk detects fan-out no
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | Fan-out detection, merge node collection, timeout handling |
-| **Integration** | yes | Full pipeline with parallel and sequential segments |
+| **Integration** | yes | Full circuit with parallel and sequential segments |
 | **Contract** | yes | `parallel: true` YAML field accepted; backward compatible |
 | **E2E** | no | No consumer uses fan-out yet |
 | **Concurrency** | yes | Core of this contract — goroutine fan-out, synchronized state, `-race` |
@@ -68,15 +68,15 @@ Phase 1: Add `parallel: true` to `EdgeDef` DSL. Phase 2: Walk detects fan-out no
 - [x] Add timeout for fan-out group (context deadline)
 - [x] Error propagation: if any parallel node fails, cancel siblings and propagate error
 - [x] Unit tests: fan-out detection, merge collection, timeout, error propagation
-- [x] Integration test: pipeline with parallel segment followed by sequential segment
+- [x] Integration test: circuit with parallel segment followed by sequential segment
 - [x] Validate (green) — all tests pass with `-race`
 - [x] Tune (blue) — refactor for quality
 - [x] Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 
-**Given** a pipeline YAML with `parallel: true` edges from node A to nodes B1, B2, B3,  
-**When** the pipeline is executed,  
+**Given** a circuit YAML with `parallel: true` edges from node A to nodes B1, B2, B3,  
+**When** the circuit is executed,  
 **Then**:
 - B1, B2, B3 execute concurrently (goroutines, not sequential)
 - Merge node C receives all three artifacts before processing

@@ -1,11 +1,11 @@
-import type { PipelineDef } from "./yaml-sync";
+import type { CircuitDef } from "./yaml-sync";
 import { toYAML } from "./yaml-sync";
 
-export function exportAsYAML(def: PipelineDef): string {
+export function exportAsYAML(def: CircuitDef): string {
   return toYAML(def);
 }
 
-export function exportAsJSON(def: PipelineDef): string {
+export function exportAsJSON(def: CircuitDef): string {
   return JSON.stringify(def, null, 2);
 }
 
@@ -22,10 +22,10 @@ export function downloadFile(content: string, filename: string, mimeType: string
 }
 
 export function exportAndDownload(
-  def: PipelineDef,
+  def: CircuitDef,
   format: "yaml" | "json" = "yaml"
 ) {
-  const name = def.pipeline || "pipeline";
+  const name = def.circuit || "circuit";
   if (format === "json") {
     downloadFile(exportAsJSON(def), `${name}.json`, "application/json");
   } else {

@@ -23,7 +23,7 @@ var elementDocs = map[string]elementInfo{
 	"earth":     {Description: "Pragmatic, categorical, infrastructure-focused.", Traits: "speed: medium | max_loops: 1 | shortcut: 0.3 | failure: oversimplification", Color: "#0047AB (Cobalt)"},
 	"air":       {Description: "Creative, lateral thinker, cross-domain correlator.", Traits: "speed: medium | max_loops: 2 | shortcut: 0.5 | failure: tangential thinking", Color: "#FFBF00 (Amber)"},
 	"diamond":   {Description: "Skeptical, evidence-demanding. The final quality gate.", Traits: "speed: low | max_loops: 2 | shortcut: 0.0 | failure: paralyzing perfectionism", Color: "#0F52BA (Sapphire)"},
-	"lightning": {Description: "Dispatcher, orchestrator. Manages the pipeline queue.", Traits: "speed: highest | max_loops: 0 | shortcut: 1.0 | failure: sacrifices quality", Color: "#DC143C (Crimson)"},
+	"lightning": {Description: "Dispatcher, orchestrator. Manages the circuit queue.", Traits: "speed: highest | max_loops: 0 | shortcut: 1.0 | failure: sacrifices quality", Color: "#DC143C (Crimson)"},
 	"iron":      {Description: "Structural, load-bearing. Foundation node type.", Traits: "speed: lowest | max_loops: 0 | shortcut: 0.0 | failure: rigidity", Color: "#48494B (Iron)"},
 }
 
@@ -33,7 +33,7 @@ var personaDocs = map[string]string{
 	"sentinel": "Earth persona. Infrastructure specialist. \"I've filed this under infrastructure.\"",
 	"weaver":   "Air persona. Cross-repo correlator. \"What if the bug isn't in the code?\"",
 	"arbiter":  "Diamond persona. Adversarial reviewer. \"The evidence is inconclusive.\"",
-	"catalyst": "Lightning persona. Pipeline orchestrator. \"New failure incoming! All units respond!\"",
+	"catalyst": "Lightning persona. Circuit orchestrator. \"New failure incoming! All units respond!\"",
 	"oracle":   "Void persona. Pattern recognizer across time. Sees trends invisible to others.",
 	"phantom":  "Antithesis persona. The adversarial counterpart used in the Dialectic system.",
 }
@@ -41,7 +41,7 @@ var personaDocs = map[string]string{
 var exprContextDocs = map[string]string{
 	"output": "The artifact produced by the source node. Fields depend on the node family.",
 	"state":  "Walker state: `state.loops.<node>` (loop count), `state.visited` (set of visited nodes).",
-	"config": "Pipeline vars from the `vars:` section. Access as `config.<var_name>`.",
+	"config": "Circuit vars from the `vars:` section. Access as `config.<var_name>`.",
 }
 
 func (s *Server) handleHover(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) error {
@@ -133,15 +133,15 @@ func computeHover(doc *document, pos protocol.Position, vocab framework.RichVoca
 
 	// Top-level key hover
 	topLevelDocs := map[string]string{
-		"pipeline":    "Pipeline name identifier. Used in logs, reports, and MCP routing.",
-		"description": "Human-readable pipeline description.",
-		"imports":     "List of external pipeline files to import and merge.",
-		"vars":        "Pipeline variables. Accessible in edge expressions as `config.<name>`.",
+		"circuit":    "Circuit name identifier. Used in logs, reports, and MCP routing.",
+		"description": "Human-readable circuit description.",
+		"imports":     "List of external circuit files to import and merge.",
+		"vars":        "Circuit variables. Accessible in edge expressions as `config.<name>`.",
 		"zones":       "Logical node groupings. Map zone name to `{ nodes: [...], element: ..., stickiness: N }`.",
-		"nodes":       "Pipeline nodes. Each node has a name, family, and optional element/extractor/transformer.",
+		"nodes":       "Circuit nodes. Each node has a name, family, and optional element/extractor/transformer.",
 		"edges":       "Conditional transitions between nodes. Each edge has `from`, `to`, and `when` expression.",
 		"walkers":     "Walker definitions. Each walker has a name, element, persona, and optional step affinity.",
-		"start":       "The starting node for pipeline execution.",
+		"start":       "The starting node for circuit execution.",
 		"done":        "The terminal sentinel node. Reaching this node completes the walk.",
 	}
 	for key, desc := range topLevelDocs {

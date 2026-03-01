@@ -6,15 +6,15 @@
 
 ## Contract rules
 
-- WalkerDef extends the pipeline DSL. It must follow the same conventions as `NodeDef`, `EdgeDef`, `ZoneDef` — YAML-first, typed Go backing.
-- MemoryStore is walker-scoped, not pipeline-scoped. It is distinct from `curate.MemoryStore` (dataset-level) and `WalkerState.Context` (per-walk only).
+- WalkerDef extends the circuit DSL. It must follow the same conventions as `NodeDef`, `EdgeDef`, `ZoneDef` — YAML-first, typed Go backing.
+- MemoryStore is walker-scoped, not circuit-scoped. It is distinct from `curate.MemoryStore` (dataset-level) and `WalkerState.Context` (per-walk only).
 - The hierarchical delegation pattern is documentation, not framework code. Origami's existing fan-out + zone stickiness already supports it.
 - No blind feature copying from CrewAI. Each gap is closed using Origami's existing architectural primitives (Elements, Personas, AffinityScheduler).
 
 ## Context
 
 - **Origin:** CrewAI case study (`docs/case-studies/crewai-crews-and-flows.md`) identified three gaps where CrewAI's developer experience exceeds Origami's.
-- **CrewAI agents.yaml:** CrewAI defines agents in YAML (`role`, `goal`, `backstory`). Origami's personas are Go code — inaccessible to YAML-pipeline authors.
+- **CrewAI agents.yaml:** CrewAI defines agents in YAML (`role`, `goal`, `backstory`). Origami's personas are Go code — inaccessible to YAML-circuit authors.
 - **CrewAI memory:** CrewAI agents carry memory across tasks within a crew. Origami's `WalkerState` resets per walk.
 - **CrewAI hierarchical process:** CrewAI auto-assigns a manager agent that delegates. Origami can model this but hasn't documented the pattern.
 - **Cross-references:**
@@ -27,21 +27,21 @@
 flowchart LR
     subgraph current [Current — walkers in Go only]
         GoCode["Go code\n(NewProcessWalker,\nAgentIdentity struct)"]
-        YAML["pipeline.yaml\n(nodes, edges, zones)"]
+        YAML["circuit.yaml\n(nodes, edges, zones)"]
     end
 
     GoCode --> Walk["graph.Walk()"]
     YAML --> Walk
 ```
 
-Walkers are constructed in Go. Pipeline YAML defines nodes and edges but not walkers. If a consumer wants to define agents in YAML, they must parse their own config and construct walkers manually.
+Walkers are constructed in Go. Circuit YAML defines nodes and edges but not walkers. If a consumer wants to define agents in YAML, they must parse their own config and construct walkers manually.
 
 ### Desired architecture
 
 ```mermaid
 flowchart LR
     subgraph desired [Desired — walkers in YAML too]
-        YAML["pipeline.yaml\n(nodes, edges, zones,\nwalkers)"]
+        YAML["circuit.yaml\n(nodes, edges, zones,\nwalkers)"]
         Build["BuildWalkersFromDef()"]
         Memory["MemoryStore\n(cross-walk persistence)"]
     end
@@ -51,7 +51,7 @@ flowchart LR
     Memory --> Walk
 ```
 
-The pipeline YAML includes a `walkers:` section. `BuildWalkersFromDef()` constructs typed walkers with Elements and Personas. `MemoryStore` provides cross-walk persistence scoped by walker identity.
+The circuit YAML includes a `walkers:` section. `BuildWalkersFromDef()` constructs typed walkers with Elements and Personas. `MemoryStore` provides cross-walk persistence scoped by walker identity.
 
 ## FSC artifacts
 
@@ -82,9 +82,9 @@ Phase 1 extends the DSL with WalkerDef. Phase 2 adds the MemoryStore framework p
 ### Phase 1 — WalkerDef (Agent-in-YAML)
 
 - [x] **WD1** Define `WalkerDef` in `dsl.go`: `Name`, `Element`, `Persona`, `Preamble`, `StepAffinity map[string]float64`
-- [x] **WD2** Add `Walkers []WalkerDef` to `PipelineDef`
+- [x] **WD2** Add `Walkers []WalkerDef` to `CircuitDef`
 - [x] **WD3** `BuildWalkersFromDef(defs []WalkerDef) ([]Walker, error)` — constructs `ProcessWalker` instances from YAML definitions. Resolves element by name, persona by name, applies preamble and step affinity.
-- [x] **WD4** Unit tests: parse pipeline YAML with `walkers:` section, build walkers, verify element and persona assignment
+- [x] **WD4** Unit tests: parse circuit YAML with `walkers:` section, build walkers, verify element and persona assignment
 - [x] **WD5** Cross-reference: does not overlap with `consumer-ergonomics` DefaultWalker (which is for the "don't care" case; WalkerDef is for the "do care, but in YAML" case)
 
 ### Phase 2 — Cross-walk MemoryStore
@@ -97,7 +97,7 @@ Phase 1 extends the DSL with WalkerDef. Phase 2 adds the MemoryStore framework p
 
 ### Phase 3 — Hierarchical delegation pattern
 
-- [x] **HD1** Create `testdata/patterns/hierarchical-delegation.yaml` — coordinator node fans out to specialist sub-pipelines via `parallel: true` edges, merges results at a merge node
+- [x] **HD1** Create `testdata/patterns/hierarchical-delegation.yaml` — coordinator node fans out to specialist sub-circuits via `parallel: true` edges, merges results at a merge node
 - [x] **HD2** Document the pattern: how Origami's fan-out + zone stickiness models CrewAI's hierarchical process declaratively, with strictly more power (conditional delegation, weighted routing, multi-level hierarchy)
 - [x] **HD3** Verify the YAML parses and the graph builds with `BuildGraphWith`
 
@@ -109,8 +109,8 @@ Phase 1 extends the DSL with WalkerDef. Phase 2 adds the MemoryStore framework p
 
 ## Acceptance criteria
 
-**Given** a pipeline YAML with a `walkers:` section defining two walkers (water/seeker and fire/herald),  
-**When** `LoadPipeline` and `BuildWalkersFromDef` are called,  
+**Given** a circuit YAML with a `walkers:` section defining two walkers (water/seeker and fire/herald),  
+**When** `LoadCircuit` and `BuildWalkersFromDef` are called,  
 **Then** two `Walker` instances are returned with correct element, persona, and preamble.
 
 **Given** a `MemoryStore` with a value set during walk 1 for walker "seeker",  
@@ -118,7 +118,7 @@ Phase 1 extends the DSL with WalkerDef. Phase 2 adds the MemoryStore framework p
 **Then** the value from walk 1 is returned. A different walker identity returns nothing.
 
 **Given** `testdata/patterns/hierarchical-delegation.yaml`,  
-**When** loaded with `LoadPipeline` and built with `BuildGraphWith`,  
+**When** loaded with `LoadCircuit` and built with `BuildGraphWith`,  
 **Then** the graph has a coordinator node, parallel fan-out edges to 2+ specialist nodes, and a merge node.
 
 ## Security assessment

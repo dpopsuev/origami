@@ -263,7 +263,7 @@ func (r *FanInWithoutMerge) Check(ctx *LintContext) []Finding {
 
 // --- Graph helpers ---
 
-func buildAdjacency(def *framework.PipelineDef) map[string][]string {
+func buildAdjacency(def *framework.CircuitDef) map[string][]string {
 	adj := make(map[string][]string)
 	for _, ed := range def.Edges {
 		adj[ed.From] = append(adj[ed.From], ed.To)
@@ -287,7 +287,7 @@ func bfs(start string, adj map[string][]string) map[string]bool {
 	return visited
 }
 
-func reachableNodes(def *framework.PipelineDef) map[string]bool {
+func reachableNodes(def *framework.CircuitDef) map[string]bool {
 	if def.Start == "" {
 		return nil
 	}

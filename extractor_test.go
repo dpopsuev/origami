@@ -161,7 +161,7 @@ func TestBuildGraph_WithExtractorNode(t *testing.T) {
 	}
 
 	data := []byte(`
-pipeline: ext-test
+circuit: ext-test
 nodes:
   - name: parse
     element: earth
@@ -180,9 +180,9 @@ edges:
 start: parse
 done: _done
 `)
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 
 	g, err := def.BuildGraph(GraphRegistries{Nodes: nodeReg, Extractors: extReg})
@@ -208,7 +208,7 @@ func TestBuildGraph_ExtractorNotRegistered(t *testing.T) {
 	nodeReg := NodeRegistry{}
 
 	data := []byte(`
-pipeline: fail-test
+circuit: fail-test
 nodes:
   - name: parse
     extractor: missing
@@ -220,9 +220,9 @@ edges:
 start: parse
 done: _done
 `)
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 
 	_, err = def.BuildGraph(GraphRegistries{Nodes: nodeReg, Extractors: extReg})
@@ -231,9 +231,9 @@ done: _done
 	}
 }
 
-func TestLoadPipeline_ExtractorField_RoundTrip(t *testing.T) {
-	original := &PipelineDef{
-		Pipeline: "ext-roundtrip",
+func TestLoadCircuit_ExtractorField_RoundTrip(t *testing.T) {
+	original := &CircuitDef{
+		Circuit: "ext-roundtrip",
 		Nodes: []NodeDef{
 			{Name: "parse", Element: "earth", Extractor: "json-v1"},
 			{Name: "process", Family: "compute"},
@@ -251,9 +251,9 @@ func TestLoadPipeline_ExtractorField_RoundTrip(t *testing.T) {
 		t.Fatalf("MarshalYAML: %v", err)
 	}
 
-	restored, err := LoadPipeline(data)
+	restored, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 
 	if restored.Nodes[0].Extractor != "json-v1" {
@@ -345,7 +345,7 @@ func TestJSONSchemaExtractor_NoSchema(t *testing.T) {
 
 func TestBuildGraph_BuiltinJSONSchemaExtractor(t *testing.T) {
 	data := []byte(`
-pipeline: json-schema-test
+circuit: json-schema-test
 nodes:
   - name: parse
     element: earth
@@ -363,9 +363,9 @@ edges:
 start: parse
 done: _done
 `)
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 
 	g, err := def.BuildGraph(GraphRegistries{})
@@ -399,8 +399,8 @@ done: _done
 }
 
 func TestBuildGraph_BuiltinJSONSchemaExtractor_NoRegistry(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes: []NodeDef{
 			{Name: "parse", Element: "earth", Extractor: "json-schema"},
 		},

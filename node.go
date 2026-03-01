@@ -2,7 +2,7 @@ package framework
 
 import "context"
 
-// Node is a processing stage in a pipeline graph.
+// Node is a processing stage in a circuit graph.
 // Implementations are domain-specific (e.g. recall, triage, investigate).
 type Node interface {
 	Name() string

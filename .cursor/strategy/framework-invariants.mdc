@@ -11,11 +11,11 @@ description: Long-term framework quality and design invariants
 - Deterministic for the same inputs. Seed ordering where needed.
 - Progressive disclosure (Papert Paradigm). Basic usage requires zero configuration; advanced features are opt-in.
 - Every component follows low floor / high ceiling / wide walls.
-- All configuration and pipeline definitions use git-diffable text formats.
+- All configuration and circuit definitions use git-diffable text formats.
 
 ## Design invariants
 
-- **DSL-first.** Pipelines are declared in YAML and compiled to executable graphs.
+- **DSL-first.** Circuits are declared in YAML and compiled to executable graphs.
 - **Single-method interfaces.** Prefer narrow interfaces that compose via adapters and chains.
 - **Functional options.** Constructor tuning via `WithX` pattern, not mandatory parameters.
 - **Pass-through defaults.** Unknown inputs return unchanged, never panic.
@@ -30,7 +30,7 @@ The framework owns contract shapes, never implementations. Seven named principle
 | **BYOB** (Bring Your Own Bots) | LLM/agent backends are external | `Dispatcher` interface, `MuxDispatcher`, `FileDispatcher` | OpenAI adapter, Anthropic SDK, custom agent |
 | **BYOA** (Bring Your Own Auth) | Credentials never touch the framework | Clean injection points on dispatchers and sources | Vault, OIDC, mTLS, service accounts |
 | **BYOS** (Bring Your Own Storage) | Persistence is an interface, not a dependency | `curate.Store`, `Hook`, in-memory `WalkerState` | Postgres, S3, Redis, etcd |
-| **BYOD** (Bring Your Own Domain) | Domain logic lives in consumers | `Node`, `Walker`, `Transformer`, `Hook` interfaces | Domain nodes, walkers, hooks, YAML pipelines |
+| **BYOD** (Bring Your Own Domain) | Domain logic lives in consumers | `Node`, `Walker`, `Transformer`, `Hook` interfaces | Domain nodes, walkers, hooks, YAML circuits |
 | **BYOR** (Bring Your Own Rules) | Routing logic and decision thresholds are consumer-defined | `when:` expression engine, `vars:` config, `EdgeFactory` | Domain-specific routing rules, custom evaluators |
 | **BYO-Data** (Bring Your Own Datasets) | Calibration data and ground truth are consumer-curated | `curate` package, Three CLIs pattern | Domain ground truth, calibration datasets |
 | **BYOI** (Bring Your Own Infrastructure) | Topology-agnostic execution | `origami run` CLI, `Dispatcher` abstraction | Cursor subagents, Linux+CLI, Docker, K8s |

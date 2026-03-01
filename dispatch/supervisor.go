@@ -15,7 +15,7 @@ type WorkerState struct {
 	LastError     string    `json:"last_error,omitempty"`
 }
 
-// HealthSummary is a snapshot of all tracked workers and overall pipeline health.
+// HealthSummary is a snapshot of all tracked workers and overall circuit health.
 type HealthSummary struct {
 	Workers        []WorkerState `json:"workers"`
 	TotalActive    int           `json:"total_active"`

@@ -1,7 +1,7 @@
-# Case Study: Cloud-Native Pipeline Tools — CNCF Ecosystem Integration Analysis
+# Case Study: Cloud-Native Circuit Tools — CNCF Ecosystem Integration Analysis
 
 **Date:** 2026-02-26  
-**Subject:** Five CNCF Graduated tools analyzed against Origami's pipeline model  
+**Subject:** Five CNCF Graduated tools analyzed against Origami's circuit model  
 **Source:** `argoproj.github.io/argo-workflows`, `tekton.dev`, `keda.sh`, `falco.org`, `cloudevents.io`  
 **Purpose:** Map each tool's architecture to Origami primitives, classify integration type (adapter/marble/infrastructure/no-action), identify competitive gaps, and extract actionable tasks to existing contracts.
 
@@ -9,13 +9,13 @@
 
 ## Executive Summary
 
-Origami pipelines run in environments where Argo, Tekton, KEDA, Falco, and CloudEvents are already present. Unlike Python-based agentic frameworks (CrewAI, LangGraph) that require custom integration wrappers, Origami's Go-native, Kubernetes-native design enables day-0 interoperability with this ecosystem. This analysis covers five CNCF Graduated tools and produces a concrete integration matrix.
+Origami circuits run in environments where Argo, Tekton, KEDA, Falco, and CloudEvents are already present. Unlike Python-based agentic frameworks (CrewAI, LangGraph) that require custom integration wrappers, Origami's Go-native, Kubernetes-native design enables day-0 interoperability with this ecosystem. This analysis covers five CNCF Graduated tools and produces a concrete integration matrix.
 
 | Tool | Classification | Priority | Rationale |
 |------|---------------|----------|-----------|
-| **Argo Workflows** | Infrastructure | High | Production execution of Origami pipelines on K8s |
+| **Argo Workflows** | Infrastructure | High | Production execution of Origami circuits on K8s |
 | **Tekton** | Adapter | Medium | Source of CI failure data for Asterisk RP integration |
-| **KEDA** | Infrastructure | Medium | Auto-scale pipeline dispatch workers |
+| **KEDA** | Infrastructure | Medium | Auto-scale circuit dispatch workers |
 | **Falco** | Adapter | Medium | Runtime security event source for Achilles |
 | **CloudEvents** | Adapter | Low | Standard event envelope for SignalBus externalization |
 
@@ -44,8 +44,8 @@ Argo Workflows is the CNCF Graduated workflow engine for Kubernetes. It defines 
 
 | Argo Concept | Origami Equivalent | Alignment |
 |-------------|-------------------|-----------|
-| Workflow | `PipelineDef` | Strong — both are declarative graph definitions |
-| DAG template | `PipelineDef.Nodes` + `PipelineDef.Edges` | Strong — DAG tasks are nodes, dependencies are edges |
+| Workflow | `CircuitDef` | Strong — both are declarative graph definitions |
+| DAG template | `CircuitDef.Nodes` + `CircuitDef.Edges` | Strong — DAG tasks are nodes, dependencies are edges |
 | Steps template | N/A (Origami uses edges for sequencing) | Partial — steps are a special case of a linear DAG |
 | Template | `Node` (process) or `Marble` (composite) | Strong — Argo templates are reusable units, like Marbles |
 | Parameters | `WalkerState.Context` | Partial — Origami passes context through walker state, not typed parameters |
@@ -64,25 +64,25 @@ Argo Workflows is the CNCF Graduated workflow engine for Kubernetes. It defines 
 
 **Argo lacks:**
 - **AI-native abstractions.** No concept of Element, Persona, Mask, or Adversarial Dialectic. Argo is infrastructure; Origami is intelligence.
-- **In-process pipeline execution.** Every Argo step requires a Pod (seconds of overhead). Origami walks execute in microseconds because nodes are in-process function calls.
+- **In-process circuit execution.** Every Argo step requires a Pod (seconds of overhead). Origami walks execute in microseconds because nodes are in-process function calls.
 - **Dynamic edge evaluation.** Argo DAG edges are static dependencies. Origami edges evaluate `when:` expressions at runtime against artifacts, enabling dynamic routing.
-- **Metacalibration.** No equivalent to Ouroboros for measuring and improving pipeline quality.
+- **Metacalibration.** No equivalent to Ouroboros for measuring and improving circuit quality.
 
 ### 1.4 Integration Recommendation: **Infrastructure**
 
-Argo Workflows is the execution substrate for production Origami pipelines. The integration path:
+Argo Workflows is the execution substrate for production Origami circuits. The integration path:
 
-1. **Origami-to-Argo compiler**: Translate `PipelineDef` to Argo Workflow CRD YAML. Each Origami Node becomes an Argo container template. Each Origami Edge becomes an Argo DAG dependency. `when:` expressions become Argo conditional steps.
+1. **Origami-to-Argo compiler**: Translate `CircuitDef` to Argo Workflow CRD YAML. Each Origami Node becomes an Argo container template. Each Origami Edge becomes an Argo DAG dependency. `when:` expressions become Argo conditional steps.
 2. **Argo step container image**: A single Docker image containing the `origami` binary that executes a single Node's `Process()` function. Parameters marshalled as JSON.
 3. **Artifact bridge**: Map Origami `Artifact` interface to Argo artifact store (S3). Serialize artifacts to JSON between steps.
 
-This is not an adapter (no external data source) or a marble (not a reusable graph node). It's infrastructure — the deployment model for production Origami pipelines.
+This is not an adapter (no external data source) or a marble (not a reusable graph node). It's infrastructure — the deployment model for production Origami circuits.
 
 ### 1.5 Extracted Tasks
 
 - **Target: `durable-execution`** — Argo integration depends on durable state. The Checkpointer design must support artifact serialization/deserialization across process boundaries. Add: "Argo artifact bridge: serialize/deserialize Artifact to JSON for inter-step transfer."
-- **Target: `pipeline-efficiency`** — Argo step overhead (Pod creation) makes node caching more valuable. Add: "Argo cost model: estimate per-step Pod overhead to prioritize caching over re-execution."
-- **Target: new contract `origami-argo-compiler`** — The Argo integration is large enough for its own contract: PipelineDef → Argo Workflow CRD compilation, container image build, artifact bridge.
+- **Target: `circuit-efficiency`** — Argo step overhead (Pod creation) makes node caching more valuable. Add: "Argo cost model: estimate per-step Pod overhead to prioritize caching over re-execution."
+- **Target: new contract `origami-argo-compiler`** — The Argo integration is large enough for its own contract: CircuitDef → Argo Workflow CRD compilation, container image build, artifact bridge.
 
 ---
 
@@ -97,22 +97,22 @@ Tekton is the CNCF Graduated cloud-native CI/CD framework. Like Argo, it runs on
 - **Step**: the smallest execution unit — a container running a specific action
 - **Task**: a collection of sequential Steps, accepting parameters and producing results
 - **TaskRun**: an instantiation of a Task
-- **Pipeline**: a collection of Tasks with dependency edges and shared Workspaces
-- **PipelineRun**: an instantiation of a Pipeline
+- **Circuit**: a collection of Tasks with dependency edges and shared Workspaces
+- **CircuitRun**: an instantiation of a Circuit
 - **Workspace**: shared volume for data exchange between Tasks
-- **Trigger / EventListener**: webhook-based event ingestion that creates PipelineRuns
-- **Tekton Results**: API for querying completed PipelineRun/TaskRun outcomes
+- **Trigger / EventListener**: webhook-based event ingestion that creates CircuitRuns
+- **Tekton Results**: API for querying completed CircuitRun/TaskRun outcomes
 
-**Execution model:** Each Task runs as a Pod; each Step runs as a container within that Pod. Pipelines compose Tasks with `runAfter` dependencies. Tekton Catalog provides a registry of reusable Tasks.
+**Execution model:** Each Task runs as a Pod; each Step runs as a container within that Pod. Circuits compose Tasks with `runAfter` dependencies. Tekton Catalog provides a registry of reusable Tasks.
 
 ### 2.2 Concept Mapping
 
 | Tekton Concept | Origami Equivalent | Alignment |
 |---------------|-------------------|-----------|
-| Pipeline | `PipelineDef` | Strong — both are declarative pipeline definitions |
+| Circuit | `CircuitDef` | Strong — both are declarative circuit definitions |
 | Task | `Node` | Strong — a Task is a unit of work with inputs/outputs |
 | Step | N/A (Origami nodes are atomic) | Partial — Steps are sub-node granularity |
-| PipelineRun | `Walker` walk session | Structural — both represent a pipeline execution instance |
+| CircuitRun | `Walker` walk session | Structural — both represent a circuit execution instance |
 | Workspace | `WalkerState.Context` | Partial — both share data between tasks/nodes |
 | Trigger | N/A (Origami is pull-based) | Gap — Origami has no event-driven triggering |
 | Tekton Results | `MemoryStore` / calibration report | Partial — both store execution outcomes |
@@ -121,31 +121,31 @@ Tekton is the CNCF Graduated cloud-native CI/CD framework. Like Argo, it runs on
 ### 2.3 Gap Analysis
 
 **Origami lacks:**
-- **Event-driven triggering.** Tekton's EventListeners create PipelineRuns on webhook events. Origami pipelines are explicitly invoked. For production use (Asterisk analyzing failures as they happen), an event-driven trigger mechanism is needed.
-- **Results API for querying past runs.** Tekton Results provides a searchable history of pipeline executions. Origami's MemoryStore and calibration reports serve a similar purpose but lack a query API.
+- **Event-driven triggering.** Tekton's EventListeners create CircuitRuns on webhook events. Origami circuits are explicitly invoked. For production use (Asterisk analyzing failures as they happen), an event-driven trigger mechanism is needed.
+- **Results API for querying past runs.** Tekton Results provides a searchable history of circuit executions. Origami's MemoryStore and calibration reports serve a similar purpose but lack a query API.
 
 **Tekton lacks:**
-- **AI-native pipeline semantics.** No LLM transformers, no element-persona model, no confidence scoring.
+- **AI-native circuit semantics.** No LLM transformers, no element-persona model, no confidence scoring.
 - **Dynamic routing.** Tekton `when` expressions are limited to input comparisons. Origami `when:` expressions can evaluate against full artifact state.
-- **Metacalibration.** No mechanism to measure and improve pipeline quality over time.
+- **Metacalibration.** No mechanism to measure and improve circuit quality over time.
 
 ### 2.4 Integration Recommendation: **Adapter**
 
-Tekton is relevant to Asterisk as a **data source**, not as an execution platform. Asterisk analyzes failures from CI pipelines — many of which are Tekton Pipelines running on OpenShift.
+Tekton is relevant to Asterisk as a **data source**, not as an execution platform. Asterisk analyzes failures from CI circuits — many of which are Tekton Circuits running on OpenShift.
 
 **Proposed adapter: `tekton.results`**
 
 - **FQCN:** `tekton.results`
 - **Type:** Adapter (data source)
-- **Function:** Query Tekton Results API for PipelineRun/TaskRun data, extract failure logs, map to Asterisk's FailureItem format
-- **Consumer:** Asterisk (`consume` pipeline)
+- **Function:** Query Tekton Results API for CircuitRun/TaskRun data, extract failure logs, map to Asterisk's FailureItem format
+- **Consumer:** Asterisk (`consume` circuit)
 
 This enables Asterisk to directly ingest Tekton CI failures without requiring ReportPortal as an intermediary, broadening the data source portfolio.
 
 ### 2.5 Extracted Tasks
 
-- **Target: `origami-adapters`** — Add adapter candidate: `tekton.results` (Tekton Results API client). FQCN `tekton.results`, provides transformers for TaskRun/PipelineRun log extraction and failure classification.
-- **Target: Asterisk `consume` pipeline** — Tekton as an alternative to RP for CI failure ingestion. The consume pipeline would gain a `tekton-discover` node alongside the existing `rp-discover` node, with a routing edge based on configured source type.
+- **Target: `origami-adapters`** — Add adapter candidate: `tekton.results` (Tekton Results API client). FQCN `tekton.results`, provides transformers for TaskRun/CircuitRun log extraction and failure classification.
+- **Target: Asterisk `consume` circuit** — Tekton as an alternative to RP for CI failure ingestion. The consume circuit would gain a `tekton-discover` node alongside the existing `rp-discover` node, with a routing edge based on configured source type.
 
 ---
 
@@ -179,16 +179,16 @@ KEDA (Kubernetes Event-Driven Autoscaling) extends the Kubernetes HPA to scale b
 
 **Origami lacks:**
 - **Dynamic worker scaling.** Origami's `--parallel` flag sets a fixed worker count. In production, case queue depth varies. KEDA can scale workers from 0 to N based on queue length.
-- **Kubernetes-native deployment model.** Origami pipelines run as local processes. KEDA requires Kubernetes Deployments/Jobs to scale. This depends on the Argo integration (Section 1).
+- **Kubernetes-native deployment model.** Origami circuits run as local processes. KEDA requires Kubernetes Deployments/Jobs to scale. This depends on the Argo integration (Section 1).
 
 **KEDA lacks:**
-- Everything Origami provides. KEDA is pure infrastructure — it scales existing workloads but has no concept of pipelines, AI, or analysis.
+- Everything Origami provides. KEDA is pure infrastructure — it scales existing workloads but has no concept of circuits, AI, or analysis.
 
 ### 3.4 Integration Recommendation: **Infrastructure**
 
-KEDA is the scaling layer for production Origami pipeline workers. It pairs with the Argo integration:
+KEDA is the scaling layer for production Origami circuit workers. It pairs with the Argo integration:
 
-1. Argo compiles PipelineDef to Workflow CRDs
+1. Argo compiles CircuitDef to Workflow CRDs
 2. Worker Pods execute Node's Process() functions
 3. KEDA scales worker replicas based on queue depth (e.g., number of pending cases)
 
@@ -201,7 +201,7 @@ No Origami code changes are needed beyond the observability contract's Prometheu
 ### 3.5 Extracted Tasks
 
 - **Target: `origami-observability`** — Ensure the Prometheus endpoint exposes metrics that KEDA scalers can consume: `origami_cases_pending`, `origami_workers_active`, `origami_dispatch_queue_depth`. Add: "KEDA-compatible metrics: expose queue depth and worker count as Prometheus gauges."
-- **Target: `pipeline-efficiency`** — KEDA dynamic scaling is the production answer to the `--parallel` flag. Add: "Document KEDA ScaledObject template for Origami worker Deployments."
+- **Target: `circuit-efficiency`** — KEDA dynamic scaling is the production answer to the `--parallel` flag. Add: "Document KEDA ScaledObject template for Origami worker Deployments."
 
 ---
 
@@ -225,7 +225,7 @@ Falco is the CNCF Graduated runtime security engine. It detects threats by monit
 
 | Falco Concept | Origami Equivalent | Alignment |
 |--------------|-------------------|-----------|
-| Detection rule | `PipelineDef` edge `when:` expression | Structural — both evaluate conditions against events |
+| Detection rule | `CircuitDef` edge `when:` expression | Structural — both evaluate conditions against events |
 | Falcosidekick | `SignalBus` | Structural — both route events to external consumers |
 | Plugin | `Adapter` / `Extractor` | Structural — both extend a core engine with external data sources |
 | Alert priority (emergency → debug) | `Severity` (Critical → Low) | Structural — both classify events by severity |
@@ -234,8 +234,8 @@ Falco is the CNCF Graduated runtime security engine. It detects threats by monit
 ### 4.3 Gap Analysis
 
 **Origami lacks:**
-- **Streaming event consumption.** Falco produces a continuous stream of security events. Origami pipelines are request/response (walk a graph, produce an artifact). Streaming event ingestion requires either a polling adapter or a push-based trigger.
-- **Alert aggregation.** Falco events are high-volume (thousands per minute in a busy cluster). Origami would need deduplication and windowing before feeding events into a pipeline.
+- **Streaming event consumption.** Falco produces a continuous stream of security events. Origami circuits are request/response (walk a graph, produce an artifact). Streaming event ingestion requires either a polling adapter or a push-based trigger.
+- **Alert aggregation.** Falco events are high-volume (thousands per minute in a busy cluster). Origami would need deduplication and windowing before feeding events into a circuit.
 
 **Falco lacks:**
 - **Root-cause analysis.** Falco detects threats but doesn't analyze them. It says "unexpected shell in container X" but doesn't determine whether the shell is from a compromised dependency, a misconfigured deployment, or an intentional debugging session.
@@ -249,7 +249,7 @@ Falco is a data source for Achilles. Runtime security events complement Achilles
 
 - **FQCN:** `falco.events`
 - **Type:** Adapter (event source)
-- **Function:** Consume Falco events via Falcosidekick webhook, deduplicate and window, feed into an Achilles pipeline as a `runtime-evidence` node
+- **Function:** Consume Falco events via Falcosidekick webhook, deduplicate and window, feed into an Achilles circuit as a `runtime-evidence` node
 - **Consumer:** Achilles (vulnerability assessment)
 
 The integration enables Achilles to correlate static vulnerability findings with runtime behavioral evidence: "CVE-2025-XXXX is present in dependency Y, AND Falco detected unexpected network activity from containers running that dependency."
@@ -257,7 +257,7 @@ The integration enables Achilles to correlate static vulnerability findings with
 ### 4.5 Extracted Tasks
 
 - **Target: `origami-adapters`** — Add adapter candidate: `falco.events` (Falcosidekick webhook consumer). FQCN `falco.events`, provides extractors for Falco alert parsing and severity mapping.
-- **Target: Achilles pipeline** — Add optional `runtime-evidence` node after `scan` that consumes Falco events when available, correlating static findings with runtime behavior. This is a post-PoC enhancement.
+- **Target: Achilles circuit** — Add optional `runtime-evidence` node after `scan` that consumes Falco events when available, correlating static findings with runtime behavior. This is a post-PoC enhancement.
 
 ---
 
@@ -308,12 +308,12 @@ CloudEvents is a serialization layer for Origami's event system. The integration
 - **Function:** Wrap `WalkEvent` / `KamiEvent` in CloudEvents envelopes; publish via CloudEvents Go SDK to any supported transport (HTTP, Kafka, NATS)
 - **Consumer:** All Origami-based tools (framework-level)
 
-Example CloudEvent from an Origami pipeline walk:
+Example CloudEvent from an Origami circuit walk:
 ```json
 {
   "specversion": "1.0",
   "type": "io.origami.walk.node.exit",
-  "source": "/pipeline/asterisk-rca/node/triage",
+  "source": "/circuit/asterisk-rca/node/triage",
   "id": "a1b2c3d4",
   "time": "2026-02-26T10:30:00Z",
   "datacontenttype": "application/json",
@@ -340,7 +340,7 @@ Example CloudEvent from an Origami pipeline walk:
 |------|---------------|------|----------|----------------|----------|
 | **Argo Workflows** | Infrastructure | N/A (compiler) | High | New: `origami-argo-compiler` | All |
 | **Tekton** | Adapter | `tekton.results` | Medium | `origami-adapters` | Asterisk |
-| **KEDA** | Infrastructure | N/A (deployment) | Medium | `origami-observability`, `pipeline-efficiency` | All |
+| **KEDA** | Infrastructure | N/A (deployment) | Medium | `origami-observability`, `circuit-efficiency` | All |
 | **Falco** | Adapter | `falco.events` | Medium | `origami-adapters` | Achilles |
 | **CloudEvents** | Adapter | `cloudevents.bridge` | Low | `origami-observability`, `origami-adapters` | All |
 
@@ -365,13 +365,13 @@ The Go-native + Kubernetes-native combination means Origami integrations are thi
 | # | Task | Target Contract | From |
 |---|------|----------------|------|
 | 1 | Argo artifact bridge: serialize/deserialize Artifact across process boundaries | `durable-execution` | Argo |
-| 2 | Argo cost model: per-step Pod overhead vs caching benefit | `pipeline-efficiency` | Argo |
-| 3 | New contract: `origami-argo-compiler` (PipelineDef → Argo Workflow CRD) | New | Argo |
+| 2 | Argo cost model: per-step Pod overhead vs caching benefit | `circuit-efficiency` | Argo |
+| 3 | New contract: `origami-argo-compiler` (CircuitDef → Argo Workflow CRD) | New | Argo |
 | 4 | Adapter candidate: `tekton.results` (Tekton Results API client) | `origami-adapters` | Tekton |
-| 5 | Tekton as alternative RP source in Asterisk consume pipeline | Asterisk | Tekton |
+| 5 | Tekton as alternative RP source in Asterisk consume circuit | Asterisk | Tekton |
 | 6 | KEDA-compatible metrics: expose queue depth and worker count as Prometheus gauges | `origami-observability` | KEDA |
-| 7 | Document KEDA ScaledObject template for Origami worker Deployments | `pipeline-efficiency` | KEDA |
+| 7 | Document KEDA ScaledObject template for Origami worker Deployments | `circuit-efficiency` | KEDA |
 | 8 | Adapter candidate: `falco.events` (Falcosidekick webhook consumer) | `origami-adapters` | Falco |
-| 9 | Optional `runtime-evidence` node in Achilles pipeline | Achilles | Falco |
+| 9 | Optional `runtime-evidence` node in Achilles circuit | Achilles | Falco |
 | 10 | CloudEvents exporter: WalkObserver serializing to CloudEvents format | `origami-observability` | CloudEvents |
 | 11 | Adapter candidate: `cloudevents.bridge` | `origami-adapters` | CloudEvents |

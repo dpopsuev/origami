@@ -69,15 +69,15 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, `Usage: origami <command> [flags]
 
 Commands:
-  run        Execute a pipeline YAML
-  validate   Validate a pipeline YAML without executing
-  lint       Static analysis for pipeline YAML (rules, profiles, auto-fix)
-  lsp        Language Server for pipeline YAML (diagnostics, completion, hover)
-  skill      Skill scaffolding (scaffold SKILL.md from pipeline YAML)
+  run        Execute a circuit YAML
+  validate   Validate a circuit YAML without executing
+  lint       Static analysis for circuit YAML (rules, profiles, auto-fix)
+  lsp        Language Server for circuit YAML (diagnostics, completion, hover)
+  skill      Skill scaffolding (scaffold SKILL.md from circuit YAML)
   ouroboros  Ouroboros meta-calibration tools (prompt, analyze, save, serve)
-  kami       Live pipeline debugger (HTTP/SSE + WS)
+  kami       Live circuit debugger (HTTP/SSE + WS)
   kami serve Start Kami MCP server over stdio (co-starts HTTP/WS)
-  studio     Visual Pipeline Editor (embedded SPA + REST API)
+  studio     Visual Circuit Editor (embedded SPA + REST API)
   adapter    Adapter management (list, inspect, validate)
   version    Print version`)
 }
@@ -98,13 +98,13 @@ func runCmd(args []string) error {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	verbose := fs.Bool("v", false, "verbose output (debug level)")
 	sets := make(setFlag)
-	fs.Var(sets, "set", "set pipeline variable (key=value), repeatable")
+	fs.Var(sets, "set", "set circuit variable (key=value), repeatable")
 	fs.Parse(args)
 
 	if fs.NArg() < 1 {
-		return fmt.Errorf("usage: origami run [-v] [--set key=value] <pipeline.yaml>")
+		return fmt.Errorf("usage: origami run [-v] [--set key=value] <circuit.yaml>")
 	}
-	pipelinePath := fs.Arg(0)
+	circuitPath := fs.Arg(0)
 
 	level := slog.LevelInfo
 	if *verbose {
@@ -116,7 +116,7 @@ func runCmd(args []string) error {
 	defer cancel()
 
 	builtins := framework.TransformerRegistry{
-		"file": transformers.NewFile(transformers.WithRootDir(filepath.Dir(pipelinePath))),
+		"file": transformers.NewFile(transformers.WithRootDir(filepath.Dir(circuitPath))),
 	}
 
 	opts := []framework.RunOption{
@@ -127,11 +127,11 @@ func runCmd(args []string) error {
 		opts = append(opts, framework.WithOverrides(map[string]any(sets)))
 	}
 
-	logger.Info("running pipeline", "path", pipelinePath)
-	if err := framework.Run(ctx, pipelinePath, nil, opts...); err != nil {
+	logger.Info("running circuit", "path", circuitPath)
+	if err := framework.Run(ctx, circuitPath, nil, opts...); err != nil {
 		return err
 	}
-	logger.Info("pipeline completed")
+	logger.Info("circuit completed")
 	return nil
 }
 
@@ -140,14 +140,14 @@ func validateCmd(args []string) error {
 	fs.Parse(args)
 
 	if fs.NArg() < 1 {
-		return fmt.Errorf("usage: origami validate <pipeline.yaml>")
+		return fmt.Errorf("usage: origami validate <circuit.yaml>")
 	}
-	pipelinePath := fs.Arg(0)
+	circuitPath := fs.Arg(0)
 
-	if err := framework.Validate(pipelinePath); err != nil {
+	if err := framework.Validate(circuitPath); err != nil {
 		return err
 	}
-	fmt.Printf("OK: %s is valid\n", pipelinePath)
+	fmt.Printf("OK: %s is valid\n", circuitPath)
 	return nil
 }
 
@@ -288,7 +288,7 @@ func ouroborosRun(args []string) error {
 
 	logger.Info("running ouroboros probe", "seed", seed.Name, "category", seed.Category)
 
-	pipelinePath := "ouroboros/pipelines/ouroboros-probe.yaml"
+	circuitPath := "ouroboros/circuits/ouroboros-probe.yaml"
 	dispatcher := func(_ context.Context, nodeName string, prompt string) (string, error) {
 		return "", fmt.Errorf("node %q: no dispatcher configured (use --serve for MCP dispatch)", nodeName)
 	}
@@ -296,8 +296,8 @@ func ouroborosRun(args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	nodes := ouroboros.PipelineNodes(seed, dispatcher)
-	if err := framework.Run(ctx, pipelinePath, nil,
+	nodes := ouroboros.CircuitNodes(seed, dispatcher)
+	if err := framework.Run(ctx, circuitPath, nil,
 		framework.WithNodes(nodes),
 		framework.WithLogger(logger),
 	); err != nil {
@@ -442,7 +442,7 @@ func ouroborosServe(args []string) error {
 	}
 
 	cfg := ouroborosmcp.NewOuroborosConfig(*runsDir)
-	srv := fwmcp.NewPipelineServer(cfg)
+	srv := fwmcp.NewCircuitServer(cfg)
 	ouroborosmcp.RegisterExtraTools(srv, *runsDir)
 	defer srv.Shutdown()
 

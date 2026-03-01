@@ -12,7 +12,7 @@ Origami uses a hybrid approach: **standard library `testing`** for unit tests, w
 
 | Situation | Framework |
 |-----------|-----------|
-| BDD/integration scenario (multi-step flow, full pipeline) | Ginkgo (`Describe`/`It` + Gomega) |
+| BDD/integration scenario (multi-step flow, full circuit) | Ginkgo (`Describe`/`It` + Gomega) |
 | Simple unit test, table-driven, small helper | Stdlib `testing` |
 | Deep equality with readable diffs | `go-cmp` (optional) |
 
@@ -20,7 +20,7 @@ Both frameworks may coexist in the same package.
 
 ## Stdlib conventions
 
-- **Naming:** `Test<Unit>_<Scenario>` (e.g., `TestLoadPipeline_ValidYAML`).
+- **Naming:** `Test<Unit>_<Scenario>` (e.g., `TestLoadCircuit_ValidYAML`).
 - **Helpers:** Use `t.Helper()` in helper functions.
 - **Assertions:** `t.Errorf` / `t.Fatalf` with clear `got` / `want` messages.
 - **Table-driven:** Prefer `t.Run(tt.name, ...)` for parameterized inputs.

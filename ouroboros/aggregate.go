@@ -31,7 +31,7 @@ func aggregateDimensions(profile *ModelProfile) {
 
 // PoleResultToProbeResult converts a judge-produced PoleResult into a
 // ProbeResult suitable for dimension aggregation. This bridges the seed
-// pipeline output into the existing ModelProfile aggregation path.
+// circuit output into the existing ModelProfile aggregation path.
 func PoleResultToProbeResult(seedName string, pr *PoleResult, elapsed time.Duration) ProbeResult {
 	return ProbeResult{
 		ProbeID:         seedName,
@@ -41,9 +41,9 @@ func PoleResultToProbeResult(seedName string, pr *PoleResult, elapsed time.Durat
 	}
 }
 
-// ProfileFromPoleResults aggregates multiple seed pipeline PoleResults into
+// ProfileFromPoleResults aggregates multiple seed circuit PoleResults into
 // a ModelProfile, using the same dimension averaging as the v1 runner.
-// This replaces RunOuroboros for seed-pipeline workflows.
+// This replaces RunOuroboros for seed-circuit workflows.
 func ProfileFromPoleResults(
 	model framework.ModelIdentity,
 	results []PoleResult,

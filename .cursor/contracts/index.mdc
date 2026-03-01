@@ -12,10 +12,8 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
-| `origami-lsp.md` | Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
-| `washi.md` | Washi — enterprise pipeline management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
-| `resilience.md` | Circuit breaker, rate limiting, thermal budget. | quick-win |
-| `ouroboros-signal-analysis.md` | GBWP measurement, persona offset compensation. | quick-win |
+| `origami-lsp.md` | Language Server for circuit YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
+| `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 
 ## Completed (recent)
 
@@ -24,34 +22,36 @@
 - `completed/api-stabilization/signal-domains.md` — Renderer interface (DAC symmetry), zone domain annotations, context filter. Complete.
 - `completed/api-stabilization/signal-integrity.md` — Evidence SNR, per-node cost tracking, mismatch scoring, convergence trajectory. Complete.
 - `completed/api-stabilization/dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.
+- `completed/api-stabilization/resilience.md` — Circuit breaker, rate limiting, thermal budget. Complete.
+- `completed/api-stabilization/ouroboros-signal-analysis.md` — GBWP probe, DimGBWP dimension, offset compensator. Complete.
 
 ### Refinement phase
 
 - `completed/framework/consumer-cli-scaffold.md` — 8 perennial commands, `origami.NewCLI()` builder, `WithObservability`. Complete.
 - `completed/framework/e2e-dsl-testing.md` — E2E walk tests gate every checkpoint. Complete.
 - `completed/framework/durable-execution.md` — `Checkpointer` interface + HITL Interrupt/Resume. Complete.
-- `completed/framework/origami-adapters.md` — FQCN resolution on all registries. `imports:` on PipelineDef. Core adapter. Complete.
+- `completed/framework/origami-adapters.md` — FQCN resolution on all registries. `imports:` on CircuitDef. Core adapter. Complete.
 - `completed/framework/memory-evolution.md` — MemoryStore: namespaced, searchable, persistent. WithTaggedMemory. Complete.
 - `completed/framework/origami-observability.md` — 9 Prometheus metrics + OTel traces. `/metrics` on KamiServer. Complete.
 - `completed/framework/origami-api-hygiene.md` — Configurable `ModelRegistry`. Parameterized probe stimuli. Complete.
 - `completed/framework/origami-marbles.md` — `Marble` interface, `marble:` on NodeDef, composite subgraph, Kami fold/unfold. Complete.
-- `completed/framework/pipeline-efficiency.md` — Node caching (InMemoryCache with TTL), fan-in merge strategies (ListArtifact). Complete.
+- `completed/framework/circuit-efficiency.md` — Node caching (InMemoryCache with TTL), fan-in merge strategies (ListArtifact). Complete.
 - `completed/framework/provider-resilience.md` — Dispatch fallback chains + intent classifier + OnFallback callback. Complete.
 - `completed/framework/prompt-calibration.md` — StepAnalyzer, TuningProposal, PromptCalibrationLoop types with synthetic tests. Complete.
 - `completed/framework/origami-lint.md` — 24 rules, 4 profiles, auto-fix, CLI integration, YAML line resolver. Complete.
 
 ### Presentation phase
 
-- `completed/framework/consumer-ergonomics.md` — ResolvePipelinePath, WithOutputCapture, DefaultWalker: three consumer-boilerplate primitives. Complete.
+- `completed/framework/consumer-ergonomics.md` — ResolveCircuitPath, WithOutputCapture, DefaultWalker: three consumer-boilerplate primitives. Complete.
 - `completed/framework/walker-experience.md` — WalkerDef (agent-in-YAML), cross-walk MemoryStore, hierarchical delegation pattern. Complete.
-- `completed/framework/ouroboros-seed-pipeline.md` — 3-node pipeline (Generator/Subject/Judge), YAML seeds, PersonaSheet, auto-routing. Phase 8 deferred. Complete.
+- `completed/framework/ouroboros-seed-circuit.md` — 3-node circuit (Generator/Subject/Judge), YAML seeds, PersonaSheet, auto-routing. Phase 8 deferred. Complete.
 - `completed/framework/kami-live-debugger.md` — Kami live agentic debugger (Demiurge pattern: MCP + HTTP/SSE + WS). EventBridge, debug API, MCP tools, recorder/replayer, React frontend. Complete.
 - `completed/framework/kabuki-presentation-engine.md` — Kabuki data-driven presentation SPA: KabukiConfig interface, API endpoints, 12 section components, element selector, scroll-snap + keyboard nav. Complete.
 
 ### Infrastructure phase
 
 - `completed/framework/papercup-protocol-maturity.md` — Papercup choreography, zone stickiness, work stealing, adaptive lifecycle, transport decoupling. Complete.
-- `completed/framework/migrate-ouroboros-to-marshaller.md` — Ouroboros discovery tools served via PipelineServer domain hooks. Complete.
+- `completed/framework/migrate-ouroboros-to-marshaller.md` — Ouroboros discovery tools served via CircuitServer domain hooks. Complete.
 - `completed/framework/knowledge-source-catalog.md` — KnowledgeSourceCatalog + Source types, KnowledgeSourceRouter for tag-based routing. Complete.
 - `completed/framework/calibration-primitives.md` — Generic calibration types, interfaces, aggregation, report formatting (`calibrate/` package). Complete.
 - `completed/framework/marshaller-step-schema-factory.md` — Replace freeform `submit_artifact` with schema-validated `submit_step` tool using StepSchemas as a step factory. Complete.
@@ -65,12 +65,12 @@
 
 ### Analysis (all done)
 
-- `completed/analysis/case-study-omo-agentic-arms-race.md` — Oh My OpenCode competitive analysis. Extracted to `provider-resilience` + `ouroboros-seed-pipeline`.
+- `completed/analysis/case-study-omo-agentic-arms-race.md` — Oh My OpenCode competitive analysis. Extracted to `provider-resilience` + `ouroboros-seed-circuit`.
 - `completed/analysis/case-study-crewai-crews-and-flows.md` — CrewAI competitive analysis. Extracted to `walker-experience`.
 - `completed/analysis/case-study-ansible-collections.md` — Ansible Collections analysis. Extracted to `origami-adapters` + `origami-marbles` + `origami-lsp`.
 - `completed/analysis/case-study-visual-editor-landscape.md` — Excalidraw + Mermaid + Ansible Automation Controller analysis. Extracted to `washi`.
-- `completed/analysis/case-study-langgraph-graph-duality.md` — LangGraph state-centric vs walker-centric analysis. Extracted to `durable-execution`, `memory-evolution`, `pipeline-efficiency`.
-- `completed/analysis/case-study-cloud-native-pipeline-tools.md` — Argo, Tekton, KEDA, Falco, CloudEvents analysis. Extracted to `origami-adapters`, `origami-marbles`, `pipeline-efficiency`.
+- `completed/analysis/case-study-langgraph-graph-duality.md` — LangGraph state-centric vs walker-centric analysis. Extracted to `durable-execution`, `memory-evolution`, `circuit-efficiency`.
+- `completed/analysis/case-study-cloud-native-circuit-tools.md` — Argo, Tekton, KEDA, Falco, CloudEvents analysis. Extracted to `origami-adapters`, `origami-marbles`, `circuit-efficiency`.
 
 See `current-goal.mdc` for the full completed contracts list.
 

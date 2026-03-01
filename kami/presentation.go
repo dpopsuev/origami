@@ -10,7 +10,7 @@ import (
 // section-based presentation SPA. Methods that return nil skip that section.
 //
 // Kabuki is the presentation layer; Kami is the debugger. Agent intros and
-// pipeline nodes are derived from Theme (not duplicated here).
+// circuit nodes are derived from Theme (not duplicated here).
 type KabukiConfig interface {
 	Hero() *HeroSection
 	Problem() *ProblemSection
@@ -164,8 +164,8 @@ type themePayload struct {
 	CooperationDialogs []Dialog          `json:"cooperation_dialogs"`
 }
 
-// pipelinePayload is the JSON envelope for /api/pipeline.
-type pipelinePayload struct {
+// circuitPayload is the JSON envelope for /api/circuit.
+type circuitPayload struct {
 	Nodes map[string]string `json:"nodes"`
 }
 
@@ -184,13 +184,13 @@ func (s *Server) handleThemeAPI(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func (s *Server) handlePipelineAPI(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleCircuitAPI(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if s.cfg.Theme == nil {
-		json.NewEncoder(w).Encode(pipelinePayload{})
+		json.NewEncoder(w).Encode(circuitPayload{})
 		return
 	}
-	json.NewEncoder(w).Encode(pipelinePayload{
+	json.NewEncoder(w).Encode(circuitPayload{
 		Nodes: s.vocabOverlay(s.cfg.Theme.NodeDescriptions()),
 	})
 }

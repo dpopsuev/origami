@@ -7,7 +7,7 @@ import (
 	"log/slog"
 )
 
-// CurationWalker is a framework.Walker that walks the curation pipeline.
+// CurationWalker is a framework.Walker that walks the curation circuit.
 // It uses configured EvidenceSources and Extractors to fetch raw data, extract
 // fields, validate against a Schema, and promote complete records.
 type CurationWalker struct {
@@ -50,8 +50,9 @@ func NewCurationWalker(cfg CurationWalkerConfig) *CurationWalker {
 	}
 }
 
-func (w *CurationWalker) Identity() framework.AgentIdentity { return w.identity }
-func (w *CurationWalker) State() *framework.WalkerState     { return w.state }
+func (w *CurationWalker) Identity() framework.AgentIdentity      { return w.identity }
+func (w *CurationWalker) SetIdentity(id framework.AgentIdentity)  { w.identity = id }
+func (w *CurationWalker) State() *framework.WalkerState           { return w.state }
 
 // Record returns the curated record after walking.
 func (w *CurationWalker) Record() Record { return w.record }
@@ -59,7 +60,7 @@ func (w *CurationWalker) Record() Record { return w.record }
 // Promoted returns true if the record was promoted (all required fields present).
 func (w *CurationWalker) Promoted() bool { return w.promoted }
 
-// Handle processes each node in the curation pipeline, producing
+// Handle processes each node in the curation circuit, producing
 // CurationArtifact outputs that the edge evaluators use for routing.
 func (w *CurationWalker) Handle(ctx context.Context, node framework.Node, nc framework.NodeContext) (framework.Artifact, error) {
 	switch node.Name() {

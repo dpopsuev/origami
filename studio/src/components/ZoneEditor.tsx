@@ -1,10 +1,10 @@
 import { useState } from "react";
-import type { PipelineZone, PipelineNode } from "../sync/yaml-sync";
+import type { CircuitZone, CircuitNode } from "../sync/yaml-sync";
 
 interface ZoneEditorProps {
-  zones: PipelineZone[];
-  availableNodes: PipelineNode[];
-  onUpdate: (zones: PipelineZone[]) => void;
+  zones: CircuitZone[];
+  availableNodes: CircuitNode[];
+  onUpdate: (zones: CircuitZone[]) => void;
 }
 
 const ELEMENTS = ["fire", "water", "earth", "air", "diamond", "lightning", "iron"];
@@ -23,7 +23,7 @@ export function ZoneEditor({ zones, availableNodes, onUpdate }: ZoneEditorProps)
     if (editingZone === name) setEditingZone(null);
   };
 
-  const updateZone = (name: string, updates: Partial<PipelineZone>) => {
+  const updateZone = (name: string, updates: Partial<CircuitZone>) => {
     onUpdate(zones.map((z) => (z.name === name ? { ...z, ...updates } : z)));
   };
 

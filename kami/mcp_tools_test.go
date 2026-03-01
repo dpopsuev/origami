@@ -84,7 +84,7 @@ func TestMCPTools_GetSnapshotHandler(t *testing.T) {
 	}
 
 	tc := res.Content[0].(*sdkmcp.TextContent)
-	var parsed PipelineSnapshot
+	var parsed CircuitSnapshot
 	if err := json.Unmarshal([]byte(tc.Text), &parsed); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

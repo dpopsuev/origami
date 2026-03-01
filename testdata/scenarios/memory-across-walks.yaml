@@ -1,5 +1,5 @@
-pipeline: memory-test
-description: "Simple 2-node pipeline for verifying cross-walk MemoryStore persistence"
+circuit: memory-test
+description: "Simple 2-node circuit for verifying cross-walk MemoryStore persistence"
 
 nodes:
   - name: process

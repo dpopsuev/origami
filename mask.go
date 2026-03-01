@@ -82,7 +82,7 @@ func isValidNode(nodeName string, validNodes []string) bool {
 	return false
 }
 
-// --- Skeleton mask implementations for the Thesis pipeline ---
+// --- Skeleton mask implementations for the Thesis circuit ---
 
 type recallMask struct{}
 
@@ -156,7 +156,7 @@ func (m *judgmentMask) Wrap(next NodeProcessor) NodeProcessor {
 // NewJudgmentMask returns the Mask of Judgment (valid at "review" node).
 func NewJudgmentMask() Mask { return &judgmentMask{} }
 
-// DefaultThesisMasks returns the 4 Thesis pipeline masks in a registry.
+// DefaultThesisMasks returns the 4 Thesis circuit masks in a registry.
 func DefaultThesisMasks() MaskRegistry {
 	masks := []Mask{NewRecallMask(), NewForgeMask(), NewCorrelationMask(), NewJudgmentMask()}
 	reg := make(MaskRegistry, len(masks))

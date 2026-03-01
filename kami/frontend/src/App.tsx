@@ -5,7 +5,7 @@ import { useKamiSelector } from './hooks/useKamiSelector'
 import { useKabuki } from './hooks/useKabuki'
 import { useTheme } from './hooks/useTheme'
 import { ThemeToggle } from './components/ThemeToggle'
-import { PipelineGraph } from './components/PipelineGraph'
+import { CircuitGraph } from './components/CircuitGraph'
 import { MonologuePanel } from './components/MonologuePanel'
 import { EvidencePanel } from './components/EvidencePanel'
 import { KamiOverlay } from './components/KamiOverlay'
@@ -53,7 +53,7 @@ const DEFAULT_ORDER = [
 function App() {
   const { events, connected } = useSSE({ url: SSE_URL })
   const { commands, connected: wsConnected, send: wsSend } = useKamiWS({ url: WS_URL })
-  const { theme, pipeline, kabuki, loading, mode } = useKabuki()
+  const { theme, circuit, kabuki, loading, mode } = useKabuki()
   const { preference, cycle } = useTheme()
   const [activeSection, setActiveSection] = useState('hero')
   useKamiSelector(true)
@@ -73,7 +73,7 @@ function App() {
     if (kabuki.hero) s.add('hero')
     s.add('agenda')
     if (kabuki.problem) s.add('problem')
-    if (pipeline?.nodes && Object.keys(pipeline.nodes).length > 0) s.add('solution')
+    if (circuit?.nodes && Object.keys(circuit.nodes).length > 0) s.add('solution')
     if (theme?.agent_intros && theme.agent_intros.length > 0) s.add('agents')
     if (kabuki.transition_line) s.add('transition')
     s.add('demo')
@@ -85,7 +85,7 @@ function App() {
     for (const cs of kabuki.code_showcases || []) s.add(cs.id)
     for (const cg of kabuki.concepts || []) s.add(cg.id)
     return s
-  }, [mode, kabuki, theme, pipeline])
+  }, [mode, kabuki, theme, circuit])
 
   // Dynamic labels from code showcases and concept groups
   const dynamicLabels = useMemo<Record<string, string>>(() => {
@@ -112,7 +112,7 @@ function App() {
       hero: kabuki.hero ? <HeroSection data={kabuki.hero} /> : null,
       agenda: <AgendaSection sections={sectionList} activeSection={activeSection} />,
       problem: kabuki.problem ? <ProblemSection data={kabuki.problem} /> : null,
-      solution: pipeline?.nodes ? <SolutionSection nodes={pipeline.nodes} /> : null,
+      solution: circuit?.nodes ? <SolutionSection nodes={circuit.nodes} /> : null,
       agents: theme?.agent_intros ? <AgentIntrosSection agents={theme.agent_intros} /> : null,
       transition: kabuki.transition_line ? <TransitionSection line={kabuki.transition_line} /> : null,
       demo: <LiveDemoSection
@@ -137,7 +137,7 @@ function App() {
       r[cg.id] = <ConceptSection id={cg.id} title={cg.title} subtitle={cg.subtitle} cards={cg.cards} />
     }
     return r
-  }, [kabuki, pipeline, theme, events, commands, connected, wsConnected, sectionList, activeSection])
+  }, [kabuki, circuit, theme, events, commands, connected, wsConnected, sectionList, activeSection])
 
   useEffect(() => {
     if (mode !== 'kabuki' || sectionIds.length === 0) return
@@ -226,7 +226,7 @@ function App() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 relative">
-          <PipelineGraph events={events} nodeDescriptions={theme?.node_descriptions} />
+          <CircuitGraph events={events} nodeDescriptions={theme?.node_descriptions} />
           <KamiOverlay commands={commands} />
         </div>
         <div className="w-96 flex flex-col border-l border-edge overflow-hidden">

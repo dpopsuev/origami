@@ -58,8 +58,9 @@ type stubWalker struct {
 	visited  []string
 }
 
-func (w *stubWalker) Identity() AgentIdentity { return w.identity }
-func (w *stubWalker) State() *WalkerState     { return w.state }
+func (w *stubWalker) Identity() AgentIdentity      { return w.identity }
+func (w *stubWalker) SetIdentity(id AgentIdentity)  { w.identity = id }
+func (w *stubWalker) State() *WalkerState           { return w.state }
 func (w *stubWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
 	w.visited = append(w.visited, node.Name())
 	return node.Process(ctx, nc)

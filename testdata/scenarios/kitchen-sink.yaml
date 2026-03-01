@@ -1,4 +1,4 @@
-pipeline: kitchen-sink
+circuit: kitchen-sink
 description: "Exercises zones, when expressions, shortcuts, hooks, input resolution, prompt rendering, vars, schema"
 
 vars:

@@ -135,9 +135,9 @@ func TestAPI_ThemeWithoutTheme(t *testing.T) {
 	}
 }
 
-func TestAPI_PipelineWithTheme(t *testing.T) {
+func TestAPI_CircuitWithTheme(t *testing.T) {
 	addr := startTestServer(t, Config{Theme: mockTheme{}})
-	body := getJSON(t, fmt.Sprintf("http://%s/api/pipeline", addr))
+	body := getJSON(t, fmt.Sprintf("http://%s/api/circuit", addr))
 
 	nodes := body["nodes"].(map[string]any)
 	if len(nodes) != 2 {
@@ -214,8 +214,8 @@ func TestAPI_KabukiNilSectionOrder(t *testing.T) {
 func TestAPI_MarbleComposite(t *testing.T) {
 	marbles := framework.MarbleRegistry{
 		"scorer": func(nd framework.NodeDef) framework.Marble {
-			def := &framework.PipelineDef{
-				Pipeline: "scorer-sub",
+			def := &framework.CircuitDef{
+				Circuit: "scorer-sub",
 				Nodes: []framework.NodeDef{
 					{Name: "calc"},
 					{Name: "normalize"},
@@ -243,8 +243,8 @@ func TestAPI_MarbleComposite(t *testing.T) {
 
 	var body map[string]any
 	json.NewDecoder(resp.Body).Decode(&body)
-	if body["pipeline"] != "scorer-sub" {
-		t.Errorf("pipeline = %v, want scorer-sub", body["pipeline"])
+	if body["circuit"] != "scorer-sub" {
+		t.Errorf("circuit = %v, want scorer-sub", body["circuit"])
 	}
 	nodes, ok := body["nodes"].([]any)
 	if !ok || len(nodes) != 2 {

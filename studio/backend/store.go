@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// EventStore is an in-memory event store for pipeline runs.
+// EventStore is an in-memory event store for circuit runs.
 // Community edition uses this; Enterprise edition can swap for Postgres.
 type EventStore struct {
 	mu     sync.RWMutex

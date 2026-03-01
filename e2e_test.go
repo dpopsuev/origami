@@ -8,13 +8,13 @@ import (
 
 // --- Test helpers ---
 
-func loadScenario(t *testing.T, path string) *PipelineDef {
+func loadScenario(t *testing.T, path string) *CircuitDef {
 	t.Helper()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}
@@ -270,8 +270,8 @@ func TestE2E_RealYAML_HierarchicalDelegation(t *testing.T) {
 func TestE2E_RealYAML_IntentClassifier(t *testing.T) {
 	def := loadScenario(t, "testdata/patterns/intent-classifier.yaml")
 
-	if def.Pipeline != "intent-classifier" {
-		t.Errorf("pipeline name = %q, want intent-classifier", def.Pipeline)
+	if def.Circuit != "intent-classifier" {
+		t.Errorf("circuit name = %q, want intent-classifier", def.Circuit)
 	}
 
 	families := make([]string, 0, len(def.Nodes))

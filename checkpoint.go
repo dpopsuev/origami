@@ -19,7 +19,7 @@ type Checkpointer interface {
 }
 
 // JSONCheckpointer persists WalkerState to a JSON file between nodes,
-// enabling resume-from-failure for pipelines.
+// enabling resume-from-failure for circuits.
 //
 // This is a PoC battery — sufficient for prototyping, not production-grade.
 // Consumers should replace it with their own checkpointing for production use.

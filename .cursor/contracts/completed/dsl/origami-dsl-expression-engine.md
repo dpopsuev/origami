@@ -8,20 +8,20 @@
 
 Global rules only, plus:
 
-- **Part of a 5-contract series.** This is contract 1 of 5 in the Origami DSL initiative. Contracts 2-5 depend on this one. See plan: "Origami DSL -- 5 Contracts for Deterministic Pipelines on Nondeterministic Data."
+- **Part of a 5-contract series.** This is contract 1 of 5 in the Origami DSL initiative. Contracts 2-5 depend on this one. See plan: "Origami DSL -- 5 Contracts for Deterministic Circuits on Nondeterministic Data."
 - **Expression engine is a dependency, not a feature.** The expression library (`expr-lang/expr`) is an implementation detail. The public API is the `when:` field on `EdgeDef`.
 - **EdgeFactory remains as escape hatch.** Edges with `when:` use expression evaluation. Edges without `when:` but with a registered `EdgeFactory` entry use Go closures. Edges with neither always match (existing `dslEdge` behavior). This preserves backward compatibility.
-- **Soul:** "Once a node transforms unstructured into structured, the routing becomes deterministic because you're evaluating against typed fields. The LLM is probabilistic; the pipeline is not."
+- **Soul:** "Once a node transforms unstructured into structured, the routing becomes deterministic because you're evaluating against typed fields. The LLM is probabilistic; the circuit is not."
 
 ## Context
 
 - `origami-agentic-network-framework` — Predecessor. Established Extractor[In, Out] as Tome V. Complete.
 - `distillation-endgame` (cross-repo) — Moved dispatch, logging, format, workspace to Origami. Built Runner.Walk(), artifact schemas. Complete.
-- `dsl.go` — Current DSL: `PipelineDef`, `NodeDef`, `EdgeDef`, `BuildGraph`, `dslEdge`.
+- `dsl.go` — Current DSL: `CircuitDef`, `NodeDef`, `EdgeDef`, `BuildGraph`, `dslEdge`.
 - `edge.go` — `Edge` interface with `Evaluate(Artifact, *WalkerState) *Transition`.
 - `graph.go` — `DefaultGraph.Walk()` calls `edge.Evaluate()` for routing.
 - `asterisk/internal/orchestrate/heuristics.go` — 17 Go closures that will become `when:` expressions.
-- `asterisk/pipelines/rca-investigation.yaml` — Existing pipeline YAML with comment-only `condition:` fields.
+- `asterisk/circuits/rca-investigation.yaml` — Existing circuit YAML with comment-only `condition:` fields.
 
 ## FSC artifacts
 
@@ -40,7 +40,7 @@ Phase 1: Add `expr-lang/expr` dependency and implement `expressionEdge`. Phase 2
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | Expression compilation, evaluation against various contexts, error messages |
-| **Integration** | yes | `BuildGraph` with `when:` edges; full pipeline walk with expression-only routing |
+| **Integration** | yes | `BuildGraph` with `when:` edges; full circuit walk with expression-only routing |
 | **Contract** | yes | `EdgeDef.When` field accepted in YAML; `expressionEdge` implements `Edge` interface |
 | **E2E** | yes | Asterisk stub calibration with expression-only edges produces identical metrics |
 | **Concurrency** | no | Compiled expressions are immutable and safe for concurrent evaluation |
@@ -53,7 +53,7 @@ All tasks complete.
 ## Acceptance criteria
 
 **Given** the Origami framework with `EdgeDef.When` support,  
-**When** a pipeline YAML declares `when: "output.match == true && output.confidence >= config.recall_hit"` on an edge,  
+**When** a circuit YAML declares `when: "output.match == true && output.confidence >= config.recall_hit"` on an edge,  
 **Then**:
 - The expression compiles at graph build time (invalid expressions fail with clear error)
 - The expression evaluates at walk time against `{output, state, config}` context

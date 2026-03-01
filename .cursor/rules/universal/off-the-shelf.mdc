@@ -31,7 +31,7 @@ alwaysApply: false
 
 | Module | Purpose |
 |--------|---------|
-| `gopkg.in/yaml.v3` | YAML parsing for pipeline DSL |
+| `gopkg.in/yaml.v3` | YAML parsing for circuit DSL |
 | `modelcontextprotocol/go-sdk` | MCP server and transport |
 
 ### Kept bespoke (with justification)

@@ -25,24 +25,24 @@ func NewAPI(store *EventStore) *API {
 func (a *API) Handler() http.Handler { return a.mux }
 
 func (a *API) registerRoutes() {
-	a.mux.HandleFunc("GET /api/pipelines", a.handleListPipelines)
+	a.mux.HandleFunc("GET /api/circuits", a.handleListCircuits)
 	a.mux.HandleFunc("GET /api/runs", a.handleListRuns)
 	a.mux.HandleFunc("GET /api/runs/{runID}", a.handleGetRun)
 	a.mux.HandleFunc("GET /api/runs/{runID}/events", a.handleRunEvents)
 	a.mux.HandleFunc("GET /api/runs/{runID}/events/stream", a.handleRunSSE)
 }
 
-func (a *API) handleListPipelines(w http.ResponseWriter, _ *http.Request) {
+func (a *API) handleListCircuits(w http.ResponseWriter, _ *http.Request) {
 	runs := a.store.Runs()
-	pipelines := map[string]bool{}
+	circuits := map[string]bool{}
 	for _, r := range runs {
-		pipelines[r.Pipeline] = true
+		circuits[r.Circuit] = true
 	}
-	names := make([]string, 0, len(pipelines))
-	for name := range pipelines {
+	names := make([]string, 0, len(circuits))
+	for name := range circuits {
 		names = append(names, name)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"pipelines": names})
+	writeJSON(w, http.StatusOK, map[string]any{"circuits": names})
 }
 
 func (a *API) handleListRuns(w http.ResponseWriter, _ *http.Request) {

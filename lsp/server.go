@@ -1,6 +1,6 @@
-// Package lsp implements a Language Server for Origami pipeline YAML.
+// Package lsp implements a Language Server for Origami circuit YAML.
 // It embeds the origami-lint engine for diagnostics and provides
-// completion, hover, and go-to-definition for the pipeline DSL.
+// completion, hover, and go-to-definition for the circuit DSL.
 package lsp
 
 import (
@@ -30,7 +30,7 @@ type Server struct {
 type document struct {
 	URI     uri.URI
 	Content string
-	Def     *framework.PipelineDef
+	Def     *framework.CircuitDef
 	LintCtx *lint.LintContext
 }
 
@@ -164,7 +164,7 @@ func (s *Server) updateDocument(docURI uri.URI, content string) *document {
 
 	lintCtx, _ := lint.NewLintContext(raw, file)
 
-	var def *framework.PipelineDef
+	var def *framework.CircuitDef
 	if lintCtx != nil {
 		def = lintCtx.Def
 	}

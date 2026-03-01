@@ -11,14 +11,14 @@ import (
 // config, and metadata. This is the DSL-first replacement for hand-coded
 // BuildParams() functions: declare data sources in YAML instead of Go.
 //
-// Usage in pipeline YAML:
+// Usage in circuit YAML:
 //
 //	nodes:
 //	  - name: build-context
 //	    transformer: template-params
 //	    meta:
 //	      include_state: true    # merge walker state outputs
-//	      include_config: true   # merge pipeline vars
+//	      include_config: true   # merge circuit vars
 //	      extra:                 # static key-value pairs
 //	        step: recall
 type TemplateParamsTransformer struct{}

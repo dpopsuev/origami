@@ -3,7 +3,7 @@
 > *Historical. Terminology superseded by Adversarial Dialectic (defect-dialectic.yaml). See `agentic-framework-III.3-shadow` and `origami-adversarial-dialectic`.*
 
 **Status:** abandoned  
-**Goal:** Extend the F0-F6 investigation pipeline with an adversarial "Defect Court" phase (D0-D4) where a prosecution brief, defense consul, and judicial verdict replace the single-perspective review, feeding contested findings back to investigation for reassessment. Future phase — post-MCP integration.  
+**Goal:** Extend the F0-F6 investigation circuit with an adversarial "Defect Court" phase (D0-D4) where a prosecution brief, defense consul, and judicial verdict replace the single-perspective review, feeding contested findings back to investigation for reassessment. Future phase — post-MCP integration.  
 **Serves:** Architecture evolution  
 **Closure:** Fully absorbed by `agentic-framework-III.3-shadow.md`. All D0-D4 steps, roles, heuristics, and remand feedback are preserved in the Framework shadow contract.
 
@@ -17,14 +17,14 @@
 
 ## Context
 
-- **Current pipeline:** F0-F6 (Recall, Triage, Resolve, Investigate, Correlate, Review, Report)
+- **Current circuit:** F0-F6 (Recall, Triage, Resolve, Investigate, Correlate, Review, Report)
 - **Current weakness:** Single-perspective analysis with confirmation bias. F5 Review is a rubber stamp (BasicAdapter always approves). No alternative hypotheses are considered.
 - **Inspiration:** US federal criminal trial process — investigation, indictment, discovery, defense preparation, hearing, verdict, appeal/remand.
 - **Baseline accuracy:** BasicAdapter M19 = 0.93 on ptp-real-ingest. The ~7% error rate is concentrated in ambiguous cases (product vs automation, component A vs component B).
 
 ## Metaphor mapping
 
-The current F0-F6 pipeline is the **police and prosecutor** — it investigates, gathers evidence, and charges the defect. The court phase adds:
+The current F0-F6 circuit is the **police and prosecutor** — it investigates, gathers evidence, and charges the defect. The court phase adds:
 
 - **D0 Indictment** — Package the prosecution's case (from F6 output) into a formal charge with itemized evidence
 - **D1 Discovery** — Make all raw failure data available to the defense (same data the prosecution saw, NOT the prosecution's conclusions)
@@ -38,7 +38,7 @@ The **plea deal** fast-path handles easy cases: when prosecution confidence is v
 
 ## Current Architecture
 
-Linear F0-F6 pipeline with single-perspective review. F5 Review is a rubber stamp (BasicAdapter always approves). No alternative hypotheses, no adversarial challenge, no structured feedback on reinvestigation.
+Linear F0-F6 circuit with single-perspective review. F5 Review is a rubber stamp (BasicAdapter always approves). No alternative hypotheses, no adversarial challenge, no structured feedback on reinvestigation.
 
 ```mermaid
 flowchart LR
@@ -93,7 +93,7 @@ sequenceDiagram
 
 ## Architecture
 
-### New pipeline steps
+### New circuit steps
 
 ```
 StepD0Indict   = "D0_INDICT"
@@ -131,7 +131,7 @@ StepD4Verdict  = "D4_VERDICT"
 
 The court requires role-separated adapters:
 
-- **ProsecutionAdapter** — the existing pipeline adapter (reused); presents the case
+- **ProsecutionAdapter** — the existing circuit adapter (reused); presents the case
 - **DefenseAdapter** — separate adapter with adversarial objective; challenges the prosecution
 - **JudgeAdapter** — separate adapter with neutral objective; weighs both sides
 
@@ -177,7 +177,7 @@ A **mistrial** is not a failure — it is the system's honest declaration that t
 - Court metadata: which role identified each gap, at which stage (D0-D4)
 - Termination reason: `time_exhausted` | `deliberation_exhausted` | `judge_declared`
 
-The `EvidenceGap` type is shared between the pipeline-level gap brief and the court-level mistrial brief. Court extends it with:
+The `EvidenceGap` type is shared between the circuit-level gap brief and the court-level mistrial brief. Court extends it with:
 
 ```go
 type CourtEvidenceGap struct {
@@ -221,7 +221,7 @@ Estimated impact:
 
 ## Acceptance criteria
 
-- **Given** the F0-F6 pipeline produces a defect classification with low confidence,
+- **Given** the F0-F6 circuit produces a defect classification with low confidence,
 - **When** the Defect Court phase (D0-D4) runs with adversarial defense and judicial review,
 - **Then** the final verdict has higher accuracy than the prosecution's original classification.
 
@@ -242,7 +242,7 @@ Estimated impact:
 | Contract | Status | Required for |
 |----------|--------|--------------|
 | `mcp-server-foundation.md` | Pending | LLM-based adapters need MCP transport |
-| `mcp-pipeline-tools.md` | Pending | Court phase reuses pipeline tool infrastructure |
+| `mcp-circuit-tools.md` | Pending | Court phase reuses circuit tool infrastructure |
 | `rp-e2e-launch.md` | Active | PoC gate must pass before court phase |
 
 ## Files affected
@@ -271,6 +271,6 @@ Implement these mitigations when executing this contract.
 
 (Running log, newest first.)
 
-- 2026-02-20 — **Absorbed by `agentic-framework-III.3-shadow.md`.** All D0-D4 steps, HD1-HD12 heuristics, prosecution/defense/judge roles, remand feedback, and TTL/handoff limits are preserved in the Framework shadow contract. The court pipeline is now expressed as a second Graph instance using the Framework DSL.
+- 2026-02-20 — **Absorbed by `agentic-framework-III.3-shadow.md`.** All D0-D4 steps, HD1-HD12 heuristics, prosecution/defense/judge roles, remand feedback, and TTL/handoff limits are preserved in the Framework shadow contract. The court circuit is now expressed as a second Graph instance using the Framework DSL.
 - 2026-02-18 — Updated: added TTL, handoff limits, remand cap, and mistrial outcome (HD10-HD12). Mistrial artifact is a superset of Evidence Gap Brief (see `evidence-gap-brief.md`). `CourtEvidenceGap` extends shared `EvidenceGap` type with role and stage metadata.
 - 2026-02-16 — Contract drafted. Adversarial RCA inspired by US federal trial process. Assessed as real benefit (not just novelty) based on proven adversarial techniques in AI alignment and the concentration of errors in ambiguous cases. Deferred to post-MCP phase.

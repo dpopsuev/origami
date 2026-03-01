@@ -1,5 +1,5 @@
-pipeline: agentic-workflow
-description: "Multi-walker agentic pipeline for E2E testing"
+circuit: agentic-workflow
+description: "Multi-walker agentic circuit for E2E testing"
 zones:
   fast:
     nodes: [scan, classify]

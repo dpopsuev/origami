@@ -1,8 +1,8 @@
-# D0-D4 Defect Court adversarial pipeline.
+# D0-D4 Defect Court adversarial circuit.
 # Antithesis path activates when Thesis F5 confidence is in the uncertain range.
 # Edge evaluation logic is registered via BuildCourtEdgeFactory in Go.
-pipeline: defect-court
-description: "D0-D4 adversarial review pipeline"
+circuit: defect-court
+description: "D0-D4 adversarial review circuit"
 
 zones:
   prosecution:

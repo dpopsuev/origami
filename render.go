@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-// Render generates a Mermaid flowchart string from a pipeline definition (P6).
+// Render generates a Mermaid flowchart string from a circuit definition (P6).
 // When Zones are defined, nodes are grouped into Mermaid subgraphs.
 // When Zones are empty, a flat graph is rendered.
-func Render(def *PipelineDef) string {
+func Render(def *CircuitDef) string {
 	var b strings.Builder
 	b.WriteString("graph LR\n")
 
@@ -21,7 +21,7 @@ func Render(def *PipelineDef) string {
 	return b.String()
 }
 
-func renderWithZones(b *strings.Builder, def *PipelineDef) {
+func renderWithZones(b *strings.Builder, def *CircuitDef) {
 	zoneNames := make([]string, 0, len(def.Zones))
 	for name := range def.Zones {
 		zoneNames = append(zoneNames, name)
@@ -46,7 +46,7 @@ func renderWithZones(b *strings.Builder, def *PipelineDef) {
 	}
 }
 
-func renderEdges(b *strings.Builder, def *PipelineDef) {
+func renderEdges(b *strings.Builder, def *CircuitDef) {
 	for _, e := range def.Edges {
 		from := sanitizeID(e.From)
 		to := sanitizeID(e.To)

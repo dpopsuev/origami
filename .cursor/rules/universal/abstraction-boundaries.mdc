@@ -10,14 +10,14 @@ Before encoding any logic, documentation, or data structure, determine whether i
 
 ## Generic
 
-Applies to any pipeline domain, any operator, any data source. Uses only abstract concepts (node, edge, graph, artifact, extractor). No hardcoded layouts, file names, or domain-specific paths.
+Applies to any circuit domain, any operator, any data source. Uses only abstract concepts (node, edge, graph, artifact, extractor). No hardcoded layouts, file names, or domain-specific paths.
 
 - Document in the **core model** or generic sections.
 - In code: prefer interfaces and abstract data shapes. Bind specifics via configuration or adapters.
 
 ## Scenario-specific
 
-Tied to a current consumer tool or use case (e.g., Asterisk RCA pipeline, Achilles vulnerability scan). Layouts, artifact directories, file names, and output formats may change per consumer.
+Tied to a current consumer tool or use case (e.g., Asterisk RCA circuit, Achilles vulnerability scan). Layouts, artifact directories, file names, and output formats may change per consumer.
 
 - Document as clearly labeled **use-case sections** (e.g., "Reference implementation: Achilles").
 - Do not embed scenario details in the core model.

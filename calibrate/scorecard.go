@@ -221,7 +221,7 @@ func LoadScoreCard(path string) (*ScoreCard, error) {
 
 // --- Default Metrics (universal, domain-agnostic) ---
 
-// DefaultMetrics returns 7 universal metrics every pipeline needs.
+// DefaultMetrics returns 7 universal metrics every circuit needs.
 // Three derived from TokiMeter (token_usage, token_cost_usd, latency_seconds),
 // two from walk (path_efficiency, loop_ratio),
 // two from multi-run (confidence_calibration, run_variance).
@@ -288,7 +288,7 @@ func DefaultMetrics() []MetricDef {
 // Consumer pattern: DefaultScoreCard().WithMetrics(domain...).Build()
 func DefaultScoreCard() *ScoreCardBuilder {
 	return NewScoreCardBuilder("default").
-		WithDescription("Universal pipeline metrics").
+		WithDescription("Universal circuit metrics").
 		WithMetrics(DefaultMetrics()...)
 }
 

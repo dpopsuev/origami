@@ -125,12 +125,12 @@ Phase 1 extracts the `Checkpointer` interface from the existing concrete `JSONCh
 
 ## Acceptance criteria
 
-**Given** a pipeline walk with `WithCheckpointer(jsonCP)`,  
+**Given** a circuit walk with `WithCheckpointer(jsonCP)`,  
 **When** the walker processes nodes A → B → C,  
 **Then** checkpoints are saved after A, B, and C. After successful completion, the checkpoint is removed.
 
 **Given** a walk that was interrupted at node B (node returned `Interrupt{Reason: "need approval"}`),  
-**When** `Run(pipeline, WithResumeInput(walkerID, approvalData))` is called,  
+**When** `Run(circuit, WithResumeInput(walkerID, approvalData))` is called,  
 **Then** the walk resumes from node B with `approvalData` in `WalkerState.Context["resume_input"]`, and `EventWalkResumed` is emitted.
 
 **Given** a `SQLiteCheckpointer` with 3 saved checkpoints,  
@@ -138,7 +138,7 @@ Phase 1 extracts the `Checkpointer` interface from the existing concrete `JSONCh
 **Then** it returns 3 walker IDs. Each can be loaded, and the loaded state matches what was saved.
 
 **Given** a walk crashes after node B (process killed),  
-**When** the process restarts and calls `Run(pipeline, WithCheckpointer(cp), WithResume(walkerID))`,  
+**When** the process restarts and calls `Run(circuit, WithCheckpointer(cp), WithResume(walkerID))`,  
 **Then** the walk continues from node B's checkpoint without re-executing nodes A and B.
 
 ## Security assessment

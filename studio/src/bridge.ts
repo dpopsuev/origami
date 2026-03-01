@@ -1,10 +1,10 @@
 /**
- * window.__origami bridge — exposes pipeline state to Playwright E2E tests.
+ * window.__origami bridge — exposes circuit state to Playwright E2E tests.
  * Tests call these functions via page.evaluate(() => window.__origami.snapshot())
  */
 
 export interface OrigamiBridge {
-  snapshot: () => PipelineSnapshot;
+  snapshot: () => CircuitSnapshot;
   nodeCount: () => number;
   edgeCount: () => number;
   selectedNode: () => string | null;
@@ -13,8 +13,8 @@ export interface OrigamiBridge {
   yamlContent: () => string;
 }
 
-export interface PipelineSnapshot {
-  pipeline: string;
+export interface CircuitSnapshot {
+  circuit: string;
   nodeCount: number;
   edgeCount: number;
   selectedNode: string | null;
@@ -24,7 +24,7 @@ export interface PipelineSnapshot {
 }
 
 let state = {
-  pipeline: "",
+  circuit: "",
   nodes: [] as Array<{ id: string }>,
   edges: [] as Array<{ id: string }>,
   selectedNode: null as string | null,
@@ -39,7 +39,7 @@ export function updateBridgeState(update: Partial<typeof state>) {
 
 const bridge: OrigamiBridge = {
   snapshot: () => ({
-    pipeline: state.pipeline,
+    circuit: state.circuit,
     nodeCount: state.nodes.length,
     edgeCount: state.edges.length,
     selectedNode: state.selectedNode,

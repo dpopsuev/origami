@@ -7,3 +7,5 @@
 - `signal-domains.md` — Renderer interface (DAC symmetry), zone domain annotations, context filter. Complete.
 - `signal-integrity.md` — Evidence SNR, per-node cost tracking, mismatch scoring, convergence trajectory. Complete.
 - `dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.
+- `resilience.md` — Circuit breaker, rate limiting, thermal budget. Complete.
+- `ouroboros-signal-analysis.md` — GBWP probe, DimGBWP dimension, offset compensator. Complete.

@@ -2,7 +2,7 @@ import { useState } from "react";
 
 interface ScheduleEntry {
   id: string;
-  pipeline: string;
+  circuit: string;
   cron: string;
   enabled: boolean;
   lastRun?: string;
@@ -11,25 +11,25 @@ interface ScheduleEntry {
 
 interface RunSchedulerProps {
   schedules: ScheduleEntry[];
-  pipelines: string[];
-  onCreateSchedule: (pipeline: string, cron: string) => void;
+  circuits: string[];
+  onCreateSchedule: (circuit: string, cron: string) => void;
   onToggleSchedule: (id: string, enabled: boolean) => void;
   onDeleteSchedule: (id: string) => void;
 }
 
 export function RunScheduler({
   schedules,
-  pipelines,
+  circuits,
   onCreateSchedule,
   onToggleSchedule,
   onDeleteSchedule,
 }: RunSchedulerProps) {
   const [showCreate, setShowCreate] = useState(false);
-  const [newPipeline, setNewPipeline] = useState(pipelines[0] || "");
+  const [newCircuit, setNewCircuit] = useState(circuits[0] || "");
   const [newCron, setNewCron] = useState("0 */6 * * *");
 
   const handleCreate = () => {
-    onCreateSchedule(newPipeline, newCron);
+    onCreateSchedule(newCircuit, newCron);
     setShowCreate(false);
   };
 
@@ -55,11 +55,11 @@ export function RunScheduler({
       {showCreate && (
         <div className="mb-4 p-3 bg-gray-800 rounded-lg border border-gray-700 space-y-2">
           <select
-            value={newPipeline}
-            onChange={(e) => setNewPipeline(e.target.value)}
+            value={newCircuit}
+            onChange={(e) => setNewCircuit(e.target.value)}
             className="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs"
           >
-            {pipelines.map((p) => (
+            {circuits.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
@@ -96,7 +96,7 @@ export function RunScheduler({
               className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-gray-700"
             >
               <div>
-                <div className="text-sm font-mono">{s.pipeline}</div>
+                <div className="text-sm font-mono">{s.circuit}</div>
                 <div className="text-xs text-gray-500 font-mono mt-0.5">
                   {s.cron}
                 </div>

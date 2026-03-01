@@ -63,7 +63,7 @@ Implement each battery independently. Each has its own unit test. Order: HTTPDis
 
 ## Acceptance criteria
 
-**Given** a new user wanting to prototype an Origami pipeline,  
+**Given** a new user wanting to prototype an Origami circuit,  
 **When** they use only framework-provided batteries (no custom code),  
 **Then**:
 - `HTTPDispatcher` sends prompts to an OpenAI-compatible API and returns responses

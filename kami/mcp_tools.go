@@ -10,17 +10,17 @@ import (
 
 // RegisterMCPTools registers all Kami debug and visualization tools
 // on an MCP server. The debug controller and server must be provided
-// for tools that interact with the pipeline state.
+// for tools that interact with the circuit state.
 func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
 	// Read tools
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_get_pipeline_state",
-		Description: "Get the current pipeline state: running/paused, current node, visited nodes.",
-	}, noOut(handleGetPipelineState(dc)))
+		Name:        "kami_get_circuit_state",
+		Description: "Get the current circuit state: running/paused, current node, visited nodes.",
+	}, noOut(handleGetCircuitState(dc)))
 
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
 		Name:        "kami_get_snapshot",
-		Description: "Get a full pipeline snapshot: state, breakpoints, visited nodes, artifacts.",
+		Description: "Get a full circuit snapshot: state, breakpoints, visited nodes, artifacts.",
 	}, noOut(handleGetSnapshot(dc)))
 
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
@@ -31,12 +31,12 @@ func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
 	// Write tools
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
 		Name:        "kami_pause",
-		Description: "Pause pipeline execution at the next node boundary.",
+		Description: "Pause circuit execution at the next node boundary.",
 	}, noOut(handlePause(dc)))
 
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
 		Name:        "kami_resume",
-		Description: "Resume pipeline execution from a paused state.",
+		Description: "Resume circuit execution from a paused state.",
 	}, noOut(handleResume(dc)))
 
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
@@ -92,7 +92,7 @@ func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
 	}, noOut(handleSetSpeed(srv)))
 }
 
-// noOut wraps a handler to suppress outputSchema (same pattern as pipeline_server).
+// noOut wraps a handler to suppress outputSchema (same pattern as circuit_server).
 func noOut[In, Out any](h func(context.Context, *sdkmcp.CallToolRequest, In) (*sdkmcp.CallToolResult, Out, error)) sdkmcp.ToolHandlerFor[In, any] {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, input In) (*sdkmcp.CallToolResult, any, error) {
 		res, out, err := h(ctx, req, input)
@@ -120,7 +120,7 @@ func textResult(msg string) *sdkmcp.CallToolResult {
 
 type emptyInput struct{}
 
-func handleGetPipelineState(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
+func handleGetCircuitState(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
 	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, map[string]any, error) {
 		snap := dc.Snapshot()
 		result := map[string]any{
@@ -133,8 +133,8 @@ func handleGetPipelineState(dc *DebugController) func(context.Context, *sdkmcp.C
 	}
 }
 
-func handleGetSnapshot(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, PipelineSnapshot, error) {
-	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, PipelineSnapshot, error) {
+func handleGetSnapshot(dc *DebugController) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, CircuitSnapshot, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, CircuitSnapshot, error) {
 		snap := dc.Snapshot()
 		res, err := jsonResult(snap)
 		return res, snap, err

@@ -9,9 +9,9 @@ import (
 	framework "github.com/dpopsuev/origami"
 )
 
-// CaseRunner runs a single calibration case through the domain pipeline.
-// Consumers implement this interface to connect their domain pipeline
-// (e.g., Asterisk's RCA pipeline) to the generic calibration pipeline.
+// CaseRunner runs a single calibration case through the domain circuit.
+// Consumers implement this interface to connect their domain circuit
+// (e.g., Asterisk's RCA circuit) to the generic calibration circuit.
 type CaseRunner interface {
 	RunCase(ctx context.Context, caseID string, input any) (any, error)
 }
@@ -37,7 +37,7 @@ func (f CaseScorerFunc) ScoreCase(caseResult, groundTruth any) (map[string]float
 }
 
 // CalibrationInput is placed in the walker context at key "input" before
-// walking the calibration pipeline. It provides all the configuration
+// walking the calibration circuit. It provides all the configuration
 // needed by the 7 calibration nodes.
 type CalibrationInput struct {
 	Scenario    string
@@ -313,7 +313,7 @@ func (n *ReportNode) Process(_ context.Context, nc framework.NodeContext) (frame
 }
 
 // CalibrationNodeRegistry returns a NodeRegistry pre-loaded with all 7
-// calibration pipeline nodes, keyed by both family and name for flexible
+// calibration circuit nodes, keyed by both family and name for flexible
 // resolution. Consumers register this with BuildGraphWith.
 func CalibrationNodeRegistry() framework.NodeRegistry {
 	return framework.NodeRegistry{

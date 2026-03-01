@@ -6,13 +6,14 @@ import "context"
 // (who the agent is) with processing capability (how it handles nodes).
 type Walker interface {
 	Identity() AgentIdentity
+	SetIdentity(AgentIdentity)
 	State() *WalkerState
 	Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error)
 }
 
 // WalkerState tracks a walker's progress through a graph.
 // It mirrors orchestrate.CaseState with string-based node names
-// instead of typed PipelineStep.
+// instead of typed CircuitStep.
 type WalkerState struct {
 	ID                string              `json:"id"`
 	CurrentNode       string              `json:"current_node"`
@@ -153,8 +154,9 @@ func NewProcessWalker(id string) *ProcessWalker {
 	}
 }
 
-func (w *ProcessWalker) Identity() AgentIdentity { return w.identity }
-func (w *ProcessWalker) State() *WalkerState     { return w.state }
+func (w *ProcessWalker) Identity() AgentIdentity    { return w.identity }
+func (w *ProcessWalker) SetIdentity(id AgentIdentity) { w.identity = id }
+func (w *ProcessWalker) State() *WalkerState         { return w.state }
 
 func (w *ProcessWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
 	return node.Process(ctx, nc)

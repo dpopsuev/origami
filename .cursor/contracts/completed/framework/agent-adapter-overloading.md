@@ -1,7 +1,7 @@
 # Contract — Agent Adapter Overloading
 
 **Status:** abandoned  
-**Goal:** Multiple adapters operate concurrently within a single calibration run, with a Scheduler routing each pipeline step to the best-suited adapter based on task characteristics and adapter personality profiles.  
+**Goal:** Multiple adapters operate concurrently within a single calibration run, with a Scheduler routing each circuit step to the best-suited adapter based on task characteristics and adapter personality profiles.  
 **Serves:** Architecture evolution  
 **Closure:** Phase 1 (AdapterPool, AffinityScheduler, color traits) fully absorbed by `agentic-framework-III.1-personae` (AgentIdentity 5-axis, 8 personas). Phases 2-4 remain deferred as future work.
 
@@ -25,11 +25,11 @@
 
 ## Current Architecture
 
-Single adapter per calibration run, selected via `--adapter` flag. Every pipeline step for every case goes through the same adapter.
+Single adapter per calibration run, selected via `--adapter` flag. Every circuit step for every case goes through the same adapter.
 
 ```mermaid
 flowchart LR
-    Runner["Runner.runCasePipeline"] -->|"SendPrompt(caseID, step)"| Adapter[ModelAdapter]
+    Runner["Runner.runCaseCircuit"] -->|"SendPrompt(caseID, step)"| Adapter[ModelAdapter]
     Adapter -->|json.RawMessage| Runner
 ```
 
@@ -72,7 +72,7 @@ Each adapter gets a color name from [Wikipedia's color list](https://en.wikipedi
 
 ### PoC palette (4 colors) with court positions
 
-Each color maps to a basketball-inspired court position with a stickiness gradient (0 = anti-sticky, 3 = heavy-sticky). Stickiness controls whether a subagent resumes context for the same case across pipeline steps.
+Each color maps to a basketball-inspired court position with a stickiness gradient (0 = anti-sticky, 3 = heavy-sticky). Stickiness controls whether a subagent resumes context for the same case across circuit steps.
 
 | Color | Hex | Position | Sticky | Home Zone | Personality | Step Affinity (weight) | Maps to |
 |-------|-----|----------|--------|-----------|-------------|----------------------|---------|

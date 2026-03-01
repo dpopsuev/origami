@@ -51,7 +51,7 @@ func looksLikeExpression(s string) bool {
 type NameYourEdges struct{}
 
 func (r *NameYourEdges) ID() string          { return "B2/name-your-edges" }
-func (r *NameYourEdges) Description() string { return "pipelines with many edges should name them for readability" }
+func (r *NameYourEdges) Description() string { return "circuits with many edges should name them for readability" }
 func (r *NameYourEdges) Severity() Severity   { return SeverityInfo }
 func (r *NameYourEdges) Tags() []string       { return []string{"best-practice"} }
 
@@ -66,7 +66,7 @@ func (r *NameYourEdges) Check(ctx *LintContext) []Finding {
 		return []Finding{{
 			RuleID:   r.ID(),
 			Severity: r.Severity(),
-			Message:  fmt.Sprintf("pipeline has %d unnamed edges; consider adding name fields for readability", unnamed),
+			Message:  fmt.Sprintf("circuit has %d unnamed edges; consider adding name fields for readability", unnamed),
 			File:     ctx.File,
 			Line:     ctx.TopLevelLine("edges"),
 		}}
@@ -117,7 +117,7 @@ func (r *ZoneStickinessWithoutProvider) Check(ctx *LintContext) []Finding {
 	// Providers are often runtime-configured and stickiness is valid
 	// as declarative intent even when YAML-level provider fields are absent.
 	// Only flag when stickiness is "exclusive" (3) and zero providers exist
-	// anywhere in the pipeline, suggesting a configuration oversight.
+	// anywhere in the circuit, suggesting a configuration oversight.
 	anyProvider := false
 	for _, nd := range ctx.Def.Nodes {
 		if nd.Provider != "" {
@@ -137,28 +137,28 @@ func (r *ZoneStickinessWithoutProvider) Check(ctx *LintContext) []Finding {
 		out = append(out, Finding{
 			RuleID:   r.ID(),
 			Severity: r.Severity(),
-			Message:  fmt.Sprintf("zone %q has exclusive stickiness=%d but no nodes in the entire pipeline declare a provider", zoneName, z.Stickiness),
+			Message:  fmt.Sprintf("zone %q has exclusive stickiness=%d but no nodes in the entire circuit declare a provider", zoneName, z.Stickiness),
 			File:     ctx.File,
 		})
 	}
 	return out
 }
 
-// --- B5: large-pipeline-no-zones ---
+// --- B5: large-circuit-no-zones ---
 
-type LargePipelineNoZones struct{}
+type LargeCircuitNoZones struct{}
 
-func (r *LargePipelineNoZones) ID() string          { return "B5/large-pipeline-no-zones" }
-func (r *LargePipelineNoZones) Description() string { return "large pipelines should define zones for organization" }
-func (r *LargePipelineNoZones) Severity() Severity   { return SeverityInfo }
-func (r *LargePipelineNoZones) Tags() []string       { return []string{"best-practice"} }
+func (r *LargeCircuitNoZones) ID() string          { return "B5/large-circuit-no-zones" }
+func (r *LargeCircuitNoZones) Description() string { return "large circuits should define zones for organization" }
+func (r *LargeCircuitNoZones) Severity() Severity   { return SeverityInfo }
+func (r *LargeCircuitNoZones) Tags() []string       { return []string{"best-practice"} }
 
-func (r *LargePipelineNoZones) Check(ctx *LintContext) []Finding {
+func (r *LargeCircuitNoZones) Check(ctx *LintContext) []Finding {
 	if len(ctx.Def.Nodes) > 6 && len(ctx.Def.Zones) == 0 {
 		return []Finding{{
 			RuleID:   r.ID(),
 			Severity: r.Severity(),
-			Message:  fmt.Sprintf("pipeline has %d nodes but no zones; consider adding zones for organization", len(ctx.Def.Nodes)),
+			Message:  fmt.Sprintf("circuit has %d nodes but no zones; consider adding zones for organization", len(ctx.Def.Nodes)),
 			File:     ctx.File,
 			Line:     ctx.TopLevelLine("nodes"),
 		}}

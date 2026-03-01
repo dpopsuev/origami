@@ -4,7 +4,5 @@
 (No directories)
 
 ## Files
-- `origami-lsp.md` — Language Server for pipeline YAML (validation, completion, color coding, virtual text, Kami live connection).
-- `washi.md` — Washi — enterprise pipeline management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.
-- `resilience.md` — Circuit breaker, rate limiting, and thermal budget patterns for dispatch and walk layers.
-- `ouroboros-signal-analysis.md` — Quality-speed product (GBWP) measurement and persona offset compensation for Ouroboros metacalibration.
+- `origami-lsp.md` — Language Server for circuit YAML (validation, completion, color coding, virtual text, Kami live connection).
+- `washi.md` — Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.

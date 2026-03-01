@@ -9,7 +9,7 @@
 #   - node caching       → avoid re-classifying identical inputs within TTL
 #   - merge: latest      → fan-in takes the most recent classification
 #   - shortcut edge      → skip enrichment for high-confidence classifications
-pipeline: intent-classifier
+circuit: intent-classifier
 description: "Classify user intent with provider fallback and caching"
 
 zones:

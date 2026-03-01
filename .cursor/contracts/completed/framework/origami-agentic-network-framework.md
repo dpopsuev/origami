@@ -12,7 +12,7 @@ Global rules only, plus:
 - **Extractors are first-class.** They are Tome V primitives alongside Nodes (Tome I), Elements (Tome II), Personae (Tome III), and Ouroboros (Tome IV).
 - **Low floor, high ceilings, wide walls** (Papert/Resnick). Batteries-included extractors require zero custom code. Domain extractors implement the same interface. Any implementation can be registered and used in YAML.
 - **Zero domain imports in `pkg/framework/`.** Batteries-included extractors are generic. Domain extractors live in `internal/`.
-- **Three CLIs per tool.** Every Origami-based tool ships three CLI surfaces: End-User (run the domain pipeline), Pipeline Developer (calibrate against ground truth), Dataset Developer (curate ground truth). This is a framework-level pattern, not optional.
+- **Three CLIs per tool.** Every Origami-based tool ships three CLI surfaces: End-User (run the domain circuit), Circuit Developer (calibrate against ground truth), Dataset Developer (curate ground truth). This is a framework-level pattern, not optional.
 
 ## The Three CLIs
 
@@ -21,14 +21,14 @@ Every tool built on Origami requires three distinct CLI surfaces serving differe
 | Phase | Persona | CLI Surface | Purpose |
 |-------|---------|-------------|---------|
 | **1. Dataset Developer** | Builds ground truth | `<tool> dataset` | Fetch, extract, validate, promote evidence into structured ground truth |
-| **2. Pipeline Developer** | Calibrates the pipeline | `<tool> calibrate` | Measure pipeline accuracy against ground truth, tune agentic workflow |
-| **3. End-User** | Uses the tool in production | `<tool> run` | Execute the domain pipeline, get results |
+| **2. Circuit Developer** | Calibrates the circuit | `<tool> calibrate` | Measure circuit accuracy against ground truth, tune agentic workflow |
+| **3. End-User** | Uses the tool in production | `<tool> run` | Execute the domain circuit, get results |
 
-Dependency chain: `Dataset Developer -> Pipeline Developer -> End-User`. You cannot calibrate without ground truth. You cannot ship without calibration.
+Dependency chain: `Dataset Developer -> Circuit Developer -> End-User`. You cannot calibrate without ground truth. You cannot ship without calibration.
 
 Extractors serve all three personas:
 - **End-User**: extractors parse agent output into structured results (implicit use)
-- **Pipeline Developer**: extractors score predicted vs. expected (comparison use)
+- **Circuit Developer**: extractors score predicted vs. expected (comparison use)
 - **Dataset Developer**: extractors turn unstructured evidence into ground truth records (explicit use)
 
 ### Asterisk as reference implementation
@@ -36,7 +36,7 @@ Extractors serve all three personas:
 | Origami Pattern | Asterisk CLI | Status |
 |-----------------|-------------|--------|
 | Dataset Developer | `asterisk gt` (ground truth ingestor) | Draft contract |
-| Pipeline Developer | `asterisk calibrate` (M1-M20 metrics) | Complete |
+| Circuit Developer | `asterisk calibrate` (M1-M20 metrics) | Complete |
 | End-User | `asterisk analyze` (RP launch -> RCA) | Complete |
 
 ## Context
@@ -44,12 +44,12 @@ Extractors serve all three personas:
 - `github.com/dpopsuev/origami` — All existing Origami primitives (Tomes I-IV).
 - `github.com/dpopsuev/origami/metacal/discovery.go` — `ParseIdentityResponse`, `ExtractProbeText`, `ParseProbeResponse` — ad-hoc extractors that should implement the `Extractor` interface.
 - `internal/calibrate/runner.go` — `parseJSON[T]` switch per step — ad-hoc typed extraction.
-- `rules/domain/dsl-design-principles.mdc` — DSL principles governing pipeline YAML; P7 (Progressive Disclosure) governs extractor adoption.
+- `rules/domain/dsl-design-principles.mdc` — DSL principles governing circuit YAML; P7 (Progressive Disclosure) governs extractor adoption.
 - Completed framework contracts (Tomes I-IV) in `completed/framework/`.
 
 ### Current architecture
 
-Three pipelines, three ad-hoc parsing strategies, zero shared abstraction:
+Three circuits, three ad-hoc parsing strategies, zero shared abstraction:
 
 ```mermaid
 flowchart TD
@@ -122,9 +122,9 @@ Phase 1 establishes the Origami identity across docs and rules. Phase 2 designs 
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | Each extractor implementation: happy path, error cases, edge inputs |
-| **Integration** | yes | ExtractorNode wired into a pipeline DSL definition; walker invokes extraction |
+| **Integration** | yes | ExtractorNode wired into a circuit DSL definition; walker invokes extraction |
 | **Contract** | yes | `Extractor[In, Out]` interface compliance across all implementations |
-| **E2E** | no | No full pipeline validation needed — extractors are leaf primitives |
+| **E2E** | no | No full circuit validation needed — extractors are leaf primitives |
 | **Concurrency** | no | Extractors are stateless; no shared state |
 | **Security** | yes | Input validation: malformed JSON, regex DoS, oversized inputs |
 
@@ -140,8 +140,8 @@ Phase 1 establishes the Origami identity across docs and rules. Phase 2 designs 
 ### Phase 2 — Extractor interface
 
 - [x] Design `Extractor[In, Out]` interface in `pkg/framework/extractor.go`
-- [x] Add `ExtractorNode` type to the pipeline DSL (`pkg/framework/dsl.go`)
-- [x] Unit tests: interface compliance, ExtractorNode in pipeline definition
+- [x] Add `ExtractorNode` type to the circuit DSL (`pkg/framework/dsl.go`)
+- [x] Unit tests: interface compliance, ExtractorNode in circuit definition
 
 ### Phase 3 — Low floor (batteries-included)
 
@@ -184,7 +184,7 @@ Phase 1 establishes the Origami identity across docs and rules. Phase 2 designs 
 - At least 2 existing ad-hoc parsers (metacal identity, calibrate parseJSON) are refactored to implement `Extractor`
 - All existing tests pass with no regressions
 - Glossary, DSL principles, goal manifest, and contracts index reference "Origami" (not "Agentic Network Framework")
-- The Three CLIs pattern (End-User, Pipeline Developer, Dataset Developer) is documented in glossary and framework guide
+- The Three CLIs pattern (End-User, Circuit Developer, Dataset Developer) is documented in glossary and framework guide
 - Asterisk is validated as the reference implementation of the Three CLIs pattern
 
 ## Security assessment
@@ -198,6 +198,6 @@ Phase 1 establishes the Origami identity across docs and rules. Phase 2 designs 
 
 2026-02-22 — All 6 phases complete. Extractor interface + 4 batteries-included extractors in `pkg/framework/`. IdentityExtractor, ProbeTextExtractor, CodeBlockProbeExtractor in metacal. StepExtractor in calibrate. DSL supports `extractor` field on nodes. Full test suite green (30 packages). Framework guide updated with Three CLIs + Extractors sections. Glossary, architecture doc, DSL principles all updated.
 
-2026-02-22 — Codified the Three CLIs pattern: every Origami-based tool ships End-User (run), Pipeline Developer (calibrate), and Dataset Developer (dataset) CLI surfaces. Dependency chain: dataset -> calibrate -> run. Asterisk is the reference implementation. Added Phase 6 (housekeeping) for docs and FSC updates.
+2026-02-22 — Codified the Three CLIs pattern: every Origami-based tool ships End-User (run), Circuit Developer (calibrate), and Dataset Developer (dataset) CLI surfaces. Dependency chain: dataset -> calibrate -> run. Asterisk is the reference implementation. Added Phase 6 (housekeeping) for docs and FSC updates.
 
 2026-02-22 — Contract created. Origami is the framework name. Extractors are Tome V — first-class primitives following the low-floor/high-ceiling/wide-walls philosophy. The "Agentic Network Framework" label is retired.

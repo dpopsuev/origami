@@ -5,7 +5,7 @@ package framework
 // (stable, methodical) and Sentinel persona (observant, reliable).
 //
 // The identity is deterministic: calling DefaultWalker() twice produces
-// identical walkers, making pipeline runs reproducible.
+// identical walkers, making circuit runs reproducible.
 func DefaultWalker() Walker {
 	return defaultWalkerWith(ElementEarth)
 }

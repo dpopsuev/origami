@@ -1,5 +1,5 @@
-pipeline: schema-validated
-description: "Pipeline with artifact schema on every node for validation testing"
+circuit: schema-validated
+description: "Circuit with artifact schema on every node for validation testing"
 
 nodes:
   - name: classify

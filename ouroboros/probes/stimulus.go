@@ -53,6 +53,12 @@ func DefaultStimuli() StimuliSet {
 			Language:         "Go",
 			ExpectedBehavior: "ParseConfig function handling all four input formats using only standard library",
 		},
+		"gbwp": {
+			Name:             "gbwp",
+			Input:            GBWPInput,
+			Language:         "",
+			ExpectedBehavior: "Correct verdict with high confidence and brief justification",
+		},
 	}
 }
 

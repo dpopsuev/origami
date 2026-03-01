@@ -1,19 +1,19 @@
 import { useState } from "react";
 
-interface PipelineVar {
+interface CircuitVar {
   key: string;
   value: string;
 }
 
 interface LaunchDialogProps {
-  pipelines: string[];
-  onLaunch: (pipeline: string, vars: Record<string, string>) => void;
+  circuits: string[];
+  onLaunch: (circuit: string, vars: Record<string, string>) => void;
   onClose: () => void;
 }
 
-export function LaunchDialog({ pipelines, onLaunch, onClose }: LaunchDialogProps) {
-  const [selectedPipeline, setSelectedPipeline] = useState(pipelines[0] || "");
-  const [vars, setVars] = useState<PipelineVar[]>([]);
+export function LaunchDialog({ circuits, onLaunch, onClose }: LaunchDialogProps) {
+  const [selectedCircuit, setSelectedCircuit] = useState(circuits[0] || "");
+  const [vars, setVars] = useState<CircuitVar[]>([]);
   const [launching, setLaunching] = useState(false);
 
   const addVar = () => setVars([...vars, { key: "", value: "" }]);
@@ -32,14 +32,14 @@ export function LaunchDialog({ pipelines, onLaunch, onClose }: LaunchDialogProps
     for (const v of vars) {
       if (v.key.trim()) varsObj[v.key.trim()] = v.value;
     }
-    onLaunch(selectedPipeline, varsObj);
+    onLaunch(selectedCircuit, varsObj);
   };
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl w-[480px] max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <h2 className="text-sm font-semibold">Launch Pipeline Run</h2>
+          <h2 className="text-sm font-semibold">Launch Circuit Run</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-white">
             ✕
           </button>
@@ -47,13 +47,13 @@ export function LaunchDialog({ pipelines, onLaunch, onClose }: LaunchDialogProps
 
         <div className="p-4 space-y-4">
           <div>
-            <label className="text-xs text-gray-400 block mb-1">Pipeline</label>
+            <label className="text-xs text-gray-400 block mb-1">Circuit</label>
             <select
-              value={selectedPipeline}
-              onChange={(e) => setSelectedPipeline(e.target.value)}
+              value={selectedCircuit}
+              onChange={(e) => setSelectedCircuit(e.target.value)}
               className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             >
-              {pipelines.map((p) => (
+              {circuits.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
@@ -106,7 +106,7 @@ export function LaunchDialog({ pipelines, onLaunch, onClose }: LaunchDialogProps
           </button>
           <button
             onClick={handleLaunch}
-            disabled={!selectedPipeline || launching}
+            disabled={!selectedCircuit || launching}
             className="px-4 py-2 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {launching ? "Launching..." : "Launch"}

@@ -172,13 +172,13 @@ func TestDebugController_Assertions(t *testing.T) {
 
 	dc.AddAssertion(Assertion{
 		Name: "always_passes",
-		Predicate: func(_ PipelineSnapshot) error {
+		Predicate: func(_ CircuitSnapshot) error {
 			return nil
 		},
 	})
 	dc.AddAssertion(Assertion{
 		Name: "always_fails",
-		Predicate: func(_ PipelineSnapshot) error {
+		Predicate: func(_ CircuitSnapshot) error {
 			return fmt.Errorf("invariant violated")
 		},
 	})

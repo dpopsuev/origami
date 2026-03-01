@@ -85,7 +85,7 @@ type CLIBuilder struct {
 	analyzeFn   AnalyzeFunc
 	dataset     DatasetStore
 	calibrate   CalibrateRunner
-	pipelines   []string
+	circuits   []string
 	consume     *string
 	serve       *ServeConfig
 	demo        *DemoConfig
@@ -121,13 +121,13 @@ func (b *CLIBuilder) WithCalibrate(runner CalibrateRunner) *CLIBuilder {
 	return b
 }
 
-func (b *CLIBuilder) WithPipeline(defs ...string) *CLIBuilder {
-	b.pipelines = append(b.pipelines, defs...)
+func (b *CLIBuilder) WithCircuit(defs ...string) *CLIBuilder {
+	b.circuits = append(b.circuits, defs...)
 	return b
 }
 
-func (b *CLIBuilder) WithConsume(pipeline string) *CLIBuilder {
-	b.consume = &pipeline
+func (b *CLIBuilder) WithConsume(circuit string) *CLIBuilder {
+	b.consume = &circuit
 	return b
 }
 
@@ -236,8 +236,8 @@ func (b *CLIBuilder) Build() (*CLI, error) {
 	if b.calibrate != nil {
 		root.AddCommand(b.buildCalibrate())
 	}
-	if len(b.pipelines) > 0 {
-		root.AddCommand(b.buildPipeline())
+	if len(b.circuits) > 0 {
+		root.AddCommand(b.buildCircuit())
 	}
 	if b.consume != nil {
 		root.AddCommand(b.buildConsume())
@@ -396,17 +396,17 @@ func (b *CLIBuilder) buildCalibrate() *cobra.Command {
 	return cal
 }
 
-func (b *CLIBuilder) buildPipeline() *cobra.Command {
+func (b *CLIBuilder) buildCircuit() *cobra.Command {
 	pl := &cobra.Command{
-		Use:   "pipeline",
-		Short: "Pipeline operations",
+		Use:   "circuit",
+		Short: "Circuit operations",
 	}
 
 	pl.AddCommand(&cobra.Command{
 		Use:   "list",
-		Short: "List registered pipelines",
+		Short: "List registered circuits",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			for _, p := range b.pipelines {
+			for _, p := range b.circuits {
 				fmt.Println(p)
 			}
 			return nil
@@ -414,8 +414,8 @@ func (b *CLIBuilder) buildPipeline() *cobra.Command {
 	})
 
 	validateCmd := &cobra.Command{
-		Use:   "validate <pipeline>",
-		Short: "Validate a pipeline YAML (lint + structural check)",
+		Use:   "validate <circuit>",
+		Short: "Validate a circuit YAML (lint + structural check)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			raw, err := os.ReadFile(args[0])
@@ -444,21 +444,21 @@ func (b *CLIBuilder) buildPipeline() *cobra.Command {
 	pl.AddCommand(validateCmd)
 
 	renderCmd := &cobra.Command{
-		Use:   "render <pipeline>",
-		Short: "Render pipeline as text or DOT graph",
+		Use:   "render <circuit>",
+		Short: "Render circuit as text or DOT graph",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			raw, err := os.ReadFile(args[0])
 			if err != nil {
 				return fmt.Errorf("read %s: %w", args[0], err)
 			}
-			def, err := framework.LoadPipeline(raw)
+			def, err := framework.LoadCircuit(raw)
 			if err != nil {
 				return fmt.Errorf("parse %s: %w", args[0], err)
 			}
 			format, _ := cmd.Flags().GetString("format")
 			if format == "dot" {
-				fmt.Println("digraph pipeline {")
+				fmt.Println("digraph circuit {")
 				fmt.Println("  rankdir=LR;")
 				for _, n := range def.Nodes {
 					label := n.Name
@@ -476,7 +476,7 @@ func (b *CLIBuilder) buildPipeline() *cobra.Command {
 				}
 				fmt.Println("}")
 			} else {
-				fmt.Printf("Pipeline: %s\n", def.Pipeline)
+				fmt.Printf("Circuit: %s\n", def.Circuit)
 				fmt.Printf("Start:    %s\n", def.Start)
 				fmt.Printf("Done:     %s\n\n", def.Done)
 				fmt.Println("Nodes:")
@@ -504,7 +504,7 @@ func (b *CLIBuilder) buildPipeline() *cobra.Command {
 
 	replayCmd := &cobra.Command{
 		Use:   "replay <recording.jsonl>",
-		Short: "Replay a pipeline recording via Kami",
+		Short: "Replay a circuit recording via Kami",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			speed, _ := cmd.Flags().GetFloat64("speed")
@@ -553,9 +553,9 @@ func (b *CLIBuilder) buildConsume() *cobra.Command {
 	}
 	consume.AddCommand(&cobra.Command{
 		Use:   "run",
-		Short: "Run ingestion pipeline",
+		Short: "Run ingestion circuit",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			fmt.Printf("Running consume pipeline %s...\n", *b.consume)
+			fmt.Printf("Running consume circuit %s...\n", *b.consume)
 			return nil
 		},
 	})
@@ -569,9 +569,9 @@ func (b *CLIBuilder) buildConsume() *cobra.Command {
 					fmt.Println("No ingestion runs recorded yet.")
 					return nil
 				}
-				return fmt.Errorf("check pipeline %s: %w", *b.consume, err)
+				return fmt.Errorf("check circuit %s: %w", *b.consume, err)
 			}
-			fmt.Printf("Pipeline:  %s\n", *b.consume)
+			fmt.Printf("Circuit:  %s\n", *b.consume)
 			fmt.Printf("Last run:  %s\n", info.ModTime().Format(time.RFC3339))
 			return nil
 		},

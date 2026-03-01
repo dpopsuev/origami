@@ -1,8 +1,8 @@
-# F0-F6 Root Cause Analysis pipeline.
+# F0-F6 Root Cause Analysis circuit.
 # Source of truth for the RCA graph structure.
 # Edge evaluation logic is registered via EdgeFactory in Go.
-pipeline: rca-investigation
-description: "F0-F6 root cause analysis pipeline"
+circuit: rca-investigation
+description: "F0-F6 root cause analysis circuit"
 
 zones:
   backcourt:

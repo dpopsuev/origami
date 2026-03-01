@@ -319,8 +319,8 @@ func TestHookRegistry_FQCNResolution(t *testing.T) {
 }
 
 func TestBuildGraph_ImportsWiring(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Imports:  []string{"vendor"},
 		Nodes: []NodeDef{
 			{Name: "start", Transformer: "my-t"},
@@ -358,8 +358,8 @@ func TestBuildGraph_ImportsWiring(t *testing.T) {
 }
 
 func TestBuildGraph_ImportFailure(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Imports:  []string{"missing-adapter"},
 		Nodes:    []NodeDef{{Name: "start"}},
 		Edges:    []EdgeDef{{ID: "e1", From: "start", To: "done"}},
@@ -385,9 +385,9 @@ func TestBuildGraph_ImportFailure(t *testing.T) {
 	}
 }
 
-func TestPipelineDef_ImportsField(t *testing.T) {
+func TestCircuitDef_ImportsField(t *testing.T) {
 	yaml := `
-pipeline: test
+circuit: test
 imports:
   - vendor.rca-tools
   - vendor.vuln-tools
@@ -400,7 +400,7 @@ edges:
 start: start
 done: done
 `
-	def, err := LoadPipeline([]byte(yaml))
+	def, err := LoadCircuit([]byte(yaml))
 	if err != nil {
 		t.Fatal(err)
 	}

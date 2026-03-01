@@ -238,23 +238,23 @@ func (r *InvalidCacheTTL) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S8: missing-pipeline-description ---
+// --- S8: missing-circuit-description ---
 
-type MissingPipelineDescription struct{}
+type MissingCircuitDescription struct{}
 
-func (r *MissingPipelineDescription) ID() string        { return "S8/missing-pipeline-description" }
-func (r *MissingPipelineDescription) Description() string { return "pipeline should have a description" }
-func (r *MissingPipelineDescription) Severity() Severity { return SeverityInfo }
-func (r *MissingPipelineDescription) Tags() []string     { return []string{"structural"} }
+func (r *MissingCircuitDescription) ID() string        { return "S8/missing-circuit-description" }
+func (r *MissingCircuitDescription) Description() string { return "circuit should have a description" }
+func (r *MissingCircuitDescription) Severity() Severity { return SeverityInfo }
+func (r *MissingCircuitDescription) Tags() []string     { return []string{"structural"} }
 
-func (r *MissingPipelineDescription) Check(ctx *LintContext) []Finding {
+func (r *MissingCircuitDescription) Check(ctx *LintContext) []Finding {
 	if ctx.Def.Description == "" {
 		return []Finding{{
 			RuleID:       r.ID(),
 			Severity:     r.Severity(),
-			Message:      "pipeline has no description",
+			Message:      "circuit has no description",
 			File:         ctx.File,
-			Line:         ctx.TopLevelLine("pipeline"),
+			Line:         ctx.TopLevelLine("circuit"),
 			FixAvailable: true,
 		}}
 	}

@@ -31,20 +31,22 @@ func (n *runnerTestNode) Process(_ context.Context, _ NodeContext) (Artifact, er
 }
 
 type runnerTestWalker struct {
-	state   *WalkerState
-	visited []string
+	identity AgentIdentity
+	state    *WalkerState
+	visited  []string
 }
 
-func (w *runnerTestWalker) Identity() AgentIdentity { return AgentIdentity{PersonaName: "test"} }
-func (w *runnerTestWalker) State() *WalkerState     { return w.state }
+func (w *runnerTestWalker) Identity() AgentIdentity      { return w.identity }
+func (w *runnerTestWalker) SetIdentity(id AgentIdentity)  { w.identity = id }
+func (w *runnerTestWalker) State() *WalkerState           { return w.state }
 func (w *runnerTestWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
 	w.visited = append(w.visited, node.Name())
 	return node.Process(ctx, nc)
 }
 
 func TestRunner_Walk_NoSchema(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "no-schema",
+	def := &CircuitDef{
+		Circuit: "no-schema",
 		Nodes: []NodeDef{
 			{Name: "a", Family: "stub"},
 			{Name: "b", Family: "stub"},
@@ -79,8 +81,8 @@ func TestRunner_Walk_NoSchema(t *testing.T) {
 }
 
 func TestRunner_Walk_SchemaPass(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "schema-pass",
+	def := &CircuitDef{
+		Circuit: "schema-pass",
 		Nodes: []NodeDef{
 			{
 				Name:   "a",
@@ -119,8 +121,8 @@ func TestRunner_Walk_SchemaPass(t *testing.T) {
 }
 
 func TestRunner_Walk_SchemaFail(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "schema-fail",
+	def := &CircuitDef{
+		Circuit: "schema-fail",
 		Nodes: []NodeDef{
 			{
 				Name:   "a",
@@ -159,8 +161,8 @@ func TestRunner_Walk_SchemaFail(t *testing.T) {
 }
 
 func TestRunner_Walk_NodeError(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "node-error",
+	def := &CircuitDef{
+		Circuit: "node-error",
 		Nodes: []NodeDef{
 			{Name: "a", Family: "failing"},
 		},
@@ -190,8 +192,8 @@ func TestRunner_Walk_NodeError(t *testing.T) {
 }
 
 func TestRunner_Walk_MultiNodeWithSchema(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "multi-schema",
+	def := &CircuitDef{
+		Circuit: "multi-schema",
 		Nodes: []NodeDef{
 			{
 				Name:   "a",
@@ -249,17 +251,17 @@ func TestRunner_Walk_MultiNodeWithSchema(t *testing.T) {
 	}
 }
 
-func TestNewRunner_InvalidPipeline(t *testing.T) {
-	def := &PipelineDef{Pipeline: ""}
+func TestNewRunner_InvalidCircuit(t *testing.T) {
+	def := &CircuitDef{Circuit: ""}
 	_, err := NewRunner(def, NodeRegistry{}, EdgeFactory{})
 	if err == nil {
-		t.Fatal("NewRunner should fail for invalid pipeline")
+		t.Fatal("NewRunner should fail for invalid circuit")
 	}
 }
 
 func TestRunner_Walk_NilWalker(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "nil-walker",
+	def := &CircuitDef{
+		Circuit: "nil-walker",
 		Nodes: []NodeDef{
 			{Name: "a", Element: "fire", Transformer: "echo"},
 			{Name: "b", Element: "water", Transformer: "echo"},
@@ -309,8 +311,8 @@ func TestProcessWalker(t *testing.T) {
 
 func TestRunner_SchemasExtracted(t *testing.T) {
 	schema := &ArtifactSchema{Type: "object", Required: []string{"id"}}
-	def := &PipelineDef{
-		Pipeline: "schemas",
+	def := &CircuitDef{
+		Circuit: "schemas",
 		Nodes: []NodeDef{
 			{Name: "a", Family: "stub", Schema: schema},
 			{Name: "b", Family: "stub"},

@@ -17,8 +17,8 @@ type Transformer interface {
 
 // TransformerContext carries all inputs needed by a transformer.
 type TransformerContext struct {
-	Input    any            // prior node's output (or pipeline input)
-	Config   map[string]any // pipeline vars
+	Input    any            // prior node's output (or circuit input)
+	Config   map[string]any // circuit vars
 	Prompt   string         // prompt template path or content
 	NodeName string         // current node name
 	Meta     map[string]any // additional metadata from NodeDef or walk state
@@ -66,7 +66,7 @@ type transformerNode struct {
 	prompt   string         // from NodeDef.Prompt
 	input    string         // from NodeDef.Input (e.g. "${recall.output}")
 	provider string         // from NodeDef.Provider (e.g. "cursor", "codex")
-	config   map[string]any // pipeline vars (from PipelineDef.Vars)
+	config   map[string]any // circuit vars (from CircuitDef.Vars)
 	meta     map[string]any // from NodeDef.Meta
 }
 

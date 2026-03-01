@@ -7,10 +7,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// PipelineDef is the top-level DSL structure for declaring a pipeline graph.
-// Layout follows P3 (reading-first): pipeline > zones > nodes > edges > start/done.
-type PipelineDef struct {
-	Pipeline    string             `yaml:"pipeline"`
+// CircuitDef is the top-level DSL structure for declaring a circuit graph.
+// Layout follows P3 (reading-first): circuit > zones > nodes > edges > start/done.
+type CircuitDef struct {
+	Circuit    string             `yaml:"circuit"`
 	Description string             `yaml:"description,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
@@ -23,7 +23,7 @@ type PipelineDef struct {
 	Done        string             `yaml:"done"`
 }
 
-// ExtractorDef declares a reusable extractor at the pipeline level.
+// ExtractorDef declares a reusable extractor at the circuit level.
 // Nodes reference extractors by name via NodeDef.Extractor.
 // Type must be a built-in extractor type (json-schema, regex).
 type ExtractorDef struct {
@@ -34,14 +34,15 @@ type ExtractorDef struct {
 	OnError string          `yaml:"on_error,omitempty"`
 }
 
-// WalkerDef declares a walker (agent) in the pipeline YAML.
+// WalkerDef declares a walker (agent) in the circuit YAML.
 // This is the "care, but in YAML" counterpart to DefaultWalker.
 type WalkerDef struct {
-	Name         string             `yaml:"name"`
-	Element      string             `yaml:"element,omitempty"`
-	Persona      string             `yaml:"persona,omitempty"`
-	Preamble     string             `yaml:"preamble,omitempty"`
-	StepAffinity map[string]float64 `yaml:"step_affinity,omitempty"`
+	Name           string             `yaml:"name"`
+	Element        string             `yaml:"element,omitempty"`
+	Persona        string             `yaml:"persona,omitempty"`
+	Preamble       string             `yaml:"preamble,omitempty"`
+	OffsetPreamble string             `yaml:"offset_preamble,omitempty"`
+	StepAffinity   map[string]float64 `yaml:"step_affinity,omitempty"`
 }
 
 // ContextFilterDef declares which context keys are allowed or blocked
@@ -61,7 +62,7 @@ type ZoneDef struct {
 	ContextFilter *ContextFilterDef `yaml:"context_filter,omitempty"`
 }
 
-// NodeDef declares a node in the pipeline.
+// NodeDef declares a node in the circuit.
 // Resolution priority: Transformer > Extractor > NodeRegistry (Family/Name).
 // Transformer is the DSL-first path; Extractor and NodeRegistry are escape hatches.
 type NodeDef struct {
@@ -116,29 +117,29 @@ type NodeRegistry map[string]func(def NodeDef) Node
 // EdgeFactory maps edge IDs to Edge factory functions.
 type EdgeFactory map[string]func(def EdgeDef) Edge
 
-// LoadPipeline parses a YAML pipeline definition and returns a PipelineDef.
-func LoadPipeline(data []byte) (*PipelineDef, error) {
-	var def PipelineDef
+// LoadCircuit parses a YAML circuit definition and returns a CircuitDef.
+func LoadCircuit(data []byte) (*CircuitDef, error) {
+	var def CircuitDef
 	if err := yaml.Unmarshal(data, &def); err != nil {
-		return nil, fmt.Errorf("parse pipeline YAML: %w", err)
+		return nil, fmt.Errorf("parse circuit YAML: %w", err)
 	}
 	return &def, nil
 }
 
-// MarshalYAML serializes a PipelineDef back to YAML (P8: round-trip fidelity).
-func (def *PipelineDef) MarshalYAML() ([]byte, error) {
+// MarshalYAML serializes a CircuitDef back to YAML (P8: round-trip fidelity).
+func (def *CircuitDef) MarshalYAML() ([]byte, error) {
 	return yaml.Marshal(def)
 }
 
-// Validate checks referential integrity of the pipeline definition:
-//   - pipeline name is non-empty
+// Validate checks referential integrity of the circuit definition:
+//   - circuit name is non-empty
 //   - at least one node and one edge exist
 //   - start node exists in the node list
 //   - all edge From/To reference existing nodes (or the done pseudo-node)
 //   - all zone node references exist
-func (def *PipelineDef) Validate() error {
-	if def.Pipeline == "" {
-		return fmt.Errorf("pipeline name is required")
+func (def *CircuitDef) Validate() error {
+	if def.Circuit == "" {
+		return fmt.Errorf("circuit name is required")
 	}
 	if len(def.Nodes) == 0 {
 		return fmt.Errorf("at least one node is required")
@@ -199,7 +200,7 @@ func (def *PipelineDef) Validate() error {
 
 // AdapterLoader resolves an import name (e.g. "core", "vendor.rca-tools")
 // to a live Adapter with populated registries. BuildGraph calls the loader
-// for each entry in PipelineDef.Imports.
+// for each entry in CircuitDef.Imports.
 type AdapterLoader func(name string) (*Adapter, error)
 
 // GraphRegistries bundles all optional registries for BuildGraph.
@@ -216,12 +217,12 @@ type GraphRegistries struct {
 	Adapters     AdapterLoader
 }
 
-// BuildGraph constructs a Graph from a PipelineDef using the full registries bundle.
+// BuildGraph constructs a Graph from a CircuitDef using the full registries bundle.
 // Node resolution priority: Transformer > Extractor > NodeRegistry (Family/Name).
 // Edge resolution priority: expressionEdge (When) > EdgeFactory > dslEdge.
-// When PipelineDef.Imports is non-empty and reg.Adapters is set, imported
+// When CircuitDef.Imports is non-empty and reg.Adapters is set, imported
 // adapters are loaded and merged into the registries before node resolution.
-func (def *PipelineDef) BuildGraph(reg GraphRegistries) (Graph, error) {
+func (def *CircuitDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 	if err := def.Validate(); err != nil {
 		return nil, fmt.Errorf("validate: %w", err)
 	}
@@ -284,12 +285,12 @@ func (def *PipelineDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 		})
 	}
 
-	return NewGraph(def.Pipeline, fwNodes, fwEdges, fwZones, WithDoneNode(def.Done))
+	return NewGraph(def.Circuit, fwNodes, fwEdges, fwZones, WithDoneNode(def.Done))
 }
 
 // resolveNode creates a Node from a NodeDef using the priority chain:
 // Transformer > Extractor > NodeRegistry (Family/Name).
-func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error) {
+func (def *CircuitDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error) {
 	elem := Element(strings.ToLower(nd.Element))
 
 	if nd.Marble != "" {
@@ -384,8 +385,8 @@ func (e *dslEdge) Evaluate(_ Artifact, _ *WalkerState) *Transition {
 }
 
 // resolveExtractor resolves an extractor reference from a NodeDef.
-// Priority: built-in name → pipeline-level ExtractorDef → ExtractorRegistry.
-func (def *PipelineDef) resolveExtractor(nd NodeDef, reg GraphRegistries) (Extractor, error) {
+// Priority: built-in name → circuit-level ExtractorDef → ExtractorRegistry.
+func (def *CircuitDef) resolveExtractor(nd NodeDef, reg GraphRegistries) (Extractor, error) {
 	switch nd.Extractor {
 	case BuiltinExtractorJSONSchema:
 		return &JSONSchemaExtractor{schema: nd.Schema}, nil
@@ -429,7 +430,7 @@ func (def *PipelineDef) resolveExtractor(nd NodeDef, reg GraphRegistries) (Extra
 
 // resolveRenderer resolves a renderer reference from a NodeDef.
 // Priority: built-in name → RendererRegistry.
-func (def *PipelineDef) resolveRenderer(nd NodeDef, reg GraphRegistries) (Renderer, error) {
+func (def *CircuitDef) resolveRenderer(nd NodeDef, reg GraphRegistries) (Renderer, error) {
 	if nd.Renderer == BuiltinRendererTemplate {
 		return &TemplateRenderer{Template: nd.Prompt}, nil
 	}

@@ -41,9 +41,9 @@ The free product is genuinely useful as a standalone tool. The paid boundary is 
 
 ### 2.3 Relevance to Origami
 
-Excalidraw's **embeddable component model** is relevant. The canvas renderer is a reusable building block that third parties embed. For Origami, the pipeline graph renderer (React Flow) could similarly be distributed as an embeddable component — any tool built on Origami could embed the graph visualization without building their own.
+Excalidraw's **embeddable component model** is relevant. The canvas renderer is a reusable building block that third parties embed. For Origami, the circuit graph renderer (React Flow) could similarly be distributed as an embeddable component — any tool built on Origami could embed the graph visualization without building their own.
 
-The **collaboration-as-premium** boundary is less relevant. Pipeline authoring is primarily a developer activity (YAML-first, AI-first authoring per the vision), not a collaborative whiteboard activity. Real-time co-editing of pipeline YAML is handled by existing tools (VS Code Live Share, IDE collaboration).
+The **collaboration-as-premium** boundary is less relevant. Circuit authoring is primarily a developer activity (YAML-first, AI-first authoring per the vision), not a collaborative whiteboard activity. Real-time co-editing of circuit YAML is handled by existing tools (VS Code Live Share, IDE collaboration).
 
 ---
 
@@ -65,9 +65,9 @@ Revenue combines SaaS subscriptions with community sponsorships. The 86k-star co
 
 ### 3.3 Relevance to Origami
 
-Mermaid's approach is directly relevant because **Origami already uses Mermaid** — `Render(def)` produces Mermaid flowcharts from `PipelineDef`. The pipeline visualization in Kami and the Visual Editor should leverage Mermaid as the text-based representation while adding interactive capabilities on top.
+Mermaid's approach is directly relevant because **Origami already uses Mermaid** — `Render(def)` produces Mermaid flowcharts from `CircuitDef`. The circuit visualization in Kami and the Visual Editor should leverage Mermaid as the text-based representation while adding interactive capabilities on top.
 
-The **text-to-diagram as lingua franca** lesson matters: Origami's pipeline YAML is already a text representation that can generate diagrams. The Visual Editor should be bidirectional — edit the graph visually, see the YAML update; edit the YAML, see the graph update. Like Mermaid Live Editor but for pipeline graphs with execution state.
+The **text-to-diagram as lingua franca** lesson matters: Origami's circuit YAML is already a text representation that can generate diagrams. The Visual Editor should be bidirectional — edit the graph visually, see the YAML update; edit the YAML, see the graph update. Like Mermaid Live Editor but for circuit graphs with execution state.
 
 ---
 
@@ -110,7 +110,7 @@ Enterprises pay for Automation Controller because of four needs the engine canno
 | **Delegation** | DevOps runs everything | Job templates let non-experts trigger automation safely |
 | **Visibility** | Terminal output | Dashboard, run history, centralized logging |
 
-These four needs — governance, scale, delegation, visibility — are the pillars of the enterprise value proposition. They apply to any domain, including agentic pipeline orchestration.
+These four needs — governance, scale, delegation, visibility — are the pillars of the enterprise value proposition. They apply to any domain, including agentic circuit orchestration.
 
 ### 4.4 The AWX upstream model
 
@@ -136,8 +136,8 @@ This dual-track model is critical: it demonstrates that the control plane can be
 
 **Audience segmentation is natural.** Origami already has two distinct audiences:
 
-- **Pipeline developers** (CLI, YAML, Go API) — they write pipelines, build collections, tune prompts. They are the community. They use the framework directly.
-- **Pipeline operators** (visual builder, run management, team coordination) — they deploy, monitor, delegate, and audit pipelines. They are the enterprise customers. They use the Visual Editor.
+- **Circuit developers** (CLI, YAML, Go API) — they write circuits, build collections, tune prompts. They are the community. They use the framework directly.
+- **Circuit operators** (visual builder, run management, team coordination) — they deploy, monitor, delegate, and audit circuits. They are the enterprise customers. They use the Visual Editor.
 
 This matches Ansible's developer/operator split exactly.
 
@@ -149,8 +149,8 @@ This matches Ansible's developer/operator split exactly.
 
 | Feature | Community (free) | Enterprise (paid) |
 |---------|-----------------|-------------------|
-| Pipeline graph visualization | Yes | Yes |
-| Drag-and-drop pipeline builder | Yes | Yes |
+| Circuit graph visualization | Yes | Yes |
+| Drag-and-drop circuit builder | Yes | Yes |
 | Mermaid rendering | Yes | Yes |
 | Run history (local) | Yes | Yes |
 | Artifact inspection | Yes | Yes |
@@ -172,7 +172,7 @@ The boundary is clear: **single user with full functionality is free. Team, gove
 
 ### 5.4 Why NOT SaaS-only (Excalidraw/Mermaid model)
 
-The Excalidraw/Mermaid SaaS model works for lightweight tools where the value is convenience and collaboration. For enterprise infrastructure automation — where pipelines process sensitive data, access internal systems, and run inside corporate networks — customers need on-premise deployment, not cloud-hosted SaaS. Red Hat's subscription model (deploy on your infrastructure, we support it) is the right fit.
+The Excalidraw/Mermaid SaaS model works for lightweight tools where the value is convenience and collaboration. For enterprise infrastructure automation — where circuits process sensitive data, access internal systems, and run inside corporate networks — customers need on-premise deployment, not cloud-hosted SaaS. Red Hat's subscription model (deploy on your infrastructure, we support it) is the right fit.
 
 SaaS could be a supplementary offering (hosted Visual Editor for evaluation, small teams, CI/CD integration), but the primary revenue model should be on-premise subscription, consistent with Red Hat's portfolio.
 
@@ -184,30 +184,30 @@ SaaS could be a supplementary offering (hosted Visual Editor for evaluation, sma
 
 | Feature | Relevance | Priority |
 |---------|-----------|----------|
-| **Embeddable component** (npm package) | High — pipeline graph renderer as a reusable React component. Consumers embed in their own UIs. | Should |
-| **Hand-drawn aesthetic** | Low — pipelines need clarity, not charm | — |
-| **Infinite canvas** | Medium — large pipelines with many zones benefit from pan/zoom/canvas | Nice |
+| **Embeddable component** (npm package) | High — circuit graph renderer as a reusable React component. Consumers embed in their own UIs. | Should |
+| **Hand-drawn aesthetic** | Low — circuits need clarity, not charm | — |
+| **Infinite canvas** | Medium — large circuits with many zones benefit from pan/zoom/canvas | Nice |
 | **Shape libraries** | Medium — reusable node families, transformer icons, element symbols | Nice |
 | **Local-first / PWA** | High — developers want offline access, instant startup, no server dependency | Should |
-| **Open export format** (.excalidraw JSON) | High — pipeline state as JSON/YAML, importable/exportable | Must |
+| **Open export format** (.excalidraw JSON) | High — circuit state as JSON/YAML, importable/exportable | Must |
 
 ### 6.2 From Mermaid
 
 | Feature | Relevance | Priority |
 |---------|-----------|----------|
 | **Text-to-diagram** (bidirectional) | Critical — edit YAML, see graph update; edit graph, see YAML update | Must |
-| **Markdown embedding** | High — embed pipeline diagrams in documentation, PRs, readmes | Should |
-| **Multiple diagram types** | Medium — pipeline graph is primary, but run timeline (Gantt), agent relationships (sequence), zone topology (state) add value | Nice |
+| **Markdown embedding** | High — embed circuit diagrams in documentation, PRs, readmes | Should |
+| **Multiple diagram types** | Medium — circuit graph is primary, but run timeline (Gantt), agent relationships (sequence), zone topology (state) add value | Nice |
 | **Live preview** | Critical — instant rendering as YAML changes. Already proven in Mermaid Live Editor. | Must |
-| **CLI rendering** | High — `origami render pipeline.yaml --format svg` for CI pipelines, documentation generation | Should |
-| **AI diagram generation** | Medium — generate pipeline YAML from natural language description (AI-first authoring from vision) | Nice |
+| **CLI rendering** | High — `origami render circuit.yaml --format svg` for CI circuits, documentation generation | Should |
+| **AI diagram generation** | Medium — generate circuit YAML from natural language description (AI-first authoring from vision) | Nice |
 
 ### 6.3 From Ansible Automation Controller
 
 | Feature | Relevance | Priority |
 |---------|-----------|----------|
-| **Job templates** | Critical — reusable pipeline run configurations with pinned vars, credentials, inventories | Must |
-| **Workflow visualizer** | Critical — multi-pipeline orchestration with conditional branching. Maps directly to Origami's graph. | Must |
+| **Job templates** | Critical — reusable circuit run configurations with pinned vars, credentials, inventories | Must |
+| **Workflow visualizer** | Critical — multi-circuit orchestration with conditional branching. Maps directly to Origami's graph. | Must |
 | **RBAC** | Critical — enterprise gate. Roles, teams, org permissions. | Must (enterprise) |
 | **Credential management** | High — BYOA pattern implemented in UI. Credential injection without exposure. | Must (enterprise) |
 | **Inventory management** | High — target environments, knowledge sources, data sources managed centrally | Should (enterprise) |
@@ -215,7 +215,7 @@ SaaS could be a supplementary offering (hosted Visual Editor for evaluation, sma
 | **Topology viewer** | Medium — visualize execution topology (workers, zones, providers) | Nice (enterprise) |
 | **Centralized logging** | High — aggregated run logs, searchable, filterable | Must (enterprise) |
 | **Activity streams** | High — audit trail of every action (who changed what, when) | Must (enterprise) |
-| **Scheduled/event runs** | Medium — cron-triggered pipeline runs, webhook-triggered runs | Should (enterprise) |
+| **Scheduled/event runs** | Medium — cron-triggered circuit runs, webhook-triggered runs | Should (enterprise) |
 
 ---
 
@@ -230,7 +230,7 @@ flowchart TB
     subgraph origami_fw [Origami Framework - unchanged]
         Walk["Walk / WalkTeam"]
         Observer["WalkObserver"]
-        Render["Render PipelineDef"]
+        Render["Render CircuitDef"]
         Collections["Collection Registry"]
         LSP["Language Server"]
     end
@@ -241,7 +241,7 @@ flowchart TB
     end
 
     subgraph ve_community [Visual Editor Community]
-        GraphUI["Pipeline Graph UI\nReact Flow"]
+        GraphUI["Circuit Graph UI\nReact Flow"]
         YAMLEditor["YAML Editor\nMonaco + LSP"]
         RunHistory["Run History\nLocal SQLite"]
         ArtifactView["Artifact Inspector"]
@@ -283,7 +283,7 @@ sequenceDiagram
     Editor->>User: show updated YAML + graph
 
     User->>Editor: click "Run"
-    Editor->>Framework: Walk(pipelineDef, opts...)
+    Editor->>Framework: Walk(circuitDef, opts...)
     Framework->>Kami: WalkEvents via Observer
     Kami->>Editor: SSE stream of KamiEvents
     Editor->>User: animate graph (node enter/exit, artifacts)
@@ -295,12 +295,12 @@ sequenceDiagram
 
 | Dimension | Excalidraw | Mermaid | Ansible Controller | Origami Visual Editor |
 |-----------|-----------|---------|--------------------|-----------------------|
-| **Core strength** | Canvas UX | Text-to-diagram ubiquity | Enterprise governance | Pipeline orchestration + AI agents |
+| **Core strength** | Canvas UX | Text-to-diagram ubiquity | Enterprise governance | Circuit orchestration + AI agents |
 | **Free boundary** | Full editor, single-user | Full renderer + live editor | AWX (full UI, community support) | Full editor, single-user, local |
 | **Paid boundary** | Collaboration | Team features + SSO | RBAC + mesh + support + certified content | RBAC + mesh + audit + SSO + certified collections |
 | **Revenue model** | SaaS sub | SaaS sub + sponsors | Enterprise subscription | Enterprise subscription |
 | **Deploy model** | Cloud-hosted | Cloud-hosted | On-premise + cloud | On-premise + cloud |
-| **Target customer** | Designers, PMs | Developers, tech writers | IT operations, DevOps teams | Pipeline operators, QE leads, DevOps |
+| **Target customer** | Designers, PMs | Developers, tech writers | IT operations, DevOps teams | Circuit operators, QE leads, DevOps |
 
 ---
 
@@ -310,13 +310,13 @@ sequenceDiagram
 
 2. **Ship a genuine Community Edition.** AWX proves that an open-source control plane doesn't cannibalize the commercial product. The Community Edition must be fully functional for single-user use — not a crippled trial. Enterprise features (RBAC, multi-tenancy, audit, SSO) only matter at organizational scale.
 
-3. **Bidirectional YAML-graph editing is the killer feature.** Neither Excalidraw (visual-only) nor Mermaid (text-only in practice) offers true bidirectional editing. Edit the graph, see YAML update. Edit YAML, see graph update. This uniquely serves the Origami audience because pipeline developers think in YAML while pipeline operators think in graphs.
+3. **Bidirectional YAML-graph editing is the killer feature.** Neither Excalidraw (visual-only) nor Mermaid (text-only in practice) offers true bidirectional editing. Edit the graph, see YAML update. Edit YAML, see graph update. This uniquely serves the Origami audience because circuit developers think in YAML while circuit operators think in graphs.
 
 4. **Embed Kami, don't replace it.** Kami is the debugger. The Visual Editor is the management plane. They share the graph visualization (React Flow) and event source (EventBridge) but serve different use cases. Kami is for development-time debugging. The Visual Editor is for operational management.
 
 5. **Collections Registry as second revenue stream.** Following Ansible's Automation Hub model, a curated registry of certified collections (tested, supported, versioned) creates recurring revenue beyond the platform subscription. Community collections on a free Galaxy-style registry drive ecosystem growth.
 
-6. **Graph renderer as embeddable component.** Following Excalidraw's npm package strategy, the pipeline graph renderer should be distributable as a standalone React component. This lets every Origami consumer embed pipeline visualization without building their own.
+6. **Graph renderer as embeddable component.** Following Excalidraw's npm package strategy, the circuit graph renderer should be distributable as a standalone React component. This lets every Origami consumer embed circuit visualization without building their own.
 
 ---
 
@@ -330,7 +330,7 @@ sequenceDiagram
 - Ansible Automation Controller: `redhat.com/en/technologies/management/ansible/automation-controller`
 - AWX repository: `github.com/ansible/awx` (14k stars, Apache 2.0)
 - Red Hat Ansible Automation Platform pricing: `redhat.com/en/technologies/management/ansible/pricing`
-- Origami Pipeline Studio spec: `contracts/completed/framework/origami-pipeline-studio.md`
+- Origami Circuit Studio spec: `contracts/completed/framework/origami-circuit-studio.md`
 - Origami Kami debugger: `contracts/draft/kami-live-debugger.md`
 - Origami Collections: `contracts/draft/origami-collections.md`
 - Origami LSP: `contracts/draft/origami-lsp.md`

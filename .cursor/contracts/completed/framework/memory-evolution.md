@@ -76,7 +76,7 @@ Phase 1 extends the `MemoryStore` interface with namespace-aware methods (backwa
 | **Unit** | yes | Namespace CRUD, search, InMemoryStore backward-compat, PersistentStore CRUD |
 | **Integration** | no | No cross-boundary changes |
 | **Contract** | yes | MemoryStore interface backward-compatibility |
-| **E2E** | no | Memory is a runtime primitive, not pipeline topology |
+| **E2E** | no | Memory is a runtime primitive, not circuit topology |
 | **Concurrency** | yes | PersistentStore must handle concurrent walker access |
 | **Security** | no | Local storage only |
 

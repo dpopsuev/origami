@@ -1,6 +1,6 @@
-# A simple 4-node "bug triage" pipeline for demonstrating the framework.
-# This is NOT the production RCA pipeline — it's a teaching example.
-pipeline: bug-triage
+# A simple 4-node "bug triage" circuit for demonstrating the framework.
+# This is NOT the production RCA circuit — it's a teaching example.
+circuit: bug-triage
 description: "Classify a bug, investigate it, decide, and close."
 
 zones:

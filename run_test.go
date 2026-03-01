@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-const testPipelineYAML = `
-pipeline: test-run
+const testCircuitYAML = `
+circuit: test-run
 nodes:
   - name: start
     element: fire
@@ -31,18 +31,18 @@ start: start
 done: _done
 `
 
-func writeTempPipeline(t *testing.T, content string) string {
+func writeTempCircuit(t *testing.T, content string) string {
 	t.Helper()
 	dir := t.TempDir()
-	path := filepath.Join(dir, "pipeline.yaml")
+	path := filepath.Join(dir, "circuit.yaml")
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
 	return path
 }
 
-func TestRun_BasicPipeline(t *testing.T) {
-	path := writeTempPipeline(t, testPipelineYAML)
+func TestRun_BasicCircuit(t *testing.T) {
+	path := writeTempCircuit(t, testCircuitYAML)
 	trans := &echoTransformer{}
 
 	err := Run(context.Background(), path, map[string]any{"data": true},
@@ -55,7 +55,7 @@ func TestRun_BasicPipeline(t *testing.T) {
 
 func TestRun_WithOverrides(t *testing.T) {
 	yaml := `
-pipeline: test-vars
+circuit: test-vars
 vars:
   threshold: 0.5
 nodes:
@@ -70,7 +70,7 @@ edges:
 start: a
 done: _done
 `
-	path := writeTempPipeline(t, yaml)
+	path := writeTempCircuit(t, yaml)
 	trans := &echoTransformer{}
 
 	err := Run(context.Background(), path, nil,
@@ -84,7 +84,7 @@ done: _done
 
 func TestRun_WithHooks(t *testing.T) {
 	yaml := `
-pipeline: test-hooks
+circuit: test-hooks
 nodes:
   - name: a
     element: fire
@@ -98,7 +98,7 @@ edges:
 start: a
 done: _done
 `
-	path := writeTempPipeline(t, yaml)
+	path := writeTempCircuit(t, yaml)
 	trans := &echoTransformer{}
 	called := false
 	hooks := HookRegistry{}
@@ -120,22 +120,22 @@ done: _done
 }
 
 func TestRun_MissingFile(t *testing.T) {
-	err := Run(context.Background(), "/nonexistent/pipeline.yaml", nil)
+	err := Run(context.Background(), "/nonexistent/circuit.yaml", nil)
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
 }
 
 func TestRun_InvalidYAML(t *testing.T) {
-	path := writeTempPipeline(t, "{{invalid yaml")
+	path := writeTempCircuit(t, "{{invalid yaml")
 	err := Run(context.Background(), path, nil)
 	if err == nil {
 		t.Fatal("expected error for invalid YAML")
 	}
 }
 
-func TestValidate_ValidPipeline(t *testing.T) {
-	path := writeTempPipeline(t, testPipelineYAML)
+func TestValidate_ValidCircuit(t *testing.T) {
+	path := writeTempCircuit(t, testCircuitYAML)
 	err := Validate(path,
 		WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}),
 	)
@@ -146,7 +146,7 @@ func TestValidate_ValidPipeline(t *testing.T) {
 
 func TestValidate_InvalidExpression(t *testing.T) {
 	yaml := `
-pipeline: bad
+circuit: bad
 nodes:
   - name: a
     element: fire
@@ -159,7 +159,7 @@ edges:
 start: a
 done: _done
 `
-	path := writeTempPipeline(t, yaml)
+	path := writeTempCircuit(t, yaml)
 	err := Validate(path, WithTransformers(TransformerRegistry{"echo": &echoTransformer{}}))
 	if err == nil {
 		t.Fatal("expected validation error for invalid expression")
@@ -168,7 +168,7 @@ done: _done
 
 func TestRun_InputResolutionAndPromptRendering(t *testing.T) {
 	yaml := `
-pipeline: test-input-resolve
+circuit: test-input-resolve
 vars:
   threshold: 0.85
 nodes:
@@ -192,7 +192,7 @@ edges:
 start: recall
 done: _done
 `
-	path := writeTempPipeline(t, yaml)
+	path := writeTempCircuit(t, yaml)
 
 	var capturedPrompt string
 	var capturedInput any
@@ -228,7 +228,7 @@ done: _done
 
 func TestRun_WithTeam_TwoWalkers(t *testing.T) {
 	yaml := `
-pipeline: test-team
+circuit: test-team
 nodes:
   - name: classify
     element: fire
@@ -248,7 +248,7 @@ edges:
 start: classify
 done: _done
 `
-	path := writeTempPipeline(t, yaml)
+	path := writeTempCircuit(t, yaml)
 
 	herald := &stubWalker{
 		identity: AgentIdentity{
@@ -302,7 +302,7 @@ done: _done
 }
 
 func TestRun_WithTeam_InputPropagated(t *testing.T) {
-	path := writeTempPipeline(t, testPipelineYAML)
+	path := writeTempCircuit(t, testCircuitYAML)
 
 	w := &stubWalker{
 		identity: AgentIdentity{PersonaName: "Solo"},
@@ -336,7 +336,7 @@ func TestRun_WithTeam_InputPropagated(t *testing.T) {
 }
 
 func TestValidate_MissingTransformer(t *testing.T) {
-	path := writeTempPipeline(t, testPipelineYAML)
+	path := writeTempCircuit(t, testCircuitYAML)
 	err := Validate(path, WithTransformers(TransformerRegistry{}))
 	if err == nil {
 		t.Fatal("expected error for missing transformer when registry is provided but empty")
@@ -344,7 +344,7 @@ func TestValidate_MissingTransformer(t *testing.T) {
 }
 
 func TestValidate_NoRegistries_StructuralOnly(t *testing.T) {
-	path := writeTempPipeline(t, testPipelineYAML)
+	path := writeTempCircuit(t, testCircuitYAML)
 	err := Validate(path)
 	if err != nil {
 		t.Fatalf("structural validation without registries should pass: %v", err)
@@ -352,7 +352,7 @@ func TestValidate_NoRegistries_StructuralOnly(t *testing.T) {
 }
 
 func TestRun_WithCheckpointer_SavesAfterEachNode(t *testing.T) {
-	path := writeTempPipeline(t, testPipelineYAML)
+	path := writeTempCircuit(t, testCircuitYAML)
 	cpDir := t.TempDir()
 	cp, _ := NewJSONCheckpointer(cpDir)
 
@@ -374,7 +374,7 @@ func TestRun_WithCheckpointer_SavesAfterEachNode(t *testing.T) {
 
 func TestRun_WithCheckpointer_ResumeFromCheckpoint(t *testing.T) {
 	threeNodeYAML := `
-pipeline: test-resume
+circuit: test-resume
 nodes:
   - name: a
     element: fire
@@ -401,7 +401,7 @@ edges:
 start: a
 done: _done
 `
-	path := writeTempPipeline(t, threeNodeYAML)
+	path := writeTempCircuit(t, threeNodeYAML)
 	cpDir := t.TempDir()
 	cp, _ := NewJSONCheckpointer(cpDir)
 
@@ -428,7 +428,7 @@ done: _done
 
 func TestRun_Interrupt_PausesWalk(t *testing.T) {
 	yaml := `
-pipeline: test-interrupt
+circuit: test-interrupt
 nodes:
   - name: a
     element: fire
@@ -455,7 +455,7 @@ edges:
 start: a
 done: _done
 `
-	path := writeTempPipeline(t, yaml)
+	path := writeTempCircuit(t, yaml)
 	cpDir := t.TempDir()
 	cp, _ := NewJSONCheckpointer(cpDir)
 	trace := &TraceCollector{}
@@ -491,7 +491,7 @@ done: _done
 }
 
 func TestRun_ResumeWithInput_AfterInterrupt(t *testing.T) {
-	path := writeTempPipeline(t, testPipelineYAML)
+	path := writeTempCircuit(t, testCircuitYAML)
 	cpDir := t.TempDir()
 	cp, _ := NewJSONCheckpointer(cpDir)
 

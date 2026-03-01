@@ -6,7 +6,7 @@
 ## Contract rules
 
 - Global rules only.
-- The Dispatcher is a **transport concern** only. It knows *how* to deliver a prompt and collect an artifact. It does **not** know what the prompt contains, how to score the result, or anything about the pipeline. That remains `ModelAdapter`'s job.
+- The Dispatcher is a **transport concern** only. It knows *how* to deliver a prompt and collect an artifact. It does **not** know what the prompt contains, how to score the result, or anything about the circuit. That remains `ModelAdapter`'s job.
 - `CursorAdapter` is the only consumer of `Dispatcher`. Other adapters (Stub, Basic) never dispatch — they compute responses internally.
 - The refactor must be **surgical**: extract the 15-line stdin block from `CursorAdapter.SendPrompt`, replace it with `a.dispatcher.Dispatch(...)`, and keep all other logic (template filling, preamble, case registration, store wiring) untouched.
 - Every dispatcher must be safe for sequential use (one prompt at a time) but need not be thread-safe.
@@ -21,7 +21,7 @@
 - Related repos:
   - `report-portal-cli` (`/home/dpopsuev/Repositories/report-portal-cli/`) — Kirsten's Go CLI for RP. Agent skill + CLI approach; validates our direction of file-based tool exchange over MCP.
   - `testo-resumado-agento` (`/home/dpopsuev/Repositories/testo-resumado-agento/`) — Kirsten's agent harness. A potential future dispatcher consumer (HarnessDispatcher).
-- Contracts: `e2e-calibration.md` (calibration framework), `prompt-orchestrator.md` (F0-F6 pipeline).
+- Contracts: `e2e-calibration.md` (calibration framework), `prompt-orchestrator.md` (F0-F6 circuit).
 
 ## Design
 
@@ -56,7 +56,7 @@ type Dispatcher interface {
 // DispatchContext carries all the metadata a dispatcher needs.
 type DispatchContext struct {
     CaseID       string
-    Step         string   // pipeline step name, e.g. "F0-recall"
+    Step         string   // circuit step name, e.g. "F0-recall"
     PromptPath   string   // absolute path to the filled prompt file
     ArtifactPath string   // absolute path where artifact JSON should appear
 }

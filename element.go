@@ -1,14 +1,14 @@
-// Package framework defines the generic agent pipeline framework.
+// Package framework defines the generic agent circuit framework.
 // It provides interfaces for building directed graphs of processing nodes
 // traversed by identity-bearing walkers, with conditional edges governing
-// transitions. Domain-specific pipelines (e.g. F0-F6 RCA) are instances
+// transitions. Domain-specific circuits (e.g. F0-F6 RCA) are instances
 // of this generic structure.
 package framework
 
 import "math"
 
 // Element represents a behavioral archetype governing how an agent
-// moves through a pipeline graph.
+// moves through a circuit graph.
 type Element string
 
 const (

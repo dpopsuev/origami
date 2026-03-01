@@ -67,6 +67,14 @@ func buildWalker(d WalkerDef) (*ProcessWalker, error) {
 		id.PromptPreamble = d.Preamble
 	}
 
+	if d.OffsetPreamble != "" {
+		if id.PromptPreamble == "" {
+			id.PromptPreamble = d.OffsetPreamble
+		} else {
+			id.PromptPreamble = id.PromptPreamble + "\n\n" + d.OffsetPreamble
+		}
+	}
+
 	if len(d.StepAffinity) > 0 {
 		id.StepAffinity = d.StepAffinity
 	}

@@ -97,7 +97,7 @@ Three independent fixes, each self-contained. Order: H2 (naming collision — mo
 | **Unit** | yes | Model registry lookup, EvidenceSource interface compliance, probe stimulus loading |
 | **Integration** | yes | Ouroboros identity probe with configurable models, curation walker with renamed Source |
 | **Contract** | yes | `curate.EvidenceSource` interface, `ModelRegistry` API |
-| **E2E** | no | No pipeline walk behavior changes |
+| **E2E** | no | No circuit walk behavior changes |
 | **Concurrency** | no | Registry populated at startup |
 | **Security** | no | No trust boundaries affected |
 

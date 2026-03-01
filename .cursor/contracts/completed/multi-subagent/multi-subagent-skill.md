@@ -5,7 +5,7 @@
 
 ## Contract rules
 
-- The skill is the **agent-side counterpart** of `BatchFileDispatcher`. The Go CLI owns the pipeline; the skill orchestrates subagent dispatch, not pipeline logic.
+- The skill is the **agent-side counterpart** of `BatchFileDispatcher`. The Go CLI owns the circuit; the skill orchestrates subagent dispatch, not circuit logic.
 - Backward compatibility: when no `batch-manifest.json` exists, the skill falls back to single-signal sequential mode (current behavior).
 - Subagent prompts must be **self-contained**: each Task subagent receives only the briefing path, signal path, and analysis instructions. No parent conversation context leaks to subagents.
 - Calibration integrity rules carry over: subagents must not read ground truth, scenario definitions, or prior calibration artifacts when the prompt contains the calibration preamble.
@@ -58,7 +58,7 @@ loop:
 Each Task subagent receives a prompt like:
 
 ```markdown
-You are a CI failure analyst investigating case {case_id} at pipeline step {step}.
+You are a CI failure analyst investigating case {case_id} at circuit step {step}.
 
 ## Instructions
 
@@ -73,7 +73,7 @@ You are a CI failure analyst investigating case {case_id} at pipeline step {step
 
 4. Analyze the failure based on the prompt content and the briefing context.
 
-5. Produce a JSON artifact for pipeline step {step}.
+5. Produce a JSON artifact for circuit step {step}.
    Schema: {brief_schema_description}
 
 6. Wrap your artifact:
@@ -135,9 +135,9 @@ Three phases. Phase 1 designs the subagent prompt template. Phase 2 rewrites the
 
 ### Phase 1 — Subagent prompt template (Red)
 
-- [x] **P1.1** Draft the subagent prompt template for each pipeline step (F0-F6). Include: briefing path, signal path, schema summary, calibration rules. Save as `.cursor/skills/asterisk-investigate/subagent-template.md`.
+- [x] **P1.1** Draft the subagent prompt template for each circuit step (F0-F6). Include: briefing path, signal path, schema summary, calibration rules. Save as `.cursor/skills/asterisk-investigate/subagent-template.md`.
 - [x] **P1.2** Test the template manually: create a mock `signal.json` and `briefing.md`, paste the filled template into a Cursor Task, verify the subagent can read files and produce valid artifact JSON.
-- [x] **P1.3** Iterate on template until subagent reliably produces correct-schema artifacts for at least 3 different pipeline steps.
+- [x] **P1.3** Iterate on template until subagent reliably produces correct-schema artifacts for at least 3 different circuit steps.
 
 ### Phase 2 — Skill rewrite (Green)
 

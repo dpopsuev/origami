@@ -1,7 +1,7 @@
 # Contract — Origami Observability
 
 **Status:** complete  
-**Goal:** Day-0 cloud-native observability for Origami pipelines — every walk is an OpenTelemetry trace, every node is metered via Prometheus, zero config required by default.  
+**Goal:** Day-0 cloud-native observability for Origami circuits — every walk is an OpenTelemetry trace, every node is metered via Prometheus, zero config required by default.  
 **Serves:** System Refinement (should)
 
 ## Contract rules
@@ -10,12 +10,12 @@
 - `WalkObserver` (already exists) is the primary hook point. OTel and Prometheus adapters implement it.
 - Three-layer slog pattern: primitives (`WalkObserver`) → defaults (`DefaultObservability()`) → consumer override.
 - Dependencies: `prometheus/client_golang`, `go.opentelemetry.io/otel`. Both are CNCF graduated projects — stable, widely adopted, acceptable risk.
-- Breaking change: `TokenTracker.Record()` gains labels (pipeline, step, direction) for Prometheus counter emission. `WalkObserver` may gain additional hooks for dispatch-level spans.
+- Breaking change: `TokenTracker.Record()` gains labels (circuit, step, direction) for Prometheus counter emission. `WalkObserver` may gain additional hooks for dispatch-level spans.
 - All metrics follow Prometheus naming conventions: `origami_` prefix, snake_case, unit suffix (`_seconds`, `_total`, `_bytes`).
 
 ## Context
 
-Pipeline walks map perfectly onto the cloud-native observability stack:
+Circuit walks map perfectly onto the cloud-native observability stack:
 - A walk IS a distributed trace (root span = walk, child spans = node visits)
 - A node visit IS a metric event (duration histogram, token counter)
 - A dispatch IS a child span (provider, model, tokens, cost)
@@ -24,7 +24,7 @@ Pipeline walks map perfectly onto the cloud-native observability stack:
 Origami already has the hook points:
 - `WalkObserver` interface — fires on node entry/exit, edge transition
 - `TokenTracker` interface — records per-step token usage
-- `SignalBus` — pipeline lifecycle events
+- `SignalBus` — circuit lifecycle events
 - `KamiServer` — already an HTTP server, natural home for `/metrics`
 
 ### Cross-references
@@ -32,7 +32,7 @@ Origami already has the hook points:
 - `principled-calibration-scorecard` — token/cost metrics become both ScoreCard `MetricDef`s AND Prometheus counters. The 3 TokiMeter-derived universal metrics (`token_usage`, `token_cost_usd`, `latency_seconds`) bridge calibration and live monitoring.
 - `consumer-cli-scaffold` — `WithObservability()` builder method on `CLIBuilder`.
 - `kami-live-debugger` (completed) — KamiServer hosts `/metrics` endpoint.
-- `case-study-cloud-native-pipeline-tools` (draft) — broader cloud-native tool analysis. This contract is the Origami-internal implementation.
+- `case-study-cloud-native-circuit-tools` (draft) — broader cloud-native tool analysis. This contract is the Origami-internal implementation.
 
 ### Current architecture
 
@@ -85,19 +85,19 @@ flowchart LR
 
 | Metric | Type | Labels | Source |
 |--------|------|--------|--------|
-| `origami_walk_node_duration_seconds` | histogram | pipeline, node, element | WalkObserver |
-| `origami_walk_edge_transitions_total` | counter | pipeline, from, to | WalkObserver |
-| `origami_walk_loops_total` | counter | pipeline, node | WalkObserver |
-| `origami_walk_active` | gauge | pipeline | WalkObserver |
-| `origami_walk_completed_total` | counter | pipeline, status | WalkObserver |
-| `origami_tokens_total` | counter | pipeline, step, direction | TokenTracker |
-| `origami_tokens_cost_usd` | counter | pipeline, step | TokenTracker |
+| `origami_walk_node_duration_seconds` | histogram | circuit, node, element | WalkObserver |
+| `origami_walk_edge_transitions_total` | counter | circuit, from, to | WalkObserver |
+| `origami_walk_loops_total` | counter | circuit, node | WalkObserver |
+| `origami_walk_active` | gauge | circuit | WalkObserver |
+| `origami_walk_completed_total` | counter | circuit, status | WalkObserver |
+| `origami_tokens_total` | counter | circuit, step, direction | TokenTracker |
+| `origami_tokens_cost_usd` | counter | circuit, step | TokenTracker |
 | `origami_dispatch_duration_seconds` | histogram | provider, step | dispatch wrapper |
 | `origami_dispatch_errors_total` | counter | provider, step | dispatch wrapper |
 
 ## OTel trace structure (proposed)
 
-- **Root span:** `pipeline.walk` — attributes: pipeline name, walker element, persona, team ID
+- **Root span:** `circuit.walk` — attributes: circuit name, walker element, persona, team ID
 - **Child span:** `node.visit` — attributes: node name, node family, artifacts produced, duration
   - **Child span:** `dispatch` — attributes: provider, model, prompt tokens, artifact tokens, cost USD
 - **Span event:** `edge.transition` — attributes: from, to, expression, result
@@ -122,9 +122,9 @@ Phases 1-4 are Origami core. Phase 5 touches `dispatch/token.go`. Phase 6 depend
 | Layer | Applies | Rationale |
 |-------|---------|-----------|
 | **Unit** | yes | OTelObserver span creation, PrometheusCollector metric emission, DefaultObservability wiring |
-| **Integration** | yes | Walk pipeline, verify traces exported to in-memory exporter, verify metrics scraped from `/metrics` |
+| **Integration** | yes | Walk circuit, verify traces exported to in-memory exporter, verify metrics scraped from `/metrics` |
 | **Contract** | yes | WalkObserver interface additions, TokenTracker label changes, metric names |
-| **E2E** | yes | `origami run pipeline.yaml` produces OTel traces and Prometheus metrics without configuration |
+| **E2E** | yes | `origami run circuit.yaml` produces OTel traces and Prometheus metrics without configuration |
 | **Concurrency** | yes | PrometheusCollector must be thread-safe across parallel walkers |
 | **Security** | no | No trust boundaries — metrics are read-only observation |
 
@@ -133,13 +133,13 @@ Phases 1-4 are Origami core. Phase 5 touches `dispatch/token.go`. Phase 6 depend
 ### Phase 1 — OTel Trace Emission
 
 - [ ] **O1** Create `observability/otel.go`: `OTelObserver` struct implementing `WalkObserver`
-- [ ] **O2** On walk start: create root span `pipeline.walk` with pipeline name, element, persona attributes
+- [ ] **O2** On walk start: create root span `circuit.walk` with circuit name, element, persona attributes
 - [ ] **O3** On node entry: create child span `node.visit` with node name, family attributes
 - [ ] **O4** On node exit: end span with artifacts-produced count, duration
 - [ ] **O5** On edge transition: add span event `edge.transition` with from/to/expression/result
 - [ ] **O6** On dispatch: create child span under node span with provider/model/tokens/cost
 - [ ] **O7** On walk complete: end root span with status (success/error)
-- [ ] **O8** Unit tests: walk a 3-node pipeline, verify span tree structure via in-memory exporter
+- [ ] **O8** Unit tests: walk a 3-node circuit, verify span tree structure via in-memory exporter
 
 ### Phase 2 — Prometheus Metrics
 
@@ -148,13 +148,13 @@ Phases 1-4 are Origami core. Phase 5 touches `dispatch/token.go`. Phase 6 depend
 - [ ] **P3** On node entry/exit: observe `origami_walk_node_duration_seconds`
 - [ ] **P4** On edge transition: increment `origami_walk_edge_transitions_total`
 - [ ] **P5** On walk start/complete: increment gauge/counter
-- [ ] **P6** Unit tests: walk a pipeline, scrape metrics, verify values
+- [ ] **P6** Unit tests: walk a circuit, scrape metrics, verify values
 
 ### Phase 3 — KamiServer `/metrics` Endpoint
 
 - [ ] **K1** Add `/metrics` HTTP handler to `KamiServer` using `promhttp.Handler()`
 - [ ] **K2** Wire `PrometheusCollector`'s registry into the handler
-- [ ] **K3** Integration test: start KamiServer, walk pipeline, GET `/metrics`, verify metric lines
+- [ ] **K3** Integration test: start KamiServer, walk circuit, GET `/metrics`, verify metric lines
 
 ### Phase 4 — DefaultObservability
 
@@ -165,7 +165,7 @@ Phases 1-4 are Origami core. Phase 5 touches `dispatch/token.go`. Phase 6 depend
 
 ### Phase 5 — TokenTracker Prometheus Integration
 
-- [ ] **T1** Add pipeline/step/direction labels to `TokenRecord` (already has `CaseID` and `Step`)
+- [ ] **T1** Add circuit/step/direction labels to `TokenRecord` (already has `CaseID` and `Step`)
 - [ ] **T2** `InMemoryTokenTracker.Record()` increments `origami_tokens_total` and `origami_tokens_cost_usd` Prometheus counters
 - [ ] **T3** Ensure thread-safety: counters are atomic via Prometheus client library
 - [ ] **T4** Unit test: record tokens, verify Prometheus counter values match
@@ -185,15 +185,15 @@ Phases 1-4 are Origami core. Phase 5 touches `dispatch/token.go`. Phase 6 depend
 
 ## Acceptance criteria
 
-**Given** a pipeline walked with `DefaultObservability()`,  
+**Given** a circuit walked with `DefaultObservability()`,  
 **When** `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317` is set,  
-**Then** OTel traces are exported to the collector with root span `pipeline.walk` and child spans for each node.
+**Then** OTel traces are exported to the collector with root span `circuit.walk` and child spans for each node.
 
 **Given** a KamiServer started with observability enabled,  
 **When** `GET /metrics` is called,  
 **Then** the response contains `origami_walk_node_duration_seconds`, `origami_tokens_total`, and all other registered metrics.
 
-**Given** a pipeline walked without any observability configuration,  
+**Given** a circuit walked without any observability configuration,  
 **When** the walk completes,  
 **Then** `DefaultObservability()` is used automatically — Prometheus metrics are collected (no OTel export unless env var is set).
 
@@ -205,11 +205,11 @@ Phases 1-4 are Origami core. Phase 5 touches `dispatch/token.go`. Phase 6 depend
 
 | OWASP | Finding | Mitigation |
 |-------|---------|------------|
-| A01 | `/metrics` endpoint exposes pipeline internals (node names, token counts) | Bind to localhost by default. Production deployment guides recommend firewall or auth proxy. |
+| A01 | `/metrics` endpoint exposes circuit internals (node names, token counts) | Bind to localhost by default. Production deployment guides recommend firewall or auth proxy. |
 | A05 | OTel traces may contain artifact content in attributes | Only metadata (names, counts, durations) goes into spans. No artifact content in trace attributes. |
 
 ## Notes
 
-2026-02-26 — Contract created. Motivated by the insight that pipeline walks ARE distributed traces and node visits ARE metric events. The cloud-native observability stack (OTel + Prometheus + Grafana + Jaeger) maps perfectly onto Origami's existing `WalkObserver` and `TokenTracker` interfaces. Placed in Sprint R1 because the TokiMeter migration (in `principled-calibration-scorecard`) must design TokenTracker counters Prometheus-friendly from the start — retrofitting later would mean a second breaking change.
+2026-02-26 — Contract created. Motivated by the insight that circuit walks ARE distributed traces and node visits ARE metric events. The cloud-native observability stack (OTel + Prometheus + Grafana + Jaeger) maps perfectly onto Origami's existing `WalkObserver` and `TokenTracker` interfaces. Placed in Sprint R1 because the TokiMeter migration (in `principled-calibration-scorecard`) must design TokenTracker counters Prometheus-friendly from the start — retrofitting later would mean a second breaking change.
 
 2026-02-27 — **Complete.** R6 sprint closed all remaining gaps: (1) `origami_tokens_total` + `origami_tokens_cost_usd` Prometheus counters bridged via `InMemoryTokenTracker.OnRecord` hook; (2) `origami_dispatch_duration_seconds` histogram + `origami_dispatch_errors_total` counter bridged via `TokenTrackingDispatcher.OnDispatch` hook; (3) `WithObservability()` on CLI scaffold with auto-default `DefaultObservability()` and `MetricsHandler()` accessor for KamiServer; (4) full 9-metric integration test. All 3 repos pass `go test -race`.

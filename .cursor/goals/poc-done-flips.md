@@ -12,7 +12,7 @@ When the "PoC Done" flag is raised, execute every flip in this checklist. Each i
   - **Current (PoC):** Origami breaking changes are expected. Update immediately. No shims.
   - **Flip to:** Origami provides a migration window. Asterisk pins Origami at a tested version and upgrades deliberately, not reactively.
 
-- [ ] **Contract rule** — `contracts/draft/ouroboros-seed-pipeline.md` § "Contract rules"
+- [ ] **Contract rule** — `contracts/draft/ouroboros-seed-circuit.md` § "Contract rules"
   - **Current (PoC):** "Breaking API allowed" note.
   - **Flip to:** Remove the note. Standard API stability applies.
 

@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-func TestLoadPipeline_ValidYAML(t *testing.T) {
+func TestLoadCircuit_ValidYAML(t *testing.T) {
 	data := []byte(`
-pipeline: test-pipe
-description: "A test pipeline"
+circuit: test-pipe
+description: "A test circuit"
 nodes:
   - name: a
     element: fire
@@ -30,15 +30,15 @@ edges:
 start: a
 done: _done
 `)
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
-	if def.Pipeline != "test-pipe" {
-		t.Errorf("Pipeline = %q, want %q", def.Pipeline, "test-pipe")
+	if def.Circuit != "test-pipe" {
+		t.Errorf("Circuit = %q, want %q", def.Circuit, "test-pipe")
 	}
-	if def.Description != "A test pipeline" {
-		t.Errorf("Description = %q, want %q", def.Description, "A test pipeline")
+	if def.Description != "A test circuit" {
+		t.Errorf("Description = %q, want %q", def.Description, "A test circuit")
 	}
 	if len(def.Nodes) != 2 {
 		t.Errorf("len(Nodes) = %d, want 2", len(def.Nodes))
@@ -54,9 +54,9 @@ done: _done
 	}
 }
 
-func TestLoadPipeline_WithZones(t *testing.T) {
+func TestLoadCircuit_WithZones(t *testing.T) {
 	data := []byte(`
-pipeline: zoned
+circuit: zoned
 nodes:
   - name: x
     family: x
@@ -82,9 +82,9 @@ edges:
 start: x
 done: _done
 `)
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 	if len(def.Zones) != 2 {
 		t.Fatalf("len(Zones) = %d, want 2", len(def.Zones))
@@ -98,17 +98,17 @@ done: _done
 	}
 }
 
-func TestLoadPipeline_InvalidYAML(t *testing.T) {
+func TestLoadCircuit_InvalidYAML(t *testing.T) {
 	data := []byte(`{invalid yaml: [`)
-	_, err := LoadPipeline(data)
+	_, err := LoadCircuit(data)
 	if err == nil {
 		t.Fatal("expected error for invalid YAML")
 	}
 }
 
 func TestValidate_Valid(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes:    []NodeDef{{Name: "a"}, {Name: "b"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "b"}, {ID: "E2", From: "b", To: "_done"}},
 		Start:    "a",
@@ -119,16 +119,16 @@ func TestValidate_Valid(t *testing.T) {
 	}
 }
 
-func TestValidate_EmptyPipelineName(t *testing.T) {
-	def := &PipelineDef{Nodes: []NodeDef{{Name: "a"}}, Edges: []EdgeDef{{ID: "E1", From: "a", To: "_done"}}, Start: "a", Done: "_done"}
+func TestValidate_EmptyCircuitName(t *testing.T) {
+	def := &CircuitDef{Nodes: []NodeDef{{Name: "a"}}, Edges: []EdgeDef{{ID: "E1", From: "a", To: "_done"}}, Start: "a", Done: "_done"}
 	if err := def.Validate(); err == nil {
-		t.Fatal("expected error for empty pipeline name")
+		t.Fatal("expected error for empty circuit name")
 	}
 }
 
 func TestValidate_MissingStartNode(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes:    []NodeDef{{Name: "a"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "_done"}},
 		Start:    "nonexistent",
@@ -140,8 +140,8 @@ func TestValidate_MissingStartNode(t *testing.T) {
 }
 
 func TestValidate_BrokenEdgeSource(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes:    []NodeDef{{Name: "a"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "ghost", To: "a"}},
 		Start:    "a",
@@ -157,8 +157,8 @@ func TestValidate_BrokenEdgeSource(t *testing.T) {
 }
 
 func TestValidate_BrokenEdgeTarget(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes:    []NodeDef{{Name: "a"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "ghost"}},
 		Start:    "a",
@@ -174,8 +174,8 @@ func TestValidate_BrokenEdgeTarget(t *testing.T) {
 }
 
 func TestValidate_BrokenZoneNode(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes:    []NodeDef{{Name: "a"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "_done"}},
 		Zones:    map[string]ZoneDef{"z": {Nodes: []string{"ghost"}}},
@@ -192,8 +192,8 @@ func TestValidate_BrokenZoneNode(t *testing.T) {
 }
 
 func TestValidate_DuplicateNodeName(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes:    []NodeDef{{Name: "a"}, {Name: "a"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "_done"}},
 		Start:    "a",
@@ -206,8 +206,8 @@ func TestValidate_DuplicateNodeName(t *testing.T) {
 }
 
 func TestValidate_DuplicateEdgeID(t *testing.T) {
-	def := &PipelineDef{
-		Pipeline: "test",
+	def := &CircuitDef{
+		Circuit: "test",
 		Nodes:    []NodeDef{{Name: "a"}, {Name: "b"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "b"}, {ID: "E1", From: "b", To: "_done"}},
 		Start:    "a",
@@ -220,8 +220,8 @@ func TestValidate_DuplicateEdgeID(t *testing.T) {
 }
 
 func TestRoundTripFidelity(t *testing.T) {
-	original := &PipelineDef{
-		Pipeline:    "roundtrip",
+	original := &CircuitDef{
+		Circuit:    "roundtrip",
 		Description: "test round trip",
 		Nodes:       []NodeDef{{Name: "a", Element: "fire", Family: "start"}, {Name: "b", Family: "end"}},
 		Edges:       []EdgeDef{{ID: "E1", Name: "a-b", From: "a", To: "b"}, {ID: "E2", Name: "b-done", From: "b", To: "_done"}},
@@ -234,13 +234,13 @@ func TestRoundTripFidelity(t *testing.T) {
 		t.Fatalf("MarshalYAML: %v", err)
 	}
 
-	restored, err := LoadPipeline(data)
+	restored, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline round-trip: %v", err)
+		t.Fatalf("LoadCircuit round-trip: %v", err)
 	}
 
-	if restored.Pipeline != original.Pipeline {
-		t.Errorf("Pipeline = %q, want %q", restored.Pipeline, original.Pipeline)
+	if restored.Circuit != original.Circuit {
+		t.Errorf("Circuit = %q, want %q", restored.Circuit, original.Circuit)
 	}
 	if len(restored.Nodes) != len(original.Nodes) {
 		t.Errorf("len(Nodes) = %d, want %d", len(restored.Nodes), len(original.Nodes))
@@ -261,20 +261,20 @@ func TestRoundTripFidelity(t *testing.T) {
 	}
 }
 
-func TestLoadPipeline_RealF0F6(t *testing.T) {
+func TestLoadCircuit_RealF0F6(t *testing.T) {
 	data, err := os.ReadFile("testdata/rca-investigation.yaml")
 	if err != nil {
 		t.Fatalf("read rca-investigation.yaml: %v", err)
 	}
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 	if err := def.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if def.Pipeline != "rca-investigation" {
-		t.Errorf("Pipeline = %q, want %q", def.Pipeline, "rca-investigation")
+	if def.Circuit != "rca-investigation" {
+		t.Errorf("Circuit = %q, want %q", def.Circuit, "rca-investigation")
 	}
 	if len(def.Nodes) != 7 {
 		t.Errorf("len(Nodes) = %d, want 7", len(def.Nodes))
@@ -284,20 +284,20 @@ func TestLoadPipeline_RealF0F6(t *testing.T) {
 	}
 }
 
-func TestLoadPipeline_RealDefectDialectic(t *testing.T) {
+func TestLoadCircuit_RealDefectDialectic(t *testing.T) {
 	data, err := os.ReadFile("testdata/defect-dialectic.yaml")
 	if err != nil {
 		t.Fatalf("read defect-dialectic.yaml: %v", err)
 	}
-	def, err := LoadPipeline(data)
+	def, err := LoadCircuit(data)
 	if err != nil {
-		t.Fatalf("LoadPipeline: %v", err)
+		t.Fatalf("LoadCircuit: %v", err)
 	}
 	if err := def.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if def.Pipeline != "defect-dialectic" {
-		t.Errorf("Pipeline = %q, want %q", def.Pipeline, "defect-dialectic")
+	if def.Circuit != "defect-dialectic" {
+		t.Errorf("Circuit = %q, want %q", def.Circuit, "defect-dialectic")
 	}
 	if len(def.Nodes) != 6 {
 		t.Errorf("len(Nodes) = %d, want 6", len(def.Nodes))

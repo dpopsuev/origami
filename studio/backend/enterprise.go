@@ -19,8 +19,8 @@ const (
 type Permission string
 
 const (
-	PermPipelineRead    Permission = "pipeline:read"
-	PermPipelineWrite   Permission = "pipeline:write"
+	PermCircuitRead    Permission = "circuit:read"
+	PermCircuitWrite   Permission = "circuit:write"
 	PermRunLaunch       Permission = "run:launch"
 	PermRunView         Permission = "run:view"
 	PermAdapterInstall  Permission = "adapter:install"
@@ -30,9 +30,9 @@ const (
 
 // RolePermissions maps roles to their allowed permissions.
 var RolePermissions = map[Role][]Permission{
-	RoleAdmin:    {PermPipelineRead, PermPipelineWrite, PermRunLaunch, PermRunView, PermAdapterInstall, PermSettingsManage, PermScheduleManage},
-	RoleOperator: {PermPipelineRead, PermPipelineWrite, PermRunLaunch, PermRunView},
-	RoleViewer:   {PermPipelineRead, PermRunView},
+	RoleAdmin:    {PermCircuitRead, PermCircuitWrite, PermRunLaunch, PermRunView, PermAdapterInstall, PermSettingsManage, PermScheduleManage},
+	RoleOperator: {PermCircuitRead, PermCircuitWrite, PermRunLaunch, PermRunView},
+	RoleViewer:   {PermCircuitRead, PermRunView},
 }
 
 // HasPermission checks if a role has a specific permission.

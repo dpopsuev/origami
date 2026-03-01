@@ -1,7 +1,7 @@
 # Contract — KnowledgeSourceCatalog + KnowledgeSourceRouter
 
 **Status:** complete  
-**Goal:** Rename `Workspace` to `KnowledgeSourceCatalog`, `Repo` to `Source` (with Kind/Tags fields), and introduce `KnowledgeSourceRouter` as a batteries-included routing struct for directing pipeline steps to relevant knowledge sources.  
+**Goal:** Rename `Workspace` to `KnowledgeSourceCatalog`, `Repo` to `Source` (with Kind/Tags fields), and introduce `KnowledgeSourceRouter` as a batteries-included routing struct for directing circuit steps to relevant knowledge sources.  
 **Serves:** Framework Maturity
 
 ## Contract rules
@@ -13,7 +13,7 @@
 ## Context
 
 - **Origin:** Asterisk Phase 5a R11 analysis revealed that `selectRepoByHypothesis` (hardcoded Purpose keyword matching) breaks across scenarios. The root cause is that repo routing is domain-specific but implemented with brittle keyword rules instead of structured metadata.
-- **Design decision:** `Workspace` is a Cursor IDE term that leaked into the framework. The concept is really "a catalog of knowledge sources the pipeline can consult." Sources include repos, specs, docs, APIs — not just code repositories.
+- **Design decision:** `Workspace` is a Cursor IDE term that leaked into the framework. The concept is really "a catalog of knowledge sources the circuit can consult." Sources include repos, specs, docs, APIs — not just code repositories.
 - **Asterisk dependency:** `phase-5a-v2-analysis.md` (Asterisk) depends on this contract for the long-term M9/M10 fix. Tactical fix uses `RepoConfig.RelevantToRCAs` in the interim.
 - **Consumer impact:** Asterisk has 11 files importing `workspace.*`. Achilles has 0.
 
@@ -27,7 +27,7 @@ workspace/
   loader_test.go
 ```
 
-Consumers call `workspace.LoadFromPath()`, get a flat `Workspace`, pass it through the pipeline. No routing intelligence — consumers implement their own (Asterisk: `selectRepoByHypothesis`).
+Consumers call `workspace.LoadFromPath()`, get a flat `Workspace`, pass it through the circuit. No routing intelligence — consumers implement their own (Asterisk: `selectRepoByHypothesis`).
 
 ### Desired architecture
 

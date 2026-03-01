@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Origami Visual Pipeline Editor",
+  "description": "Origami Visual Circuit Editor",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

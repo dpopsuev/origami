@@ -1,7 +1,7 @@
-export type { OverlayType, OverlayConfig, NodeMetrics, EdgeMetrics, CostEstimate, WalkerTrace, PipelineDiff } from "./types";
+export type { OverlayType, OverlayConfig, NodeMetrics, EdgeMetrics, CostEstimate, WalkerTrace, CircuitDiff } from "./types";
 export { applyHeatmap } from "./heatmap";
 export { applyWalkerTrace } from "./walker-trace";
-export { applyDiffOverlay } from "./pipeline-diff";
+export { applyDiffOverlay } from "./circuit-diff";
 export { applyNodeHealth, type HealthBadge } from "./node-health";
 export { computeCostSummary, formatCost, formatTokens, type CostSummary } from "./cost-estimator";
 export { testResultNodeStyles, testSummary, type TestRunResult, type NodeTestResult, type TestStatus } from "./testing-mode";

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { KamiEvent } from '../hooks/useSSE'
 import type { WSCommand } from '../hooks/useKamiWS'
-import { PipelineGraph } from '../components/PipelineGraph'
+import { CircuitGraph } from '../components/CircuitGraph'
 import { KamiOverlay } from '../components/KamiOverlay'
 
 interface Props {
@@ -201,9 +201,9 @@ export function LiveDemoSection({
           </div>
         </div>
 
-        {/* Center: Pipeline graph */}
+        {/* Center: Circuit graph */}
         <div className="flex-1 relative min-w-0">
-          <PipelineGraph events={events} nodeDescriptions={nodeDescriptions} />
+          <CircuitGraph events={events} nodeDescriptions={nodeDescriptions} />
           <KamiOverlay commands={commands} />
         </div>
 

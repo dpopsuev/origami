@@ -7,13 +7,13 @@ interface Dependency {
 }
 
 interface DependencyViewerProps {
-  pipelineName: string;
+  circuitName: string;
   dependencies: Dependency[];
   onUpdate?: (name: string, targetVersion: string) => void;
 }
 
 export function DependencyViewer({
-  pipelineName,
+  circuitName,
   dependencies,
   onUpdate,
 }: DependencyViewerProps) {
@@ -23,7 +23,7 @@ export function DependencyViewer({
   return (
     <div className="p-4">
       <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">
-        Dependencies: {pipelineName}
+        Dependencies: {circuitName}
       </h2>
 
       {dependencies.length === 0 ? (

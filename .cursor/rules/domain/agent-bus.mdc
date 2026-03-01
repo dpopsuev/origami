@@ -1,11 +1,11 @@
 ---
-description: Papercup agent-bus protocol — mandatory signaling protocol for agent/subagent coordination during pipeline execution
+description: Papercup agent-bus protocol — mandatory signaling protocol for agent/subagent coordination during circuit execution
 alwaysApply: false
 ---
 
 # Papercup Agent-Bus Protocol
 
-The Papercup protocol governs how agents coordinate during pipeline execution.
+The Papercup protocol governs how agents coordinate during circuit execution.
 It uses the **signal bus** (accessible via MCP tools, HTTP endpoints, or direct Go API)
 and the **competing consumers** pattern for parallel step processing.
 
@@ -18,7 +18,7 @@ and the **competing consumers** pattern for parallel step processing.
 
 ## Delegation mandate
 
-Every pipeline step MUST be processed by a worker. The parent agent acts as a **supervisor**, not an executor or switchboard.
+Every circuit step MUST be processed by a worker. The parent agent acts as a **supervisor**, not an executor or switchboard.
 
 | Responsibility | Owner |
 |----------------|-------|
@@ -82,7 +82,7 @@ report = get_report(session_id)
 | `session_started` | `start_calibration` |
 | `step_ready` | `get_next_step` returns a step |
 | `artifact_submitted` | `submit_step` succeeds |
-| `pipeline_done` | `get_next_step` returns `done=true` |
+| `circuit_done` | `get_next_step` returns `done=true` |
 | `session_done` | Calibration run completes |
 | `session_error` | Calibration run fails |
 

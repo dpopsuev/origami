@@ -7,7 +7,7 @@ import (
 	framework "github.com/dpopsuev/origami"
 )
 
-// DebugState represents the execution state of a debugged pipeline.
+// DebugState represents the execution state of a debugged circuit.
 type DebugState int
 
 const (
@@ -26,8 +26,8 @@ func (s DebugState) String() string {
 	}
 }
 
-// PipelineSnapshot is the inspectable state of a pipeline at a point in time.
-type PipelineSnapshot struct {
+// CircuitSnapshot is the inspectable state of a circuit at a point in time.
+type CircuitSnapshot struct {
 	State       string            `json:"state"`
 	CurrentNode string            `json:"current_node,omitempty"`
 	Breakpoints []string          `json:"breakpoints"`
@@ -38,11 +38,11 @@ type PipelineSnapshot struct {
 // Assertion is a configurable invariant check that runs after each node.
 type Assertion struct {
 	Name      string
-	Predicate func(snapshot PipelineSnapshot) error
+	Predicate func(snapshot CircuitSnapshot) error
 }
 
 // DebugController provides breakpoint management, execution control,
-// and pipeline inspection. It wraps an EventBridge and intercepts
+// and circuit inspection. It wraps an EventBridge and intercepts
 // WalkEvents to implement pause-at-breakpoint semantics.
 type DebugController struct {
 	mu          sync.Mutex
@@ -130,8 +130,8 @@ func (d *DebugController) AdvanceNode() {
 	d.Resume()
 }
 
-// Snapshot returns the current pipeline state.
-func (d *DebugController) Snapshot() PipelineSnapshot {
+// Snapshot returns the current circuit state.
+func (d *DebugController) Snapshot() CircuitSnapshot {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -148,7 +148,7 @@ func (d *DebugController) Snapshot() PipelineSnapshot {
 		arts[k] = v
 	}
 
-	return PipelineSnapshot{
+	return CircuitSnapshot{
 		State:        d.state.String(),
 		CurrentNode:  d.currentNode,
 		Breakpoints:  bps,
