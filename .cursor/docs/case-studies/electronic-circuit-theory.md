@@ -605,6 +605,158 @@ This table applies the taxonomic duck test to Origami. For each capability, we a
 
 ---
 
+## 9. Worked Example: Mixed-Signal Circuit with 555 Timer
+
+The preceding sections describe components and patterns in isolation. This section assembles them into a complete, working mixed-signal circuit — electrical and agentic — to show how ADC, DAC, and a timing reference interoperate in a closed feedback loop.
+
+### Is the 555 Timer a valid component?
+
+Yes — and it is a particularly apt choice for three reasons:
+
+1. **The 555 is itself a mixed-signal device.** Internally it contains two analog comparators (thresholds at 1/3 VCC and 2/3 VCC), an RS flip-flop (digital), a totem-pole output driver (digital), and a discharge transistor (analog switch). It sits at the analog-digital boundary by construction.
+
+2. **It serves as the timing reference for both ADC and DAC.** In astable mode the 555 generates a free-running square wave used as the sample clock. Without a clock, neither the ADC nor the DAC knows when to convert. The 555 is the heartbeat of the mixed circuit.
+
+3. **It can itself perform crude domain conversions.** Pin 5 (control voltage) accepts an analog input that modulates output frequency — a voltage-to-frequency converter (crude ADC). In PWM mode with a low-pass filter on the output, the 555 produces an analog voltage proportional to duty cycle (crude DAC). One IC, both conversion directions.
+
+The 555 is the most produced IC in history (over a billion units/year). It is to electronics what the JSON extractor is to agentic circuits: ubiquitous, cheap, covers 80% of use cases, and its internals embody the very domain boundary it serves.
+
+### Electrical circuit: closed-loop temperature controller
+
+Application: a digital thermostat. A thermistor senses temperature (analog), the microcontroller computes PID error (digital), and a heater element adjusts the physical system (analog). Feedback travels through the physical world — temperature — closing the control loop.
+
+```mermaid
+flowchart LR
+    subgraph analogIn ["Analog Domain (Sensor)"]
+        thermistor["Thermistor"]
+        opamp["Op-Amp Conditioner"]
+        aaLPF["Anti-Aliasing LPF"]
+        thermistor --> opamp --> aaLPF
+    end
+
+    subgraph adcBound ["ADC Boundary"]
+        adc["ADC"]
+    end
+
+    subgraph digitalDomain ["Digital Domain (Processing)"]
+        mcu["Microcontroller"]
+        pid["PID Controller"]
+        mcu --> pid
+    end
+
+    subgraph dacBound ["DAC Boundary"]
+        dac["DAC"]
+    end
+
+    subgraph analogOut ["Analog Domain (Actuator)"]
+        reconLPF["Reconstruction LPF"]
+        driver["Power Driver"]
+        heater["Heater Element"]
+        reconLPF --> driver --> heater
+    end
+
+    subgraph clock ["Timing Reference"]
+        timer555["555 Timer IC (Astable)"]
+    end
+
+    aaLPF --> adc
+    adc --> mcu
+    pid --> dac
+    dac --> reconLPF
+
+    timer555 -.->|"sample clock"| adc
+    timer555 -.->|"sample clock"| dac
+
+    heater -.->|"thermal feedback"| thermistor
+```
+
+Key observations:
+
+- The 555 clocks both conversions — without it, neither ADC nor DAC knows when to sample.
+- The anti-aliasing LPF prevents frequencies above Nyquist from corrupting the ADC.
+- The reconstruction LPF smooths the DAC staircase output into a continuous control voltage.
+- Feedback is through the physical world (temperature), not through a wire — the plant is in the loop.
+
+### Agentic circuit: RCA analysis (structural isomorph)
+
+Same topology, mapped 1:1 to Origami primitives. Each electrical component has an agentic counterpart.
+
+```mermaid
+flowchart LR
+    subgraph unstructIn ["Unstructured Domain (Evidence)"]
+        logs["Logs + Error Messages"]
+        mask["Prompt Preamble (Mask.pre)"]
+        persona["Persona Constraints"]
+        logs --> mask --> persona
+    end
+
+    subgraph extractBound ["Extractor Boundary (ADC)"]
+        extractor["JSON Extractor"]
+    end
+
+    subgraph structuredDomain ["Structured Domain (Processing)"]
+        artifact["Typed Artifact"]
+        nodeProc["Node.Process + Schema"]
+        artifact --> nodeProc
+    end
+
+    subgraph renderBound ["Renderer Boundary (DAC)"]
+        renderer["Template Renderer"]
+    end
+
+    subgraph unstructOut ["Unstructured Domain (Prompt)"]
+        smooth["Narrative Smoothing"]
+        llm["LLM Call"]
+        output["Next Node Input"]
+        smooth --> llm --> output
+    end
+
+    subgraph timing ["Timing Reference"]
+        scheduler["Scheduler / Dispatch Cycle"]
+    end
+
+    persona --> extractor
+    extractor --> artifact
+    nodeProc --> renderer
+    renderer --> smooth
+
+    scheduler -.->|"dispatch cycle"| extractor
+    scheduler -.->|"dispatch cycle"| renderer
+
+    output -.->|"loop edge (convergence feedback)"| logs
+```
+
+### 1:1 component mapping
+
+| Electrical Component | Agentic Equivalent | Mapping rationale |
+|---|---|---|
+| **Thermistor** | Logs + Error Messages | Raw signal from the physical / informational world |
+| **Op-Amp Conditioner** | Prompt Preamble / Mask.pre | Amplifies weak signals, removes DC offset (irrelevant context) |
+| **Anti-Aliasing LPF** | Persona Constraints | Removes "frequencies" above the extractor's bandwidth — filters output the schema cannot represent, preventing aliasing |
+| **ADC** | JSON Extractor | Continuous unstructured signal to discrete typed artifact |
+| **Microcontroller + PID** | Node.Process + Schema Validation | Digital/structured computation with feedback-aware control |
+| **DAC** | Template Renderer | Discrete typed data back to continuous natural language |
+| **Reconstruction LPF** | Narrative Smoothing | Interpolates between structured data points into coherent prose — eliminates "staircase" artifacts like `Category: pb001, Confidence: 0.72` |
+| **Power Driver + Heater** | LLM Call + Next Node | Actuator that affects the physical / informational world |
+| **555 Timer** | Scheduler / Dispatch Cycle | Timing reference that synchronizes both conversion boundaries |
+| **Thermal Feedback** | Loop Edge with Convergence Threshold | Output affects input through the environment/evidence, closing the control loop |
+
+### Why the 555 analogy is deeper than "just a clock"
+
+The 555 internally contains the same ADC/DAC duality the circuit uses at macro scale:
+
+- Its comparators (analog input to digital flip-flop state) are micro-ADCs.
+- Its output driver (digital state to voltage level) is a micro-DAC.
+
+Similarly, the Scheduler/Dispatch Cycle internally contains both conversion directions:
+
+- Polling for work (reading unstructured signal state to structured dispatch decision) is a micro-extraction.
+- Emitting dispatch (structured decision to signal bus event for human/agent consumption) is a micro-rendering.
+
+Both the 555 and the Scheduler are **boundary devices that embody the very conversion they coordinate**. They are not passive clocks — they are active participants in the mixed-signal architecture.
+
+---
+
 ## References
 
 - Electronic circuit fundamentals: `en.wikipedia.org/wiki/Electronic_circuit`
@@ -617,6 +769,8 @@ This table applies the taxonomic duck test to Origami. For each capability, we a
 - Negative feedback: `en.wikipedia.org/wiki/Negative_feedback`
 - Signal conditioning: `en.wikipedia.org/wiki/Signal_conditioning`
 - Mixed-signal IC design: `en.wikipedia.org/wiki/Mixed-signal_integrated_circuit`
+- 555 timer IC: `en.wikipedia.org/wiki/555_timer_IC`
+- PID controller: `en.wikipedia.org/wiki/PID_controller`
 - Origami Extractor: `extractor.go` (Extractor interface, ExtractorRegistry, built-in extractors)
 - Origami Prompt Rendering: `render.go` (RenderPrompt utility)
 - Origami Elements: `element.go` (6 elements, quantified traits, ConvergenceThreshold)
