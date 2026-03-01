@@ -20,20 +20,31 @@ description: Shared domain definitions for Origami
 - **Thesis** — The primary analysis path in graph stratification. Personas aligned `AlignmentThesis` (Cadai) staff the F0-F6 pipeline. Represents the 80% of workloads handled by direct analysis.
 - **Antithesis** — The adversarial path that challenges the thesis, identifies evidence gaps, and proposes counter-explanations. Personas aligned `AlignmentAntithesis` (Cytharai) staff the D0-D4 dialectic pipeline.
 - **Synthesis** — The reconciled conclusion produced after thesis and antithesis interact. Hegel's *Aufheben*: preserved and transcended.
-- **DialecticConfig** — Configuration struct for adversarial dialectic behavior (replaces `CourtConfig`).
+- **DialecticConfig** — Configuration struct for adversarial dialectic behavior (replaces `CourtConfig`). Includes `GapClosureThreshold`, `CMRREnabled`, and optional `ContextGuard`.
+- **Gap Closure** — Metric on `DialecticRecord` measuring how much the evidence gap narrowed during debate. Computed by consumers (LLM node). When below `GapClosureThreshold` (default 0.15), HD5 routes to verdict — further debate has diminishing returns.
+- **Evidence Immutability** — Safety property enforced via `ReadOnlyContext()`. During dialectic rounds, the shared `WalkerState.Context` is snapshot-copied so adversarial nodes cannot corrupt upstream evidence. Writes to the copy are discarded.
+- **CMRR (Common-Mode Rejection Ratio)** — Shared-assumption detection between thesis and antithesis. When both sides share unexamined premises, they may converge on a wrong answer. `CMRRCheck` artifact with `SuspicionScore > 0` triggers HD13 routing to deeper investigation. Inspired by the Op-Amp CMRR concept.
 - **NeedsAntithesis()** — Activation check: returns true when confidence is below the contradiction threshold (replaces `ShouldActivate`).
 - **MaxTurns** — Thesis-antithesis exchange limit (replaces `MaxHandoffs`).
 - **MaxNegations** — Antithesis rejection limit (replaces `MaxRemands`).
 - **Cycle** — Element interaction pattern. Generative (sheng): strengthens the next element. Destructive (ke): challenges across the circle.
 - **Extractor** — Converts unstructured input (agent text, raw JSON, log output) into structured data. Implements `Extractor` interface: `Name()`, `Extract(ctx, input) (any, error)`.
 - **ExtractorRegistry** — Maps extractor names to implementations for DSL integration.
+- **Renderer** — Converts structured data into human-readable output. Symmetric counterpart to Extractor (ADC/DAC duality). Implements `Renderer` interface: `Name()`, `Render(ctx, data) (string, error)`. Built-in: `template` (wraps `RenderPrompt`).
+- **RendererRegistry** — Maps renderer names to implementations for DSL integration. Mirrors `ExtractorRegistry`.
 - **Pipeline DSL** — YAML-based language for declaring pipeline graphs. Compiled to executable graphs via `BuildGraph`.
-- **Zone** — A meta-phase grouping of nodes (e.g., Backcourt, Frontcourt, Paint). Carries element affinity and stickiness.
+- **Zone** — A meta-phase grouping of nodes (e.g., Backcourt, Frontcourt, Paint). Carries element affinity, stickiness, domain annotation, and context filter.
+- **Zone Domain** — Annotation on a zone (`domain:` in YAML) classifying its data nature: `unstructured` (raw text, logs), `structured` (typed schemas), or `hybrid` (mixed). Used by lint rules and future zone-aware optimizations.
+- **Context Filter** — Zone-level configuration (`context_filter:` in YAML) that strips or keeps specific `WalkerState.Context` keys when a walker exits the zone. Implements the decoupling capacitor pattern: zone-local data stays local.
 - **Stickiness** — How reluctant a walker is to leave its home zone. 0 = free movement, 3 = heavy anchor.
 - **Vocabulary** — Code-to-name translation interface. Implementations: `MapVocabulary`, `VocabularyFunc`, `ChainVocabulary`.
 - **NarrationObserver** — Walk observer that translates raw events into human-readable narration lines.
 - **WalkObserver** — Interface for observing graph walk events. Implementations: `LogObserver`, `TraceCollector`, `NarrationObserver`.
 - **Scheduler** — Decides which walker handles each node in a team walk. Implementations: `SingleScheduler`, `AffinityScheduler`.
+- **Impedance Mismatch** — Score (0=perfect, 1=worst) measuring how well a walker fits a node. Computed from step affinity and element match. Available via `AffinityScheduler.LastMismatch()` after each `Select()`.
+- **Evidence SNR (Signal-to-Noise Ratio)** — Ratio of output items to input items per node, measuring signal preservation. Higher is better. Computed via `EvidenceSNR(inputItems, outputItems)`.
+- **Convergence Trajectory** — Classification of how confidence values evolve over a walk: `underdamped` (oscillating), `overdamped` (monotone), `critically_damped` (converging within 1 oscillation), `unstable` (diverging), `insufficient` (<3 data points). Computed via `ClassifyTrajectory(history)`.
+- **ConfidenceHistory** — Slice on `WalkerState` tracking confidence values at each node exit. Fed by `RecordConfidence()`. Input to `ClassifyTrajectory()`.
 - **Signal Bus** — Transport-agnostic message bus for agent/subagent coordination. Emits and receives structured events. Accessible via MCP tools, HTTP endpoints, or direct Go API.
 - **MCP** — Model Context Protocol; standardized tool interface for AI to access external systems.
 - **Papercup** — The agent-bus protocol governing how agents coordinate during MCP calibration. Named for the children's paper-cup telephone: data flows through a narrow channel between participants. Defined in `rules/domain/agent-bus.mdc`.

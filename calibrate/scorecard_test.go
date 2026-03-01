@@ -207,8 +207,8 @@ func TestScoreCard_Report(t *testing.T) {
 
 func TestDefaultMetrics_Count(t *testing.T) {
 	defs := calibrate.DefaultMetrics()
-	if len(defs) != 7 {
-		t.Errorf("want 7 default metrics, got %d", len(defs))
+	if len(defs) != 9 {
+		t.Errorf("want 9 default metrics, got %d", len(defs))
 	}
 }
 
@@ -221,7 +221,7 @@ func TestDefaultMetrics_IDs(t *testing.T) {
 		}
 		ids[d.ID] = true
 	}
-	want := []string{"token_usage", "token_cost_usd", "latency_seconds", "path_efficiency", "loop_ratio", "confidence_calibration", "run_variance"}
+	want := []string{"token_usage", "token_cost_usd", "latency_seconds", "path_efficiency", "loop_ratio", "confidence_calibration", "run_variance", "evidence_snr", "walker_mismatch"}
 	for _, id := range want {
 		if !ids[id] {
 			t.Errorf("missing default metric: %s", id)
@@ -241,8 +241,8 @@ func TestDefaultMetrics_AllHaveDirection(t *testing.T) {
 
 func TestDefaultScoreCard_ContainsUniversalMetrics(t *testing.T) {
 	sc := calibrate.DefaultScoreCard().Build()
-	if len(sc.MetricDefs) != 7 {
-		t.Errorf("DefaultScoreCard should have 7 metrics, got %d", len(sc.MetricDefs))
+	if len(sc.MetricDefs) != 9 {
+		t.Errorf("DefaultScoreCard should have 9 metrics, got %d", len(sc.MetricDefs))
 	}
 	if sc.Name != "default" {
 		t.Errorf("name: want 'default', got %q", sc.Name)
@@ -253,8 +253,8 @@ func TestDefaultScoreCard_ExtendWithDomain(t *testing.T) {
 	sc := calibrate.DefaultScoreCard().
 		WithMetrics(calibrate.MetricDef{ID: "domain_m1", Name: "Domain Metric"}).
 		Build()
-	if len(sc.MetricDefs) != 8 {
-		t.Errorf("want 8 (7+1), got %d", len(sc.MetricDefs))
+	if len(sc.MetricDefs) != 10 {
+		t.Errorf("want 10 (9+1), got %d", len(sc.MetricDefs))
 	}
 }
 
@@ -377,8 +377,8 @@ func TestThreeLayerPattern(t *testing.T) {
 		}).
 		Build()
 
-	if len(sc.MetricDefs) != 8 {
-		t.Fatalf("want 8 (7 default + 1 domain), got %d", len(sc.MetricDefs))
+	if len(sc.MetricDefs) != 10 {
+		t.Fatalf("want 10 (9 default + 1 domain), got %d", len(sc.MetricDefs))
 	}
 
 	vals := map[string]float64{

@@ -269,6 +269,18 @@ func DefaultMetrics() []MetricDef {
 			Threshold: 0.15, Weight: 0.05,
 			Strategy: StrategyFixed, Rationale: "Stddev of primary metric across runs — lower is more deterministic",
 		},
+		{
+			ID: "evidence_snr", Name: "Evidence SNR",
+			Tier: TierEfficiency, Direction: HigherIsBetter,
+			Threshold: 0.50, Weight: 0,
+			Strategy: StrategyFixed, Rationale: "Health check — signal preservation ratio across nodes",
+		},
+		{
+			ID: "walker_mismatch", Name: "Walker Mismatch",
+			Tier: TierEfficiency, Direction: LowerIsBetter,
+			Threshold: 0.30, Weight: 0,
+			Strategy: StrategyFixed, Rationale: "Health check — walker-node impedance mismatch (lower = better fit)",
+		},
 	}
 }
 

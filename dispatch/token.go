@@ -19,6 +19,7 @@ type TokenTracker interface {
 type TokenRecord struct {
 	CaseID         string    `json:"case_id"`
 	Step           string    `json:"step"`
+	Node           string    `json:"node,omitempty"`
 	PromptBytes    int       `json:"prompt_bytes"`
 	ArtifactBytes  int       `json:"artifact_bytes"`
 	PromptTokens   int       `json:"prompt_tokens"`
@@ -66,6 +67,7 @@ type TokenSummary struct {
 	TotalCostUSD        float64                     `json:"total_cost_usd"`
 	PerCase             map[string]CaseTokenSummary `json:"per_case"`
 	PerStep             map[string]StepTokenSummary `json:"per_step"`
+	PerNode             map[string]StepTokenSummary `json:"per_node,omitempty"`
 	TotalSteps          int                         `json:"total_steps"`
 	TotalWallClockMs    int64                       `json:"total_wall_clock_ms"`
 }
@@ -123,6 +125,7 @@ func (t *InMemoryTokenTracker) Summary() TokenSummary {
 	s := TokenSummary{
 		PerCase: make(map[string]CaseTokenSummary),
 		PerStep: make(map[string]StepTokenSummary),
+		PerNode: make(map[string]StepTokenSummary),
 	}
 
 	for _, r := range t.records {
@@ -145,6 +148,15 @@ func (t *InMemoryTokenTracker) Summary() TokenSummary {
 		ss.TotalTokens += r.PromptTokens + r.ArtifactTokens
 		ss.Invocations++
 		s.PerStep[r.Step] = ss
+
+		if r.Node != "" {
+			ns := s.PerNode[r.Node]
+			ns.PromptTokens += r.PromptTokens
+			ns.ArtifactTokens += r.ArtifactTokens
+			ns.TotalTokens += r.PromptTokens + r.ArtifactTokens
+			ns.Invocations++
+			s.PerNode[r.Node] = ns
+		}
 	}
 
 	s.TotalTokens = s.TotalPromptTokens + s.TotalArtifactTokens

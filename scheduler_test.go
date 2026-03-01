@@ -128,6 +128,38 @@ func TestAffinityScheduler_EmptyWalkers(t *testing.T) {
 	}
 }
 
+func TestAffinityScheduler_Mismatch_PerfectMatch(t *testing.T) {
+	w := &affinityWalker{
+		identity: AgentIdentity{
+			PersonaName:  "Perfect",
+			Element:      ElementFire,
+			StepAffinity: map[string]float64{"node": 1.0},
+		},
+		state: NewWalkerState("p1"),
+	}
+	sched := &AffinityScheduler{}
+	node := &stubNode{name: "node", element: ElementFire}
+	sched.Select(SchedulerContext{Node: node, Walkers: []Walker{w}})
+
+	if sched.LastMismatch() != 0.0 {
+		t.Errorf("perfect match should have mismatch 0.0, got %f", sched.LastMismatch())
+	}
+}
+
+func TestAffinityScheduler_Mismatch_WorstCase(t *testing.T) {
+	w := &affinityWalker{
+		identity: AgentIdentity{PersonaName: "Worst"},
+		state:    NewWalkerState("w1"),
+	}
+	sched := &AffinityScheduler{}
+	node := &stubNode{name: "node", element: ElementFire}
+	sched.Select(SchedulerContext{Node: node, Walkers: []Walker{w}})
+
+	if sched.LastMismatch() < 0.5 {
+		t.Errorf("no affinity + wrong element should have high mismatch, got %f", sched.LastMismatch())
+	}
+}
+
 func TestZoneForNode(t *testing.T) {
 	zones := []Zone{
 		{Name: "front", NodeNames: []string{"A", "B"}},

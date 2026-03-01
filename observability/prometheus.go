@@ -21,6 +21,10 @@ type PrometheusCollector struct {
 	TokensTotal      *prometheus.CounterVec
 	TokensCostUSD    *prometheus.CounterVec
 
+	EvidenceSNR      *prometheus.GaugeVec
+	WalkerMismatch   *prometheus.GaugeVec
+	ConvergenceType  *prometheus.CounterVec
+
 	DispatchDuration *prometheus.HistogramVec
 	DispatchErrors   *prometheus.CounterVec
 
@@ -70,6 +74,19 @@ func NewPrometheusCollector(reg *prometheus.Registry) *PrometheusCollector {
 			Help: "Estimated LLM token cost in USD.",
 		}, []string{"pipeline", "step"}),
 
+		EvidenceSNR: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "origami_evidence_snr",
+			Help: "Evidence signal-to-noise ratio per node.",
+		}, []string{"pipeline", "node"}),
+		WalkerMismatch: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "origami_walker_mismatch",
+			Help: "Walker-node impedance mismatch score (0=perfect, 1=worst).",
+		}, []string{"pipeline", "node"}),
+		ConvergenceType: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "origami_convergence_trajectory_total",
+			Help: "Convergence trajectory classifications observed.",
+		}, []string{"pipeline", "type"}),
+
 		DispatchDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "origami_dispatch_duration_seconds",
 			Help:    "Duration of dispatch calls in seconds.",
@@ -84,6 +101,7 @@ func NewPrometheusCollector(reg *prometheus.Registry) *PrometheusCollector {
 	reg.MustRegister(
 		c.NodeDuration, c.EdgeTransitions, c.WalkActive, c.WalkCompleted, c.LoopsTotal,
 		c.TokensTotal, c.TokensCostUSD,
+		c.EvidenceSNR, c.WalkerMismatch, c.ConvergenceType,
 		c.DispatchDuration, c.DispatchErrors,
 	)
 	return c
@@ -148,6 +166,30 @@ func (c *PrometheusCollector) RecordTokens(step string, promptTokens, artifactTo
 	c.TokensTotal.WithLabelValues(pipeline, step, "prompt").Add(float64(promptTokens))
 	c.TokensTotal.WithLabelValues(pipeline, step, "artifact").Add(float64(artifactTokens))
 	c.TokensCostUSD.WithLabelValues(pipeline, step).Add(costUSD)
+}
+
+// RecordSNR records an evidence SNR value for a node.
+func (c *PrometheusCollector) RecordSNR(node string, snr float64) {
+	c.mu.Lock()
+	pipeline := c.pipeline
+	c.mu.Unlock()
+	c.EvidenceSNR.WithLabelValues(pipeline, node).Set(snr)
+}
+
+// RecordMismatch records a walker-node mismatch score.
+func (c *PrometheusCollector) RecordMismatch(node string, mismatch float64) {
+	c.mu.Lock()
+	pipeline := c.pipeline
+	c.mu.Unlock()
+	c.WalkerMismatch.WithLabelValues(pipeline, node).Set(mismatch)
+}
+
+// RecordTrajectory increments the counter for a convergence trajectory type.
+func (c *PrometheusCollector) RecordTrajectory(trajectoryType string) {
+	c.mu.Lock()
+	pipeline := c.pipeline
+	c.mu.Unlock()
+	c.ConvergenceType.WithLabelValues(pipeline, trajectoryType).Inc()
 }
 
 // RecordDispatch records a dispatch duration and optional error.

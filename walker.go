@@ -14,13 +14,14 @@ type Walker interface {
 // It mirrors orchestrate.CaseState with string-based node names
 // instead of typed PipelineStep.
 type WalkerState struct {
-	ID          string              `json:"id"`
-	CurrentNode string              `json:"current_node"`
-	LoopCounts  map[string]int      `json:"loop_counts"`
-	Status      string              `json:"status"` // running, paused, done, error
-	History     []StepRecord        `json:"history"`
-	Context     map[string]any      `json:"context"`
-	Outputs     map[string]Artifact `json:"-"` // node name -> last artifact, populated during Walk
+	ID                string              `json:"id"`
+	CurrentNode       string              `json:"current_node"`
+	LoopCounts        map[string]int      `json:"loop_counts"`
+	Status            string              `json:"status"` // running, paused, done, error
+	History           []StepRecord        `json:"history"`
+	Context           map[string]any      `json:"context"`
+	Outputs           map[string]Artifact `json:"-"`
+	ConfidenceHistory []float64           `json:"confidence_history,omitempty"`
 }
 
 // NewWalkerState creates a WalkerState with initialized maps.
@@ -51,6 +52,11 @@ func (ws *WalkerState) IncrementLoop(edgeID string) int {
 	return ws.LoopCounts[edgeID]
 }
 
+// RecordConfidence appends a confidence value to the history.
+func (ws *WalkerState) RecordConfidence(value float64) {
+	ws.ConfidenceHistory = append(ws.ConfidenceHistory, value)
+}
+
 // MergeContext merges additions into the walker's accumulated context.
 func (ws *WalkerState) MergeContext(additions map[string]any) {
 	if additions == nil {
@@ -59,6 +65,69 @@ func (ws *WalkerState) MergeContext(additions map[string]any) {
 	for k, v := range additions {
 		ws.Context[k] = v
 	}
+}
+
+// TrajectoryType classifies a confidence convergence pattern.
+type TrajectoryType string
+
+const (
+	TrajectoryUnderdamped      TrajectoryType = "underdamped"
+	TrajectoryOverdamped       TrajectoryType = "overdamped"
+	TrajectoryCriticallyDamped TrajectoryType = "critically_damped"
+	TrajectoryUnstable         TrajectoryType = "unstable"
+	TrajectoryInsufficient     TrajectoryType = "insufficient"
+)
+
+// ClassifyTrajectory analyzes a confidence history to determine the convergence pattern.
+// Underdamped: many oscillations (3+ sign changes in derivative).
+// Overdamped: monotonically increasing (0 sign changes).
+// Critically damped: converging within 1 oscillation (1-2 sign changes).
+// Unstable: final value lower than first (diverging).
+// Insufficient: fewer than 3 data points.
+func ClassifyTrajectory(history []float64) TrajectoryType {
+	if len(history) < 3 {
+		return TrajectoryInsufficient
+	}
+
+	if history[len(history)-1] < history[0] {
+		return TrajectoryUnstable
+	}
+
+	signChanges := 0
+	prevDelta := history[1] - history[0]
+	for i := 2; i < len(history); i++ {
+		delta := history[i] - history[i-1]
+		if (prevDelta > 0 && delta < 0) || (prevDelta < 0 && delta > 0) {
+			signChanges++
+		}
+		if delta != 0 {
+			prevDelta = delta
+		}
+	}
+
+	switch {
+	case signChanges >= 3:
+		return TrajectoryUnderdamped
+	case signChanges == 0:
+		return TrajectoryOverdamped
+	default:
+		return TrajectoryCriticallyDamped
+	}
+}
+
+// ReadOnlyContext returns a shallow copy of the context map.
+// Used to snapshot context at dialectic entry so nodes cannot mutate
+// the shared state during adversarial debate. The original map is never
+// exposed; writes to the copy are discarded after the dialectic round.
+func ReadOnlyContext(ctx map[string]any) map[string]any {
+	if ctx == nil {
+		return nil
+	}
+	snapshot := make(map[string]any, len(ctx))
+	for k, v := range ctx {
+		snapshot[k] = v
+	}
+	return snapshot
 }
 
 // StepRecord logs a completed node visit.

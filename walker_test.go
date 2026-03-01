@@ -81,3 +81,39 @@ func TestWalkerState_MergeContext(t *testing.T) {
 		t.Errorf("expected 2 context entries after nil merge, got %d", len(ws.Context))
 	}
 }
+
+func TestWalkerState_RecordConfidence(t *testing.T) {
+	ws := NewWalkerState("test-conf")
+	ws.RecordConfidence(0.7)
+	ws.RecordConfidence(0.8)
+	ws.RecordConfidence(0.9)
+	if len(ws.ConfidenceHistory) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(ws.ConfidenceHistory))
+	}
+	if ws.ConfidenceHistory[2] != 0.9 {
+		t.Errorf("last entry = %f, want 0.9", ws.ConfidenceHistory[2])
+	}
+}
+
+func TestClassifyTrajectory(t *testing.T) {
+	cases := []struct {
+		name    string
+		history []float64
+		want    TrajectoryType
+	}{
+		{"insufficient-0", nil, TrajectoryInsufficient},
+		{"insufficient-2", []float64{0.5, 0.7}, TrajectoryInsufficient},
+		{"overdamped", []float64{0.3, 0.5, 0.7, 0.85, 0.90}, TrajectoryOverdamped},
+		{"underdamped", []float64{0.3, 0.8, 0.5, 0.9, 0.6, 0.85}, TrajectoryUnderdamped},
+		{"critically_damped", []float64{0.3, 0.7, 0.65, 0.80}, TrajectoryCriticallyDamped},
+		{"unstable", []float64{0.8, 0.6, 0.4, 0.3}, TrajectoryUnstable},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ClassifyTrajectory(tc.history)
+			if got != tc.want {
+				t.Errorf("ClassifyTrajectory(%v) = %q, want %q", tc.history, got, tc.want)
+			}
+		})
+	}
+}
