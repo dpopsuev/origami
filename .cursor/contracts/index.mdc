@@ -14,7 +14,6 @@
 |----------|------|------|
 | `origami-lsp.md` | Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
 | `washi.md` | Washi — enterprise pipeline management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
-| `thesis-antithesis-rename.md` | Rename Light/Shadow alignment to Thesis/Antithesis. | quick-win |
 | `signal-domains.md` | Renderer interface (DAC symmetry), zone domain annotations, context filter. | gate |
 | `signal-integrity.md` | Evidence SNR, per-node cost tracking, mismatch scoring, convergence trajectory. | gate |
 | `resilience.md` | Circuit breaker, rate limiting, thermal budget. | quick-win |
@@ -59,6 +58,7 @@
 ### Polishing phase
 
 - `completed/polishing/rich-vocabulary.md` — `RichVocabulary` interface + `RichMapVocabulary` + Kami/LSP/Kabuki wiring. Bundle 2: Rich Names. Complete.
+- `completed/polishing/thesis-antithesis-rename.md` — Rename Light/Shadow alignment to Thesis/Antithesis across Origami and Asterisk. Complete.
 
 ### Analysis (all done)
 

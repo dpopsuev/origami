@@ -1,6 +1,6 @@
 # Contract — thesis-antithesis-rename
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Rename Light/Shadow alignment terminology to Thesis/Antithesis across Origami and Asterisk.  
 **Serves:** API Stabilization
 
@@ -54,17 +54,17 @@ Alignment names match dialectic structure: `AlignmentThesis` / `AlignmentAntithe
 
 ## Tasks
 
-- [ ] Rename Go identifiers in Origami (identity.go, persona.go, mask.go, curate/walker.go, examples/playground/main.go)
-- [ ] Rename test names and assertions (persona_test.go, mask_test.go)
-- [ ] Update Go comments (persona.go, dialectic.go, evidence_gap.go, mask.go, lsp/hover.go)
-- [ ] Update YAML comments (2 files) and all documentation (11 files) in Origami
-- [ ] Update glossary entries
-- [ ] Build + test Origami green
-- [ ] Update Asterisk Go code (3 files) and documentation (4 files)
-- [ ] Build + test Asterisk green
-- [ ] Validate (green) — all tests pass, acceptance criteria met.
-- [ ] Tune (blue) — refactor for quality. No behavior changes.
-- [ ] Validate (green) — all tests still pass after tuning.
+- [x] Rename Go identifiers in Origami (identity.go, persona.go, mask.go, curate/walker.go, examples/playground/main.go)
+- [x] Rename test names and assertions (persona_test.go, mask_test.go)
+- [x] Update Go comments (persona.go, dialectic.go, evidence_gap.go, mask.go, lsp/hover.go)
+- [x] Update YAML comments (2 files) and all documentation (11 files) in Origami
+- [x] Update glossary entries
+- [x] Build + test Origami green
+- [x] Update Asterisk Go code (3 files) and documentation (4 files)
+- [x] Build + test Asterisk green
+- [x] Validate (green) — all tests pass, acceptance criteria met.
+- [x] Tune (blue) — no further refactoring needed; rename was clean.
+- [x] Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 

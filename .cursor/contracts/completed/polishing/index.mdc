@@ -5,3 +5,4 @@ Contracts completed during the Polishing & Presentation goal phase.
 | Contract | Goal |
 |----------|------|
 | `rich-vocabulary.md` | `RichVocabulary` interface + `RichMapVocabulary` + Kami/LSP/Kabuki wiring. Bundle 2: Rich Names. |
+| `thesis-antithesis-rename.md` | Rename Light/Shadow alignment to Thesis/Antithesis across Origami and Asterisk. |

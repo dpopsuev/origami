@@ -9,30 +9,54 @@ description: Active goal manifest — single-read orientation for agents to know
 
 ## Open Checklist
 
-- [ ] Public API surface is stable — no breaking changes pending
+- [ ] Gate contracts complete — `signal-domains`, `signal-integrity`, `dialectic-hardening`
+- [ ] Quick-win contracts complete — `resilience`, `ouroboros-signal-analysis`
+- [ ] Public API surface is stable — no breaking changes pending (blocked by gate contracts)
 - [ ] Test coverage on public interfaces is solid
 - [ ] Root `README.md` positions Origami as a standalone framework (does not exist yet)
 - [x] `examples/playground/` demonstrates all 9 concepts (Elements, Personas, DSL, Mermaid, Walk, Masks, Cycles, Dialectic, Team Walk)
-- [x] `docs/framework-guide.md` covers Three CLIs, Extractors, Elements, Personas, DSL, Walk (stale path ref to `examples/framework/` needs fix)
+- [x] `docs/framework-guide.md` covers Three CLIs, Extractors, Elements, Personas, DSL, Walk
 - [x] `testdata/` contains canonical pipeline YAMLs: `defect-dialectic.yaml`, `defect-court.yaml`, `rca-investigation.yaml`; curation in `curate/testdata/`
 - [x] `RichVocabulary` interface with `VocabEntry` wired into Kami, LSP, Kabuki
+- [x] Thesis/Antithesis rename — terminology aligned with Hegelian dialectic model
+
+## Execution Roadmap
+
+```
+Phase 1 — Gates (parallel where possible)
+├── signal-domains        ← foundational, do first
+├── dialectic-hardening   ← independent, parallel with signal-domains
+└── signal-integrity      ← after signal-domains (uses zone domain labels)
+
+Phase 2 — Quick-wins (parallel)
+├── resilience
+└── ouroboros-signal-analysis
+
+Phase 3 — Finish line
+├── Root README.md
+├── Public API surface audit
+└── Test coverage audit
+
+Phase 4 — Vision (post-stabilization)
+├── origami-lsp
+└── washi
+```
 
 ## Active Contracts
 
-| Contract | Tier | Scope |
-|----------|------|-------|
-| `signal-domains` | gate | Renderer interface (DAC symmetry), zone domain annotations, context filter on zone boundaries. |
-| `signal-integrity` | gate | Evidence SNR metric, per-node cost tracking, impedance mismatch scoring, convergence trajectory. |
-| `dialectic-hardening` | gate | Gap-closure convergence, evidence immutability, shared-assumption detection (CMRR). |
-| `resilience` | quick-win | Circuit breaker, rate limiting, thermal budget for dispatch and walk layers. |
-| `ouroboros-signal-analysis` | quick-win | Quality-speed product (GBWP) measurement, persona offset compensation. |
-| `thesis-antithesis-rename` | quick-win | Rename Light/Shadow alignment to Thesis/Antithesis across Origami and Asterisk. |
-| `origami-lsp` | vision | LSP server: validation, completion, hover docs for pipeline YAML. |
-| `washi` | vision | Enterprise pipeline management UI. Shared ODS with Kabuki. Depends on Kami, LSP, Adapters, Marbles. |
+| Contract | Tier | Phase | Scope |
+|----------|------|-------|-------|
+| `signal-domains` | gate | 1 | Renderer interface (DAC symmetry), zone domain annotations, context filter on zone boundaries. |
+| `dialectic-hardening` | gate | 1 | Gap-closure convergence, evidence immutability, shared-assumption detection (CMRR). |
+| `signal-integrity` | gate | 1 | Evidence SNR metric, per-node cost tracking, impedance mismatch scoring, convergence trajectory. |
+| `resilience` | quick-win | 2 | Circuit breaker, rate limiting, thermal budget for dispatch and walk layers. |
+| `ouroboros-signal-analysis` | quick-win | 2 | Quality-speed product (GBWP) measurement, persona offset compensation. |
+| `origami-lsp` | vision | 4 | LSP server: validation, completion, hover docs for pipeline YAML. |
+| `washi` | vision | 4 | Enterprise pipeline management UI. Shared ODS with Kabuki. |
 
 ## Completed Work
 
-67 contracts across 10 phases — all complete. DSL (C1-C5), Framework (ontology through calibration), MCP (server through metacal), Multi-subagent (scheduler through skill), Pipeline (dispatcher, cleanup), PoC v2 (determinism, testing), Presentation (ergonomics through Kabuki), Refinement (CLI scaffold through lint), Analysis (6 case studies), Framework Maturity (green border through knowledge catalog).
+68 contracts across 10 phases — all complete. Includes Thesis/Antithesis rename (polishing).
 
 Full contract list: see git history of this file.
 
