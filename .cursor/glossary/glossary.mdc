@@ -42,7 +42,8 @@ description: Shared domain definitions for Origami
 - **WalkObserver** — Interface for observing graph walk events. Implementations: `LogObserver`, `TraceCollector`, `NarrationObserver`.
 - **Scheduler** — Decides which walker handles each node in a team walk. Implementations: `SingleScheduler`, `AffinityScheduler`.
 - **Impedance Mismatch** — Score (0=perfect, 1=worst) measuring how well a walker fits a node. Computed from step affinity and element match. Available via `AffinityScheduler.LastMismatch()` after each `Select()`.
-- **Evidence SNR (Signal-to-Noise Ratio)** — Ratio of output items to input items per node, measuring signal preservation. Higher is better. Computed via `EvidenceSNR(inputItems, outputItems)`.
+- **Evidence SNR (Signal-to-Noise Ratio)** — Ratio of output items to input items per node, measuring signal preservation. Higher is better. Auto-wired: when an `Artifact` implements `CountableArtifact`, the walk loop computes SNR and emits it as `"snr"` metadata on `EventNodeExit`. Also available manually via `EvidenceSNR(inputItems, outputItems)`.
+- **CountableArtifact** — Optional extension of `Artifact` for nodes that process discrete items. Adds `InputCount() int` and `OutputCount() int`. Enables automatic SNR computation in the walk loop.
 - **Convergence Trajectory** — Classification of how confidence values evolve over a walk: `underdamped` (oscillating), `overdamped` (monotone), `critically_damped` (converging within 1 oscillation), `unstable` (diverging), `insufficient` (<3 data points). Computed via `ClassifyTrajectory(history)`.
 - **ConfidenceHistory** — Slice on `WalkerState` tracking confidence values at each node exit. Fed by `RecordConfidence()`. Input to `ClassifyTrajectory()`.
 - **Signal Bus** — Transport-agnostic message bus for agent/subagent coordination. Emits and receives structured events. Accessible via MCP tools, HTTP endpoints, or direct Go API.

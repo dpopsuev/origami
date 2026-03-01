@@ -184,7 +184,11 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 			return fmt.Errorf("node %s: %w", node.Name(), err)
 		}
 
-		emitEvent(obs, WalkEvent{Type: EventNodeExit, Node: node.Name(), Walker: walkerName, Artifact: artifact, Elapsed: nodeElapsed})
+		exitMeta := map[string]any{}
+		if ca, ok := artifact.(CountableArtifact); ok {
+			exitMeta["snr"] = EvidenceSNR(ca.InputCount(), ca.OutputCount())
+		}
+		emitEvent(obs, WalkEvent{Type: EventNodeExit, Node: node.Name(), Walker: walkerName, Artifact: artifact, Elapsed: nodeElapsed, Metadata: exitMeta})
 
 		if artifact != nil && artifact.Confidence() > 0 {
 			state.RecordConfidence(artifact.Confidence())
@@ -379,12 +383,17 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 			return fmt.Errorf("node %s: %w", node.Name(), err)
 		}
 
+		teamExitMeta := map[string]any{}
+		if ca, ok := artifact.(CountableArtifact); ok {
+			teamExitMeta["snr"] = EvidenceSNR(ca.InputCount(), ca.OutputCount())
+		}
 		emitEvent(obs, WalkEvent{
 			Type:     EventNodeExit,
 			Node:     node.Name(),
 			Walker:   walker.Identity().PersonaName,
 			Artifact: artifact,
 			Elapsed:  nodeElapsed,
+			Metadata: teamExitMeta,
 		})
 
 		if artifact != nil && artifact.Confidence() > 0 {

@@ -122,6 +122,9 @@ func (c *PrometheusCollector) OnEvent(e framework.WalkEvent) {
 	switch e.Type {
 	case framework.EventNodeExit:
 		c.NodeDuration.WithLabelValues(pipeline, e.Node).Observe(e.Elapsed.Seconds())
+		if snr, ok := e.Metadata["snr"].(float64); ok {
+			c.EvidenceSNR.WithLabelValues(pipeline, e.Node).Set(snr)
+		}
 	case framework.EventTransition:
 		from := ""
 		to := ""
