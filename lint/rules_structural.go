@@ -186,7 +186,7 @@ func (r *DuplicateEdgeCondition) Check(ctx *LintContext) []Finding {
 type EmptyPrompt struct{}
 
 func (r *EmptyPrompt) ID() string          { return "S6/empty-prompt" }
-func (r *EmptyPrompt) Description() string { return "node with family but no prompt or transformer may produce empty prompts" }
+func (r *EmptyPrompt) Description() string { return "node with no prompt, transformer, extractor, renderer, or marble may produce empty output" }
 func (r *EmptyPrompt) Severity() Severity   { return SeverityWarning }
 func (r *EmptyPrompt) Tags() []string       { return []string{"structural"} }
 
@@ -198,7 +198,7 @@ func (r *EmptyPrompt) Check(ctx *LintContext) []Finding {
 		if nd.Family != "" {
 			continue
 		}
-		if nd.Prompt == "" && nd.Transformer == "" && nd.Extractor == "" && nd.Marble == "" {
+		if nd.Prompt == "" && nd.Transformer == "" && nd.Extractor == "" && nd.Renderer == "" && nd.Marble == "" {
 			out = append(out, Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
@@ -335,6 +335,72 @@ func (r *InvalidWalkerPersona) Check(ctx *LintContext) []Finding {
 				Message:  fmt.Sprintf("walker %q: unknown persona %q", w.Name, w.Persona),
 				File:     ctx.File,
 				Line:     ctx.WalkerLine(w.Name),
+			})
+		}
+	}
+	return out
+}
+
+// Valid zone domain values.
+var validDomains = map[string]bool{
+	"unstructured": true,
+	"structured":   true,
+	"hybrid":       true,
+}
+
+// --- S12: schema-in-unstructured-zone ---
+
+type SchemaInUnstructuredZone struct{}
+
+func (r *SchemaInUnstructuredZone) ID() string          { return "S12/schema-in-unstructured-zone" }
+func (r *SchemaInUnstructuredZone) Description() string { return "nodes with schema should not be in unstructured zones" }
+func (r *SchemaInUnstructuredZone) Severity() Severity   { return SeverityWarning }
+func (r *SchemaInUnstructuredZone) Tags() []string       { return []string{"structural"} }
+
+func (r *SchemaInUnstructuredZone) Check(ctx *LintContext) []Finding {
+	var out []Finding
+	for zoneName, zd := range ctx.Def.Zones {
+		if strings.ToLower(zd.Domain) != "unstructured" {
+			continue
+		}
+		nodeSet := make(map[string]bool, len(zd.Nodes))
+		for _, n := range zd.Nodes {
+			nodeSet[n] = true
+		}
+		for _, nd := range ctx.Def.Nodes {
+			if nodeSet[nd.Name] && nd.Schema != nil {
+				out = append(out, Finding{
+					RuleID:   r.ID(),
+					Severity: r.Severity(),
+					Message:  fmt.Sprintf("node %q has schema but is in unstructured zone %q", nd.Name, zoneName),
+					File:     ctx.File,
+					Line:     ctx.NodeLine(nd.Name),
+				})
+			}
+		}
+	}
+	return out
+}
+
+// --- S13: invalid-zone-domain ---
+
+type InvalidZoneDomain struct{}
+
+func (r *InvalidZoneDomain) ID() string          { return "S13/invalid-zone-domain" }
+func (r *InvalidZoneDomain) Description() string { return "zone domain must be unstructured, structured, or hybrid" }
+func (r *InvalidZoneDomain) Severity() Severity   { return SeverityError }
+func (r *InvalidZoneDomain) Tags() []string       { return []string{"structural"} }
+
+func (r *InvalidZoneDomain) Check(ctx *LintContext) []Finding {
+	var out []Finding
+	for zoneName, zd := range ctx.Def.Zones {
+		if zd.Domain != "" && !validDomains[strings.ToLower(zd.Domain)] {
+			out = append(out, Finding{
+				RuleID:   r.ID(),
+				Severity: r.Severity(),
+				Message:  fmt.Sprintf("zone %q: unknown domain %q (valid: unstructured, structured, hybrid)", zoneName, zd.Domain),
+				File:     ctx.File,
+				Line:     ctx.TopLevelLine("zones"),
 			})
 		}
 	}

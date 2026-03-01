@@ -12,19 +12,20 @@ A design document for the graph-based agent orchestration engine. This is not AP
 
 1. [The Three CLIs](#the-three-clis)
 2. [Extractors](#extractors)
-3. [The Metaphor](#the-metaphor)
-4. [Elements](#elements)
-5. [Personas](#personas)
-6. [Pipeline DSL](#pipeline-dsl)
-7. [Graph Walk](#graph-walk)
-8. [Walk Observability](#walk-observability)
-9. [Vocabulary and Narration](#vocabulary-and-narration)
-10. [Scheduler](#scheduler)
-11. [Team Walk](#team-walk)
-12. [Masks](#masks)
-13. [Adversarial Dialectic](#adversarial-dialectic)
-14. [Cycles](#cycles)
-15. [Architecture](#architecture)
+3. [Renderers](#renderers)
+4. [The Metaphor](#the-metaphor)
+5. [Elements](#elements)
+6. [Personas](#personas)
+7. [Pipeline DSL](#pipeline-dsl)
+8. [Graph Walk](#graph-walk)
+9. [Walk Observability](#walk-observability)
+10. [Vocabulary and Narration](#vocabulary-and-narration)
+11. [Scheduler](#scheduler)
+12. [Team Walk](#team-walk)
+13. [Masks](#masks)
+14. [Adversarial Dialectic](#adversarial-dialectic)
+15. [Cycles](#cycles)
+16. [Architecture](#architecture)
 
 ---
 
@@ -114,6 +115,65 @@ graph, _ := def.BuildGraph(framework.GraphRegistries{Nodes: nodeReg, Edges: edge
 ### Wide walls
 
 Any `Extractor` implementation can be registered and used in YAML. Domain-specific extractors (Jira, GitHub PR, CI log) live in their own packages and implement the same interface.
+
+---
+
+## Renderers
+
+Renderers are the symmetric counterpart to Extractors. Where Extractors convert unstructured input into structured data (ADC), Renderers convert structured data back into human-readable output (DAC).
+
+### The interface
+
+```go
+type Renderer interface {
+    Name() string
+    Render(ctx context.Context, data any) (string, error)
+}
+```
+
+### Batteries-included
+
+| Renderer | In | Out | Use case |
+|----------|----|-----|----------|
+| `TemplateRenderer` | `TemplateContext` | `string` | Render Go `text/template` prompts |
+
+### DSL integration
+
+Nodes can reference a registered renderer via the `renderer` field:
+
+```yaml
+nodes:
+  - name: narrative
+    element: air
+    renderer: narrative-v1
+```
+
+The `RendererRegistry` maps names to implementations:
+
+```go
+reg := make(framework.RendererRegistry)
+reg.Register(&myNarrativeRenderer{})
+graph, _ := def.BuildGraph(framework.GraphRegistries{Renderers: reg})
+```
+
+### Zone domains and context filtering
+
+Zones support data-domain annotations and context filtering for signal conditioning:
+
+```yaml
+zones:
+  ingestion:
+    nodes: [ingest, extract]
+    domain: unstructured
+    context_filter:
+      block: [raw_logs, debug_trace]
+  analysis:
+    nodes: [analyze]
+    domain: structured
+```
+
+- `domain:` classifies the zone's data nature: `unstructured`, `structured`, or `hybrid`.
+- `context_filter:` strips or keeps specific `WalkerState.Context` keys when a walker exits the zone. The `block` list removes named keys; the `pass` list keeps only named keys (allowlist). This implements the decoupling capacitor pattern: zone-local data stays local.
 
 ---
 

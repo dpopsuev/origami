@@ -1,0 +1,71 @@
+# Signal Domains test pipeline — exercises renderer:, domain:, and context_filter:.
+pipeline: signal-domains-test
+description: "Test pipeline for Renderer interface, zone domain annotations, and context filtering"
+
+zones:
+  ingestion:
+    nodes: [ingest, extract]
+    element: fire
+    domain: unstructured
+    context_filter:
+      block: [raw_logs, debug_trace]
+  analysis:
+    nodes: [analyze, render]
+    element: water
+    domain: structured
+  output:
+    nodes: [report]
+    element: air
+    domain: hybrid
+
+nodes:
+  - name: ingest
+    element: fire
+    transformer: llm
+    prompt: "Ingest raw data"
+  - name: extract
+    element: fire
+    extractor: json-schema
+    schema:
+      type: object
+      required: [category]
+      properties:
+        category:
+          type: string
+  - name: analyze
+    element: water
+    transformer: llm
+    prompt: "Analyze structured data"
+  - name: render
+    element: water
+    renderer: template
+    prompt: "Summary: {{.Output}}"
+  - name: report
+    element: air
+    transformer: llm
+    prompt: "Final report"
+
+edges:
+  - id: e1
+    name: ingest to extract
+    from: ingest
+    to: extract
+  - id: e2
+    name: extract to analyze
+    from: extract
+    to: analyze
+  - id: e3
+    name: analyze to render
+    from: analyze
+    to: render
+  - id: e4
+    name: render to report
+    from: render
+    to: report
+  - id: e5
+    name: report to done
+    from: report
+    to: _done
+
+start: ingest
+done: _done

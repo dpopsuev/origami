@@ -44,11 +44,21 @@ type WalkerDef struct {
 	StepAffinity map[string]float64 `yaml:"step_affinity,omitempty"`
 }
 
+// ContextFilterDef declares which context keys are allowed or blocked
+// when a walker transitions out of a zone. Implements the decoupling
+// capacitor pattern: zone-local data stays local.
+type ContextFilterDef struct {
+	Pass  []string `yaml:"pass,omitempty"`
+	Block []string `yaml:"block,omitempty"`
+}
+
 // ZoneDef declares a meta-phase zone (P7: optional, progressive disclosure).
 type ZoneDef struct {
-	Nodes      []string `yaml:"nodes"`
-	Element    string   `yaml:"element,omitempty"`
-	Stickiness int      `yaml:"stickiness,omitempty"`
+	Nodes         []string          `yaml:"nodes"`
+	Element       string            `yaml:"element,omitempty"`
+	Stickiness    int               `yaml:"stickiness,omitempty"`
+	Domain        string            `yaml:"domain,omitempty"`
+	ContextFilter *ContextFilterDef `yaml:"context_filter,omitempty"`
 }
 
 // NodeDef declares a node in the pipeline.
@@ -59,6 +69,7 @@ type NodeDef struct {
 	Element     string          `yaml:"element,omitempty"`
 	Family      string          `yaml:"family,omitempty"`
 	Extractor   string          `yaml:"extractor,omitempty"`
+	Renderer    string          `yaml:"renderer,omitempty"`
 	Transformer string          `yaml:"transformer,omitempty"`
 	Provider    string          `yaml:"provider,omitempty"`
 	Prompt      string          `yaml:"prompt,omitempty"`
@@ -198,6 +209,7 @@ type GraphRegistries struct {
 	Nodes        NodeRegistry
 	Edges        EdgeFactory
 	Extractors   ExtractorRegistry
+	Renderers    RendererRegistry
 	Transformers TransformerRegistry
 	Hooks        HookRegistry
 	Marbles      MarbleRegistry
@@ -267,6 +279,8 @@ func (def *PipelineDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 			NodeNames:       zd.Nodes,
 			ElementAffinity: Element(strings.ToLower(zd.Element)),
 			Stickiness:      zd.Stickiness,
+			Domain:          strings.ToLower(zd.Domain),
+			ContextFilter:   zd.ContextFilter,
 		})
 	}
 
@@ -320,6 +334,19 @@ func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, erro
 			name:    nd.Name,
 			element: elem,
 			ext:     ext,
+			meta:    nd.Meta,
+		}, nil
+	}
+
+	if nd.Renderer != "" {
+		rnd, err := def.resolveRenderer(nd, reg)
+		if err != nil {
+			return nil, err
+		}
+		return &rendererNode{
+			name:    nd.Name,
+			element: elem,
+			rnd:     rnd,
 			meta:    nd.Meta,
 		}, nil
 	}
@@ -398,4 +425,19 @@ func (def *PipelineDef) resolveExtractor(nd NodeDef, reg GraphRegistries) (Extra
 		}
 	}
 	return nil, fmt.Errorf("node %q: extractor %q not found", nd.Name, nd.Extractor)
+}
+
+// resolveRenderer resolves a renderer reference from a NodeDef.
+// Priority: built-in name → RendererRegistry.
+func (def *PipelineDef) resolveRenderer(nd NodeDef, reg GraphRegistries) (Renderer, error) {
+	if nd.Renderer == BuiltinRendererTemplate {
+		return &TemplateRenderer{Template: nd.Prompt}, nil
+	}
+	if reg.Renderers != nil {
+		rnd, err := reg.Renderers.Get(nd.Renderer)
+		if err == nil {
+			return rnd, nil
+		}
+	}
+	return nil, fmt.Errorf("node %q: renderer %q not found", nd.Name, nd.Renderer)
 }

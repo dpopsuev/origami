@@ -29,6 +29,8 @@ type Zone struct {
 	NodeNames       []string
 	ElementAffinity Element
 	Stickiness      int // 0-3 stickiness value for agents in this zone
+	Domain          string
+	ContextFilter   *ContextFilterDef
 }
 
 // DefaultGraph is the reference Graph implementation. It stores nodes and
@@ -262,6 +264,12 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 		state.RecordStep(node.Name(), matchedEdge.ID(), matchedEdge.ID(), time.Now().UTC().Format(time.RFC3339))
 		state.MergeContext(matched.ContextAdditions)
 
+		fromZone := zoneForNode(node.Name(), g.zones)
+		toZone := zoneForNode(matched.NextNode, g.zones)
+		if fromZone != nil && (toZone == nil || fromZone.Name != toZone.Name) {
+			applyContextFilter(state.Context, fromZone.ContextFilter)
+		}
+
 		if matched.NextNode == g.doneNode {
 			state.Status = "done"
 			emitEvent(obs, WalkEvent{Type: EventWalkComplete, Walker: walkerName})
@@ -405,6 +413,12 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 		state.RecordStep(node.Name(), matchedEdge.ID(), matchedEdge.ID(), time.Now().UTC().Format(time.RFC3339))
 		state.MergeContext(matched.ContextAdditions)
 
+		fromZone := zoneForNode(node.Name(), g.zones)
+		toZone := zoneForNode(matched.NextNode, g.zones)
+		if fromZone != nil && (toZone == nil || fromZone.Name != toZone.Name) {
+			applyContextFilter(state.Context, fromZone.ContextFilter)
+		}
+
 		if matched.NextNode == g.doneNode {
 			state.Status = "done"
 			emitEvent(obs, WalkEvent{Type: EventWalkComplete, Walker: walker.Identity().PersonaName})
@@ -424,6 +438,32 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 		node = nextNode
 		steps++
 	}
+}
+
+// applyContextFilter strips or keeps context keys based on a zone's filter.
+// Block takes precedence: if both pass and block are set, blocked keys are
+// removed first, then only passed keys survive.
+func applyContextFilter(ctx map[string]any, filter *ContextFilterDef) map[string]any {
+	if filter == nil {
+		return ctx
+	}
+	if len(filter.Block) > 0 {
+		for _, key := range filter.Block {
+			delete(ctx, key)
+		}
+	}
+	if len(filter.Pass) > 0 {
+		allowed := make(map[string]bool, len(filter.Pass))
+		for _, key := range filter.Pass {
+			allowed[key] = true
+		}
+		for key := range ctx {
+			if !allowed[key] {
+				delete(ctx, key)
+			}
+		}
+	}
+	return ctx
 }
 
 // composeObservers returns a single observer from two possibly-nil observers.
