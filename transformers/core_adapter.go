@@ -30,6 +30,7 @@ func CoreAdapter(d dispatch.Dispatcher, opts ...CoreAdapterOption) *fw.Adapter {
 		fileOpts = append(fileOpts, WithRootDir(cfg.baseDir))
 	}
 	reg["file"] = NewFile(fileOpts...)
+	reg["template-params"] = NewTemplateParams()
 
 	return &fw.Adapter{
 		Namespace:    "core",

@@ -92,11 +92,17 @@ func BuildRouter(cfg *ProviderConfig, extraFactories map[string]DispatcherFactor
 
 func builtinFactories() map[string]DispatcherFactory {
 	return map[string]DispatcherFactory{
-		"http":  httpFactory,
-		"cli":   cliFactory,
-		"file":  fileFactory,
-		"stdin": stdinFactory,
+		"http":   httpFactory,
+		"cli":    cliFactory,
+		"file":   fileFactory,
+		"stdin":  stdinFactory,
+		"static": staticFactory,
 	}
+}
+
+func staticFactory(config map[string]any) (Dispatcher, error) {
+	dir, _ := config["dir"].(string)
+	return NewStaticDispatcher(dir), nil
 }
 
 func httpFactory(config map[string]any) (Dispatcher, error) {

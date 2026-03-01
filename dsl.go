@@ -14,12 +14,24 @@ type PipelineDef struct {
 	Description string             `yaml:"description,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
+	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
 	Zones       map[string]ZoneDef `yaml:"zones,omitempty"`
 	Nodes       []NodeDef          `yaml:"nodes"`
 	Edges       []EdgeDef          `yaml:"edges"`
 	Walkers     []WalkerDef        `yaml:"walkers,omitempty"`
 	Start       string             `yaml:"start"`
 	Done        string             `yaml:"done"`
+}
+
+// ExtractorDef declares a reusable extractor at the pipeline level.
+// Nodes reference extractors by name via NodeDef.Extractor.
+// Type must be a built-in extractor type (json-schema, regex).
+type ExtractorDef struct {
+	Name    string          `yaml:"name"`
+	Type    string          `yaml:"type"`
+	Schema  *ArtifactSchema `yaml:"schema,omitempty"`
+	Pattern string          `yaml:"pattern,omitempty"`
+	OnError string          `yaml:"on_error,omitempty"`
 }
 
 // WalkerDef declares a walker (agent) in the pipeline YAML.
@@ -300,19 +312,9 @@ func (def *PipelineDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, erro
 	}
 
 	if nd.Extractor != "" {
-		var ext Extractor
-		switch nd.Extractor {
-		case BuiltinExtractorJSONSchema:
-			ext = &JSONSchemaExtractor{schema: nd.Schema}
-		default:
-			if reg.Extractors == nil {
-				return nil, fmt.Errorf("node %q: extractor %q not found (registry is nil)", nd.Name, nd.Extractor)
-			}
-			var err error
-			ext, err = reg.Extractors.Get(nd.Extractor)
-			if err != nil {
-				return nil, fmt.Errorf("node %q: %w", nd.Name, err)
-			}
+		ext, err := def.resolveExtractor(nd, reg)
+		if err != nil {
+			return nil, err
 		}
 		return &extractorNode{
 			name:    nd.Name,
@@ -352,4 +354,48 @@ func (e *dslEdge) Evaluate(_ Artifact, _ *WalkerState) *Transition {
 		NextNode:    e.def.To,
 		Explanation: e.def.Condition,
 	}
+}
+
+// resolveExtractor resolves an extractor reference from a NodeDef.
+// Priority: built-in name → pipeline-level ExtractorDef → ExtractorRegistry.
+func (def *PipelineDef) resolveExtractor(nd NodeDef, reg GraphRegistries) (Extractor, error) {
+	switch nd.Extractor {
+	case BuiltinExtractorJSONSchema:
+		return &JSONSchemaExtractor{schema: nd.Schema}, nil
+	case BuiltinExtractorRegex:
+		pattern, _ := nd.Meta["pattern"].(string)
+		if pattern == "" {
+			return nil, fmt.Errorf("node %q: regex extractor requires meta.pattern", nd.Name)
+		}
+		return NewRegexExtractor(nd.Name, pattern)
+	}
+
+	for _, ed := range def.Extractors {
+		if ed.Name != nd.Extractor {
+			continue
+		}
+		switch ed.Type {
+		case BuiltinExtractorJSONSchema:
+			schema := ed.Schema
+			if nd.Schema != nil {
+				schema = nd.Schema
+			}
+			return &JSONSchemaExtractor{schema: schema}, nil
+		case BuiltinExtractorRegex:
+			if ed.Pattern == "" {
+				return nil, fmt.Errorf("extractor %q: regex type requires pattern", ed.Name)
+			}
+			return NewRegexExtractor(ed.Name, ed.Pattern)
+		default:
+			return nil, fmt.Errorf("extractor %q: unknown type %q", ed.Name, ed.Type)
+		}
+	}
+
+	if reg.Extractors != nil {
+		ext, err := reg.Extractors.Get(nd.Extractor)
+		if err == nil {
+			return ext, nil
+		}
+	}
+	return nil, fmt.Errorf("node %q: extractor %q not found", nd.Name, nd.Extractor)
 }

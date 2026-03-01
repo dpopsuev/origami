@@ -96,6 +96,7 @@ func (a *extractorArtifact) Raw() any            { return a.raw }
 // Built-in extractor names recognized by resolveNode.
 const (
 	BuiltinExtractorJSONSchema = "json-schema"
+	BuiltinExtractorRegex      = "regex"
 )
 
 // JSONSchemaExtractor is a built-in extractor that unmarshals JSON input
@@ -138,3 +139,4 @@ func (e *JSONSchemaExtractor) Extract(_ context.Context, input any) (any, error)
 
 	return result, nil
 }
+
