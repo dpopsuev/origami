@@ -7,6 +7,7 @@ var (
 	_ Artifact = (*AntithesisResponse)(nil)
 	_ Artifact = (*DialecticRecord)(nil)
 	_ Artifact = (*Synthesis)(nil)
+	_ Artifact = (*CMRRCheck)(nil)
 )
 
 func TestDefaultDialecticConfig(t *testing.T) {
@@ -22,6 +23,9 @@ func TestDefaultDialecticConfig(t *testing.T) {
 	}
 	if cfg.ContradictionThreshold != 0.85 {
 		t.Errorf("ContradictionThreshold = %f, want 0.85", cfg.ContradictionThreshold)
+	}
+	if cfg.GapClosureThreshold != 0.15 {
+		t.Errorf("GapClosureThreshold = %f, want 0.15", cfg.GapClosureThreshold)
 	}
 }
 
@@ -164,7 +168,7 @@ func TestBuildDialecticEdgeFactory_AllKeysPresent(t *testing.T) {
 	factory := BuildDialecticEdgeFactory(cfg)
 	expectedKeys := []string{
 		"HD1", "HD2", "HD3", "HD4", "HD5", "HD6",
-		"HD7", "HD8", "HD9", "HD10", "HD11", "HD12",
+		"HD7", "HD8", "HD9", "HD10", "HD12", "HD13",
 	}
 	for _, k := range expectedKeys {
 		if _, ok := factory[k]; !ok {
@@ -314,6 +318,119 @@ func TestDialecticEdge_HD12_Unresolved(t *testing.T) {
 	tr := edge.Evaluate(s, &WalkerState{})
 	if tr == nil || tr.NextNode != "_done" {
 		t.Fatal("HD12 should route unresolved contradiction to _done")
+	}
+}
+
+func TestDialecticEdge_HD5_GapClosure(t *testing.T) {
+	cfg := DefaultDialecticConfig()
+	cfg.GapClosureThreshold = 0.15
+	factory := BuildDialecticEdgeFactory(cfg)
+	edge := factory["HD5"](EdgeDef{ID: "HD5", From: "hearing", To: "verdict"})
+
+	closed := &DialecticRecord{GapClosure: 0.10, MaxRounds: 10, Rounds: []DialecticRound{{Round: 1}}}
+	tr := edge.Evaluate(closed, &WalkerState{})
+	if tr == nil {
+		t.Fatal("HD5 should trigger when gap closure < threshold")
+	}
+
+	open := &DialecticRecord{GapClosure: 0.50, MaxRounds: 10, Rounds: []DialecticRound{{Round: 1}}}
+	tr = edge.Evaluate(open, &WalkerState{})
+	if tr != nil {
+		t.Error("HD5 should not trigger when gap closure > threshold")
+	}
+
+	noGap := &DialecticRecord{GapClosure: 0, MaxRounds: 10, Rounds: []DialecticRound{{Round: 1}}}
+	tr = edge.Evaluate(noGap, &WalkerState{})
+	if tr != nil {
+		t.Error("HD5 should not trigger when gap closure is zero (not set)")
+	}
+}
+
+func TestDialecticEdge_HD10_SafetyCeiling(t *testing.T) {
+	cfg := DialecticConfig{MaxTurns: 3}
+	factory := BuildDialecticEdgeFactory(cfg)
+	edge := factory["HD10"](EdgeDef{ID: "HD10", From: "hearing", To: "_done"})
+
+	state := &WalkerState{LoopCounts: map[string]int{"verdict": 2, "hearing": 2}}
+	tr := edge.Evaluate(&DialecticRecord{GapClosure: 0.45}, state)
+	if tr == nil {
+		t.Fatal("HD10 should trigger when combined loops exceed MaxTurns")
+	}
+
+	state = &WalkerState{LoopCounts: map[string]int{"verdict": 1, "hearing": 1}}
+	tr = edge.Evaluate(&DialecticRecord{}, state)
+	if tr != nil {
+		t.Error("HD10 should not trigger when combined loops are under MaxTurns")
+	}
+}
+
+func TestDialecticEdge_HD13_CMRR(t *testing.T) {
+	cfg := DefaultDialecticConfig()
+	cfg.CMRREnabled = true
+	factory := BuildDialecticEdgeFactory(cfg)
+	edge := factory["HD13"](EdgeDef{ID: "HD13", From: "hearing", To: "hearing"})
+
+	cmrr := &CMRRCheck{SharedPremises: []string{"both assume stable network"}, SuspicionScore: 0.7}
+	tr := edge.Evaluate(cmrr, &WalkerState{})
+	if tr == nil {
+		t.Fatal("HD13 should trigger when CMRR detects shared assumptions")
+	}
+	if tr.NextNode != "hearing" {
+		t.Errorf("NextNode = %q, want hearing", tr.NextNode)
+	}
+
+	clean := &CMRRCheck{SharedPremises: nil, SuspicionScore: 0}
+	tr = edge.Evaluate(clean, &WalkerState{})
+	if tr != nil {
+		t.Error("HD13 should not trigger when suspicion is zero")
+	}
+}
+
+func TestDialecticEdge_HD13_CMRRDisabled(t *testing.T) {
+	cfg := DefaultDialecticConfig()
+	cfg.CMRREnabled = false
+	factory := BuildDialecticEdgeFactory(cfg)
+	edge := factory["HD13"](EdgeDef{ID: "HD13", From: "hearing", To: "hearing"})
+
+	cmrr := &CMRRCheck{SharedPremises: []string{"test"}, SuspicionScore: 0.9}
+	tr := edge.Evaluate(cmrr, &WalkerState{})
+	if tr != nil {
+		t.Error("HD13 should not trigger when CMRR is disabled")
+	}
+}
+
+func TestCMRRCheck_ArtifactInterface(t *testing.T) {
+	c := &CMRRCheck{SharedPremises: []string{"p1"}, SuspicionScore: 0.3}
+	if c.Type() != "cmrr_check" {
+		t.Errorf("Type() = %q, want cmrr_check", c.Type())
+	}
+	if c.Confidence() != 0.7 {
+		t.Errorf("Confidence() = %f, want 0.7", c.Confidence())
+	}
+}
+
+func TestReadOnlyContext(t *testing.T) {
+	original := map[string]any{"key1": "val1", "key2": 42}
+	snapshot := ReadOnlyContext(original)
+
+	if snapshot["key1"] != "val1" {
+		t.Errorf("snapshot[key1] = %v, want val1", snapshot["key1"])
+	}
+
+	snapshot["key1"] = "mutated"
+	if original["key1"] != "val1" {
+		t.Error("mutating snapshot should not affect original")
+	}
+
+	snapshot["new_key"] = "new_val"
+	if _, ok := original["new_key"]; ok {
+		t.Error("adding to snapshot should not affect original")
+	}
+}
+
+func TestReadOnlyContext_Nil(t *testing.T) {
+	if ReadOnlyContext(nil) != nil {
+		t.Error("ReadOnlyContext(nil) should return nil")
 	}
 }
 

@@ -1,6 +1,9 @@
 package framework
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // DialecticConfig controls the adversarial dialectic pipeline activation and limits.
 // When the Thesis path's confidence falls below the contradiction threshold,
@@ -11,6 +14,9 @@ type DialecticConfig struct {
 	MaxTurns               int           `json:"max_turns"`
 	MaxNegations           int           `json:"max_negations"`
 	ContradictionThreshold float64       `json:"contradiction_threshold"`
+	GapClosureThreshold    float64       `json:"gap_closure_threshold"`
+	CMRREnabled            bool          `json:"cmrr_enabled"`
+	ContextGuard           func(map[string]any) map[string]any `json:"-"`
 }
 
 // DefaultDialecticConfig returns conservative defaults for the dialectic pipeline.
@@ -21,6 +27,7 @@ func DefaultDialecticConfig() DialecticConfig {
 		MaxTurns:               6,
 		MaxNegations:           2,
 		ContradictionThreshold: 0.85,
+		GapClosureThreshold:    0.15,
 	}
 }
 
@@ -95,9 +102,10 @@ type DialecticRound struct {
 
 // DialecticRecord is the D3 dialectic artifact: rounds of structured debate.
 type DialecticRecord struct {
-	Rounds    []DialecticRound `json:"rounds"`
-	MaxRounds int              `json:"max_rounds"`
-	Converged bool             `json:"converged"`
+	Rounds     []DialecticRound `json:"rounds"`
+	MaxRounds  int              `json:"max_rounds"`
+	Converged  bool             `json:"converged"`
+	GapClosure float64          `json:"gap_closure"`
 }
 
 func (d *DialecticRecord) Type() string       { return "dialectic_record" }
@@ -133,8 +141,21 @@ type DialecticEvidenceGap struct {
 	DialecticPhase string `json:"dialectic_phase,omitempty"`
 }
 
+// CMRRCheck captures shared-assumption detection results between thesis and antithesis.
+// When both sides share unexamined premises, the debate may converge on a wrong answer.
+// CMRR (Common-Mode Rejection Ratio) flags this: high SuspicionScore means
+// shared assumptions need independent verification.
+type CMRRCheck struct {
+	SharedPremises []string `json:"shared_premises"`
+	SuspicionScore float64  `json:"suspicion_score"`
+}
+
+func (c *CMRRCheck) Type() string       { return "cmrr_check" }
+func (c *CMRRCheck) Confidence() float64 { return 1.0 - c.SuspicionScore }
+func (c *CMRRCheck) Raw() any            { return c }
+
 // BuildDialecticEdgeFactory returns an EdgeFactory with skeleton dialectic
-// evaluators (HD1-HD12) for the adversarial dialectic pipeline. Each evaluator
+// evaluators (HD1-HD13) for the adversarial dialectic pipeline. Each evaluator
 // checks the artifact type and dialectic-specific conditions.
 func BuildDialecticEdgeFactory(cfg DialecticConfig) EdgeFactory {
 	return EdgeFactory{
@@ -182,6 +203,9 @@ func BuildDialecticEdgeFactory(cfg DialecticConfig) EdgeFactory {
 			rec, ok := unwrapDialecticRecord(a)
 			if !ok {
 				return nil
+			}
+			if rec.GapClosure > 0 && rec.GapClosure < cfg.GapClosureThreshold {
+				return &Transition{NextNode: "verdict", Explanation: fmt.Sprintf("gap closed (%.2f < %.2f threshold)", rec.GapClosure, cfg.GapClosureThreshold)}
 			}
 			if rec.Converged || len(rec.Rounds) >= rec.MaxRounds {
 				return &Transition{NextNode: "verdict", Explanation: "dialectic complete"}
@@ -231,15 +255,14 @@ func BuildDialecticEdgeFactory(cfg DialecticConfig) EdgeFactory {
 			}
 			return nil
 		}),
-		"HD10": dialecticEdgeFactory(func(_ Artifact, ws *WalkerState) *Transition {
-			if ws.LoopCounts["_handoff"] > cfg.MaxTurns {
-				return &Transition{NextNode: "_done", Explanation: "unresolved contradiction: turn limit exceeded"}
-			}
-			return nil
-		}),
-		"HD11": dialecticEdgeFactory(func(_ Artifact, ws *WalkerState) *Transition {
-			if ws.LoopCounts["_handoff"] > cfg.MaxTurns {
-				return &Transition{NextNode: "_done", Explanation: "unresolved contradiction: turn counter exceeded"}
+		"HD10": dialecticEdgeFactory(func(a Artifact, ws *WalkerState) *Transition {
+			totalLoops := ws.LoopCounts["verdict"] + ws.LoopCounts["hearing"]
+			if totalLoops > cfg.MaxTurns {
+				gc := float64(0)
+				if rec, ok := unwrapDialecticRecord(a); ok {
+					gc = rec.GapClosure
+				}
+				return &Transition{NextNode: "_done", Explanation: fmt.Sprintf("safety ceiling reached after %d turns, gap closure was %.2f", totalLoops, gc)}
 			}
 			return nil
 		}),
@@ -250,6 +273,26 @@ func BuildDialecticEdgeFactory(cfg DialecticConfig) EdgeFactory {
 			}
 			if s.Decision == SynthesisUnresolved {
 				return &Transition{NextNode: "_done", Explanation: "synthesis: unresolved contradiction declared by arbiter"}
+			}
+			return nil
+		}),
+		"HD13": dialecticEdgeFactory(func(a Artifact, _ *WalkerState) *Transition {
+			if !cfg.CMRREnabled {
+				return nil
+			}
+			cmrr, ok := unwrapCMRRCheck(a)
+			if !ok {
+				return nil
+			}
+			if cmrr.SuspicionScore > 0 {
+				return &Transition{
+					NextNode:    "hearing",
+					Explanation: fmt.Sprintf("CMRR: shared assumptions detected (suspicion %.2f)", cmrr.SuspicionScore),
+					ContextAdditions: map[string]any{
+						"cmrr_shared_premises": cmrr.SharedPremises,
+						"cmrr_suspicion":       cmrr.SuspicionScore,
+					},
+				}
 			}
 			return nil
 		}),
@@ -308,4 +351,12 @@ func unwrapSynthesis(a Artifact) (*Synthesis, bool) {
 	}
 	s, ok := a.Raw().(*Synthesis)
 	return s, ok
+}
+
+func unwrapCMRRCheck(a Artifact) (*CMRRCheck, bool) {
+	if a == nil {
+		return nil, false
+	}
+	c, ok := a.Raw().(*CMRRCheck)
+	return c, ok
 }
