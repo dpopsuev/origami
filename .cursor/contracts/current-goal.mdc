@@ -21,6 +21,12 @@ description: Active goal manifest — single-read orientation for agents to know
 
 | Contract | Tier | Scope |
 |----------|------|-------|
+| `signal-domains` | gate | Renderer interface (DAC symmetry), zone domain annotations, context filter on zone boundaries. |
+| `signal-integrity` | gate | Evidence SNR metric, per-node cost tracking, impedance mismatch scoring, convergence trajectory. |
+| `dialectic-hardening` | gate | Gap-closure convergence, evidence immutability, shared-assumption detection (CMRR). |
+| `resilience` | quick-win | Circuit breaker, rate limiting, thermal budget for dispatch and walk layers. |
+| `ouroboros-signal-analysis` | quick-win | Quality-speed product (GBWP) measurement, persona offset compensation. |
+| `thesis-antithesis-rename` | quick-win | Rename Light/Shadow alignment to Thesis/Antithesis across Origami and Asterisk. |
 | `origami-lsp` | vision | LSP server: validation, completion, hover docs for pipeline YAML. |
 | `washi` | vision | Enterprise pipeline management UI. Shared ODS with Kabuki. Depends on Kami, LSP, Adapters, Marbles. |
 
