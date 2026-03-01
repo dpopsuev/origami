@@ -57,6 +57,29 @@ In Origami today, the `Extractor` interface is first-class: named, registered, D
 
 Circuit theory says this asymmetry is a design smell. The structured-to-unstructured conversion (DAC) deserves the same architectural weight as the unstructured-to-structured conversion (ADC). A `Renderer` interface symmetric to `Extractor` — with named implementations, a registry, and DSL integration — would close this gap.
 
+```mermaid
+flowchart LR
+    subgraph unstructuredIn ["Unstructured Domain"]
+        raw["LLM Output\nLogs, Free Text\n(continuous, noisy)"]
+    end
+
+    raw -->|"sample, quantize,\nschema-validate"| ADC["Extractor\n(ADC)"]
+    ADC --> structured
+
+    subgraph structuredDomain ["Structured Domain"]
+        structured["Typed Artifact\nGo Struct\n(discrete, validated)"]
+    end
+
+    structured -->|"interpolate,\ntemplate-render"| DAC["Renderer\n(DAC)"]
+    DAC --> prompt
+
+    subgraph unstructuredOut ["Unstructured Domain"]
+        prompt["Prompt for Next Node\nNatural Language\n(continuous, shaped)"]
+    end
+```
+
+The cycle is continuous: each node receives unstructured input (from an LLM or prior rendering), extracts structure (ADC), processes the structured data, then renders it back to unstructured form (DAC) for the next LLM call. The quality of both conversions determines the pipeline's overall signal fidelity.
+
 ---
 
 ## 3. Concept Mapping: Circuit Theory to Origami
@@ -82,11 +105,107 @@ Circuit theory says this asymmetry is a design smell. The structured-to-unstruct
 
 ---
 
-## Visual: Op-Amp as Adversarial Dialectic
+## Visual Gallery: Component Parallels
+
+Each core circuit component has a structural counterpart in the Origami framework. The following diagrams place them side by side.
+
+### Transistor and Node
+
+The transistor is the fundamental active element in electronics — everything else is built from it. The Node is the fundamental active element in Origami. Both take an input signal, apply a controlled transformation (set by a bias/affinity), and produce an amplified or processed output.
+
+```mermaid
+flowchart LR
+    subgraph transistor ["Transistor (Active Element)"]
+        vin["Vin\n(input signal)"] --> tr["Transistor\n(gain = A)"]
+        gate["Gate / Base\n(bias controls behavior)"] -.-> tr
+        tr --> vout["Vout = A x Vin\n(amplified)"]
+    end
+
+    subgraph nodeOrigami ["Node (Active Element)"]
+        artIn["Input\nArtifact"] --> nd["Node.Process\n(domain logic)"]
+        elem["ElementAffinity\n(behavioral bias)"] -.-> nd
+        nd --> artOut["Output\nArtifact"]
+    end
+```
+
+A transistor without a gate bias is uncontrolled. A node without an element affinity has no behavioral contract. Both need a control signal to produce useful output.
+
+### Capacitor and WalkerState.Context
+
+A capacitor accumulates charge over time — voltage builds as current flows in. `WalkerState.Context` accumulates state across nodes — context builds as each node adds its output. Both are the memory of the system.
+
+```mermaid
+flowchart TB
+    subgraph capacitor ["Capacitor (Stores Charge)"]
+        direction LR
+        it1["I at t1"] --> cap["C\n(accumulates)"]
+        it2["I at t2"] --> cap
+        it3["I at t3"] --> cap
+        cap --> voltage["V = Q/C\n(built-up voltage\navailable to circuit)"]
+    end
+
+    subgraph context ["WalkerState.Context (Stores State)"]
+        direction LR
+        n1out["Node 1\noutput"] --> ctx["Context map\n(accumulates)"]
+        n2out["Node 2\noutput"] --> ctx
+        n3out["Node 3\noutput"] --> ctx
+        ctx --> downstream["Accumulated state\navailable to all\ndownstream nodes"]
+    end
+```
+
+A capacitor that never discharges bloats the circuit. A context that grows without bound bloats the prompt window. Both need periodic discharge — in circuits via a bleed resistor, in pipelines via context filtering at zone boundaries (Pattern 6).
+
+### Diode and Shortcut Edge
+
+A diode allows current in one direction only, above a threshold voltage. A shortcut edge allows traversal only when a condition is met, skipping intermediate nodes. Both implement conditional, one-directional flow.
+
+```mermaid
+flowchart LR
+    subgraph diode ["Diode (Conditional One-Way)"]
+        srcA["Source"] -->|"V >= 0.7V\n(forward bias)"| d["Diode"] --> destA["Destination"]
+        srcA -.->|"V < 0.7V\n(reverse: blocked)"| normalA["Normal\npath"]
+    end
+
+    subgraph shortcut ["Shortcut Edge (Conditional Skip)"]
+        classify["classify"] -->|"confidence >= 0.8\n(shortcut taken)"| s["Shortcut\nEdge"] --> decide["decide"]
+        classify -.->|"confidence < 0.8\n(normal path)"| investigate["investigate"]
+    end
+```
+
+The diode's forward voltage (0.7V) is the shortcut's confidence threshold (0.8). Below it, signal takes the long path. Above it, signal bypasses intermediate stages. Both trade thoroughness for speed when the signal is strong enough.
+
+### Bus and Papercup Signal Bus
+
+A system bus has three channels: data (payload), address (routing), control (status/commands). Papercup's signal protocol mirrors this exactly with three corresponding channels.
+
+```mermaid
+flowchart TB
+    subgraph systemBus ["System Bus (3-Channel)"]
+        direction LR
+        dataBus["Data Bus\n(payload bytes)"]
+        addrBus["Address Bus\n(destination select)"]
+        ctrlBus["Control Bus\n(R/W, IRQ, clock)"]
+    end
+
+    dataBus <-->|"maps to"| artifactCh
+    addrBus <-->|"maps to"| dispatchID
+    ctrlBus <-->|"maps to"| statusSig
+
+    subgraph papercup ["Papercup Signal Bus (3-Channel)"]
+        direction LR
+        artifactCh["Artifact Channel\n(step payload)"]
+        dispatchID["Dispatch ID\n(routing key)"]
+        statusSig["Status Signal\n(waiting / processing / done)"]
+    end
+```
+
+In circuits, a device that writes to the data bus without a valid address corrupts memory. In Papercup, an artifact submitted without a matching `dispatch_id` is a race condition. Both protocols require all three channels to be coherent for correct operation.
+
+### Op-Amp and Adversarial Dialectic
 
 The op-amp is the most instructive single-component analogy in this study. Its two-input, one-output, feedback-stabilized architecture maps directly onto Origami's Adversarial Dialectic.
 
-### Op-Amp with Negative Feedback
+#### Op-Amp with Negative Feedback
 
 ```mermaid
 flowchart LR
@@ -106,7 +225,7 @@ flowchart LR
 
 The non-inverting input (+V) carries the signal. The inverting input (-V) carries a fraction of the output fed back through the feedback network (β). The differential stage amplifies the difference. Without feedback, the enormous open-loop gain (100,000x) drives the output to saturation on any tiny input difference. With feedback, the system self-corrects: output too high -> feedback increases inverting input -> difference shrinks -> output stabilizes.
 
-### Origami Adversarial Dialectic (same topology)
+#### Origami Adversarial Dialectic (same topology)
 
 ```mermaid
 flowchart LR
@@ -130,7 +249,7 @@ flowchart LR
     note["Convergence threshold = β\nRemand trades speed\nfor calibrated confidence"]
 ```
 
-### Reading the parallel
+#### Reading the parallel
 
 | Op-Amp | Adversarial Dialectic |
 |---|---|
@@ -159,6 +278,19 @@ The critical insight: an op-amp without feedback is useless (saturates instantly
 
 **Possible adaptation:** Document mask placement guidelines using signal conditioning vocabulary. A pipeline design checklist: "Before every extraction boundary, verify the signal conditioning chain: noise filtered? signal amplified? level-shifted to match schema range?"
 
+```mermaid
+flowchart LR
+    subgraph circuit ["Analog: Sensor → Conditioning → ADC"]
+        sensor["Sensor\n(raw analog)"] --> lpf["Low-Pass\nFilter\n(remove noise)"] --> amp["Amplifier\n(boost signal)"] --> ls["Level\nShift\n(match range)"] --> adc["ADC"]
+        adc --> digital["Digital\nOutput"]
+    end
+
+    subgraph origami ["Pipeline: LLM → Masks → Extractor"]
+        llmOut["LLM\nOutput\n(raw text)"] --> m1["CorrelationMask\n.pre\n(filter noise)"] --> m2["RecallMask\n.pre\n(amplify signal)"] --> proc["Node\n.Process"] --> m2post["RecallMask\n.post"] --> m1post["CorrelationMask\n.post"] --> ext["Extractor\n(ADC)"]
+        ext --> typed["Typed\nArtifact"]
+    end
+```
+
 ### Pattern 2: Mixed-Signal Architecture
 
 **Circuit principle:** Real-world systems are almost never pure analog or pure digital. They are **mixed-signal**: analog sections for interfacing with the physical world, digital sections for computation, and converters (ADC/DAC) at the boundaries. Each domain has different design rules. Analog design cares about noise, bandwidth, impedance. Digital design cares about timing, logic correctness, propagation delay. The boundary between domains is the most critical design point.
@@ -174,6 +306,25 @@ The critical insight: an op-amp without feedback is useless (saturates instantly
 
 **Possible adaptation:** An optional `domain:` annotation on zones (`analog`, `digital`, `mixed`) that feeds into pipeline linting. The linter checks that extraction nodes sit at analog-to-digital zone boundaries, and prompt rendering happens at digital-to-analog boundaries.
 
+```mermaid
+flowchart LR
+    subgraph analogZone ["Analog Zone: Backcourt"]
+        recall["recall\n(unstructured)"] --> investigate["investigate\n(unstructured)"]
+    end
+
+    investigate -->|"ADC boundary"| ext["Extractor"]
+    ext --> judge
+
+    subgraph digitalZone ["Digital Zone: Frontcourt"]
+        judge["judge\n(structured)"] --> synthesize["synthesize\n(structured)"]
+    end
+
+    synthesize -->|"DAC boundary"| rend["Renderer"]
+    rend --> nextLLM["Next LLM call\n(unstructured)"]
+```
+
+The zone boundary is the most critical design point. Placing an extractor inside an analog zone or a renderer inside a digital zone is like placing an ADC in the middle of an analog filter chain — it quantizes the signal before conditioning is complete.
+
 ### Pattern 3: Impedance Matching
 
 **Circuit principle:** Maximum power transfer between a source and load occurs when their impedances are conjugate-matched. Mismatched impedance causes signal reflection — energy bounces back instead of being absorbed. In RF design, impedance mismatch is measured as VSWR (voltage standing wave ratio): 1:1 is perfect, higher ratios mean more reflection and less useful power transfer.
@@ -186,6 +337,21 @@ The critical insight: an op-amp without feedback is useless (saturates instantly
 - Let pipeline designers tune `stickiness` based on empirical mismatch data
 
 **Possible adaptation:** Add a `Mismatch(walker, node) float64` method to `AffinityScheduler` that returns a quantified impedance ratio. Expose it via `WalkObserver` events so Kami can visualize mismatched assignments in the graph.
+
+```mermaid
+flowchart LR
+    subgraph matched ["Matched Impedance (maximum power transfer)"]
+        fireW["Walker: Fire\nspeed: fast\nshortcut affinity: 0.9"] -->|"Z source = Z load\nmismatch: 0.0"| fireN["Node: Fire affinity\nneeds speed\nwants shortcuts"]
+        fireN --> goodArt["High-quality\nartifact"]
+    end
+
+    subgraph mismatched ["Mismatched Impedance (signal reflection)"]
+        waterW["Walker: Water\nspeed: deep\nshortcut affinity: 0.1"] -->|"Z source != Z load\nmismatch: 0.8"| fireN2["Node: Fire affinity\nneeds speed\nwants shortcuts"]
+        fireN2 --> poorArt["Degraded\nartifact"]
+    end
+```
+
+A Water walker assigned to a Fire node is like connecting a high-impedance source to a low-impedance load: most of the "energy" (processing capability) is wasted as reflection (behavioral friction) rather than transferred into useful work.
 
 ### Pattern 4: Negative Feedback for Stability
 
@@ -213,6 +379,26 @@ The pipeline equivalent of KCL: for every evidence item in a node's input, the o
 
 **Possible adaptation:** An optional `evidence_conservation: strict` flag on nodes that activates input/output evidence tracking. The framework counts evidence items in and evidence items out (referenced + transformed + explicitly drained). A conservation violation triggers a warning via `WalkObserver`. Not a hard gate (too rigid for early pipeline stages), but a measurable signal for calibration tuning.
 
+```mermaid
+flowchart LR
+    subgraph kcl ["KCL: Sum of currents in = Sum of currents out"]
+        i1["I1 = 3A"] --> junction["Junction"]
+        i2["I2 = 2A"] --> junction
+        junction --> i3["I3 = 2A"]
+        junction --> i4["I4 = 3A"]
+    end
+
+    subgraph conservation ["Evidence Conservation: items in = items accounted"]
+        logs["3 log\nentries"] --> node["Investigation\nNode"]
+        commits["2 commit\nrefs"] --> node
+        node --> referenced["2 referenced\n(cited in output)"]
+        node --> transformed["1 transformed\n(merged into finding)"]
+        node --> drained["2 drained\n(explicit: irrelevant\nto this defect)"]
+    end
+```
+
+In the circuit: 3A + 2A in = 2A + 3A out. Conservation holds. In the pipeline: 3 + 2 = 5 evidence items in = 2 referenced + 1 transformed + 2 explicitly drained = 5 accounted. The "drained" items are current flowing to ground — legitimate, but the drain must be explicit, not silent.
+
 ### Pattern 6: Decoupling Capacitors — Context Isolation
 
 **Circuit principle:** Every IC has decoupling capacitors (typically 100nF ceramic) placed physically close to its power pins. Their purpose: prevent high-frequency noise generated by one chip from propagating through the power rail to affect other chips. They act as local energy reservoirs that absorb transient current demands, keeping the power supply clean for neighboring components.
@@ -222,6 +408,23 @@ The pipeline equivalent of KCL: for every evidence item in a node's input, the o
 **Insight:** Zone boundaries should act as decoupling capacitors. When a walker crosses from one zone to another, the context should be filtered: persistent, validated context (DC component — stable, always-relevant facts) passes through, while transient, speculative context (AC component — intermediate hypotheses, raw LLM fragments) is blocked or attenuated.
 
 **Possible adaptation:** A `context_filter` field on zone definitions that specifies which context keys propagate across the zone boundary. Keys not listed are available within the zone but stripped when the walker exits. This prevents investigation-phase speculation from leaking into judgment-phase processing.
+
+```mermaid
+flowchart LR
+    subgraph zoneA ["Investigation Zone"]
+        n1["investigate"] --> n2["correlate"]
+    end
+
+    n2 --> filter["Context Filter\n(decoupling capacitor)\nat zone boundary"]
+    filter -->|"pass: evidence,\ntimeline, artifacts"| n3
+    filter -.->|"block: raw_llm_output,\nintermediate_hypotheses"| stripped["(stripped)"]
+
+    subgraph zoneB ["Judgment Zone"]
+        n3["judge"] --> n4["synthesize"]
+    end
+```
+
+In the circuit, a decoupling capacitor passes DC (stable power) while blocking AC (high-frequency noise). At a zone boundary, the context filter passes stable facts (evidence, timeline) while blocking transient noise (raw LLM fragments, speculative hypotheses). Both prevent upstream noise from corrupting downstream processing.
 
 ```yaml
 zones:
