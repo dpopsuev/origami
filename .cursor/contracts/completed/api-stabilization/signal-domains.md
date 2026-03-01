@@ -1,6 +1,6 @@
 # Contract — signal-domains
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Add Renderer interface (DAC symmetry), zone data-domain annotations, and context filtering on zone boundaries.  
 **Serves:** API Stabilization
 

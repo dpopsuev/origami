@@ -1,6 +1,6 @@
 # Contract — dialectic-hardening
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Add gap-closure convergence check, evidence immutability enforcement, and shared-assumption detection (CMRR) to the Adversarial Dialectic.  
 **Serves:** API Stabilization
 

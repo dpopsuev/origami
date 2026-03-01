@@ -1,6 +1,6 @@
 # Contract — signal-integrity
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Add evidence SNR metric, per-node cost tracking, impedance mismatch scoring, and convergence trajectory classification.  
 **Serves:** API Stabilization
 

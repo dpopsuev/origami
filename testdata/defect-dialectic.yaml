@@ -14,7 +14,7 @@ zones:
     element: water
     stickiness: 2
   synthesis:
-    nodes: [hearing, verdict]
+    nodes: [hearing, verdict, cmrr]
     element: diamond
     stickiness: 2
 
@@ -34,6 +34,9 @@ nodes:
   - name: verdict
     element: diamond
     family: verdict
+  - name: cmrr
+    element: earth
+    family: cmrr
 
 edges:
   - id: HD0
@@ -110,6 +113,18 @@ edges:
     from: verdict
     to: _done
     condition: "synthesis == unresolved"
+
+  - id: HD13
+    name: cmrr-check
+    from: hearing
+    to: cmrr
+    condition: "CMRR enabled and shared assumptions detected"
+
+  - id: HD13b
+    name: cmrr-return
+    from: cmrr
+    to: hearing
+    condition: "shared premises flagged"
 
 start: indict
 done: _done

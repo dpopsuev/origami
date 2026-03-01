@@ -68,7 +68,7 @@ func NewPrometheusCollector(reg *prometheus.Registry) *PrometheusCollector {
 		TokensTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "origami_tokens_total",
 			Help: "Total LLM tokens consumed.",
-		}, []string{"pipeline", "step", "direction"}),
+		}, []string{"pipeline", "step", "node", "direction"}),
 		TokensCostUSD: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "origami_tokens_cost_usd",
 			Help: "Estimated LLM token cost in USD.",
@@ -158,13 +158,13 @@ func (c *PrometheusCollector) StartWalk(pipeline string) {
 
 // RecordTokens increments token counters for a dispatch step.
 // direction should be "prompt" or "artifact".
-func (c *PrometheusCollector) RecordTokens(step string, promptTokens, artifactTokens int, costUSD float64) {
+func (c *PrometheusCollector) RecordTokens(step, node string, promptTokens, artifactTokens int, costUSD float64) {
 	c.mu.Lock()
 	pipeline := c.pipeline
 	c.mu.Unlock()
 
-	c.TokensTotal.WithLabelValues(pipeline, step, "prompt").Add(float64(promptTokens))
-	c.TokensTotal.WithLabelValues(pipeline, step, "artifact").Add(float64(artifactTokens))
+	c.TokensTotal.WithLabelValues(pipeline, step, node, "prompt").Add(float64(promptTokens))
+	c.TokensTotal.WithLabelValues(pipeline, step, node, "artifact").Add(float64(artifactTokens))
 	c.TokensCostUSD.WithLabelValues(pipeline, step).Add(costUSD)
 }
 

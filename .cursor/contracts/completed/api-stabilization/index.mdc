@@ -1,0 +1,9 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `signal-domains.md` — Renderer interface (DAC symmetry), zone domain annotations, context filter. Complete.
+- `signal-integrity.md` — Evidence SNR, per-node cost tracking, mismatch scoring, convergence trajectory. Complete.
+- `dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.

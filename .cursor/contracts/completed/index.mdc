@@ -10,6 +10,7 @@
 - `analysis/` — completed case study/analysis contracts
 - `absorbed/` — contracts whose scope was absorbed by other contracts
 - `polishing/` — completed polishing & presentation-phase contracts
+- `api-stabilization/` — completed API stabilization gate contracts (signal-domains, signal-integrity, dialectic-hardening)
 
 ## Files
 (No files)

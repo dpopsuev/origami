@@ -299,8 +299,8 @@ func TestLoadPipeline_RealDefectDialectic(t *testing.T) {
 	if def.Pipeline != "defect-dialectic" {
 		t.Errorf("Pipeline = %q, want %q", def.Pipeline, "defect-dialectic")
 	}
-	if len(def.Nodes) != 5 {
-		t.Errorf("len(Nodes) = %d, want 5", len(def.Nodes))
+	if len(def.Nodes) != 6 {
+		t.Errorf("len(Nodes) = %d, want 6", len(def.Nodes))
 	}
 }
 

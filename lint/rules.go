@@ -20,6 +20,7 @@ func structuralRules() []Rule {
 		&InvalidWalkerElement{},
 		&InvalidWalkerPersona{},
 		&SchemaInUnstructuredZone{},
+		&MissingZoneDomain{},
 		&InvalidZoneDomain{},
 	}
 }

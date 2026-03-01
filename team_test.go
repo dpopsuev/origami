@@ -248,3 +248,76 @@ func TestWalkTeam_ContextCancellation(t *testing.T) {
 		t.Error("expected walk_error event on cancellation")
 	}
 }
+
+func TestWalkTeam_MismatchEmitted(t *testing.T) {
+	nodeA := &stubNode{name: "A", element: ElementFire, artifact: &stubArtifact{typ: "a", confidence: 0.8}}
+	nodeB := &stubNode{name: "B", element: ElementWater, artifact: &stubArtifact{typ: "b", confidence: 0.7}}
+
+	edges := []Edge{
+		&stubEdge{id: "A-B", from: "A", to: "B"},
+		&stubEdge{id: "B-done", from: "B", to: "_done"},
+	}
+
+	g, err := NewGraph("mismatch-test", []Node{nodeA, nodeB}, edges, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wFire := &stubWalker{
+		identity: AgentIdentity{
+			PersonaName:  "FireWalker",
+			Element:      ElementFire,
+			StepAffinity: map[string]float64{"A": 0.9, "B": 0.1},
+		},
+		state: NewWalkerState("fire-1"),
+	}
+	wWater := &stubWalker{
+		identity: AgentIdentity{
+			PersonaName:  "WaterWalker",
+			Element:      ElementWater,
+			StepAffinity: map[string]float64{"A": 0.1, "B": 0.9},
+		},
+		state: NewWalkerState("water-1"),
+	}
+
+	tc := &TraceCollector{}
+	team := &Team{
+		Walkers:   []Walker{wFire, wWater},
+		Scheduler: &AffinityScheduler{},
+		Observer:  tc,
+		MaxSteps:  10,
+	}
+
+	if err := g.WalkTeam(context.Background(), team, "A"); err != nil {
+		t.Fatalf("WalkTeam failed: %v", err)
+	}
+
+	switches := tc.EventsOfType(EventWalkerSwitch)
+	if len(switches) < 2 {
+		t.Fatalf("expected at least 2 walker_switch events, got %d", len(switches))
+	}
+
+	foundMismatch := false
+	for _, ev := range switches {
+		if ev.Metadata == nil {
+			t.Error("walker_switch event has nil Metadata, expected mismatch key")
+			continue
+		}
+		val, ok := ev.Metadata["mismatch"]
+		if !ok {
+			t.Errorf("walker_switch event for %s missing mismatch key", ev.Walker)
+			continue
+		}
+		mm, ok := val.(float64)
+		if !ok {
+			t.Errorf("mismatch value is %T, want float64", val)
+			continue
+		}
+		if mm > 0 {
+			foundMismatch = true
+		}
+	}
+	if !foundMismatch {
+		t.Error("expected at least one walker_switch with mismatch > 0")
+	}
+}

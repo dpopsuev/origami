@@ -234,8 +234,8 @@ func TestPrometheusCollector_TokenMetrics(t *testing.T) {
 	col := NewPrometheusCollector(reg)
 
 	col.StartWalk("rca-pipeline")
-	col.RecordTokens("recall", 500, 200, 0.0045)
-	col.RecordTokens("triage", 300, 100, 0.0024)
+	col.RecordTokens("recall", "recall_node", 500, 200, 0.0045)
+	col.RecordTokens("triage", "triage_node", 300, 100, 0.0024)
 
 	families, err := reg.Gather()
 	if err != nil {
@@ -335,7 +335,7 @@ func TestPrometheusCollector_AllNineMetrics(t *testing.T) {
 	col.OnEvent(framework.WalkEvent{Type: framework.EventTransition, Node: "a",
 		Metadata: map[string]any{"from": "a", "to": "b"}})
 	col.OnEvent(framework.WalkEvent{Type: framework.EventWalkComplete})
-	col.RecordTokens("a", 100, 50, 0.001)
+	col.RecordTokens("a", "node_a", 100, 50, 0.001)
 	col.RecordDispatch("default", "a", 100*time.Millisecond, nil)
 	col.RecordDispatch("default", "a", 50*time.Millisecond, fmt.Errorf("fail"))
 	col.LoopsTotal.WithLabelValues("test-pipeline", "a").Inc()

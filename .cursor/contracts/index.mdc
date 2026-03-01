@@ -14,13 +14,16 @@
 |----------|------|------|
 | `origami-lsp.md` | Language Server for pipeline YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
 | `washi.md` | Washi — enterprise pipeline management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
-| `signal-domains.md` | Renderer interface (DAC symmetry), zone domain annotations, context filter. | gate |
-| `signal-integrity.md` | Evidence SNR, per-node cost tracking, mismatch scoring, convergence trajectory. | gate |
 | `resilience.md` | Circuit breaker, rate limiting, thermal budget. | quick-win |
-| `dialectic-hardening.md` | Gap-closure convergence, evidence immutability, CMRR. | gate |
 | `ouroboros-signal-analysis.md` | GBWP measurement, persona offset compensation. | quick-win |
 
 ## Completed (recent)
+
+### API Stabilization phase (gate)
+
+- `completed/api-stabilization/signal-domains.md` — Renderer interface (DAC symmetry), zone domain annotations, context filter. Complete.
+- `completed/api-stabilization/signal-integrity.md` — Evidence SNR, per-node cost tracking, mismatch scoring, convergence trajectory. Complete.
+- `completed/api-stabilization/dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.
 
 ### Refinement phase
 

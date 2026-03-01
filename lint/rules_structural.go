@@ -382,11 +382,36 @@ func (r *SchemaInUnstructuredZone) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S13: invalid-zone-domain ---
+// --- S13: missing-zone-domain ---
+
+type MissingZoneDomain struct{}
+
+func (r *MissingZoneDomain) ID() string          { return "S13/missing-zone-domain" }
+func (r *MissingZoneDomain) Description() string { return "zones should declare a domain (unstructured, structured, hybrid)" }
+func (r *MissingZoneDomain) Severity() Severity   { return SeverityInfo }
+func (r *MissingZoneDomain) Tags() []string       { return []string{"structural"} }
+
+func (r *MissingZoneDomain) Check(ctx *LintContext) []Finding {
+	var out []Finding
+	for zoneName, zd := range ctx.Def.Zones {
+		if len(zd.Nodes) > 0 && zd.Domain == "" {
+			out = append(out, Finding{
+				RuleID:   r.ID(),
+				Severity: r.Severity(),
+				Message:  fmt.Sprintf("zone %q has no domain annotation (consider: unstructured, structured, hybrid)", zoneName),
+				File:     ctx.File,
+				Line:     ctx.TopLevelLine("zones"),
+			})
+		}
+	}
+	return out
+}
+
+// --- S14: invalid-zone-domain ---
 
 type InvalidZoneDomain struct{}
 
-func (r *InvalidZoneDomain) ID() string          { return "S13/invalid-zone-domain" }
+func (r *InvalidZoneDomain) ID() string          { return "S14/invalid-zone-domain" }
 func (r *InvalidZoneDomain) Description() string { return "zone domain must be unstructured, structured, or hybrid" }
 func (r *InvalidZoneDomain) Severity() Severity   { return SeverityError }
 func (r *InvalidZoneDomain) Tags() []string       { return []string{"structural"} }

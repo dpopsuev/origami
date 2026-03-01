@@ -9,7 +9,7 @@ description: Active goal manifest — single-read orientation for agents to know
 
 ## Open Checklist
 
-- [ ] Gate contracts complete — `signal-domains`, `signal-integrity`, `dialectic-hardening`
+- [x] Gate contracts complete — `signal-domains`, `signal-integrity`, `dialectic-hardening`
 - [ ] Quick-win contracts complete — `resilience`, `ouroboros-signal-analysis`
 - [ ] Public API surface is stable — no breaking changes pending (blocked by gate contracts)
 - [ ] Test coverage on public interfaces is solid
@@ -46,9 +46,6 @@ Phase 4 — Vision (post-stabilization)
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
-| `signal-domains` | gate | 1 | Renderer interface (DAC symmetry), zone domain annotations, context filter on zone boundaries. |
-| `dialectic-hardening` | gate | 1 | Gap-closure convergence, evidence immutability, shared-assumption detection (CMRR). |
-| `signal-integrity` | gate | 1 | Evidence SNR metric, per-node cost tracking, impedance mismatch scoring, convergence trajectory. |
 | `resilience` | quick-win | 2 | Circuit breaker, rate limiting, thermal budget for dispatch and walk layers. |
 | `ouroboros-signal-analysis` | quick-win | 2 | Quality-speed product (GBWP) measurement, persona offset compensation. |
 | `origami-lsp` | vision | 4 | LSP server: validation, completion, hover docs for pipeline YAML. |
@@ -56,7 +53,7 @@ Phase 4 — Vision (post-stabilization)
 
 ## Completed Work
 
-68 contracts across 10 phases — all complete. Includes Thesis/Antithesis rename (polishing).
+71 contracts across 11 phases — all complete. Includes Thesis/Antithesis rename (polishing) and Phase 1 API Stabilization gates.
 
 Full contract list: see git history of this file.
 

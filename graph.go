@@ -186,6 +186,10 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 
 		emitEvent(obs, WalkEvent{Type: EventNodeExit, Node: node.Name(), Walker: walkerName, Artifact: artifact, Elapsed: nodeElapsed})
 
+		if artifact != nil && artifact.Confidence() > 0 {
+			state.RecordConfidence(artifact.Confidence())
+		}
+
 		if state.Outputs == nil {
 			state.Outputs = make(map[string]Artifact)
 		}
@@ -335,10 +339,15 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 		})
 
 		if priorWalker == nil || walker.Identity().PersonaName != priorWalker.Identity().PersonaName {
+			meta := map[string]any{}
+			if as, ok := team.Scheduler.(*AffinityScheduler); ok {
+				meta["mismatch"] = as.LastMismatch()
+			}
 			emitEvent(obs, WalkEvent{
-				Type:   EventWalkerSwitch,
-				Node:   node.Name(),
-				Walker: walker.Identity().PersonaName,
+				Type:     EventWalkerSwitch,
+				Node:     node.Name(),
+				Walker:   walker.Identity().PersonaName,
+				Metadata: meta,
 			})
 		}
 
@@ -377,6 +386,10 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 			Artifact: artifact,
 			Elapsed:  nodeElapsed,
 		})
+
+		if artifact != nil && artifact.Confidence() > 0 {
+			state.RecordConfidence(artifact.Confidence())
+		}
 
 		edges := g.EdgesFrom(node.Name())
 		if len(edges) == 0 {
