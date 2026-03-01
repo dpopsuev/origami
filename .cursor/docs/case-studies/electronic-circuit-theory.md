@@ -203,62 +203,111 @@ In circuits, a device that writes to the data bus without a valid address corrup
 
 ### Op-Amp and Adversarial Dialectic
 
-The op-amp is the most instructive single-component analogy in this study. Its two-input, one-output, feedback-stabilized architecture maps directly onto Origami's Adversarial Dialectic.
+The op-amp is the most instructive single-component analogy in this study. A real op-amp (e.g., the classic uA741) has open-loop gain of ~100,000, near-infinite input impedance, near-zero output impedance, and a fixed gain-bandwidth product. These characteristics make it useless in open-loop mode (it saturates instantly) but extraordinarily useful in closed-loop mode, where external feedback components determine all useful behavior. The Adversarial Dialectic follows the same architecture.
 
-#### Op-Amp with Negative Feedback
+#### Open-loop vs Closed-loop
 
-```mermaid
-flowchart LR
-    subgraph opamp ["Op-Amp"]
-        direction TB
-        diff["Differential Stage (A = 100k)"]
-    end
-
-    Vplus["+V non-inverting"] --> diff
-    Vminus["-V inverting"] --> diff
-    diff --> Vout["Vout (stable)"]
-
-    Vout -->|"feedback network (β)"| Vminus
-```
-
-The non-inverting input (+V) carries the signal. The inverting input (-V) carries a fraction of the output fed back through the feedback network (β). The differential stage amplifies the difference. Without feedback, the enormous open-loop gain (100,000x) drives the output to saturation on any tiny input difference. With feedback, the system self-corrects: output too high -> feedback increases inverting input -> difference shrinks -> output stabilizes.
-
-#### Origami Adversarial Dialectic (same topology)
+An op-amp without feedback is a **comparator** — it produces a binary output (HIGH or LOW) because any nonzero input difference, multiplied by 100,000, immediately saturates. With negative feedback, the same op-amp becomes a **linear amplifier** with predictable, controlled gain.
 
 ```mermaid
 flowchart LR
-    subgraph dialectic ["Adversarial Dialectic"]
-        direction TB
-        D0["D0 Indict"]
-        D1["D1 Discover"]
-        D2["D2 Defend"]
-        D3["D3 Hearing"]
-        D4["D4 Synthesis"]
-        D0 --> D1 --> D2 --> D3 --> D4
+    subgraph openLoop ["Open-Loop: Comparator"]
+        inOL["Signal"] --> ampOL["Op-Amp (A=100k)"] --> outOL["Saturated: HIGH or LOW"]
     end
 
-    Light["+ Light Path (Thesis)"] --> D0
-    Shadow["- Shadow Path (Antithesis)"] --> D2
-
-    D4 --> Output["Synthesis Verdict"]
-
-    Output -->|"Remand (confidence < threshold)"| D0
+    subgraph closedLoop ["Closed-Loop: Linear Amplifier"]
+        inCL["Signal"] --> ampCL["Op-Amp (A=100k)"] --> outCL["Proportional Output"]
+        outCL -->|"Rf / Rg feedback"| ampCL
+    end
 ```
 
-#### Reading the parallel
+```mermaid
+flowchart LR
+    subgraph noFeedback ["No Feedback: Snap Judgment"]
+        thesis1["Thesis"] --> dial1["Dialectic"] --> verdict1["Binary: Affirm or Acquit"]
+    end
 
-| Op-Amp | Adversarial Dialectic |
-|---|---|
-| Non-inverting input (+V) | Light Path thesis (Herald, Seeker analyze the case) |
-| Inverting input (-V) | Shadow Path antithesis (Challenger, Abyss contest the thesis) |
-| Differential stage | D0-D3: structured debate amplifying the disagreement |
-| Output (Vout) | D4 Synthesis: reconciled verdict with calibrated confidence |
-| Feedback network (β) | Remand loop: if confidence < threshold, feed output back as new thesis |
-| Open-loop saturation | Unchecked dialectic: thesis or antithesis dominates without moderation |
-| Closed-loop stability | Convergence: β limits gain so the system settles on a defensible answer |
-| Gain-bandwidth tradeoff | Accuracy-speed tradeoff: more feedback (stricter threshold) = more stable but slower convergence |
+    subgraph withFeedback ["With Feedback: Calibrated Analysis"]
+        thesis2["Thesis"] --> dial2["Dialectic"] --> verdict2["Calibrated Verdict"]
+        verdict2 -->|"MaxTurns / Threshold"| dial2
+    end
+```
 
-The critical insight: an op-amp without feedback is useless (saturates instantly). A dialectic without convergence criteria is equally useless (loops forever or commits to the first strong argument). The feedback network / convergence threshold is not optional — it is the mechanism that transforms raw amplification into controlled, useful output.
+Without convergence criteria, the Dialectic is a comparator: whichever argument is slightly stronger wins instantly with maximum confidence. With feedback (convergence threshold, max turns), the Dialectic produces proportional, calibrated output where confidence reflects the actual weight of evidence.
+
+#### Non-Inverting Amplifier Topology
+
+The classic non-inverting amplifier is the op-amp's most common configuration. Two resistors (Rf and Rg) form a voltage divider in the feedback path. The closed-loop gain is entirely determined by these passive components: `Gain = 1 + Rf/Rg`. The op-amp's own gain (100,000) becomes irrelevant — only the feedback network matters.
+
+```mermaid
+flowchart TB
+    signal["+V Signal"] --> opamp["Op-Amp"]
+    opamp --> vout["Vout"]
+    vout -->|"Rf"| divider["Voltage Divider"]
+    divider -->|"to inverting input"| opamp
+    divider -->|"Rg"| gnd["GND"]
+```
+
+```mermaid
+flowchart TB
+    light["+ Light Thesis"] --> engine["Dialectic Engine"]
+    engine --> synth["Synthesis"]
+    synth -->|"MaxTurns (Rf)"| check["Convergence Check"]
+    check -->|"to antithesis input"| engine
+    check -->|"Threshold (Rg)"| baseline["Baseline"]
+```
+
+The mapping: **Rf = MaxTurns** (how many debate rounds feed back) and **Rg = ConvergenceThreshold** (the reference level against which convergence is measured). Just as `Gain = 1 + Rf/Rg`, the dialectic's effective "amplification" of evidence quality scales with more rounds and a lower threshold. And just as in circuit design, **the useful behavior is set by the feedback parameters, not by the raw LLM capability** — an LLM with higher raw ability (higher open-loop gain) produces no better output if the feedback network is identical.
+
+#### The Two Golden Rules
+
+The ideal op-amp obeys two golden rules (Horowitz & Hill, *The Art of Electronics*):
+
+1. **In negative feedback, the output does whatever is necessary to make the voltage difference between the inputs zero.**
+2. **The inputs draw zero current.**
+
+These translate directly to Dialectic design rules:
+
+1. **The synthesis does whatever is necessary to make the disagreement between thesis and antithesis zero.** A synthesis that leaves unresolved contradictions between Light and Shadow is like an op-amp that hasn't settled — it's still in transient, not at equilibrium. The convergence check should verify that the gap has closed, not just that N rounds have passed.
+
+2. **The dialectic draws zero evidence.** The debate process should not consume, alter, or destroy the original evidence. Thesis and antithesis observe the same evidence; they interpret it differently. This is the "high input impedance" principle: the dialectic probes the evidence without loading it (changing it). If the dialectic process itself corrupts or selectively omits evidence, input impedance is too low.
+
+#### Extended Parallel
+
+| Op-Amp Characteristic | Dialectic Equivalent | Design Implication |
+|---|---|---|
+| Non-inverting input (+V) | Light Path thesis | The primary signal to be processed |
+| Inverting input (-V) | Shadow Path antithesis | The challenging signal fed back from output |
+| Differential stage | D0-D3: structured debate | Amplifies the disagreement between inputs |
+| Output (Vout) | D4 Synthesis verdict | Single reconciled output |
+| Feedback network (Rf, Rg) | MaxTurns, ConvergenceThreshold | Passive components that determine all useful behavior |
+| Open-loop gain (100k) | Raw LLM capability | Enormous but useless without feedback; irrelevant to closed-loop behavior |
+| Closed-loop gain (1 + Rf/Rg) | Effective quality amplification | Entirely determined by feedback parameters, not raw capability |
+| **Golden Rule 1**: Vdiff -> 0 | Synthesis closes the thesis-antithesis gap | Convergence should verify gap closure, not just round count |
+| **Golden Rule 2**: zero input current | Dialectic does not consume evidence | Evidence is observed, never altered by the debate process |
+| **CMRR** (common-mode rejection) | Reject shared assumptions | The dialectic should amplify *disagreement*, not shared biases. If both thesis and antithesis share a faulty assumption, the synthesis inherits it. High CMRR = the dialectic surfaces and challenges shared premises |
+| **GBWP** (gain-bandwidth product) | Quality-speed product is constant | More calibrated confidence (gain) requires more debate rounds (time). Faster convergence produces less calibrated output. The product is fixed for a given model |
+| **Compensation** (dominant pole) | MaxNegations limit | Op-amps add a dominant pole capacitor to prevent high-frequency oscillation. MaxNegations prevents the dialectic from oscillating between thesis and antithesis indefinitely. Both sacrifice bandwidth for stability |
+| **Slew rate** (max dV/dt) | Complexity processing limit | An op-amp distorts signals that change faster than its slew rate. An LLM distorts analysis when input complexity exceeds its processing capacity. Both produce triangle waves (oversimplified output) instead of faithful reproduction |
+| **Input offset voltage** | Persona bias | A real op-amp has a small inherent bias that shifts the output. Each persona has an inherent element bias. Both are measurable, both can be compensated (Ouroboros measures persona bias; op-amps have offset null pins) |
+| **Saturation** (output rails) | Confidence floor/ceiling | Output cannot exceed supply rails (0.0 to 1.0 confidence). A dialectic that always produces 0.95 or 0.15 is railing — the feedback isn't working |
+| **Phase reversal** (input overdrive) | Confirmation bias lock-in | When an op-amp input is overdriven beyond the common-mode range, positive feedback can lock the output in the wrong state. When a thesis is overwhelmingly strong, the dialectic can lock into confirmation bias — the antithesis cannot overcome the thesis regardless of evidence |
+| **Noise** (thermal, flicker) | Hallucination, prompt sensitivity | Intrinsic output noise even with zero input. LLMs hallucinate even with clean prompts. Both require low-noise designs for high-precision work |
+| **PSRR** (power supply rejection) | Prompt template stability | A good op-amp rejects power supply noise. A good dialectic rejects variations in prompt formatting, template wording, and irrelevant context changes |
+
+#### Design Improvements from Op-Amp Theory
+
+**1. Convergence verification should check gap closure, not just round count.** Golden Rule 1 says the output settles when `V+ - V- = 0`. Currently, `MaxTurns` limits rounds but doesn't verify that the thesis-antithesis gap actually closed. A dialectic that runs 3 rounds but leaves major contradictions unresolved is like an op-amp that hasn't settled. The convergence check should measure the remaining disagreement between the last thesis and antithesis — not just whether the budget is exhausted.
+
+**2. Evidence immutability during dialectic.** Golden Rule 2 says inputs draw zero current. The dialectic should guarantee that the original evidence (walker context, prior artifacts) is read-only during D0-D4. If the debate process modifies, filters, or selectively presents evidence to thesis or antithesis holders, input impedance is compromised and the output is biased by the process, not just the evidence.
+
+**3. Shared-assumption detection (CMRR).** The most dangerous failure mode in a dialectic isn't that thesis and antithesis disagree — it's that they agree on something wrong. High CMRR means the system detects and challenges premises shared by both sides. A CMRR check in the dialectic would explicitly ask: "What assumptions do thesis and antithesis share? Are any of them unwarranted?" This is the one place where agreement should raise suspicion, not confidence.
+
+**4. Quality-speed product as a model constant.** GBWP is fixed for a given op-amp. For a given model, the product of confidence calibration and convergence speed may be approximately constant. Ouroboros could measure this empirically: run the same dialectic at different MaxTurns values and plot confidence accuracy vs. rounds. The resulting curve characterizes the model's GBWP equivalent — pipeline designers can then choose the right operating point on the curve for their latency/quality tradeoff.
+
+**5. Compensation for oscillation prevention.** MaxNegations is the dominant pole capacitor. Without it, a dialectic between two strong personas can oscillate: thesis refuted, antithesis refuted, thesis reinstated, antithesis reinstated. MaxNegations breaks this oscillation by forcing a decision after N rejections. The value should be tuned per element pair: Water vs Fire (high conflict = needs more compensation) vs Earth vs Air (low conflict = less compensation needed).
+
+**6. Offset calibration via Ouroboros.** Real op-amps have offset null pins to trim inherent bias. Ouroboros already measures per-model behavioral dimensions — this is offset measurement. The next step is offset *compensation*: when a persona's measured bias is known, the prompt preamble can include a corrective instruction ("you tend toward over-confidence in classification; weight counter-evidence 10% more heavily"). This is the dialectic equivalent of trimming the offset null potentiometer.
 
 ---
 
@@ -517,11 +566,23 @@ Despite this, the structural patterns transfer remarkably well. The mixed-signal
 
 7. **Signal conditioning vocabulary in docs** — Adopt circuit conditioning vocabulary (anti-aliasing, amplification, level-shifting, impedance matching) in mask and pipeline design documentation. No code change needed — purely a conceptual framework that helps pipeline designers make principled mask placement decisions.
 
+8. **Gap-closure convergence check** — Change dialectic convergence from "did we exhaust MaxTurns?" to "did the thesis-antithesis gap close?" (Op-amp Golden Rule 1). Measure remaining disagreement between the final thesis and antithesis. A dialectic that runs MaxTurns rounds but leaves major contradictions is like an op-amp that hasn't settled — still in transient.
+
+9. **Evidence immutability guarantee** — Enforce read-only access to walker context and prior artifacts during D0-D4 (Op-amp Golden Rule 2: zero input current). The debate process should observe evidence, never alter it. Violations bias the output by process, not evidence.
+
+10. **Shared-assumption detection (CMRR check)** — Add a dedicated challenge step that surfaces premises shared by both thesis and antithesis. Shared agreement in a dialectic should raise suspicion (potential shared bias), not confidence. This is the one place where consensus is a warning signal.
+
+11. **Quality-speed product measurement** — Use Ouroboros to empirically measure each model's GBWP equivalent: run the same dialectic at varying MaxTurns and plot confidence accuracy vs. rounds. The resulting curve lets pipeline designers choose the optimal operating point for their latency/quality tradeoff.
+
+12. **Persona offset compensation** — When Ouroboros measures a persona's behavioral bias (offset voltage), inject a corrective preamble instruction to trim it. This is the dialectic equivalent of adjusting an op-amp's offset null potentiometer.
+
 ---
 
 ## References
 
 - Electronic circuit fundamentals: `en.wikipedia.org/wiki/Electronic_circuit`
+- Operational amplifier: `en.wikipedia.org/wiki/Operational_amplifier` (golden rules, CMRR, GBWP, compensation, slew rate)
+- Horowitz & Hill, *The Art of Electronics* (golden rules of ideal op-amps)
 - ADC principles: `en.wikipedia.org/wiki/Analog-to-digital_converter`
 - DAC principles: `en.wikipedia.org/wiki/Digital-to-analog_converter`
 - Kirchhoff's circuit laws: `en.wikipedia.org/wiki/Kirchhoff%27s_circuit_laws`
