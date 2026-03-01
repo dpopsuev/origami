@@ -168,6 +168,9 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 		if err != nil {
 			if intr, ok := AsInterrupt(err); ok {
 				state.Status = "interrupted"
+				if intr.Data != nil {
+					state.Context["interrupt_data"] = intr.Data
+				}
 				emitEvent(obs, WalkEvent{
 					Type:   EventWalkInterrupted,
 					Node:   node.Name(),

@@ -17,11 +17,12 @@ type Transformer interface {
 
 // TransformerContext carries all inputs needed by a transformer.
 type TransformerContext struct {
-	Input    any            // prior node's output (or circuit input)
-	Config   map[string]any // circuit vars
-	Prompt   string         // prompt template path or content
-	NodeName string         // current node name
-	Meta     map[string]any // additional metadata from NodeDef or walk state
+	Input       any            // prior node's output (or circuit input)
+	Config      map[string]any // circuit vars
+	Prompt      string         // prompt template path or content
+	NodeName    string         // current node name
+	Meta        map[string]any // additional metadata from NodeDef or walk state
+	WalkerState *WalkerState   // walker state including context, outputs, and loop counts
 }
 
 // TransformerRegistry maps transformer names to implementations.
@@ -122,11 +123,12 @@ func (n *transformerNode) Process(ctx context.Context, nc NodeContext) (Artifact
 	}
 
 	tc := &TransformerContext{
-		Input:    input,
-		Config:   n.config,
-		Prompt:   prompt,
-		NodeName: n.name,
-		Meta:     meta,
+		Input:       input,
+		Config:      n.config,
+		Prompt:      prompt,
+		NodeName:    n.name,
+		Meta:        meta,
+		WalkerState: nc.WalkerState,
 	}
 
 	result, err := n.trans.Transform(ctx, tc)

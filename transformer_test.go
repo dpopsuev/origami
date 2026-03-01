@@ -519,6 +519,38 @@ func TestBuiltinGoTemplate_WithMeta(t *testing.T) {
 	}
 }
 
+func TestTransformerNode_WalkerStateReachesTransformer(t *testing.T) {
+	var captured *WalkerState
+	captureTrans := TransformerFunc("capture-state", func(_ context.Context, tc *TransformerContext) (any, error) {
+		captured = tc.WalkerState
+		return "ok", nil
+	})
+
+	node := &transformerNode{
+		name:  "test-node",
+		trans: captureTrans,
+	}
+
+	state := NewWalkerState("walker-1")
+	state.Context["injected"] = "hello"
+
+	nc := NodeContext{WalkerState: state}
+	_, err := node.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+
+	if captured == nil {
+		t.Fatal("WalkerState was not passed to TransformerContext")
+	}
+	if captured.ID != "walker-1" {
+		t.Errorf("WalkerState.ID = %q, want walker-1", captured.ID)
+	}
+	if captured.Context["injected"] != "hello" {
+		t.Errorf("Context[injected] = %v, want hello", captured.Context["injected"])
+	}
+}
+
 func TestIsTransformerNode(t *testing.T) {
 	trans := &transformerNode{name: "t", trans: &echoTransformer{}}
 	plain := &testNode{name: "p"}

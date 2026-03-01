@@ -75,6 +75,7 @@ type NodeDef struct {
 	Provider    string          `yaml:"provider,omitempty"`
 	Prompt      string          `yaml:"prompt,omitempty"`
 	Input       string          `yaml:"input,omitempty"`
+	Before      []string        `yaml:"before,omitempty"`
 	After       []string        `yaml:"after,omitempty"`
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
 	Cache       *CacheDef       `yaml:"cache,omitempty"`

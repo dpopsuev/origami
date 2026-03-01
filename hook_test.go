@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -275,6 +276,215 @@ func TestFileWriteHook_AutoRegisteredByRunner(t *testing.T) {
 	_, err = runner.Hooks.Get("file-write")
 	if err != nil {
 		t.Fatalf("file-write hook should be registered: %v", err)
+	}
+}
+
+func TestBeforeHooks_FireBeforeNodeProcessing(t *testing.T) {
+	var order []string
+	hooks := HookRegistry{}
+	hooks.Register(NewHookFunc("before.inject", func(_ context.Context, nodeName string, art Artifact) error {
+		if art != nil {
+			t.Error("before-hook should receive nil artifact")
+		}
+		order = append(order, "before:"+nodeName)
+		return nil
+	}))
+	hooks.Register(NewHookFunc("after.store", func(_ context.Context, nodeName string, art Artifact) error {
+		if art == nil {
+			t.Error("after-hook should receive non-nil artifact")
+		}
+		order = append(order, "after:"+nodeName)
+		return nil
+	}))
+
+	def := &CircuitDef{
+		Circuit: "test",
+		Nodes: []NodeDef{
+			{Name: "a", Element: "fire", Transformer: "echo", Before: []string{"before.inject"}, After: []string{"after.store"}},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "_done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{
+		Transformers: TransformerRegistry{"echo": &echoTransformer{}},
+		Hooks:        hooks,
+	})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	err = runner.Walk(context.Background(), nil, "a")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	expected := []string{"before:a", "after:a"}
+	if len(order) != len(expected) {
+		t.Fatalf("hook calls = %v, want %v", order, expected)
+	}
+	for i, exp := range expected {
+		if order[i] != exp {
+			t.Errorf("order[%d] = %q, want %q", i, order[i], exp)
+		}
+	}
+}
+
+func TestBeforeHooks_InjectIntoWalkerContext(t *testing.T) {
+	hooks := HookRegistry{}
+
+	var capturedState *WalkerState
+	hooks.Register(NewHookFunc("inject.data", func(ctx context.Context, _ string, _ Artifact) error {
+		ws := WalkerStateFromContext(ctx)
+		if ws == nil {
+			return fmt.Errorf("WalkerStateFromContext returned nil")
+		}
+		ws.Context["greeting"] = "hello from before-hook"
+		return nil
+	}))
+
+	captureTrans := TransformerFunc("capture", func(_ context.Context, tc *TransformerContext) (any, error) {
+		capturedState = tc.WalkerState
+		return "ok", nil
+	})
+
+	walker := NewProcessWalker("test")
+
+	def := &CircuitDef{
+		Circuit: "test",
+		Nodes: []NodeDef{
+			{Name: "a", Element: "fire", Transformer: "capture", Before: []string{"inject.data"}},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "_done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{
+		Transformers: TransformerRegistry{"capture": captureTrans},
+		Hooks:        hooks,
+	})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	err = runner.Walk(context.Background(), walker, "a")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	if capturedState == nil {
+		t.Fatal("WalkerState not captured")
+	}
+	if capturedState.Context["greeting"] != "hello from before-hook" {
+		t.Errorf("greeting = %v, want 'hello from before-hook'", capturedState.Context["greeting"])
+	}
+}
+
+func TestBeforeHooks_OnlyOnDeclaredNodes(t *testing.T) {
+	var beforeCalls []string
+	hooks := HookRegistry{}
+	hooks.Register(NewHookFunc("inject.data", func(_ context.Context, nodeName string, _ Artifact) error {
+		beforeCalls = append(beforeCalls, nodeName)
+		return nil
+	}))
+
+	def := &CircuitDef{
+		Circuit: "test",
+		Nodes: []NodeDef{
+			{Name: "a", Element: "fire", Transformer: "echo", Before: []string{"inject.data"}},
+			{Name: "b", Element: "water", Transformer: "echo"},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "b", When: "true"},
+			{ID: "E2", From: "b", To: "_done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{
+		Transformers: TransformerRegistry{"echo": &echoTransformer{}},
+		Hooks:        hooks,
+	})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	err = runner.Walk(context.Background(), nil, "a")
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	if len(beforeCalls) != 1 || beforeCalls[0] != "a" {
+		t.Errorf("before-hook calls = %v, want [a]", beforeCalls)
+	}
+}
+
+func TestBeforeHooks_MissingHookContinues(t *testing.T) {
+	hooks := HookRegistry{}
+	def := &CircuitDef{
+		Circuit: "test",
+		Nodes: []NodeDef{
+			{Name: "a", Element: "fire", Transformer: "echo", Before: []string{"nonexistent"}},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "_done", When: "true"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{
+		Transformers: TransformerRegistry{"echo": &echoTransformer{}},
+		Hooks:        hooks,
+	})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	err = runner.Walk(context.Background(), nil, "a")
+	if err != nil {
+		t.Fatalf("Walk should succeed even with missing before-hook: %v", err)
+	}
+}
+
+func TestNodeDef_BeforeParsedFromYAML(t *testing.T) {
+	yaml := `
+circuit: test-before
+nodes:
+  - name: recall
+    element: earth
+    transformer: echo
+    before: [inject.envelope, inject.history]
+    after: [store.recall]
+edges:
+  - id: E1
+    from: recall
+    to: _done
+    when: "true"
+start: recall
+done: _done
+`
+	def, err := LoadCircuit([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+
+	nd := def.Nodes[0]
+	if len(nd.Before) != 2 {
+		t.Fatalf("Before = %v, want 2 entries", nd.Before)
+	}
+	if nd.Before[0] != "inject.envelope" || nd.Before[1] != "inject.history" {
+		t.Errorf("Before = %v", nd.Before)
+	}
+	if len(nd.After) != 1 || nd.After[0] != "store.recall" {
+		t.Errorf("After = %v", nd.After)
 	}
 }
 

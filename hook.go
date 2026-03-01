@@ -10,6 +10,22 @@ import (
 	"text/template"
 )
 
+type walkerStateCtxKey struct{}
+
+// WithWalkerState returns a child context carrying the given WalkerState.
+// Used by hookingWalker to make walker state available to hooks via Go context.
+func WithWalkerState(ctx context.Context, s *WalkerState) context.Context {
+	return context.WithValue(ctx, walkerStateCtxKey{}, s)
+}
+
+// WalkerStateFromContext extracts the WalkerState from a Go context.
+// Before-hooks use this to inject data into the walker's Context map.
+// Returns nil if the context does not carry a WalkerState.
+func WalkerStateFromContext(ctx context.Context) *WalkerState {
+	s, _ := ctx.Value(walkerStateCtxKey{}).(*WalkerState)
+	return s
+}
+
 // Hook is a side-effect function invoked after a node completes.
 // Hooks receive the validated artifact and can perform side effects
 // (store writes, notifications) but do NOT affect routing or data flow.

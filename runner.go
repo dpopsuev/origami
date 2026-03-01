@@ -35,16 +35,18 @@ func AsInterrupt(err error) (Interrupt, bool) {
 	return i, ok
 }
 
-// Runner drives a circuit graph with automatic artifact schema validation
-// and after-hooks. Domain tools create a Runner from a CircuitDef and their
-// registries, then call Walk with a domain Walker.
+// Runner drives a circuit graph with automatic artifact schema validation,
+// before-hooks (context injection), and after-hooks (side effects).
+// Domain tools create a Runner from a CircuitDef and their registries,
+// then call Walk with a domain Walker.
 type Runner struct {
-	Circuit  *CircuitDef
-	Graph     Graph
-	Schemas   map[string]*ArtifactSchema // node name -> schema (from CircuitDef)
-	NodeHooks map[string][]string        // node name -> hook names (from NodeDef.After)
-	Hooks     HookRegistry               // resolved hooks
-	Logger    *slog.Logger
+	Circuit    *CircuitDef
+	Graph       Graph
+	Schemas     map[string]*ArtifactSchema // node name -> schema (from CircuitDef)
+	NodeBefore  map[string][]string        // node name -> before-hook names (from NodeDef.Before)
+	NodeHooks   map[string][]string        // node name -> after-hook names (from NodeDef.After)
+	Hooks       HookRegistry               // resolved hooks
+	Logger      *slog.Logger
 }
 
 // NewRunner constructs a Runner from a circuit definition and registries.
@@ -69,12 +71,16 @@ func NewRunnerWith(def *CircuitDef, reg GraphRegistries) (*Runner, error) {
 	}
 
 	schemas := make(map[string]*ArtifactSchema, len(def.Nodes))
+	nodeBefore := make(map[string][]string, len(def.Nodes))
 	nodeHooks := make(map[string][]string, len(def.Nodes))
 	nodeMeta := make(map[string]map[string]any, len(def.Nodes))
 	needsFileWrite := false
 	for _, nd := range def.Nodes {
 		if nd.Schema != nil {
 			schemas[nd.Name] = nd.Schema
+		}
+		if len(nd.Before) > 0 {
+			nodeBefore[nd.Name] = nd.Before
 		}
 		if len(nd.After) > 0 {
 			nodeHooks[nd.Name] = nd.After
@@ -100,11 +106,12 @@ func NewRunnerWith(def *CircuitDef, reg GraphRegistries) (*Runner, error) {
 	}
 
 	return &Runner{
-		Circuit:  def,
-		Graph:     graph,
-		Schemas:   schemas,
-		NodeHooks: nodeHooks,
-		Hooks:     hooks,
+		Circuit:    def,
+		Graph:       graph,
+		Schemas:     schemas,
+		NodeBefore:  nodeBefore,
+		NodeHooks:   nodeHooks,
+		Hooks:       hooks,
 	}, nil
 }
 
@@ -122,12 +129,14 @@ func (r *Runner) Walk(ctx context.Context, walker Walker, startNode string) erro
 		log:     r.Logger,
 	}
 	var w Walker = vw
-	if len(r.NodeHooks) > 0 && r.Hooks != nil {
+	hasHooks := (len(r.NodeBefore) > 0 || len(r.NodeHooks) > 0) && r.Hooks != nil
+	if hasHooks {
 		w = &hookingWalker{
-			inner:     vw,
-			nodeHooks: r.NodeHooks,
-			hooks:     r.Hooks,
-			log:       r.Logger,
+			inner:      vw,
+			nodeBefore: r.NodeBefore,
+			nodeHooks:  r.NodeHooks,
+			hooks:      r.Hooks,
+			log:        r.Logger,
 		}
 	}
 	return r.Graph.Walk(ctx, w, startNode)
@@ -169,14 +178,16 @@ func (vw *validatingWalker) Handle(ctx context.Context, node Node, nc NodeContex
 	return artifact, nil
 }
 
-// hookingWalker wraps a Walker to invoke after-hooks once a node's
-// artifact is validated. Hook errors are logged but do not stop the walk
-// by default. Set FailOnHookError on the Runner to change this.
+// hookingWalker wraps a Walker to invoke before-hooks (context injection)
+// and after-hooks (side effects). Before-hooks run with nil artifact and
+// can inject data into walker context. After-hooks run with the node's
+// artifact. Hook errors are logged but do not stop the walk by default.
 type hookingWalker struct {
-	inner     Walker
-	nodeHooks map[string][]string // node name -> hook names
-	hooks     HookRegistry
-	log       *slog.Logger
+	inner      Walker
+	nodeBefore map[string][]string // node name -> before-hook names
+	nodeHooks  map[string][]string // node name -> after-hook names
+	hooks      HookRegistry
+	log        *slog.Logger
 }
 
 func (hw *hookingWalker) Identity() AgentIdentity      { return hw.inner.Identity() }
@@ -184,13 +195,28 @@ func (hw *hookingWalker) SetIdentity(id AgentIdentity)  { hw.inner.SetIdentity(i
 func (hw *hookingWalker) State() *WalkerState           { return hw.inner.State() }
 
 func (hw *hookingWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
+	hookCtx := WithWalkerState(ctx, hw.State())
+	for _, name := range hw.nodeBefore[node.Name()] {
+		hook, hErr := hw.hooks.Get(name)
+		if hErr != nil {
+			if hw.log != nil {
+				hw.log.Warn("before-hook not found", slog.String("hook", name), slog.String("node", node.Name()))
+			}
+			continue
+		}
+		if hErr = hook.Run(hookCtx, node.Name(), nil); hErr != nil {
+			if hw.log != nil {
+				hw.log.Warn("before-hook error", slog.String("hook", name), slog.String("node", node.Name()), slog.String("error", hErr.Error()))
+			}
+		}
+	}
+
 	artifact, err := hw.inner.Handle(ctx, node, nc)
 	if err != nil {
 		return nil, err
 	}
 
-	hookNames := hw.nodeHooks[node.Name()]
-	for _, name := range hookNames {
+	for _, name := range hw.nodeHooks[node.Name()] {
 		hook, hErr := hw.hooks.Get(name)
 		if hErr != nil {
 			if hw.log != nil {
@@ -198,7 +224,7 @@ func (hw *hookingWalker) Handle(ctx context.Context, node Node, nc NodeContext) 
 			}
 			continue
 		}
-		if hErr = hook.Run(ctx, node.Name(), artifact); hErr != nil {
+		if hErr = hook.Run(hookCtx, node.Name(), artifact); hErr != nil {
 			if hw.log != nil {
 				hw.log.Warn("hook error", slog.String("hook", name), slog.String("node", node.Name()), slog.String("error", hErr.Error()))
 			}
@@ -206,6 +232,13 @@ func (hw *hookingWalker) Handle(ctx context.Context, node Node, nc NodeContext) 
 	}
 
 	return artifact, nil
+}
+
+// WrapWithCheckpointer wraps a Walker so that state is saved after each
+// successful node and on Interrupt. Use this when calling Runner.Walk()
+// directly (outside of framework.Run) and you need checkpoint support.
+func WrapWithCheckpointer(w Walker, cp Checkpointer) Walker {
+	return &checkpointingWalker{inner: w, cp: cp}
 }
 
 // checkpointingWalker wraps a Walker to save state after each successful
@@ -222,6 +255,9 @@ func (cw *checkpointingWalker) State() *WalkerState           { return cw.inner.
 func (cw *checkpointingWalker) Handle(ctx context.Context, node Node, nc NodeContext) (Artifact, error) {
 	artifact, err := cw.inner.Handle(ctx, node, nc)
 	if err != nil {
+		if IsInterrupt(err) {
+			_ = cw.cp.Save(cw.inner.State())
+		}
 		return nil, err
 	}
 	if cpErr := cw.cp.Save(cw.inner.State()); cpErr != nil {
