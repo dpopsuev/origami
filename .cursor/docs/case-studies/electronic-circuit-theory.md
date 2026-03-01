@@ -59,22 +59,22 @@ Circuit theory says this asymmetry is a design smell. The structured-to-unstruct
 
 ```mermaid
 flowchart LR
-    subgraph unstructuredIn ["Unstructured Domain"]
-        raw["LLM Output\nLogs, Free Text\n(continuous, noisy)"]
+    subgraph unstructuredIn ["Unstructured"]
+        raw["LLM Output / Logs / Free Text"]
     end
 
-    raw -->|"sample, quantize,\nschema-validate"| ADC["Extractor\n(ADC)"]
+    raw --> ADC["Extractor (ADC)"]
     ADC --> structured
 
-    subgraph structuredDomain ["Structured Domain"]
-        structured["Typed Artifact\nGo Struct\n(discrete, validated)"]
+    subgraph structuredDomain ["Structured"]
+        structured["Typed Artifact / Go Struct"]
     end
 
-    structured -->|"interpolate,\ntemplate-render"| DAC["Renderer\n(DAC)"]
+    structured --> DAC["Renderer (DAC)"]
     DAC --> prompt
 
-    subgraph unstructuredOut ["Unstructured Domain"]
-        prompt["Prompt for Next Node\nNatural Language\n(continuous, shaped)"]
+    subgraph unstructuredOut ["Unstructured"]
+        prompt["Prompt for Next Node"]
     end
 ```
 
@@ -115,16 +115,16 @@ The transistor is the fundamental active element in electronics — everything e
 
 ```mermaid
 flowchart LR
-    subgraph transistor ["Transistor (Active Element)"]
-        vin["Vin\n(input signal)"] --> tr["Transistor\n(gain = A)"]
-        gate["Gate / Base\n(bias controls behavior)"] -.-> tr
-        tr --> vout["Vout = A x Vin\n(amplified)"]
+    subgraph transistor ["Transistor"]
+        vin["Vin"] --> tr["Transistor"]
+        gate["Gate / Base"] -.->|"bias"| tr
+        tr --> vout["Vout (amplified)"]
     end
 
-    subgraph nodeOrigami ["Node (Active Element)"]
-        artIn["Input\nArtifact"] --> nd["Node.Process\n(domain logic)"]
-        elem["ElementAffinity\n(behavioral bias)"] -.-> nd
-        nd --> artOut["Output\nArtifact"]
+    subgraph nodeOrigami ["Node"]
+        artIn["Input Artifact"] --> nd["Node.Process"]
+        elem["ElementAffinity"] -.->|"bias"| nd
+        nd --> artOut["Output Artifact"]
     end
 ```
 
@@ -136,20 +136,20 @@ A capacitor accumulates charge over time — voltage builds as current flows in.
 
 ```mermaid
 flowchart TB
-    subgraph capacitor ["Capacitor (Stores Charge)"]
+    subgraph capacitor ["Capacitor"]
         direction LR
-        it1["I at t1"] --> cap["C\n(accumulates)"]
+        it1["I at t1"] --> cap["C"]
         it2["I at t2"] --> cap
         it3["I at t3"] --> cap
-        cap --> voltage["V = Q/C\n(built-up voltage\navailable to circuit)"]
+        cap --> voltage["V = Q/C"]
     end
 
-    subgraph context ["WalkerState.Context (Stores State)"]
+    subgraph context ["WalkerState.Context"]
         direction LR
-        n1out["Node 1\noutput"] --> ctx["Context map\n(accumulates)"]
-        n2out["Node 2\noutput"] --> ctx
-        n3out["Node 3\noutput"] --> ctx
-        ctx --> downstream["Accumulated state\navailable to all\ndownstream nodes"]
+        n1out["Node 1 output"] --> ctx["Context map"]
+        n2out["Node 2 output"] --> ctx
+        n3out["Node 3 output"] --> ctx
+        ctx --> downstream["Available downstream"]
     end
 ```
 
@@ -161,14 +161,14 @@ A diode allows current in one direction only, above a threshold voltage. A short
 
 ```mermaid
 flowchart LR
-    subgraph diode ["Diode (Conditional One-Way)"]
-        srcA["Source"] -->|"V >= 0.7V\n(forward bias)"| d["Diode"] --> destA["Destination"]
-        srcA -.->|"V < 0.7V\n(reverse: blocked)"| normalA["Normal\npath"]
+    subgraph diode ["Diode"]
+        srcA["Source"] -->|"V >= 0.7V"| d["Diode"] --> destA["Destination"]
+        srcA -.->|"V < 0.7V: blocked"| normalA["Normal path"]
     end
 
-    subgraph shortcut ["Shortcut Edge (Conditional Skip)"]
-        classify["classify"] -->|"confidence >= 0.8\n(shortcut taken)"| s["Shortcut\nEdge"] --> decide["decide"]
-        classify -.->|"confidence < 0.8\n(normal path)"| investigate["investigate"]
+    subgraph shortcut ["Shortcut Edge"]
+        classify["classify"] -->|"confidence >= 0.8"| s["Shortcut Edge"] --> decide["decide"]
+        classify -.->|"confidence < 0.8"| investigate["investigate"]
     end
 ```
 
@@ -180,22 +180,22 @@ A system bus has three channels: data (payload), address (routing), control (sta
 
 ```mermaid
 flowchart TB
-    subgraph systemBus ["System Bus (3-Channel)"]
+    subgraph systemBus ["System Bus"]
         direction LR
-        dataBus["Data Bus\n(payload bytes)"]
-        addrBus["Address Bus\n(destination select)"]
-        ctrlBus["Control Bus\n(R/W, IRQ, clock)"]
+        dataBus["Data Bus"]
+        addrBus["Address Bus"]
+        ctrlBus["Control Bus"]
     end
 
-    dataBus <-->|"maps to"| artifactCh
-    addrBus <-->|"maps to"| dispatchID
-    ctrlBus <-->|"maps to"| statusSig
+    dataBus <-->|"payload"| artifactCh
+    addrBus <-->|"routing"| dispatchID
+    ctrlBus <-->|"status"| statusSig
 
-    subgraph papercup ["Papercup Signal Bus (3-Channel)"]
+    subgraph papercup ["Papercup Signal Bus"]
         direction LR
-        artifactCh["Artifact Channel\n(step payload)"]
-        dispatchID["Dispatch ID\n(routing key)"]
-        statusSig["Status Signal\n(waiting / processing / done)"]
+        artifactCh["Artifact Channel"]
+        dispatchID["Dispatch ID"]
+        statusSig["Status Signal"]
     end
 ```
 
@@ -209,18 +209,16 @@ The op-amp is the most instructive single-component analogy in this study. Its t
 
 ```mermaid
 flowchart LR
-    subgraph opamp ["Op-Amp (Differential Amplifier)"]
+    subgraph opamp ["Op-Amp"]
         direction TB
-        diff["Differential\nStage\n(A = 100,000)"]
+        diff["Differential Stage (A = 100k)"]
     end
 
-    Vplus["+V non-inverting\n(signal)"] --> diff
-    Vminus["-V inverting\n(feedback)"] --> diff
-    diff --> Vout["Vout\n(stable output)"]
+    Vplus["+V non-inverting"] --> diff
+    Vminus["-V inverting"] --> diff
+    diff --> Vout["Vout (stable)"]
 
     Vout -->|"feedback network (β)"| Vminus
-
-    note["Closed-loop gain: G = 1/β\nFeedback trades raw gain\nfor predictable stability"]
 ```
 
 The non-inverting input (+V) carries the signal. The inverting input (-V) carries a fraction of the output fed back through the feedback network (β). The differential stage amplifies the difference. Without feedback, the enormous open-loop gain (100,000x) drives the output to saturation on any tiny input difference. With feedback, the system self-corrects: output too high -> feedback increases inverting input -> difference shrinks -> output stabilizes.
@@ -229,7 +227,7 @@ The non-inverting input (+V) carries the signal. The inverting input (-V) carrie
 
 ```mermaid
 flowchart LR
-    subgraph dialectic ["Adversarial Dialectic (D0-D4)"]
+    subgraph dialectic ["Adversarial Dialectic"]
         direction TB
         D0["D0 Indict"]
         D1["D1 Discover"]
@@ -239,14 +237,12 @@ flowchart LR
         D0 --> D1 --> D2 --> D3 --> D4
     end
 
-    Light["+  Light Path\n(Thesis)\nHerald / Seeker"] --> D0
-    Shadow["-  Shadow Path\n(Antithesis)\nChallenger / Abyss"] --> D2
+    Light["+ Light Path (Thesis)"] --> D0
+    Shadow["- Shadow Path (Antithesis)"] --> D2
 
-    D4 --> Output["Synthesis\n(Affirm / Amend /\nAcquit / Remand)"]
+    D4 --> Output["Synthesis Verdict"]
 
-    Output -->|"Remand = feedback loop\n(confidence < threshold)"| D0
-
-    note["Convergence threshold = β\nRemand trades speed\nfor calibrated confidence"]
+    Output -->|"Remand (confidence < threshold)"| D0
 ```
 
 #### Reading the parallel
@@ -280,14 +276,12 @@ The critical insight: an op-amp without feedback is useless (saturates instantly
 
 ```mermaid
 flowchart LR
-    subgraph circuit ["Analog: Sensor → Conditioning → ADC"]
-        sensor["Sensor\n(raw analog)"] --> lpf["Low-Pass\nFilter\n(remove noise)"] --> amp["Amplifier\n(boost signal)"] --> ls["Level\nShift\n(match range)"] --> adc["ADC"]
-        adc --> digital["Digital\nOutput"]
+    subgraph circuit ["Analog Signal Conditioning"]
+        sensor["Sensor"] --> lpf["Filter"] --> amp["Amplifier"] --> ls["Level Shift"] --> adc["ADC"] --> digital["Digital Out"]
     end
 
-    subgraph origami ["Pipeline: LLM → Masks → Extractor"]
-        llmOut["LLM\nOutput\n(raw text)"] --> m1["CorrelationMask\n.pre\n(filter noise)"] --> m2["RecallMask\n.pre\n(amplify signal)"] --> proc["Node\n.Process"] --> m2post["RecallMask\n.post"] --> m1post["CorrelationMask\n.post"] --> ext["Extractor\n(ADC)"]
-        ext --> typed["Typed\nArtifact"]
+    subgraph origami ["Mask Pipeline"]
+        llmOut["LLM Output"] --> m1["CorrelationMask .pre"] --> m2["RecallMask .pre"] --> proc["Node.Process"] --> m2post["RecallMask .post"] --> m1post["CorrelationMask .post"] --> ext["Extractor"] --> typed["Typed Artifact"]
     end
 ```
 
@@ -308,19 +302,19 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    subgraph analogZone ["Analog Zone: Backcourt"]
-        recall["recall\n(unstructured)"] --> investigate["investigate\n(unstructured)"]
+    subgraph analogZone ["Analog Zone (Backcourt)"]
+        recall["recall"] --> investigate["investigate"]
     end
 
-    investigate -->|"ADC boundary"| ext["Extractor"]
+    investigate -->|"ADC"| ext["Extractor"]
     ext --> judge
 
-    subgraph digitalZone ["Digital Zone: Frontcourt"]
-        judge["judge\n(structured)"] --> synthesize["synthesize\n(structured)"]
+    subgraph digitalZone ["Digital Zone (Frontcourt)"]
+        judge["judge"] --> synthesize["synthesize"]
     end
 
-    synthesize -->|"DAC boundary"| rend["Renderer"]
-    rend --> nextLLM["Next LLM call\n(unstructured)"]
+    synthesize -->|"DAC"| rend["Renderer"]
+    rend --> nextLLM["Next LLM call"]
 ```
 
 The zone boundary is the most critical design point. Placing an extractor inside an analog zone or a renderer inside a digital zone is like placing an ADC in the middle of an analog filter chain — it quantizes the signal before conditioning is complete.
@@ -340,14 +334,14 @@ The zone boundary is the most critical design point. Placing an extractor inside
 
 ```mermaid
 flowchart LR
-    subgraph matched ["Matched Impedance (maximum power transfer)"]
-        fireW["Walker: Fire\nspeed: fast\nshortcut affinity: 0.9"] -->|"Z source = Z load\nmismatch: 0.0"| fireN["Node: Fire affinity\nneeds speed\nwants shortcuts"]
-        fireN --> goodArt["High-quality\nartifact"]
+    subgraph matched ["Matched: mismatch = 0.0"]
+        fireW["Walker (Fire)"] -->|"Z matched"| fireN["Node (Fire affinity)"]
+        fireN --> goodArt["High-quality artifact"]
     end
 
-    subgraph mismatched ["Mismatched Impedance (signal reflection)"]
-        waterW["Walker: Water\nspeed: deep\nshortcut affinity: 0.1"] -->|"Z source != Z load\nmismatch: 0.8"| fireN2["Node: Fire affinity\nneeds speed\nwants shortcuts"]
-        fireN2 --> poorArt["Degraded\nartifact"]
+    subgraph mismatched ["Mismatched: mismatch = 0.8"]
+        waterW["Walker (Water)"] -->|"Z mismatched"| fireN2["Node (Fire affinity)"]
+        fireN2 --> poorArt["Degraded artifact"]
     end
 ```
 
@@ -381,19 +375,19 @@ The pipeline equivalent of KCL: for every evidence item in a node's input, the o
 
 ```mermaid
 flowchart LR
-    subgraph kcl ["KCL: Sum of currents in = Sum of currents out"]
+    subgraph kcl ["KCL: current in = current out"]
         i1["I1 = 3A"] --> junction["Junction"]
         i2["I2 = 2A"] --> junction
         junction --> i3["I3 = 2A"]
         junction --> i4["I4 = 3A"]
     end
 
-    subgraph conservation ["Evidence Conservation: items in = items accounted"]
-        logs["3 log\nentries"] --> node["Investigation\nNode"]
-        commits["2 commit\nrefs"] --> node
-        node --> referenced["2 referenced\n(cited in output)"]
-        node --> transformed["1 transformed\n(merged into finding)"]
-        node --> drained["2 drained\n(explicit: irrelevant\nto this defect)"]
+    subgraph conservation ["Evidence: items in = items accounted"]
+        logs["3 log entries"] --> node["Investigation Node"]
+        commits["2 commit refs"] --> node
+        node --> referenced["2 referenced"]
+        node --> transformed["1 transformed"]
+        node --> drained["2 drained (explicit)"]
     end
 ```
 
@@ -415,9 +409,9 @@ flowchart LR
         n1["investigate"] --> n2["correlate"]
     end
 
-    n2 --> filter["Context Filter\n(decoupling capacitor)\nat zone boundary"]
-    filter -->|"pass: evidence,\ntimeline, artifacts"| n3
-    filter -.->|"block: raw_llm_output,\nintermediate_hypotheses"| stripped["(stripped)"]
+    n2 --> filter["Context Filter"]
+    filter -->|"pass: evidence, timeline"| n3
+    filter -.->|"block: raw LLM, hypotheses"| stripped["stripped"]
 
     subgraph zoneB ["Judgment Zone"]
         n3["judge"] --> n4["synthesize"]
