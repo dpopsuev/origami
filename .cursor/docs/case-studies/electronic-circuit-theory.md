@@ -82,6 +82,71 @@ Circuit theory says this asymmetry is a design smell. The structured-to-unstruct
 
 ---
 
+## Visual: Op-Amp as Adversarial Dialectic
+
+The op-amp is the most instructive single-component analogy in this study. Its two-input, one-output, feedback-stabilized architecture maps directly onto Origami's Adversarial Dialectic.
+
+### Op-Amp with Negative Feedback
+
+```mermaid
+flowchart LR
+    subgraph opamp ["Op-Amp (Differential Amplifier)"]
+        direction TB
+        diff["Differential\nStage\n(A = 100,000)"]
+    end
+
+    Vplus["+V non-inverting\n(signal)"] --> diff
+    Vminus["-V inverting\n(feedback)"] --> diff
+    diff --> Vout["Vout\n(stable output)"]
+
+    Vout -->|"feedback network (β)"| Vminus
+
+    note["Closed-loop gain: G = 1/β\nFeedback trades raw gain\nfor predictable stability"]
+```
+
+The non-inverting input (+V) carries the signal. The inverting input (-V) carries a fraction of the output fed back through the feedback network (β). The differential stage amplifies the difference. Without feedback, the enormous open-loop gain (100,000x) drives the output to saturation on any tiny input difference. With feedback, the system self-corrects: output too high -> feedback increases inverting input -> difference shrinks -> output stabilizes.
+
+### Origami Adversarial Dialectic (same topology)
+
+```mermaid
+flowchart LR
+    subgraph dialectic ["Adversarial Dialectic (D0-D4)"]
+        direction TB
+        D0["D0 Indict"]
+        D1["D1 Discover"]
+        D2["D2 Defend"]
+        D3["D3 Hearing"]
+        D4["D4 Synthesis"]
+        D0 --> D1 --> D2 --> D3 --> D4
+    end
+
+    Light["+  Light Path\n(Thesis)\nHerald / Seeker"] --> D0
+    Shadow["-  Shadow Path\n(Antithesis)\nChallenger / Abyss"] --> D2
+
+    D4 --> Output["Synthesis\n(Affirm / Amend /\nAcquit / Remand)"]
+
+    Output -->|"Remand = feedback loop\n(confidence < threshold)"| D0
+
+    note["Convergence threshold = β\nRemand trades speed\nfor calibrated confidence"]
+```
+
+### Reading the parallel
+
+| Op-Amp | Adversarial Dialectic |
+|---|---|
+| Non-inverting input (+V) | Light Path thesis (Herald, Seeker analyze the case) |
+| Inverting input (-V) | Shadow Path antithesis (Challenger, Abyss contest the thesis) |
+| Differential stage | D0-D3: structured debate amplifying the disagreement |
+| Output (Vout) | D4 Synthesis: reconciled verdict with calibrated confidence |
+| Feedback network (β) | Remand loop: if confidence < threshold, feed output back as new thesis |
+| Open-loop saturation | Unchecked dialectic: thesis or antithesis dominates without moderation |
+| Closed-loop stability | Convergence: β limits gain so the system settles on a defensible answer |
+| Gain-bandwidth tradeoff | Accuracy-speed tradeoff: more feedback (stricter threshold) = more stable but slower convergence |
+
+The critical insight: an op-amp without feedback is useless (saturates instantly). A dialectic without convergence criteria is equally useless (loops forever or commits to the first strong argument). The feedback network / convergence threshold is not optional — it is the mechanism that transforms raw amplification into controlled, useful output.
+
+---
+
 ## 4. Six Transferable Patterns
 
 ### Pattern 1: Signal Conditioning Chain
