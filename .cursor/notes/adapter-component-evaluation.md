@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-02
 **Contract:** naming-taxonomy (Phase 4)
-**Decision:** Defer — rename not justified during PoC.
+**Decision:** Executed — rename completed.
 
 ## Audit
 
@@ -18,16 +18,30 @@
 
 ## Analysis
 
-**"Adapter" is semantically accurate.** In the Origami DSL, an `Adapter` bundles transformers, extractors, and hooks into a namespace — it _adapts_ a domain's processing logic to the framework's interfaces. This is textbook Adapter pattern.
+**"Component" was selected** over "Adapter", "Plugin", "Extension", and "Provider" based on:
 
-**"Component" is marginally more intuitive** for newcomers who think of a "component" as a self-contained unit. But "Adapter" already communicates the relationship: the Adapter adapts domain logic to the framework.
+1. **Electronics metaphor alignment** — a component is a discrete functional block on a PCB; matches Origami's circuit vocabulary (Node, Edge, Zone, Circuit).
+2. **Semantic accuracy** — Components bundle capabilities (transformers, extractors, hooks) under a namespace. They are self-contained units, not GoF adapters bridging incompatible interfaces.
+3. **Reduced overloading** — "Adapter" was overloaded: `framework.Adapter`, `store.EnvelopeStoreAdapter` (GoF adapter), `adapter_routing.go` (wrapper). Renaming the framework concept to "Component" disambiguates.
+4. **Developer intuition** — "Component" is immediately understood as "a unit I install/import".
 
-**Risk/reward during PoC:**
-- ~200 occurrences across 33 files = high mechanical risk.
-- Zero functional or API change.
-- The `Adapter` struct, registry, and CLI surface would all need coordinated renaming across Origami + Asterisk + Achilles.
-- PoC API stability rule says "delete over deprecate, no shim layers" — a rename would be a large diff with no shim, but also no user-facing benefit.
+## Rename Scope
 
-## Decision
+| Before | After | Scope |
+|--------|-------|-------|
+| `framework.Adapter` | `framework.Component` | Struct, types, functions |
+| `adapter.go` | `component.go` | File rename |
+| `adapters/` | `components/` | Directory rename + import paths |
+| `adapter.yaml` | `component.yaml` | YAML manifest files |
+| `origami adapter` | `origami component` | CLI command |
+| `calibrate.ModelAdapter` | `calibrate.ModelBackend` | Interface |
+| `--adapter` flag | `--backend` flag | CLI flags |
 
-Defer the rename. Re-evaluate when the PoC-Done flag is raised and naming conventions are locked for external consumers. If the rename happens post-PoC, it should be a standalone atomic contract with a migration window.
+**Excluded (GoF adapter pattern, correct as-is):**
+- `store.EnvelopeStoreAdapter` — true GoF adapter bridging store interfaces
+- `adapter_routing.go` / `RoutingRecorder` — wraps transformers, not framework.Component
+- `framework_adapters.go` — bridge functions between framework types and RCA domain
+
+## Outcome
+
+Rename completed across Origami and Asterisk. All tests pass including race detector.

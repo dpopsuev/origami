@@ -93,6 +93,12 @@ description: Shared domain definitions for Origami
 - **Provider** — An optional field on `NodeDef` (`provider:` in YAML) that names which LLM backend should process the node. The `ProviderRouter` dispatcher selects the concrete `Dispatcher` implementation based on this name. Nodes without a provider use the default dispatcher.
 - **ProviderRouter** — A `Dispatcher` implementation that delegates to child dispatchers based on the `Provider` field in `DispatchContext`. Enables per-step LLM routing within a single circuit.
 
+## Components
+
+- **Component** — A reusable bundle of transformers, extractors, and hooks under a namespace. Consumers merge components into registries at graph build time. The `component.yaml` manifest declares a component's namespace, name, version, and provided capabilities. Registered via `WithComponents()` RunOption or `imports:` in circuit YAML. Previously named "Adapter" (renamed for clarity: the electronics metaphor — a component is a discrete functional block on a PCB). Lives in `component.go`.
+- **ComponentLoader** — Function type `func(name string) (*Component, error)` that resolves an import name to a live `Component`. Called by `BuildGraph` for each entry in `CircuitDef.Imports`.
+- **ModelBackend** — Interface for sending prompts and receiving responses during calibration. `Name() string`, `SendPrompt(caseID, step, prompt string) (json.RawMessage, error)`. Optionally implements `Identifiable` to report the underlying foundation model. Previously named "ModelAdapter". CLI flag: `--backend`. Lives in `calibrate/backend.go`.
+
 ## DSL primitives
 
 - **Module** — A self-contained functional block with defined inputs, outputs, and internal wiring. The `modules/` directory contains exportable Go packages (e.g., `modules/rca/`) that bundle transformers, extractors, hooks, and CLI commands for a specific domain. Electronics analogy: an IC module on a PCB — a discrete, replaceable unit with a defined pinout. Distinct from the `Marble` interface (composable circuit nodes); "module" names the package, "marble" names the framework primitive.

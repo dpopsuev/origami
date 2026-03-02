@@ -124,7 +124,7 @@ triggers:
 **Achilles usage:**
 - Currently no persistence. Future: save findings to a vulnerability database. The module would provide this capability without Go code.
 
-**Generalization:** The module is a hook-triggered persistence chain. On step completion, it writes the artifact to file (JSON) and optionally executes SQLite operations via the sqlite adapter. The trigger conditions, file paths, and SQL operations are all YAML-configured.
+**Generalization:** The module is a hook-triggered persistence chain. On step completion, it writes the artifact to file (JSON) and optionally executes SQLite operations via the sqlite component. The trigger conditions, file paths, and SQL operations are all YAML-configured.
 
 **Origami location:** `modules/persist/` using `adapters/sqlite/` for DB operations.
 
@@ -215,10 +215,10 @@ outputs:
 ```
 
 **Asterisk usage:**
-- `BasicAdapter` (adapt/basic.go) — 577 LOC heuristic adapter: keyword-based triage, component detection, store lookups, fallback when LLM unavailable
-- `LLMAdapter` (adapt/llm.go) — 269 LOC: prompt dispatch via `dispatch.MuxDispatcher`, stdin template parsing
-- `StubAdapter` (adapt/stub.go) — 218 LOC: returns pre-authored artifacts for deterministic calibration
-- `RoutingRecorder` (adapt/routing.go) — 214 LOC: wraps any adapter, logs routing decisions to JSON
+- `HeuristicComponent` — heuristic backend: keyword-based triage, component detection, store lookups, fallback when LLM unavailable
+- `TransformerComponent` — wraps any Transformer (LLM, stub) into a Component for circuit injection
+- `StubTransformer` — returns pre-authored artifacts for deterministic calibration
+- `RoutingRecorder` (adapter_routing.go) — wraps any transformer, logs routing decisions to JSON
 
 **Achilles usage:**
 - Direct subprocess call to `govulncheck`. No fallback chain, no LLM. But future Achilles phases will add LLM-based assessment — the module would provide that without Go code.
@@ -249,4 +249,4 @@ outputs:
 | `persist` | recall, triage, investigate, correlate, review (store hooks) | None (future: finding DB) | Yes — optional, hook-triggered |
 | `score` | calibrate (M1-M20, scorecard) | assess (risk score) | Yes — scorecard is generic |
 | `report` | report (5 formats) | report (terminal) | Yes — template-driven |
-| `dispatch` | All LLM nodes (adapter selection + fallback) | scan (subprocess) | Yes — provider is pluggable |
+| `dispatch` | All LLM nodes (backend selection + fallback) | scan (subprocess) | Yes — provider is pluggable |

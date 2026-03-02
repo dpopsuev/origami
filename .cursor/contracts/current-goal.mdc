@@ -66,5 +66,5 @@ Full contract list: see git history of this file.
 When API stabilization is complete:
 
 1. Archive this manifest in `notes/` as `goal-history-api-stabilization.md`
-2. Evaluate next goal: adapter hub, marble ecosystem, or v1.0 release
+2. Evaluate next goal: component hub, module ecosystem, or v1.0 release
 3. Reassess vision contracts — re-tier relative to the next goal

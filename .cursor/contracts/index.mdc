@@ -42,7 +42,7 @@ These contracts are tracked in Asterisk `contracts/draft/` but require significa
 - `completed/framework/consumer-cli-scaffold.md` — 8 perennial commands, `origami.NewCLI()` builder, `WithObservability`. Complete.
 - `completed/framework/e2e-dsl-testing.md` — E2E walk tests gate every checkpoint. Complete.
 - `completed/framework/durable-execution.md` — `Checkpointer` interface + HITL Interrupt/Resume. Complete.
-- `completed/framework/origami-adapters.md` — FQCN resolution on all registries. `imports:` on CircuitDef. Core adapter. Complete.
+- `completed/framework/origami-adapters.md` — FQCN resolution on all registries. `imports:` on CircuitDef. Core component. Complete. (Type renamed from Adapter to Component.)
 - `completed/framework/memory-evolution.md` — MemoryStore: namespaced, searchable, persistent. WithTaggedMemory. Complete.
 - `completed/framework/origami-observability.md` — 9 Prometheus metrics + OTel traces. `/metrics` on KamiServer. Complete.
 - `completed/framework/origami-api-hygiene.md` — Configurable `ModelRegistry`. Parameterized probe stimuli. Complete.
