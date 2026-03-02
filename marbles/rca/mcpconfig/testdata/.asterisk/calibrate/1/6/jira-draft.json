@@ -1,0 +1,8 @@
+{
+  "case_id": "C10",
+  "component": "linuxptp-daemon",
+  "defect_type": "pb001",
+  "jira_id": "OCPBUGS-68352",
+  "summary": "",
+  "test_name": ""
+}

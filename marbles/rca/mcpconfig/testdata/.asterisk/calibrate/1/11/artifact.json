@@ -1,0 +1,11 @@
+{
+  "launch_id": "",
+  "case_ids": null,
+  "rca_message": "HTTP events using consumer OCPBUGS-45680: Consumer is losing subscription to events after restarting linuxptp-daemon pod",
+  "defect_type": "pb001",
+  "component": "cnf-features-deploy",
+  "convergence_score": 0.8,
+  "evidence_refs": [
+    "openshift-kni/cnf-features-deploy#2178"
+  ]
+}

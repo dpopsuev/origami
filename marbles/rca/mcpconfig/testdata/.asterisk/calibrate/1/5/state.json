@@ -1,0 +1,33 @@
+{
+  "case_id": 5,
+  "suite_id": 1,
+  "current_step": "F6_REPORT",
+  "loop_counts": {},
+  "status": "done",
+  "history": [
+    {
+      "step": "F0_RECALL",
+      "outcome": "H2",
+      "heuristic_id": "H2",
+      "timestamp": "2026-03-02T09:49:13Z"
+    },
+    {
+      "step": "F1_TRIAGE",
+      "outcome": "H4",
+      "heuristic_id": "H4",
+      "timestamp": "2026-03-02T09:49:13Z"
+    },
+    {
+      "step": "F5_REVIEW",
+      "outcome": "H12",
+      "heuristic_id": "H12",
+      "timestamp": "2026-03-02T09:49:13Z"
+    },
+    {
+      "step": "F6_REPORT",
+      "outcome": "FALLBACK",
+      "heuristic_id": "FALLBACK",
+      "timestamp": "2026-03-02T09:49:13Z"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "launch_id": "",
+  "case_ids": null,
+  "rca_message": "root cause from subagent-2",
+  "defect_type": "pb001",
+  "component": "test-component",
+  "convergence_score": 0.85,
+  "evidence_refs": [
+    "ref-1"
+  ]
+}

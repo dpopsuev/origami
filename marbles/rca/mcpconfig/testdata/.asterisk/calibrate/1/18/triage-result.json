@@ -1,0 +1,9 @@
+{
+  "symptom_category": "product",
+  "severity": "critical",
+  "defect_type_hypothesis": "pb001",
+  "candidate_repos": [
+    "cnf-features-deploy"
+  ],
+  "skip_investigation": false
+}

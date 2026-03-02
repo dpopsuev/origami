@@ -1,0 +1,11 @@
+{
+  "launch_id": "",
+  "case_ids": null,
+  "rca_message": "",
+  "defect_type": "pb001",
+  "component": "cloud-event-proxy",
+  "convergence_score": 0.8,
+  "evidence_refs": [
+    "redhat-cne/cloud-event-proxy#613"
+  ]
+}

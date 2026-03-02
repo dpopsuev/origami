@@ -1,0 +1,8 @@
+{
+  "case_id": "C09",
+  "component": "linuxptp-daemon",
+  "defect_type": "en001",
+  "jira_id": "CNF-21408",
+  "summary": "",
+  "test_name": ""
+}

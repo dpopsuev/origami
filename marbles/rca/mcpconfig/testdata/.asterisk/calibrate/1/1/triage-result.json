@@ -1,0 +1,9 @@
+{
+  "symptom_category": "infra",
+  "severity": "medium",
+  "defect_type_hypothesis": "en001",
+  "candidate_repos": [
+    "cloud-event-proxy"
+  ],
+  "skip_investigation": true
+}

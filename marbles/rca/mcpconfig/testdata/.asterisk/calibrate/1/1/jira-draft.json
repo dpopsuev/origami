@@ -1,0 +1,8 @@
+{
+  "case_id": "C04",
+  "component": "cloud-event-proxy",
+  "defect_type": "en001",
+  "jira_id": "OCPBUGS-70327",
+  "summary": "",
+  "test_name": ""
+}
