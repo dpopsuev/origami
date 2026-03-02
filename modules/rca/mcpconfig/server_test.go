@@ -138,13 +138,13 @@ func callToolE(ctx context.Context, session *sdkmcp.ClientSession, name string, 
 }
 
 // startCircuit is a helper that wraps start_circuit with Asterisk-specific
-// extra params (scenario, adapter) to reduce boilerplate in domain tests.
-func startCircuit(t *testing.T, ctx context.Context, session *sdkmcp.ClientSession, scenario, adapter string, parallel int) map[string]any {
+// extra params (scenario, backend) to reduce boilerplate in domain tests.
+func startCircuit(t *testing.T, ctx context.Context, session *sdkmcp.ClientSession, scenario, backend string, parallel int) map[string]any {
 	t.Helper()
 	args := map[string]any{
 		"extra": map[string]any{
 			"scenario": scenario,
-			"adapter":  adapter,
+			"backend":  backend,
 		},
 	}
 	if parallel > 0 {
@@ -270,7 +270,7 @@ func TestServer_StubCalibration_FullLoop(t *testing.T) {
 	})
 	done, _ := stepResult["done"].(bool)
 	if !done {
-		t.Fatalf("expected done=true for stub adapter, got %v", stepResult)
+		t.Fatalf("expected done=true for stub backend, got %v", stepResult)
 	}
 
 	reportResult := callTool(t, ctx, session, "get_report", map[string]any{
@@ -356,7 +356,7 @@ func TestServer_DoubleStart_WhileRunning(t *testing.T) {
 	res, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
 		Name: "start_circuit",
 		Arguments: map[string]any{
-			"extra": map[string]any{"scenario": "ptp-mock", "adapter": "llm"},
+			"extra": map[string]any{"scenario": "ptp-mock", "backend": "llm"},
 		},
 	})
 	if err != nil {
@@ -979,7 +979,7 @@ func TestServer_StaleSession_StartReplacesStuck(t *testing.T) {
 	}
 
 	_, err := callToolE(ctx, session, "start_circuit", map[string]any{
-		"extra": map[string]any{"scenario": "ptp-mock", "adapter": "stub"},
+		"extra": map[string]any{"scenario": "ptp-mock", "backend": "stub"},
 	})
 	if err == nil {
 		t.Fatal("expected error starting second session without force")
@@ -987,7 +987,7 @@ func TestServer_StaleSession_StartReplacesStuck(t *testing.T) {
 	t.Logf("without force: %v (expected)", err)
 
 	start3 := callTool(t, ctx, session, "start_circuit", map[string]any{
-		"extra": map[string]any{"scenario": "ptp-mock", "adapter": "stub"},
+		"extra": map[string]any{"scenario": "ptp-mock", "backend": "stub"},
 		"force": true,
 	})
 	sid3 := start3["session_id"].(string)

@@ -1,9 +1,0 @@
-adapter: origami-sqlite
-namespace: sqlite
-version: "1.0.0"
-description: SQLite DSL adapter — YAML-defined schema, migrations, parameterized CRUD
-provides:
-  transformers: []
-  hooks: []
-requires:
-  origami: ">=0.3.0"

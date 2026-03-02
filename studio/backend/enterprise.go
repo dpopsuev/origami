@@ -23,14 +23,14 @@ const (
 	PermCircuitWrite   Permission = "circuit:write"
 	PermRunLaunch       Permission = "run:launch"
 	PermRunView         Permission = "run:view"
-	PermAdapterInstall  Permission = "adapter:install"
+	PermComponentInstall Permission = "component:install"
 	PermSettingsManage  Permission = "settings:manage"
 	PermScheduleManage  Permission = "schedule:manage"
 )
 
 // RolePermissions maps roles to their allowed permissions.
 var RolePermissions = map[Role][]Permission{
-	RoleAdmin:    {PermCircuitRead, PermCircuitWrite, PermRunLaunch, PermRunView, PermAdapterInstall, PermSettingsManage, PermScheduleManage},
+	RoleAdmin:    {PermCircuitRead, PermCircuitWrite, PermRunLaunch, PermRunView, PermComponentInstall, PermSettingsManage, PermScheduleManage},
 	RoleOperator: {PermCircuitRead, PermCircuitWrite, PermRunLaunch, PermRunView},
 	RoleViewer:   {PermCircuitRead, PermRunView},
 }

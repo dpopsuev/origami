@@ -8,15 +8,15 @@ import (
 	"testing"
 )
 
-func TestLoadAdapterManifest(t *testing.T) {
+func TestLoadComponentManifest(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "adapter.yaml")
+	path := filepath.Join(dir, "component.yaml")
 
 	manifest := `
-adapter: test-adapter
+component: test-component
 namespace: test
 version: "1.0.0"
-description: A test adapter
+description: A test component
 provides:
   transformers: [my-transform]
   extractors: [my-extract]
@@ -28,7 +28,7 @@ requires:
 		t.Fatal(err)
 	}
 
-	m, err := LoadAdapterManifest(path)
+	m, err := LoadComponentManifest(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,8 +36,8 @@ requires:
 	if m.Namespace != "test" {
 		t.Errorf("namespace = %q, want %q", m.Namespace, "test")
 	}
-	if m.Adapter != "test-adapter" {
-		t.Errorf("adapter = %q, want %q", m.Adapter, "test-adapter")
+	if m.Component != "test-component" {
+		t.Errorf("component = %q, want %q", m.Component, "test-component")
 	}
 	if m.Version != "1.0.0" {
 		t.Errorf("version = %q, want %q", m.Version, "1.0.0")
@@ -53,19 +53,19 @@ requires:
 	}
 }
 
-func TestLoadAdapterManifest_MissingNamespace(t *testing.T) {
+func TestLoadComponentManifest_MissingNamespace(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "adapter.yaml")
-	if err := os.WriteFile(path, []byte("adapter: bad\n"), 0644); err != nil {
+	path := filepath.Join(dir, "component.yaml")
+	if err := os.WriteFile(path, []byte("component: bad\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadAdapterManifest(path)
+	_, err := LoadComponentManifest(path)
 	if err == nil {
 		t.Fatal("expected error for missing namespace")
 	}
 }
 
-func TestMergeAdapters_NoCollision(t *testing.T) {
+func TestMergeComponents_NoCollision(t *testing.T) {
 	stubT := TransformerFunc("base-t", func(_ context.Context, _ *TransformerContext) (any, error) {
 		return "base", nil
 	})
@@ -75,15 +75,15 @@ func TestMergeAdapters_NoCollision(t *testing.T) {
 		Hooks:        HookRegistry{},
 	}
 
-	adapterT := TransformerFunc("ext-t", func(_ context.Context, _ *TransformerContext) (any, error) {
-		return "adapter", nil
+	compT := TransformerFunc("ext-t", func(_ context.Context, _ *TransformerContext) (any, error) {
+		return "comp", nil
 	})
-	adapter := &Adapter{
+	comp := &Component{
 		Namespace:    "vendor",
-		Transformers: TransformerRegistry{"ext-t": adapterT},
+		Transformers: TransformerRegistry{"ext-t": compT},
 	}
 
-	merged, err := MergeAdapters(base, adapter)
+	merged, err := MergeComponents(base, comp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestMergeAdapters_NoCollision(t *testing.T) {
 	}
 }
 
-func TestMergeAdapters_ShortNameCollision(t *testing.T) {
+func TestMergeComponents_ShortNameCollision(t *testing.T) {
 	stubT := TransformerFunc("llm", func(_ context.Context, _ *TransformerContext) (any, error) {
 		return "base-llm", nil
 	})
@@ -112,20 +112,20 @@ func TestMergeAdapters_ShortNameCollision(t *testing.T) {
 		Hooks:        HookRegistry{},
 	}
 
-	adapterT := TransformerFunc("llm", func(_ context.Context, _ *TransformerContext) (any, error) {
-		return "adapter-llm", nil
+	compT := TransformerFunc("llm", func(_ context.Context, _ *TransformerContext) (any, error) {
+		return "comp-llm", nil
 	})
-	adapter := &Adapter{
+	comp := &Component{
 		Namespace:    "custom",
-		Transformers: TransformerRegistry{"llm": adapterT},
+		Transformers: TransformerRegistry{"llm": compT},
 	}
 
-	merged, err := MergeAdapters(base, adapter)
+	merged, err := MergeComponents(base, comp)
 	if err != nil {
-		t.Fatal("MergeAdapters should succeed; short name collision is not fatal")
+		t.Fatal("MergeComponents should succeed; short name collision is not fatal")
 	}
 
-	// FQCN resolves to adapter's version
+	// FQCN resolves to component's version
 	if _, err := merged.Transformers.Get("custom.llm"); err != nil {
 		t.Errorf("FQCN lookup failed: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestMergeAdapters_ShortNameCollision(t *testing.T) {
 	}
 }
 
-func TestMergeAdapters_FQCNCollision(t *testing.T) {
+func TestMergeComponents_FQCNCollision(t *testing.T) {
 	base := GraphRegistries{
 		Transformers: TransformerRegistry{},
 		Extractors:   ExtractorRegistry{},
@@ -153,19 +153,19 @@ func TestMergeAdapters_FQCNCollision(t *testing.T) {
 	t2 := TransformerFunc("llm", func(_ context.Context, _ *TransformerContext) (any, error) {
 		return "a2", nil
 	})
-	a1 := &Adapter{Namespace: "vendor", Transformers: TransformerRegistry{"llm": t1}}
-	a2 := &Adapter{Namespace: "vendor", Transformers: TransformerRegistry{"llm": t2}}
+	a1 := &Component{Namespace: "vendor", Transformers: TransformerRegistry{"llm": t1}}
+	a2 := &Component{Namespace: "vendor", Transformers: TransformerRegistry{"llm": t2}}
 
-	_, err := MergeAdapters(base, a1, a2)
+	_, err := MergeComponents(base, a1, a2)
 	if err == nil {
 		t.Fatal("expected FQCN collision error")
 	}
-	if got := err.Error(); got != `transformer "vendor.llm" collision (adapter vendor)` {
+	if got := err.Error(); got != `transformer "vendor.llm" collision (component vendor)` {
 		t.Errorf("unexpected error: %v", got)
 	}
 }
 
-func TestMergeAdapters_DoesNotMutateBase(t *testing.T) {
+func TestMergeComponents_DoesNotMutateBase(t *testing.T) {
 	base := GraphRegistries{
 		Transformers: TransformerRegistry{
 			"base-t": TransformerFunc("base-t", func(_ context.Context, _ *TransformerContext) (any, error) { return nil, nil }),
@@ -174,14 +174,14 @@ func TestMergeAdapters_DoesNotMutateBase(t *testing.T) {
 		Hooks:      HookRegistry{},
 	}
 
-	adapter := &Adapter{
+	comp := &Component{
 		Namespace: "x",
 		Transformers: TransformerRegistry{
 			"new-t": TransformerFunc("new-t", func(_ context.Context, _ *TransformerContext) (any, error) { return nil, nil }),
 		},
 	}
 
-	_, err := MergeAdapters(base, adapter)
+	_, err := MergeComponents(base, comp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestResolveFQCN(t *testing.T) {
 	}
 }
 
-func TestMergeAdapters_Hooks(t *testing.T) {
+func TestMergeComponents_Hooks(t *testing.T) {
 	base := GraphRegistries{
 		Transformers: TransformerRegistry{},
 		Extractors:   ExtractorRegistry{},
@@ -220,12 +220,12 @@ func TestMergeAdapters_Hooks(t *testing.T) {
 	}
 
 	hook := NewHookFunc("store", func(_ context.Context, _ string, _ Artifact) error { return nil })
-	adapter := &Adapter{
+	comp := &Component{
 		Namespace: "rca",
 		Hooks:     HookRegistry{"store": hook},
 	}
 
-	merged, err := MergeAdapters(base, adapter)
+	merged, err := MergeComponents(base, comp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,20 +238,20 @@ func TestMergeAdapters_Hooks(t *testing.T) {
 	}
 }
 
-func TestMergeAdapters_Extractors(t *testing.T) {
+func TestMergeComponents_Extractors(t *testing.T) {
 	base := GraphRegistries{
 		Transformers: TransformerRegistry{},
 		Extractors:   ExtractorRegistry{},
 		Hooks:        HookRegistry{},
 	}
 
-	ext := &adapterStubExtractor{name: "govulncheck"}
-	adapter := &Adapter{
+	ext := &componentStubExtractor{name: "govulncheck"}
+	comp := &Component{
 		Namespace:  "achilles",
 		Extractors: ExtractorRegistry{"govulncheck": ext},
 	}
 
-	merged, err := MergeAdapters(base, adapter)
+	merged, err := MergeComponents(base, comp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,12 +264,12 @@ func TestMergeAdapters_Extractors(t *testing.T) {
 	}
 }
 
-type adapterStubExtractor struct {
+type componentStubExtractor struct {
 	name string
 }
 
-func (e *adapterStubExtractor) Name() string                                   { return e.name }
-func (e *adapterStubExtractor) Extract(_ context.Context, _ any) (any, error) { return "extracted", nil }
+func (e *componentStubExtractor) Name() string                                   { return e.name }
+func (e *componentStubExtractor) Extract(_ context.Context, _ any) (any, error) { return "extracted", nil }
 
 func TestTransformerRegistry_FQCNResolution(t *testing.T) {
 	reg := TransformerRegistry{
@@ -294,7 +294,7 @@ func TestTransformerRegistry_FQCNResolution(t *testing.T) {
 
 func TestExtractorRegistry_FQCNResolution(t *testing.T) {
 	reg := ExtractorRegistry{
-		"achilles.govulncheck": &adapterStubExtractor{name: "govulncheck"},
+		"achilles.govulncheck": &componentStubExtractor{name: "govulncheck"},
 	}
 
 	if _, err := reg.Get("achilles.govulncheck"); err != nil {
@@ -333,19 +333,19 @@ func TestBuildGraph_ImportsWiring(t *testing.T) {
 	}
 
 	vendorT := TransformerFunc("my-t", func(_ context.Context, _ *TransformerContext) (any, error) { return "ok", nil })
-	loader := func(name string) (*Adapter, error) {
+	loader := func(name string) (*Component, error) {
 		if name == "vendor" {
-			return &Adapter{
+			return &Component{
 				Namespace:    "vendor",
 				Transformers: TransformerRegistry{"my-t": vendorT},
 			}, nil
 		}
-		return nil, fmt.Errorf("unknown adapter: %s", name)
+		return nil, fmt.Errorf("unknown component: %s", name)
 	}
 
 	reg := GraphRegistries{
 		Transformers: TransformerRegistry{},
-		Adapters:     loader,
+		Components:   loader,
 	}
 
 	g, err := def.BuildGraph(reg)
@@ -367,18 +367,18 @@ func TestBuildGraph_ImportFailure(t *testing.T) {
 		Done:     "done",
 	}
 
-	loader := func(name string) (*Adapter, error) {
-		return nil, fmt.Errorf("adapter %q not found", name)
+	loader := func(name string) (*Component, error) {
+		return nil, fmt.Errorf("component %q not found", name)
 	}
 
 	reg := GraphRegistries{
-		Nodes:    NodeRegistry{"": func(_ NodeDef) Node { return nil }},
-		Adapters: loader,
+		Nodes:      NodeRegistry{"": func(_ NodeDef) Node { return nil }},
+		Components: loader,
 	}
 
 	_, err := def.BuildGraph(reg)
 	if err == nil {
-		t.Fatal("expected error for missing adapter import")
+		t.Fatal("expected error for missing component import")
 	}
 	if !contains(err.Error(), "missing-adapter") {
 		t.Errorf("error should reference the import name: %v", err)

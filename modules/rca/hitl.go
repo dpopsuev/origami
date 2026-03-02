@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 	"github.com/dpopsuev/origami/modules/rca/store"
 	"github.com/dpopsuev/origami/knowledge"
 )
@@ -41,13 +41,13 @@ func RunHITLStep(ctx context.Context, cfg HITLConfig) (*HITLResult, error) {
 		return nil, fmt.Errorf("create checkpointer: %w", err)
 	}
 
-	hitlAdapter := HITLAdapter()
-	storeAdapter := &framework.Adapter{
+	hitlComp := HITLComponent()
+	storeComp := &framework.Component{
 		Namespace: "store",
 		Name:      "rca-store-hooks",
 		Hooks:     StoreHooks(cfg.Store, cfg.CaseData),
 	}
-	runner, err := BuildRunner(th, hitlAdapter, storeAdapter)
+	runner, err := BuildRunner(th, hitlComp, storeComp)
 	if err != nil {
 		return nil, fmt.Errorf("build runner: %w", err)
 	}
@@ -73,13 +73,13 @@ func ResumeHITLStep(ctx context.Context, cfg HITLConfig, artifactData []byte) (*
 		return nil, fmt.Errorf("create checkpointer: %w", err)
 	}
 
-	hitlAdapter := HITLAdapter()
-	storeAdapter := &framework.Adapter{
+	hitlComp := HITLComponent()
+	storeComp := &framework.Component{
 		Namespace: "store",
 		Name:      "rca-store-hooks",
 		Hooks:     StoreHooks(cfg.Store, cfg.CaseData),
 	}
-	runner, err := BuildRunner(th, hitlAdapter, storeAdapter)
+	runner, err := BuildRunner(th, hitlComp, storeComp)
 	if err != nil {
 		return nil, fmt.Errorf("build runner: %w", err)
 	}

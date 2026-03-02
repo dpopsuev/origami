@@ -8,7 +8,7 @@ import (
 	"github.com/dpopsuev/origami/modules/rca/store"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 	"github.com/dpopsuev/origami/format"
 	"github.com/dpopsuev/origami/knowledge"
 	"github.com/dpopsuev/origami/logging"
@@ -16,7 +16,7 @@ import (
 
 // AnalysisConfig holds configuration for an analysis run.
 type AnalysisConfig struct {
-	Adapters   []*framework.Adapter
+	Components   []*framework.Component
 	Envelope   *rp.Envelope
 	Catalog    *knowledge.KnowledgeSourceCatalog
 	Thresholds Thresholds
@@ -58,8 +58,8 @@ type AnalysisCaseResult struct {
 // Each case is walked through the circuit graph using WalkCase with store-effect hooks.
 func RunAnalysis(st store.Store, cases []*store.Case, suiteID int64, cfg AnalysisConfig) (*AnalysisReport, error) {
 	transformerName := "unknown"
-	if len(cfg.Adapters) > 0 {
-		transformerName = cfg.Adapters[0].Name
+	if len(cfg.Components) > 0 {
+		transformerName = cfg.Components[0].Name
 	}
 	report := &AnalysisReport{
 		Transformer: transformerName,
@@ -108,17 +108,17 @@ func walkAnalysisCase(
 	}
 	caseDir, _ := EnsureCaseDir(basePath, 0, caseData.ID)
 
-	hooksAdapter := &framework.Adapter{
+	hooksComp := &framework.Component{
 		Namespace: "store",
 		Name:      "rca-store-hooks",
 		Hooks:     StoreHooks(st, caseData),
 	}
-	injectAdapter := &framework.Adapter{
+	injectComp := &framework.Component{
 		Namespace: "inject",
 		Name:      "rca-inject-hooks",
 		Hooks:     InjectHooks(st, caseData, cfg.Envelope, cfg.Catalog, caseDir),
 	}
-	adapters := append(cfg.Adapters, hooksAdapter, injectAdapter)
+	comps := append(cfg.Components, hooksComp, injectComp)
 
 	walkCfg := WalkConfig{
 		Store:      st,
@@ -128,7 +128,7 @@ func walkAnalysisCase(
 		CaseDir:    caseDir,
 		CaseLabel:  caseLabel,
 		Thresholds: cfg.Thresholds,
-		Adapters:   adapters,
+		Components:   comps,
 	}
 
 	walkResult, err := WalkCase(context.Background(), walkCfg)

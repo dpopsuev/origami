@@ -49,8 +49,8 @@ func main() {
 		err = kamiCmd(os.Args[2:])
 	case "studio":
 		err = studioCmd(os.Args[2:])
-	case "adapter":
-		err = adapterCmd(os.Args[2:])
+	case "component":
+		err = componentCmd(os.Args[2:])
 	case "fold":
 		err = foldCmd(os.Args[2:])
 	case "version":
@@ -80,7 +80,7 @@ Commands:
   kami       Live circuit debugger (HTTP/SSE + WS)
   kami serve Start Kami MCP server over stdio (co-starts HTTP/WS)
   studio     Visual Circuit Editor (embedded SPA + REST API)
-  adapter    Adapter management (list, inspect, validate)
+  component  Component management (list, inspect, validate)
   fold       Compile a YAML manifest into a standalone binary
   version    Print version`)
 }

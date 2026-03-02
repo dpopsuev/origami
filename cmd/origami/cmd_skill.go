@@ -159,7 +159,7 @@ Call the MCP tool:
 ` + "```" + `
 start_calibration(
   scenario: "<SCENARIO>",
-  adapter: "cursor",
+  backend: "cursor",
   parallel: 4,
   force: true
 )

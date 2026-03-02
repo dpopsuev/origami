@@ -1,17 +1,17 @@
-// Package rca provides an Origami adapter that bundles the RCA circuit's
+// Package rca provides an Origami component that bundles the RCA circuit's
 // hooks, transformers, and extractors under the "rca" namespace.
 package rca
 
 import (
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 	"github.com/dpopsuev/origami/modules/rca/store"
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/knowledge"
 )
 
-// AdapterConfig holds runtime dependencies injected into the RCA adapter.
-type AdapterConfig struct {
+// ComponentConfig holds runtime dependencies injected into the RCA component.
+type ComponentConfig struct {
 	Store     store.Store
 	CaseData  *store.Case
 	Envelope  *rp.Envelope
@@ -20,11 +20,11 @@ type AdapterConfig struct {
 	CaseDir   string
 }
 
-// Adapter returns an Origami Adapter bundling all RCA circuit plumbing
+// Component returns an Origami Component bundling all RCA circuit plumbing
 // (store hooks, context-builder transformer, prompt-filler transformer,
 // and per-step extractors) under the "rca" namespace.
-func Adapter(cfg AdapterConfig) *framework.Adapter {
-	return &framework.Adapter{
+func Component(cfg ComponentConfig) *framework.Component {
+	return &framework.Component{
 		Namespace:    "rca",
 		Name:         "asterisk-rca",
 		Version:      "1.0.0",
@@ -39,11 +39,11 @@ func Adapter(cfg AdapterConfig) *framework.Adapter {
 // a single monolithic transformer under each node for backwards compat.
 var allNodeNames = []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
 
-// HeuristicAdapter returns an Adapter with per-node heuristic transformers
+// HeuristicComponent returns a Component with per-node heuristic transformers
 // that implement deterministic, keyword-based RCA logic.
-func HeuristicAdapter(st store.Store, repos []string) *framework.Adapter {
+func HeuristicComponent(st store.Store, repos []string) *framework.Component {
 	ht := NewHeuristicTransformer(st, repos)
-	return &framework.Adapter{
+	return &framework.Component{
 		Namespace: "rca",
 		Name:      "rca-heuristic",
 		Transformers: framework.TransformerRegistry{
@@ -58,24 +58,24 @@ func HeuristicAdapter(st store.Store, repos []string) *framework.Adapter {
 	}
 }
 
-// TransformerAdapter wraps a monolithic framework.Transformer (e.g. stub, rca)
+// TransformerComponent wraps a monolithic framework.Transformer (e.g. stub, rca)
 // and registers it under every node name so that DSL transformer: resolution
 // can find it. The transformer's Transform() dispatches on tc.NodeName.
-func TransformerAdapter(t framework.Transformer) *framework.Adapter {
+func TransformerComponent(t framework.Transformer) *framework.Component {
 	reg := framework.TransformerRegistry{}
 	for _, name := range allNodeNames {
 		reg[name] = t
 	}
-	return &framework.Adapter{
+	return &framework.Component{
 		Namespace:    "rca",
 		Name:         "rca-transformer",
 		Transformers: reg,
 	}
 }
 
-// HITLAdapter returns an Adapter with per-node HITL transformers that
+// HITLComponent returns a Component with per-node HITL transformers that
 // fill prompt templates and return framework.Interrupt for human input.
-func HITLAdapter() *framework.Adapter {
+func HITLComponent() *framework.Component {
 	reg := framework.TransformerRegistry{}
 	steps := map[string]CircuitStep{
 		"recall": StepF0Recall, "triage": StepF1Triage, "resolve": StepF2Resolve,
@@ -85,14 +85,14 @@ func HITLAdapter() *framework.Adapter {
 	for name, step := range steps {
 		reg[name] = &hitlTransformerNode{step: step}
 	}
-	return &framework.Adapter{
+	return &framework.Component{
 		Namespace:    "rca",
 		Name:         "rca-hitl",
 		Transformers: reg,
 	}
 }
 
-func buildTransformers(_ AdapterConfig) framework.TransformerRegistry {
+func buildTransformers(_ ComponentConfig) framework.TransformerRegistry {
 	return framework.TransformerRegistry{}
 }
 
@@ -108,7 +108,7 @@ func buildExtractors() framework.ExtractorRegistry {
 	return reg
 }
 
-func buildHooks(cfg AdapterConfig) framework.HookRegistry {
+func buildHooks(cfg ComponentConfig) framework.HookRegistry {
 	reg := framework.HookRegistry{}
 
 	inject := InjectHooks(cfg.Store, cfg.CaseData, cfg.Envelope, cfg.Catalog, cfg.CaseDir)

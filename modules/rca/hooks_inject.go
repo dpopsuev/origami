@@ -4,7 +4,7 @@ import (
 	"context"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 	"github.com/dpopsuev/origami/modules/rca/store"
 	"github.com/dpopsuev/origami/knowledge"
 )

@@ -33,18 +33,18 @@ func AsteriskCircuitDef(th Thresholds) (*framework.CircuitDef, error) {
 }
 
 // BuildRunner constructs a framework.Runner from the Asterisk circuit
-// definition with the given thresholds and adapters. The adapters provide
+// definition with the given thresholds and components. The components provide
 // transformers, hooks, and extractors to the graph build.
-func BuildRunner(th Thresholds, adapters ...*framework.Adapter) (*framework.Runner, error) {
+func BuildRunner(th Thresholds, comps ...*framework.Component) (*framework.Runner, error) {
 	def, err := AsteriskCircuitDef(th)
 	if err != nil {
 		return nil, err
 	}
 	reg := framework.GraphRegistries{}
-	if len(adapters) > 0 {
-		reg, err = framework.MergeAdapters(reg, adapters...)
+	if len(comps) > 0 {
+		reg, err = framework.MergeComponents(reg, comps...)
 		if err != nil {
-			return nil, fmt.Errorf("merge adapters: %w", err)
+			return nil, fmt.Errorf("merge components: %w", err)
 		}
 	}
 	return framework.NewRunnerWith(def, reg)

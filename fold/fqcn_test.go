@@ -13,8 +13,8 @@ func TestResolveFQCN(t *testing.T) {
 		err  bool
 	}{
 		{"origami.modules.rca", "github.com/dpopsuev/origami/modules/rca", false},
-		{"origami.adapters.rp", "github.com/dpopsuev/origami/adapters/rp", false},
-		{"origami.adapters.sqlite", "github.com/dpopsuev/origami/adapters/sqlite", false},
+		{"origami.components.rp", "github.com/dpopsuev/origami/components/rp", false},
+		{"origami.components.sqlite", "github.com/dpopsuev/origami/components/sqlite", false},
 		{"origami.calibrate", "github.com/dpopsuev/origami/calibrate", false},
 		{"unknown.module", "", true},
 		{"origami", "", true},
@@ -52,7 +52,7 @@ func TestResolveProvider(t *testing.T) {
 	}{
 		{"modules.rca.CalibrateRunner", "github.com/dpopsuev/origami/modules/rca", "CalibrateRunner", false},
 		{"modules.rca.AnalyzeFunc", "github.com/dpopsuev/origami/modules/rca", "AnalyzeFunc", false},
-		{"adapters.rp.Fetcher", "github.com/dpopsuev/origami/adapters/rp", "Fetcher", false},
+		{"components.rp.Fetcher", "github.com/dpopsuev/origami/components/rp", "Fetcher", false},
 		{"SingleWord", "", "", true},
 	}
 

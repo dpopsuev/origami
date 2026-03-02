@@ -1,6 +1,6 @@
 package store
 
-import "github.com/dpopsuev/origami/adapters/rp"
+import "github.com/dpopsuev/origami/components/rp"
 
 // DefaultDBPath is the default relative path for the SQLite DB (per-workspace).
 // Resolve against cwd or workspace root; Open() creates the parent dir (e.g. .asterisk).

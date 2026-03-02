@@ -8,9 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Adapter bundles reusable plumbing (transformers, extractors, hooks) under
-// a namespace. Consumers merge adapters into their registries at build time.
-type Adapter struct {
+// Component bundles reusable plumbing (transformers, extractors, hooks) under
+// a namespace. Consumers merge components into their registries at build time.
+type Component struct {
 	Namespace    string
 	Name         string
 	Version      string
@@ -20,9 +20,9 @@ type Adapter struct {
 	Hooks        HookRegistry
 }
 
-// AdapterManifest is the YAML schema for adapter.yaml files.
-type AdapterManifest struct {
-	Adapter     string `yaml:"adapter"`
+// ComponentManifest is the YAML schema for component.yaml files.
+type ComponentManifest struct {
+	Component   string `yaml:"component"`
 	Namespace   string `yaml:"namespace"`
 	Version     string `yaml:"version"`
 	Description string `yaml:"description,omitempty"`
@@ -36,27 +36,27 @@ type AdapterManifest struct {
 	} `yaml:"requires,omitempty"`
 }
 
-// LoadAdapterManifest reads and parses an adapter.yaml file.
-func LoadAdapterManifest(path string) (*AdapterManifest, error) {
+// LoadComponentManifest reads and parses a component.yaml file.
+func LoadComponentManifest(path string) (*ComponentManifest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read adapter manifest %s: %w", path, err)
+		return nil, fmt.Errorf("read component manifest %s: %w", path, err)
 	}
-	var m AdapterManifest
+	var m ComponentManifest
 	if err := yaml.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("parse adapter manifest %s: %w", path, err)
+		return nil, fmt.Errorf("parse component manifest %s: %w", path, err)
 	}
 	if m.Namespace == "" {
-		return nil, fmt.Errorf("adapter manifest %s: namespace is required", path)
+		return nil, fmt.Errorf("component manifest %s: namespace is required", path)
 	}
 	return &m, nil
 }
 
-// MergeAdapters merges one or more adapters into a base GraphRegistries.
-// Each adapter's items are registered under their FQCN (namespace.name).
-// Short names are also registered if no collision with the base or earlier adapters.
-// Returns an error if two adapters provide the same FQCN.
-func MergeAdapters(base GraphRegistries, adapters ...*Adapter) (GraphRegistries, error) {
+// MergeComponents merges one or more components into a base GraphRegistries.
+// Each component's items are registered under their FQCN (namespace.name).
+// Short names are also registered if no collision with the base or earlier components.
+// Returns an error if two components provide the same FQCN.
+func MergeComponents(base GraphRegistries, components ...*Component) (GraphRegistries, error) {
 	merged := GraphRegistries{
 		Transformers: cloneMap(base.Transformers),
 		Extractors:   cloneMap(base.Extractors),
@@ -65,7 +65,7 @@ func MergeAdapters(base GraphRegistries, adapters ...*Adapter) (GraphRegistries,
 		Edges:        base.Edges,
 	}
 
-	for _, a := range adapters {
+	for _, a := range components {
 		if err := mergeTransformers(merged.Transformers, a); err != nil {
 			return GraphRegistries{}, err
 		}
@@ -79,11 +79,11 @@ func MergeAdapters(base GraphRegistries, adapters ...*Adapter) (GraphRegistries,
 	return merged, nil
 }
 
-func mergeTransformers(dst TransformerRegistry, a *Adapter) error {
+func mergeTransformers(dst TransformerRegistry, a *Component) error {
 	for name, t := range a.Transformers {
 		fqcn := a.Namespace + "." + name
 		if _, exists := dst[fqcn]; exists {
-			return fmt.Errorf("transformer %q collision (adapter %s)", fqcn, a.Namespace)
+			return fmt.Errorf("transformer %q collision (component %s)", fqcn, a.Namespace)
 		}
 		dst[fqcn] = t
 		if _, exists := dst[name]; !exists {
@@ -93,11 +93,11 @@ func mergeTransformers(dst TransformerRegistry, a *Adapter) error {
 	return nil
 }
 
-func mergeExtractors(dst ExtractorRegistry, a *Adapter) error {
+func mergeExtractors(dst ExtractorRegistry, a *Component) error {
 	for name, e := range a.Extractors {
 		fqcn := a.Namespace + "." + name
 		if _, exists := dst[fqcn]; exists {
-			return fmt.Errorf("extractor %q collision (adapter %s)", fqcn, a.Namespace)
+			return fmt.Errorf("extractor %q collision (component %s)", fqcn, a.Namespace)
 		}
 		dst[fqcn] = e
 		if _, exists := dst[name]; !exists {
@@ -107,11 +107,11 @@ func mergeExtractors(dst ExtractorRegistry, a *Adapter) error {
 	return nil
 }
 
-func mergeHooks(dst HookRegistry, a *Adapter) error {
+func mergeHooks(dst HookRegistry, a *Component) error {
 	for name, h := range a.Hooks {
 		fqcn := a.Namespace + "." + name
 		if _, exists := dst[fqcn]; exists {
-			return fmt.Errorf("hook %q collision (adapter %s)", fqcn, a.Namespace)
+			return fmt.Errorf("hook %q collision (component %s)", fqcn, a.Namespace)
 		}
 		dst[fqcn] = h
 		if _, exists := dst[name]; !exists {

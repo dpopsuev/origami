@@ -6,8 +6,8 @@ import (
 	"github.com/dpopsuev/origami/modules/rca/store"
 )
 
-func TestAdapter_NamespaceAndProvides(t *testing.T) {
-	a := Adapter(AdapterConfig{})
+func TestComponent_NamespaceAndProvides(t *testing.T) {
+	a := Component(ComponentConfig{})
 	if a.Namespace != "rca" {
 		t.Errorf("Namespace = %q, want rca", a.Namespace)
 	}
@@ -16,8 +16,8 @@ func TestAdapter_NamespaceAndProvides(t *testing.T) {
 	}
 }
 
-func TestAdapter_Extractors(t *testing.T) {
-	a := Adapter(AdapterConfig{})
+func TestComponent_Extractors(t *testing.T) {
+	a := Component(ComponentConfig{})
 	expected := []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
 	for _, name := range expected {
 		if _, ok := a.Extractors[name]; !ok {
@@ -26,10 +26,10 @@ func TestAdapter_Extractors(t *testing.T) {
 	}
 }
 
-func TestAdapter_Hooks_WithStore(t *testing.T) {
+func TestComponent_Hooks_WithStore(t *testing.T) {
 	ms := store.NewMemStore()
 	c := &store.Case{ID: 1}
-	a := Adapter(AdapterConfig{Store: ms, CaseData: c})
+	a := Component(ComponentConfig{Store: ms, CaseData: c})
 	storeHooks := []string{"store.recall", "store.triage", "store.investigate", "store.correlate", "store.review"}
 	for _, name := range storeHooks {
 		if _, ok := a.Hooks[name]; !ok {
@@ -42,8 +42,8 @@ func TestAdapter_Hooks_WithStore(t *testing.T) {
 	}
 }
 
-func TestAdapter_Hooks_NilStore(t *testing.T) {
-	a := Adapter(AdapterConfig{})
+func TestComponent_Hooks_NilStore(t *testing.T) {
+	a := Component(ComponentConfig{})
 	injectCount := 8
 	if len(a.Hooks) != injectCount {
 		t.Errorf("expected %d inject hooks with nil store, got %d", injectCount, len(a.Hooks))

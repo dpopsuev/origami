@@ -46,6 +46,19 @@ FAIL: Expected clock state to be LOCKED
 
 
 
+## Known symptom
+
+| Field | Value |
+|-------|-------|
+| Name | OCP-83297 PTP sync stability |
+| Status | active |
+| Occurrences | 1 |
+| First seen | 2026-03-02T14:31:05Z |
+| Last seen | 2026-03-02T14:31:05Z |
+
+
+
+
 
 
 

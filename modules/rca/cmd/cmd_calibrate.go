@@ -17,12 +17,12 @@ import (
 	"github.com/dpopsuev/origami/modules/rca"
 	"github.com/dpopsuev/origami/modules/rca/scenarios"
 	"github.com/dpopsuev/origami/modules/rca/store"
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 )
 
 var calibrateFlags struct {
 	scenario      string
-	adapter       string
+	backend       string
 	dispatchMode  string
 	agentDebug    bool
 	runs          int
@@ -51,12 +51,12 @@ with ground-truth expectations, computing accuracy metrics (M1-M20).`,
 func init() {
 	f := calibrateCmd.Flags()
 	f.StringVar(&calibrateFlags.scenario, "scenario", "ptp-mock", "Scenario name (ptp-mock, daemon-mock, ptp-real, ptp-real-ingest)")
-	f.StringVar(&calibrateFlags.adapter, "adapter", "stub", "Model adapter (stub, basic, llm)")
-	f.StringVar(&calibrateFlags.dispatchMode, "dispatch", "stdin", "Dispatch mode for cursor adapter (stdin, file, batch-file)")
+	f.StringVar(&calibrateFlags.backend, "backend", "stub", "Model backend (stub, basic, llm)")
+	f.StringVar(&calibrateFlags.dispatchMode, "dispatch", "stdin", "Dispatch mode for cursor backend (stdin, file, batch-file)")
 	f.BoolVar(&calibrateFlags.agentDebug, "agent-debug", false, "Enable verbose debug logging for dispatcher/agent communication")
 	f.IntVar(&calibrateFlags.runs, "runs", 1, "Number of calibration runs")
 	f.StringVar(&calibrateFlags.promptDir, "prompt-dir", ".cursor/prompts", "Prompt template directory")
-	f.BoolVar(&calibrateFlags.clean, "clean", true, "Remove .asterisk/calibrate/ before starting (cursor adapter only)")
+	f.BoolVar(&calibrateFlags.clean, "clean", true, "Remove .asterisk/calibrate/ before starting (cursor backend only)")
 	f.BoolVar(&calibrateFlags.costReport, "cost-report", false, "Write token-report.json with per-case token/cost breakdown")
 	f.IntVar(&calibrateFlags.parallel, "parallel", 1, "Number of parallel workers for triage/investigation (1 = serial)")
 	f.IntVar(&calibrateFlags.tokenBudget, "token-budget", 0, "Max concurrent dispatches (0 = same as --parallel)")
@@ -65,7 +65,7 @@ func init() {
 	f.StringVar(&calibrateFlags.rpBase, "rp-base-url", "", "RP base URL for RP-sourced scenario cases")
 	f.StringVar(&calibrateFlags.rpKeyPath, "rp-api-key", ".rp-api-key", "Path to RP API key file")
 	f.StringVar(&calibrateFlags.rpProject, "rp-project", "", "RP project name (default: $ASTERISK_RP_PROJECT)")
-	f.StringVar(&calibrateFlags.routingLog, "routing-log", "", "Write adapter routing log to path (JSON); empty = disabled")
+	f.StringVar(&calibrateFlags.routingLog, "routing-log", "", "Write backend routing log to path (JSON); empty = disabled")
 	f.StringVar(&calibrateFlags.scorecard, "scorecard", "scorecards/asterisk-rca.yaml", "Path to scorecard YAML for metric definitions")
 }
 
@@ -102,22 +102,22 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 	var debugLogger *slog.Logger
 	if calibrateFlags.agentDebug {
 		debugLogger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-		debugLogger.Info("agent-debug enabled: dispatcher and adapter operations will be traced to stderr")
+		debugLogger.Info("agent-debug enabled: dispatcher and backend operations will be traced to stderr")
 	}
 
-	var adapters []*framework.Adapter
+	var comps []*framework.Component
 	var transformerLabel string
 	var idMapper rca.IDMappable
 	var routingRecorder *rca.RoutingRecorder
-	switch calibrateFlags.adapter {
+	switch calibrateFlags.backend {
 	case "stub":
 		stub := rca.NewStubTransformer(scenario)
 		var t framework.Transformer = stub
 		if calibrateFlags.routingLog != "" {
-			routingRecorder = rca.NewRoutingRecorder(t, adapterColor(calibrateFlags.adapter))
-			t = routingRecorder
+		routingRecorder = rca.NewRoutingRecorder(t, backendColor(calibrateFlags.backend))
+		t = routingRecorder
 		}
-		adapters = []*framework.Adapter{rca.TransformerAdapter(t)}
+		comps = []*framework.Component{rca.TransformerComponent(t)}
 		transformerLabel = "stub"
 		idMapper = stub
 	case "basic":
@@ -129,7 +129,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		for _, r := range scenario.Workspace.Repos {
 			repoNames = append(repoNames, r.Name)
 		}
-		adapters = []*framework.Adapter{rca.HeuristicAdapter(basicSt, repoNames)}
+		comps = []*framework.Component{rca.HeuristicComponent(basicSt, repoNames)}
 		transformerLabel = "basic"
 	case "llm":
 		dispatcher, err := buildDispatcher(DispatchOpts{
@@ -144,17 +144,17 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		trackedDispatcher := dispatch.NewTokenTrackingDispatcher(dispatcher, tokenTracker)
 		var t framework.Transformer = rca.NewRCATransformer(trackedDispatcher, calibrateFlags.promptDir, rca.WithRCABasePath(calibDir))
 		if calibrateFlags.routingLog != "" {
-			routingRecorder = rca.NewRoutingRecorder(t, adapterColor(calibrateFlags.adapter))
+			routingRecorder = rca.NewRoutingRecorder(t, backendColor(calibrateFlags.backend))
 			t = routingRecorder
 		}
-		adapters = []*framework.Adapter{rca.TransformerAdapter(t)}
+		comps = []*framework.Component{rca.TransformerComponent(t)}
 		transformerLabel = "llm"
 	default:
-		return fmt.Errorf("unknown adapter: %s (available: stub, basic, llm)", calibrateFlags.adapter)
+		return fmt.Errorf("unknown backend: %s (available: stub, basic, llm)", calibrateFlags.backend)
 	}
 
 	var basePath string
-	if calibrateFlags.adapter == "llm" {
+	if calibrateFlags.backend == "llm" {
 		if calibrateFlags.clean {
 			if info, err := os.Stat(calibDir); err == nil && info.IsDir() {
 				fmt.Fprintf(cmd.OutOrStdout(), "[cleanup] removing previous calibration artifacts: %s/\n", calibDir)
@@ -175,7 +175,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		basePath = calibDir
 		out := cmd.OutOrStdout()
 		fmt.Fprintf(out, "Calibration artifacts: %s/\n", calibDir)
-		fmt.Fprintf(out, "Adapter: llm (dispatch=%s, clean=%v)\n", calibrateFlags.dispatchMode, calibrateFlags.clean)
+		fmt.Fprintf(out, "Backend: llm (dispatch=%s, clean=%v)\n", calibrateFlags.dispatchMode, calibrateFlags.clean)
 		fmt.Fprintf(out, "Scenario: %s (%d cases)\n\n", scenario.Name, len(scenario.Cases))
 	} else {
 		tmpDir, err := os.MkdirTemp("", "asterisk-calibrate-*")
@@ -186,11 +186,11 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		basePath = tmpDir
 	}
 
-	if calibrateFlags.adapter == "llm" && calibrateFlags.runs > 1 {
-		return fmt.Errorf("llm adapter only supports --runs=1 (interactive mode)")
+	if calibrateFlags.backend == "llm" && calibrateFlags.runs > 1 {
+		return fmt.Errorf("llm backend only supports --runs=1 (interactive mode)")
 	}
 
-	if calibrateFlags.adapter == "llm" && calibrateFlags.dispatchMode == "file" {
+	if calibrateFlags.backend == "llm" && calibrateFlags.dispatchMode == "file" {
 		fmt.Fprintln(cmd.OutOrStdout(), "[lifecycle] dispatch=file: ensure Cursor agent or MCP server is responding to signals")
 	}
 
@@ -210,7 +210,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 
 	cfg := rca.RunConfig{
 		Scenario:     scenario,
-		Adapters:     adapters,
+		Components: comps,
 		TransformerName: transformerLabel,
 		IDMapper:     idMapper,
 		Runs:         calibrateFlags.runs,
@@ -226,7 +226,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 
 	report, err := rca.RunCalibration(cmd.Context(), cfg)
 
-	if calibrateFlags.adapter == "llm" && calibrateFlags.dispatchMode == "file" {
+	if calibrateFlags.backend == "llm" && calibrateFlags.dispatchMode == "file" {
 		dispatch.FinalizeSignals(calibDir)
 	}
 
@@ -309,8 +309,8 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// adapterColor maps adapter name to color identity for routing log tagging.
-func adapterColor(name string) string {
+// backendColor maps backend name to color identity for routing log tagging.
+func backendColor(name string) string {
 	switch name {
 	case "basic":
 		return "crimson"

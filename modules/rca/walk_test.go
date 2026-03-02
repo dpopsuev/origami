@@ -32,17 +32,17 @@ func TestWalkCase_RecallHitPath(t *testing.T) {
 	ms := store.NewMemStore()
 	c := &store.Case{ID: 1, Name: "test-case"}
 
-	storeAdapter := &framework.Adapter{
+	storeComp := &framework.Component{
 		Namespace: "store", Name: "test-store",
 		Hooks: StoreHooks(ms, c),
 	}
-	transAdapter := TransformerAdapter(&fullCircuitTransformer{})
+	transComp := TransformerComponent(&fullCircuitTransformer{})
 
 	result, err := WalkCase(context.Background(), WalkConfig{
 		Store:    ms,
 		CaseData: c,
 		CaseLabel: "T1",
-		Adapters: []*framework.Adapter{transAdapter, storeAdapter},
+		Components: []*framework.Component{transComp, storeComp},
 	})
 	if err != nil {
 		t.Fatalf("WalkCase: %v", err)
@@ -99,17 +99,17 @@ func TestWalkCase_TriageInvestigatePath(t *testing.T) {
 	ms := store.NewMemStore()
 	c := &store.Case{ID: 2, Name: "test-deep"}
 
-	storeAdapter := &framework.Adapter{
+	storeComp := &framework.Component{
 		Namespace: "store", Name: "test-store",
 		Hooks: StoreHooks(ms, c),
 	}
-	transAdapter := TransformerAdapter(&triageInvestigateTransformer{})
+	transComp := TransformerComponent(&triageInvestigateTransformer{})
 
 	result, err := WalkCase(context.Background(), WalkConfig{
 		Store:    ms,
 		CaseData: c,
 		CaseLabel: "T2",
-		Adapters: []*framework.Adapter{transAdapter, storeAdapter},
+		Components: []*framework.Component{transComp, storeComp},
 	})
 	if err != nil {
 		t.Fatalf("WalkCase: %v", err)
@@ -127,9 +127,9 @@ func TestWalkCase_TriageInvestigatePath(t *testing.T) {
 }
 
 func TestWalkCase_HITL_Fallback(t *testing.T) {
-	hitlAdapter := HITLAdapter()
+	hitlComp := HITLComponent()
 	th := DefaultThresholds()
-	runner, err := BuildRunner(th, hitlAdapter)
+	runner, err := BuildRunner(th, hitlComp)
 	if err != nil {
 		t.Fatalf("BuildRunner: %v", err)
 	}

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 )
 
 // MemStore is an in-memory Store for tests. Implements Store.

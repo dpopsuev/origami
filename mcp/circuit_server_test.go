@@ -111,7 +111,7 @@ func stubRunFunc(disp *dispatch.MuxDispatcher, nCases, nSteps, parallel int, ste
 	}
 }
 
-// stubRunFuncInstant creates a RunFunc that completes instantly (like a stub adapter).
+// stubRunFuncInstant creates a RunFunc that completes instantly (like a stub backend).
 func stubRunFuncInstant(nCases int) mcp.RunFunc {
 	return func(ctx context.Context) (any, error) {
 		return &testReport{CasesProcessed: nCases, StepsProcessed: 0}, nil

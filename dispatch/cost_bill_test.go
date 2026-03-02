@@ -56,7 +56,7 @@ func TestBuildCostBill_Basic(t *testing.T) {
 func TestBuildCostBill_WithOptions(t *testing.T) {
 	bill := dispatch.BuildCostBill(sampleTokenSummary(),
 		dispatch.WithTitle("TokiMeter"),
-		dispatch.WithSubtitle("scenario: test | adapter: llm"),
+		dispatch.WithSubtitle("scenario: test | backend: llm"),
 		dispatch.WithStepOrder([]string{"STEP_C", "STEP_A", "STEP_B"}),
 		dispatch.WithStepNames(func(s string) string {
 			names := map[string]string{"STEP_A": "Alpha", "STEP_B": "Beta", "STEP_C": "Gamma"}

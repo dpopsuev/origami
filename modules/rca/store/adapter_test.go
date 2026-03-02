@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 )
 
 func TestEnvelopeStoreAdapter_WithSqlStore(t *testing.T) {

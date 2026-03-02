@@ -38,8 +38,8 @@ version: "1.0"
 
 imports:
   - origami.modules.rca
-  - origami.adapters.rp
-  - origami.adapters.sqlite
+  - origami.components.rp
+  - origami.components.sqlite
 
 embed:
   - circuits/

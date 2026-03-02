@@ -1,4 +1,4 @@
-adapter: asterisk-rca
+component: asterisk-rca
 namespace: rca
 version: "1.0.0"
 description: RCA circuit plumbing for CI root-cause analysis

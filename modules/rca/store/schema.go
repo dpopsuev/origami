@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dpopsuev/origami/adapters/sqlite"
+	"github.com/dpopsuev/origami/components/sqlite"
 )
 
 //go:embed schema.yaml

@@ -135,7 +135,7 @@ func TestBatchWalk_PerCaseAdapters(t *testing.T) {
 	}
 
 	hookCalled := make(map[string]bool)
-	hookAdapter := &Adapter{
+	hookAdapter := &Component{
 		Namespace: "test",
 		Name:      "case-hook",
 		Hooks: HookRegistry{
@@ -146,7 +146,7 @@ func TestBatchWalk_PerCaseAdapters(t *testing.T) {
 		},
 	}
 
-	noopHookAdapter := &Adapter{
+	noopHookAdapter := &Component{
 		Namespace: "test",
 		Name:      "noop-hook",
 		Hooks: HookRegistry{
@@ -160,8 +160,8 @@ func TestBatchWalk_PerCaseAdapters(t *testing.T) {
 		Def:    def,
 		Shared: sharedReg,
 		Cases: []BatchCase{
-			{ID: "with-hook", Adapters: []*Adapter{hookAdapter}},
-			{ID: "no-hook", Adapters: []*Adapter{noopHookAdapter}},
+			{ID: "with-hook", Components: []*Component{hookAdapter}},
+			{ID: "no-hook", Components: []*Component{noopHookAdapter}},
 		},
 		Parallel: 1,
 	})

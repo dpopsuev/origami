@@ -13,7 +13,7 @@ import (
 	"github.com/dpopsuev/origami/dispatch"
 	"github.com/dpopsuev/origami/logging"
 
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 	"github.com/dpopsuev/origami/modules/rca/store"
 )
 
@@ -28,7 +28,7 @@ type IDMappable interface {
 // RunConfig holds configuration for a calibration run.
 type RunConfig struct {
 	Scenario     *Scenario
-	Adapters     []*framework.Adapter // transformer adapter(s) for the circuit
+	Components     []*framework.Component // transformer component(s) for the circuit
 	TransformerName string             // label for reports
 	IDMapper     IDMappable           // optional; stub cross-case references
 	Runs         int
@@ -47,10 +47,10 @@ type RunConfig struct {
 }
 
 // DefaultRunConfig returns defaults for calibration.
-func DefaultRunConfig(scenario *Scenario, adapters []*framework.Adapter, transformerName string) RunConfig {
+func DefaultRunConfig(scenario *Scenario, comps []*framework.Component, transformerName string) RunConfig {
 	return RunConfig{
 		Scenario:                 scenario,
-		Adapters:                 adapters,
+		Components:               comps,
 		TransformerName:         transformerName,
 		Runs:                     1,
 		PromptDir:                ".cursor/prompts",
@@ -254,12 +254,12 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 		}
 		caseDir, _ := EnsureCaseDir(cfg.BasePath, suiteID, caseData.ID)
 
-		storeAdapter := &framework.Adapter{
+		storeComp := &framework.Component{
 			Namespace: "store",
 			Name:      "rca-store-hooks",
 			Hooks:     StoreHooks(st, caseData),
 		}
-		injectAdapter := &framework.Adapter{
+		injectComp := &framework.Component{
 			Namespace: "inject",
 			Name:      "rca-inject-hooks",
 			Hooks:     InjectHooks(st, caseData, env, catalog, caseDir),
@@ -267,9 +267,9 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 
 		entries[i] = caseEntry{gtCase: gtCase, caseData: caseData, caseDir: caseDir}
 
-		adapters := make([]*framework.Adapter, len(cfg.Adapters), len(cfg.Adapters)+2)
-		copy(adapters, cfg.Adapters)
-		adapters = append(adapters, storeAdapter, injectAdapter)
+		adapters := make([]*framework.Component, len(cfg.Components), len(cfg.Components)+2)
+		copy(adapters, cfg.Components)
+		adapters = append(adapters, storeComp, injectComp)
 
 		batchCases[i] = framework.BatchCase{
 			ID: gtCase.ID,
@@ -279,7 +279,7 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 				KeyCaseDir:   caseDir,
 				KeyCaseLabel: gtCase.ID,
 			},
-			Adapters: adapters,
+			Components: adapters,
 		}
 	}
 

@@ -199,10 +199,10 @@ func (def *CircuitDef) Validate() error {
 	return nil
 }
 
-// AdapterLoader resolves an import name (e.g. "core", "vendor.rca-tools")
-// to a live Adapter with populated registries. BuildGraph calls the loader
+// ComponentLoader resolves an import name (e.g. "core", "vendor.rca-tools")
+// to a live Component with populated registries. BuildGraph calls the loader
 // for each entry in CircuitDef.Imports.
-type AdapterLoader func(name string) (*Adapter, error)
+type ComponentLoader func(name string) (*Component, error)
 
 // GraphRegistries bundles all optional registries for BuildGraph.
 // Fields are optional; BuildGraph resolves nodes by priority:
@@ -215,29 +215,29 @@ type GraphRegistries struct {
 	Transformers TransformerRegistry
 	Hooks        HookRegistry
 	Marbles      MarbleRegistry
-	Adapters     AdapterLoader
+	Components   ComponentLoader
 }
 
 // BuildGraph constructs a Graph from a CircuitDef using the full registries bundle.
 // Node resolution priority: Transformer > Extractor > NodeRegistry (Family/Name).
 // Edge resolution priority: expressionEdge (When) > EdgeFactory > dslEdge.
-// When CircuitDef.Imports is non-empty and reg.Adapters is set, imported
-// adapters are loaded and merged into the registries before node resolution.
+// When CircuitDef.Imports is non-empty and reg.Components is set, imported
+// components are loaded and merged into the registries before node resolution.
 func (def *CircuitDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 	if err := def.Validate(); err != nil {
 		return nil, fmt.Errorf("validate: %w", err)
 	}
 
-	if len(def.Imports) > 0 && reg.Adapters != nil {
-		adapters := make([]*Adapter, 0, len(def.Imports))
+	if len(def.Imports) > 0 && reg.Components != nil {
+		comps := make([]*Component, 0, len(def.Imports))
 		for _, imp := range def.Imports {
-			a, err := reg.Adapters(imp)
+			c, err := reg.Components(imp)
 			if err != nil {
 				return nil, fmt.Errorf("import %q: %w", imp, err)
 			}
-			adapters = append(adapters, a)
+			comps = append(comps, c)
 		}
-		merged, err := MergeAdapters(reg, adapters...)
+		merged, err := MergeComponents(reg, comps...)
 		if err != nil {
 			return nil, fmt.Errorf("merge imports: %w", err)
 		}

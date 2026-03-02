@@ -1,6 +1,6 @@
-// Package sqlite provides a YAML-defined SQLite adapter for Origami circuits.
+// Package sqlite provides a YAML-defined SQLite component for Origami circuits.
 //
-// The adapter replaces hand-written SQL DDL strings with declarative YAML schema
+// The component replaces hand-written SQL DDL strings with declarative YAML schema
 // definitions. It provides:
 //
 //   - Schema parser: YAML table/column/index definitions → Go types

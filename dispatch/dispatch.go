@@ -65,7 +65,7 @@ type ExternalDispatcher interface {
 }
 
 // Finalizer is an optional interface for dispatchers that need post-dispatch
-// cleanup (e.g. updating signal files). Adapters check for this interface
+// cleanup (e.g. updating signal files). Components check for this interface
 // instead of type-asserting specific dispatcher implementations.
 type Finalizer interface {
 	MarkDone(artifactPath string)

@@ -10,36 +10,36 @@ import (
 	framework "github.com/dpopsuev/origami"
 )
 
-func adapterCmd(args []string) error {
+func componentCmd(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: origami adapter <list|inspect|validate> [flags]")
+		return fmt.Errorf("usage: origami component <list|inspect|validate> [flags]")
 	}
 	switch args[0] {
 	case "list":
-		return adapterList(args[1:])
+		return componentList(args[1:])
 	case "inspect":
-		return adapterInspect(args[1:])
+		return componentInspect(args[1:])
 	case "validate":
-		return adapterValidate(args[1:])
+		return componentValidate(args[1:])
 	default:
-		return fmt.Errorf("unknown adapter subcommand: %s", args[0])
+		return fmt.Errorf("unknown component subcommand: %s", args[0])
 	}
 }
 
-func adapterList(args []string) error {
-	fs := flag.NewFlagSet("adapter list", flag.ContinueOnError)
-	dir := fs.String("dir", ".", "directory to scan for adapter.yaml files")
+func componentList(args []string) error {
+	fs := flag.NewFlagSet("component list", flag.ContinueOnError)
+	dir := fs.String("dir", ".", "directory to scan for component.yaml files")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	var manifests []*framework.AdapterManifest
+	var manifests []*framework.ComponentManifest
 	filepath.Walk(*dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.Name() == "adapter.yaml" {
-			m, loadErr := framework.LoadAdapterManifest(path)
+		if info.Name() == "component.yaml" {
+			m, loadErr := framework.LoadComponentManifest(path)
 			if loadErr == nil {
 				manifests = append(manifests, m)
 			}
@@ -48,11 +48,11 @@ func adapterList(args []string) error {
 	})
 
 	if len(manifests) == 0 {
-		fmt.Println("No adapters found.")
+		fmt.Println("No components found.")
 		return nil
 	}
 
-	fmt.Printf("%-20s %-10s %-12s %s\n", "NAMESPACE", "VERSION", "ADAPTER", "PROVIDES")
+	fmt.Printf("%-20s %-10s %-12s %s\n", "NAMESPACE", "VERSION", "COMPONENT", "PROVIDES")
 	for _, m := range manifests {
 		provides := make([]string, 0)
 		if len(m.Provides.Transformers) > 0 {
@@ -64,26 +64,26 @@ func adapterList(args []string) error {
 		if len(m.Provides.Hooks) > 0 {
 			provides = append(provides, fmt.Sprintf("H:%s", strings.Join(m.Provides.Hooks, ",")))
 		}
-		fmt.Printf("%-20s %-10s %-12s %s\n", m.Namespace, m.Version, m.Adapter, strings.Join(provides, " "))
+		fmt.Printf("%-20s %-10s %-12s %s\n", m.Namespace, m.Version, m.Component, strings.Join(provides, " "))
 	}
 	return nil
 }
 
-func adapterInspect(args []string) error {
-	fs := flag.NewFlagSet("adapter inspect", flag.ContinueOnError)
+func componentInspect(args []string) error {
+	fs := flag.NewFlagSet("component inspect", flag.ContinueOnError)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() == 0 {
-		return fmt.Errorf("usage: origami adapter inspect <adapter.yaml>")
+		return fmt.Errorf("usage: origami component inspect <component.yaml>")
 	}
 
-	m, err := framework.LoadAdapterManifest(fs.Arg(0))
+	m, err := framework.LoadComponentManifest(fs.Arg(0))
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Adapter:     %s\n", m.Adapter)
+	fmt.Printf("Component:   %s\n", m.Component)
 	fmt.Printf("Namespace:   %s\n", m.Namespace)
 	fmt.Printf("Version:     %s\n", m.Version)
 	if m.Description != "" {
@@ -104,24 +104,24 @@ func adapterInspect(args []string) error {
 	return nil
 }
 
-func adapterValidate(args []string) error {
-	fs := flag.NewFlagSet("adapter validate", flag.ContinueOnError)
+func componentValidate(args []string) error {
+	fs := flag.NewFlagSet("component validate", flag.ContinueOnError)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() == 0 {
-		return fmt.Errorf("usage: origami adapter validate <adapter.yaml>")
+		return fmt.Errorf("usage: origami component validate <component.yaml>")
 	}
 
 	path := fs.Arg(0)
-	m, err := framework.LoadAdapterManifest(path)
+	m, err := framework.LoadComponentManifest(path)
 	if err != nil {
 		return err
 	}
 
 	var issues []string
-	if m.Adapter == "" {
-		issues = append(issues, "missing adapter name")
+	if m.Component == "" {
+		issues = append(issues, "missing component name")
 	}
 	if m.Namespace == "" {
 		issues = append(issues, "missing namespace")
@@ -138,9 +138,9 @@ func adapterValidate(args []string) error {
 		for _, issue := range issues {
 			fmt.Fprintf(os.Stderr, "  ✗ %s\n", issue)
 		}
-		return fmt.Errorf("adapter manifest %s has %d issue(s)", path, len(issues))
+		return fmt.Errorf("component manifest %s has %d issue(s)", path, len(issues))
 	}
 
-	fmt.Printf("OK: %s (%s/%s) is valid\n", path, m.Namespace, m.Adapter)
+	fmt.Printf("OK: %s (%s/%s) is valid\n", path, m.Namespace, m.Component)
 	return nil
 }

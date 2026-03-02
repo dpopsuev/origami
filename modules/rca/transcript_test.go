@@ -22,7 +22,7 @@ func TestWeaveTranscripts_StubTransformer(t *testing.T) {
 
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,
@@ -95,7 +95,7 @@ func TestWeaveTranscripts_GroupsByRCA(t *testing.T) {
 
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,
@@ -224,7 +224,7 @@ func TestRenderRCATranscript_IncludesPromptWhenAvailable(t *testing.T) {
 }
 
 // TestRenderTranscript_OmitsPromptWhenEmpty verifies that the Prompt section
-// is skipped when no prompt content is available (e.g. stub/basic adapter).
+// is skipped when no prompt content is available (e.g. stub/basic backend).
 func TestRenderTranscript_OmitsPromptWhenEmpty(t *testing.T) {
 	tr := &rca.RCATranscript{
 		RCAID:      1,
@@ -281,7 +281,7 @@ func TestWeaveTranscripts_WritesToDisk(t *testing.T) {
 
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,

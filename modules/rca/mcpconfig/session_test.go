@@ -17,7 +17,7 @@ func TestStartCircuit_InvalidScenario(t *testing.T) {
 	res, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
 		Name: "start_circuit",
 		Arguments: map[string]any{
-			"extra": map[string]any{"scenario": "nonexistent", "adapter": "stub"},
+			"extra": map[string]any{"scenario": "nonexistent", "backend": "stub"},
 		},
 	})
 	if err != nil {

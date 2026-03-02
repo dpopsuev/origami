@@ -17,7 +17,7 @@ func TestParallel_ResultsMatch(t *testing.T) {
 
 	serialCfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,
@@ -34,7 +34,7 @@ func TestParallel_ResultsMatch(t *testing.T) {
 
 	parallelCfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,
@@ -80,7 +80,7 @@ func TestParallel_NoRace(t *testing.T) {
 	stub := rca.NewStubTransformer(scenario)
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,
@@ -108,7 +108,7 @@ func TestParallel_AllCasesComplete(t *testing.T) {
 	stub := rca.NewStubTransformer(scenario)
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,

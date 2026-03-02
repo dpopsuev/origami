@@ -11,7 +11,7 @@ import (
 	"github.com/dpopsuev/origami/modules/rca/scenarios"
 	"github.com/dpopsuev/origami/modules/rca/store"
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 	cal "github.com/dpopsuev/origami/calibrate"
 	"github.com/dpopsuev/origami/dispatch"
 	fwmcp "github.com/dpopsuev/origami/mcp"
@@ -66,7 +66,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	extra := params.Extra
 
 	scenarioName, _ := extra["scenario"].(string)
-	transformerName, _ := extra["adapter"].(string)
+	transformerName, _ := extra["backend"].(string)
 	rpBaseURL, _ := extra["rp_base_url"].(string)
 	rpProject, _ := extra["rp_project"].(string)
 
@@ -104,13 +104,13 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	tokenTracker := dispatch.NewTokenTracker()
 	tracked := dispatch.NewTokenTrackingDispatcher(disp, tokenTracker)
 
-	var adapters []*framework.Adapter
+	var comps []*framework.Component
 	var transformerLabel string
 	var idMapper rca.IDMappable
 	switch transformerName {
 	case "stub":
 		stub := rca.NewStubTransformer(scenario)
-		adapters = []*framework.Adapter{rca.TransformerAdapter(stub)}
+		comps = []*framework.Component{rca.TransformerComponent(stub)}
 		transformerLabel = "stub"
 		idMapper = stub
 	case "basic":
@@ -122,7 +122,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		for _, r := range scenario.Workspace.Repos {
 			repoNames = append(repoNames, r.Name)
 		}
-		adapters = []*framework.Adapter{rca.HeuristicAdapter(basicSt, repoNames)}
+		comps = []*framework.Component{rca.HeuristicComponent(basicSt, repoNames)}
 		transformerLabel = "basic"
 	default:
 		t := rca.NewRCATransformer(
@@ -130,7 +130,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 			promptDir,
 			rca.WithRCABasePath(basePath),
 		)
-		adapters = []*framework.Adapter{rca.TransformerAdapter(t)}
+		comps = []*framework.Component{rca.TransformerComponent(t)}
 		transformerLabel = "rca"
 	}
 
@@ -151,7 +151,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 
 	cfg := rca.RunConfig{
 		Scenario:     scenario,
-		Adapters:     adapters,
+		Components: comps,
 		TransformerName: transformerLabel,
 		IDMapper:     idMapper,
 		Runs:         1,

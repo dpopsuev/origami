@@ -109,5 +109,5 @@ type SessionMeta struct {
 type StartParams struct {
 	Parallel int
 	Force    bool
-	Extra    map[string]any // domain-specific params (scenario, adapter, rp_base_url, etc.)
+	Extra    map[string]any // domain-specific params (scenario, backend, rp_base_url, etc.)
 }

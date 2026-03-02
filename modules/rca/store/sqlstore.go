@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dpopsuev/origami/adapters/rp"
-	"github.com/dpopsuev/origami/adapters/sqlite"
+	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/components/sqlite"
 )
 
 func nowUTC() string { return time.Now().UTC().Format(time.RFC3339) }
@@ -27,7 +27,7 @@ func nullFloat(nf sql.NullFloat64) float64 {
 	return 0
 }
 
-// SqlStore implements Store with SQLite via the Origami sqlite adapter.
+// SqlStore implements Store with SQLite via the Origami sqlite component.
 type SqlStore struct {
 	db *sqlite.DB
 }

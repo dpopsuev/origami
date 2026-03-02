@@ -72,7 +72,7 @@ func TestRunAnalysis_HeuristicTransformer(t *testing.T) {
 	}
 
 	cfg := rca.AnalysisConfig{
-		Adapters:   []*framework.Adapter{rca.HeuristicAdapter(st, []string{"linuxptp-daemon", "cloud-event-proxy"})},
+		Components:   []*framework.Component{rca.HeuristicComponent(st, []string{"linuxptp-daemon", "cloud-event-proxy"})},
 		Thresholds: rca.DefaultThresholds(),
 		BasePath:   tmpDir,
 	}
@@ -111,7 +111,7 @@ func TestRunAnalysis_EmptyCases(t *testing.T) {
 	st := store.NewMemStore()
 
 	cfg := rca.AnalysisConfig{
-		Adapters:   []*framework.Adapter{rca.HeuristicAdapter(st, nil)},
+		Components:   []*framework.Component{rca.HeuristicComponent(st, nil)},
 		Thresholds: rca.DefaultThresholds(),
 		BasePath:   tmpDir,
 	}

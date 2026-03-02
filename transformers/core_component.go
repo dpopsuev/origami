@@ -5,11 +5,11 @@ import (
 	"github.com/dpopsuev/origami/dispatch"
 )
 
-// CoreAdapter returns an Adapter bundling the four built-in transformers
+// CoreComponent returns a Component bundling the four built-in transformers
 // (llm, http, jq, file) under the "core" namespace.
 // The llm transformer requires a Dispatcher; pass nil to omit it.
-func CoreAdapter(d dispatch.Dispatcher, opts ...CoreAdapterOption) *fw.Adapter {
-	cfg := &coreAdapterConfig{}
+func CoreComponent(d dispatch.Dispatcher, opts ...CoreComponentOption) *fw.Component {
+	cfg := &coreComponentConfig{}
 	for _, opt := range opts {
 		opt(cfg)
 	}
@@ -33,7 +33,7 @@ func CoreAdapter(d dispatch.Dispatcher, opts ...CoreAdapterOption) *fw.Adapter {
 	reg["template-params"] = NewTemplateParams()
 	reg["match"] = NewMatch()
 
-	return &fw.Adapter{
+	return &fw.Component{
 		Namespace:    "core",
 		Name:         "origami-core",
 		Version:      "1.0.0",
@@ -42,14 +42,14 @@ func CoreAdapter(d dispatch.Dispatcher, opts ...CoreAdapterOption) *fw.Adapter {
 	}
 }
 
-// CoreAdapterOption configures CoreAdapter.
-type CoreAdapterOption func(*coreAdapterConfig)
+// CoreComponentOption configures CoreComponent.
+type CoreComponentOption func(*coreComponentConfig)
 
-type coreAdapterConfig struct {
+type coreComponentConfig struct {
 	baseDir string
 }
 
 // WithCoreBaseDir sets the base directory for file and llm transformers.
-func WithCoreBaseDir(dir string) CoreAdapterOption {
-	return func(c *coreAdapterConfig) { c.baseDir = dir }
+func WithCoreBaseDir(dir string) CoreComponentOption {
+	return func(c *coreComponentConfig) { c.baseDir = dir }
 }

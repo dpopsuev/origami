@@ -11,7 +11,7 @@ import (
 type BatchCase struct {
 	ID       string
 	Context  map[string]any
-	Adapters []*Adapter
+	Components []*Component
 }
 
 // BatchWalkResult captures the outcome of walking one case.
@@ -33,16 +33,16 @@ type BatchWalkConfig struct {
 }
 
 // BatchWalk walks a circuit once per case, optionally in parallel.
-// Each case gets its own runner (shared registries + per-case adapters),
+// Each case gets its own runner (shared registries + per-case components),
 // walker, and observer. Results are returned in case order.
 func BatchWalk(ctx context.Context, cfg BatchWalkConfig) []BatchWalkResult {
 	results := make([]BatchWalkResult, len(cfg.Cases))
 
 	walkOne := func(ctx context.Context, i int, bc BatchCase) {
 		reg := cfg.Shared
-		if len(bc.Adapters) > 0 {
+		if len(bc.Components) > 0 {
 			var err error
-			reg, err = MergeAdapters(reg, bc.Adapters...)
+			reg, err = MergeComponents(reg, bc.Components...)
 			if err != nil {
 				results[i] = BatchWalkResult{CaseID: bc.ID, Error: err}
 				return

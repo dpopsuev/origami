@@ -299,7 +299,7 @@ func (fs *FileStore) Save(_ context.Context, s *rca.Scenario) error {
 }
 
 // CurationStore returns a generic curate.Store that persists curate.Dataset
-// objects. This is the bridge between Asterisk's origami adapter and the
+// objects. This is the bridge between Asterisk's origami component and the
 // generic curation layer.
 func CurationStore(dir string) (curate.Store, error) {
 	return curate.NewFileStore(dir)

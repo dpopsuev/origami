@@ -6,7 +6,7 @@ import (
 
 	"github.com/dpopsuev/origami/logging"
 
-	orirp "github.com/dpopsuev/origami/adapters/rp"
+	orirp "github.com/dpopsuev/origami/components/rp"
 )
 
 // ResolveRPCases fetches real failure data from ReportPortal for cases that

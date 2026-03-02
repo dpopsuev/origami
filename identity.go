@@ -97,7 +97,7 @@ func (id AgentIdentity) Tag() string {
 }
 
 // ModelIdentity records which foundation LLM model ("ghost") is behind
-// an adapter ("shell"). The Wrapper field records the hosting environment
+// a backend ("shell"). The Wrapper field records the hosting environment
 // (e.g. Cursor, Azure) that may sit between the caller and the foundation model.
 type ModelIdentity struct {
 	ModelName string `json:"model_name"`

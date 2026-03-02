@@ -66,7 +66,7 @@ type GroundTruthCase struct {
 	RCAID        string   `json:"rca_id" yaml:"rca_id"`        // expected GroundTruthRCA.ID
 	ExpectedPath []string `json:"expected_path" yaml:"expected_path"` // expected circuit steps, e.g. ["F0","F1","F2","F3","F4","F5","F6"]
 
-	// Expected per-step outcomes (for stub adapter responses)
+	// Expected per-step outcomes (for stub backend responses)
 	ExpectedRecall    *ExpectedRecall    `json:"expected_recall,omitempty" yaml:"expected_recall,omitempty"`
 	ExpectedTriage    *ExpectedTriage    `json:"expected_triage,omitempty" yaml:"expected_triage,omitempty"`
 	ExpectedResolve   *ExpectedResolve   `json:"expected_resolve,omitempty" yaml:"expected_resolve,omitempty"`

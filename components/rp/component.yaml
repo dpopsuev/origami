@@ -1,0 +1,9 @@
+component: asterisk-rp
+namespace: rp
+version: "1.0.0"
+description: ReportPortal component — API client, envelope fetching, defect pushing, dataset ingestion
+provides:
+  transformers: []
+  hooks: []
+requires:
+  origami: ">=0.3.0"

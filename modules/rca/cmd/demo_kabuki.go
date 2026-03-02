@@ -371,12 +371,12 @@ func (PoliceStationKabuki) Concepts() []kami.ConceptGroup {
 		},
 		{
 			ID:       "act2-adapters",
-			Title:    "Adapters & Marbles / Coming Next",
+			Title:    "Components & Marbles / Coming Next",
 			Subtitle: "Reusable building blocks for circuit composition",
 			Cards: []kami.ConceptCard{
-				{Name: "Adapters", Description: "Helper bundles: transformers, extractors, hooks. Package common patterns (JSON parsing, YAML validation, log filtering) as reusable units."},
+				{Name: "Components", Description: "Helper bundles: transformers, extractors, hooks. Package common patterns (JSON parsing, YAML validation, log filtering) as reusable units."},
 				{Name: "Marbles", Description: "Reusable graph nodes: atomic (single node) or composite (subgraphs). Snap together like marbles on a track."},
-				{Name: "FQCN Resolution", Description: "Fully qualified component names. Adapters and marbles use FQCN for unambiguous resolution across circuits."},
+				{Name: "FQCN Resolution", Description: "Fully qualified component names. Components and marbles use FQCN for unambiguous resolution across circuits."},
 				{Name: "Status", Description: "Conceptual design complete. DSL surface and runtime support shipping in the next milestone."},
 			},
 		},

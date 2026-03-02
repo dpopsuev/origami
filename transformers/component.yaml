@@ -1,4 +1,4 @@
-adapter: origami-core
+component: origami-core
 namespace: core
 version: "1.0.0"
 description: Built-in transformers for the Origami circuit framework

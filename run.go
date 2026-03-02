@@ -16,7 +16,7 @@ type runConfig struct {
 	extractors     ExtractorRegistry
 	nodes          NodeRegistry
 	edges          EdgeFactory
-	adapters       AdapterLoader
+	components     ComponentLoader
 	marbles        MarbleRegistry
 	overrides      map[string]any
 	walker         Walker
@@ -57,11 +57,11 @@ func WithEdges(reg EdgeFactory) RunOption {
 	return func(c *runConfig) { c.edges = reg }
 }
 
-// WithAdapters registers an adapter loader for the run. When the circuit
+// WithComponents registers a component loader for the run. When the circuit
 // YAML contains imports: [...], the loader is called for each import name
-// and the resulting adapters are merged into the registries.
-func WithAdapters(loader AdapterLoader) RunOption {
-	return func(c *runConfig) { c.adapters = loader }
+// and the resulting components are merged into the registries.
+func WithComponents(loader ComponentLoader) RunOption {
+	return func(c *runConfig) { c.components = loader }
 }
 
 // WithMarbles registers a marble registry for the run. Nodes that declare
@@ -187,7 +187,7 @@ func Run(ctx context.Context, circuitPath string, input any, opts ...RunOption) 
 		Transformers: cfg.transformers,
 		Hooks:        cfg.hooks,
 		Marbles:      cfg.marbles,
-		Adapters:     cfg.adapters,
+		Components:   cfg.components,
 	}
 
 	runner, err := NewRunnerWith(def, reg)
@@ -318,7 +318,7 @@ func Validate(circuitPath string, opts ...RunOption) error {
 		Transformers: cfg.transformers,
 		Hooks:        cfg.hooks,
 		Marbles:      cfg.marbles,
-		Adapters:     cfg.adapters,
+		Components:   cfg.components,
 	}
 
 	hasRegistries := reg.Nodes != nil || reg.Edges != nil || reg.Extractors != nil || reg.Transformers != nil || reg.Hooks != nil

@@ -39,7 +39,7 @@ func TestStubCalibration_AllMetricsPass(t *testing.T) {
 	stub := rca.NewStubTransformer(scenario)
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,
@@ -117,7 +117,7 @@ func TestStubCalibration_MultiRun(t *testing.T) {
 	stub := rca.NewStubTransformer(scenario)
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        3,
@@ -152,7 +152,7 @@ func TestFormatReport(t *testing.T) {
 
 	scenario := mustLoadScenario(t, "ptp-mock")
 	stub := rca.NewStubTransformer(scenario)
-	cfg := rca.DefaultRunConfig(scenario, []*framework.Adapter{rca.TransformerAdapter(stub)}, "stub")
+	cfg := rca.DefaultRunConfig(scenario, []*framework.Component{rca.TransformerComponent(stub)}, "stub")
 	cfg.IDMapper = stub
 	cfg.Thresholds = rca.DefaultThresholds()
 	cfg.BasePath = tmpDir
@@ -198,7 +198,7 @@ func TestStubCalibration_DaemonMock(t *testing.T) {
 	stub := rca.NewStubTransformer(scenario)
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,
@@ -251,7 +251,7 @@ func TestStubCalibration_PTPReal(t *testing.T) {
 	stub := rca.NewStubTransformer(scenario)
 	cfg := rca.RunConfig{
 		Scenario:    scenario,
-		Adapters:    []*framework.Adapter{rca.TransformerAdapter(stub)},
+		Components:    []*framework.Component{rca.TransformerComponent(stub)},
 		TransformerName: "stub",
 		IDMapper:    stub,
 		Runs:        1,

@@ -7,7 +7,7 @@ import (
 	"github.com/dpopsuev/origami/modules/rca/store"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/adapters/rp"
+	"github.com/dpopsuev/origami/components/rp"
 	"github.com/dpopsuev/origami/knowledge"
 )
 
@@ -20,7 +20,7 @@ type WalkConfig struct {
 	CaseDir    string
 	CaseLabel  string
 	Thresholds Thresholds
-	Adapters   []*framework.Adapter
+	Components   []*framework.Component
 }
 
 // WalkResult captures the outcome of a walk-based RCA.
@@ -53,7 +53,7 @@ func WalkCase(ctx context.Context, cfg WalkConfig) (*WalkResult, error) {
 				KeyCaseDir:   cfg.CaseDir,
 				KeyCaseLabel: cfg.CaseLabel,
 			},
-			Adapters: cfg.Adapters,
+			Components: cfg.Components,
 		}},
 	})
 

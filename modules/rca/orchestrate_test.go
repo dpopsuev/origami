@@ -107,7 +107,7 @@ func (noopTransformer) Transform(_ context.Context, _ *framework.TransformerCont
 
 func buildTestRunner(t *testing.T) *framework.Runner {
 	t.Helper()
-	runner, err := BuildRunner(DefaultThresholds(), TransformerAdapter(&noopTransformer{}))
+	runner, err := BuildRunner(DefaultThresholds(), TransformerComponent(&noopTransformer{}))
 	if err != nil {
 		t.Fatalf("BuildRunner: %v", err)
 	}
