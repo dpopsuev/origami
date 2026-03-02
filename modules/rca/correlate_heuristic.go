@@ -12,7 +12,8 @@ type correlateHeuristic struct {
 	ht *heuristicTransformer
 }
 
-func (t *correlateHeuristic) Name() string { return "correlate-heuristic" }
+func (t *correlateHeuristic) Name() string        { return "correlate-heuristic" }
+func (t *correlateHeuristic) Deterministic() bool { return true }
 
 func (t *correlateHeuristic) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
 	fp := failureFromContext(tc.WalkerState)

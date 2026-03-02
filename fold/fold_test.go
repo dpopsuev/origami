@@ -22,7 +22,7 @@ name: test-tool
 description: Integration test tool
 version: "1.0"
 imports:
-  - origami.marbles.rca
+  - origami.modules.rca
 `), 0644); err != nil {
 		t.Fatal(err)
 	}

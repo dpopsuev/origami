@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/dpopsuev/origami/marbles/rca"
+	"github.com/dpopsuev/origami/modules/rca"
 	"context"
 	"os"
 	"testing"

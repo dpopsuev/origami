@@ -57,7 +57,8 @@ func NewRCATransformer(d dispatch.Dispatcher, promptDir string, opts ...RCATrans
 	return t
 }
 
-func (t *rcaTransformer) Name() string { return "rca" }
+func (t *rcaTransformer) Name() string        { return "rca" }
+func (t *rcaTransformer) Deterministic() bool { return false }
 
 func (t *rcaTransformer) Transform(ctx context.Context, tc *framework.TransformerContext) (any, error) {
 	step := NodeNameToStep(tc.NodeName)

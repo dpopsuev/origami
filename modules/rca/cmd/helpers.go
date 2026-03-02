@@ -12,7 +12,7 @@ import (
 	"github.com/dpopsuev/origami/dispatch"
 
 	"github.com/dpopsuev/origami/adapters/rp"
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca/store"
 )
 
 // DispatchOpts collects the parameters needed to construct a dispatcher.

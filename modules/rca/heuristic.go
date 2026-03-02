@@ -9,7 +9,7 @@ import (
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/transformers"
 
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca/store"
 
 	"gopkg.in/yaml.v3"
 )

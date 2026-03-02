@@ -12,7 +12,7 @@ func TestResolveFQCN(t *testing.T) {
 		want string
 		err  bool
 	}{
-		{"origami.marbles.rca", "github.com/dpopsuev/origami/marbles/rca", false},
+		{"origami.modules.rca", "github.com/dpopsuev/origami/modules/rca", false},
 		{"origami.adapters.rp", "github.com/dpopsuev/origami/adapters/rp", false},
 		{"origami.adapters.sqlite", "github.com/dpopsuev/origami/adapters/sqlite", false},
 		{"origami.calibrate", "github.com/dpopsuev/origami/calibrate", false},
@@ -50,8 +50,8 @@ func TestResolveProvider(t *testing.T) {
 		wantSymbol string
 		err        bool
 	}{
-		{"marbles.rca.CalibrateRunner", "github.com/dpopsuev/origami/marbles/rca", "CalibrateRunner", false},
-		{"marbles.rca.AnalyzeFunc", "github.com/dpopsuev/origami/marbles/rca", "AnalyzeFunc", false},
+		{"modules.rca.CalibrateRunner", "github.com/dpopsuev/origami/modules/rca", "CalibrateRunner", false},
+		{"modules.rca.AnalyzeFunc", "github.com/dpopsuev/origami/modules/rca", "AnalyzeFunc", false},
 		{"adapters.rp.Fetcher", "github.com/dpopsuev/origami/adapters/rp", "Fetcher", false},
 		{"SingleWord", "", "", true},
 	}

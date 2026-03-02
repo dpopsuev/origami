@@ -14,9 +14,9 @@ import (
 	cal "github.com/dpopsuev/origami/calibrate"
 	"github.com/dpopsuev/origami/dispatch"
 
-	"github.com/dpopsuev/origami/marbles/rca"
-	"github.com/dpopsuev/origami/marbles/rca/scenarios"
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/modules/rca/scenarios"
+	"github.com/dpopsuev/origami/modules/rca/store"
 	"github.com/dpopsuev/origami/adapters/rp"
 )
 

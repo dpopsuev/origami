@@ -8,7 +8,8 @@ import (
 
 type reportHeuristic struct{}
 
-func (t *reportHeuristic) Name() string { return "report-heuristic" }
+func (t *reportHeuristic) Name() string        { return "report-heuristic" }
+func (t *reportHeuristic) Deterministic() bool { return true }
 
 func (t *reportHeuristic) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
 	fp := failureFromContext(tc.WalkerState)

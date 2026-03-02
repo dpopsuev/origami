@@ -1,17 +1,17 @@
-# Marble Catalog
+# Module Catalog
 
-First user-discovered marbles, extracted from Asterisk's `adapters/rca/` (14,600 LOC) and cross-validated against Achilles's pipeline. Marbles are composable YAML subgraphs that any Origami analysis tool can import.
+First user-discovered modules, extracted from Asterisk's `adapters/rca/` (14,600 LOC) and cross-validated against Achilles's pipeline. Modules are composable YAML subgraphs that any Origami analysis tool can import.
 
 ## Design principles
 
-1. **Ansible collection model.** Marbles are to Origami what Ansible Roles are to Ansible — reusable building blocks, not one-off glue.
-2. **Two-consumer validation.** Every marble must work for both Asterisk (passive CI post-mortem) and Achilles (proactive security probing). If a marble only fits one tool, the abstraction is wrong.
-3. **DSL-first.** The marble's public interface is YAML. Consumer code configures marbles via YAML, never by writing Go.
-4. **Zero domain imports.** Marbles live in Origami and must not import from Asterisk, Achilles, or any consumer.
+1. **Ansible collection model.** Modules are to Origami what Ansible Roles are to Ansible — reusable building blocks, not one-off glue.
+2. **Two-consumer validation.** Every module must work for both Asterisk (passive CI post-mortem) and Achilles (proactive security probing). If a module only fits one tool, the abstraction is wrong.
+3. **DSL-first.** The module's public interface is YAML. Consumer code configures modules via YAML, never by writing Go.
+4. **Zero domain imports.** Modules live in Origami and must not import from Asterisk, Achilles, or any consumer.
 
-## Marble summary
+## Module summary
 
-| # | Marble | Purpose | Asterisk source | Achilles counterpart |
+| # | Module | Purpose | Asterisk source | Achilles counterpart |
 |---|--------|---------|-----------------|----------------------|
 | 1 | `llm-extract` | Prompt template + output schema -> parsed structured result | `extractor.go`, `adapt/llm.go` | `extractors.go` (govulncheck, classify) |
 | 2 | `context-builder` | Walker state + templates -> filled prompt variables | `transformers.go`, `params.go`, `template.go`, `catalog_convert.go` | Implicit in node logic |
@@ -29,7 +29,7 @@ First user-discovered marbles, extracted from Asterisk's `adapters/rca/` (14,600
 **Interface:**
 
 ```yaml
-marble: llm-extract
+module: llm-extract
 inputs:
   prompt: string        # filled prompt text
   schema: object        # expected output JSON schema
@@ -50,9 +50,9 @@ outputs:
 - `GovulncheckExtractor` — parses govulncheck JSON stream (non-LLM)
 - `ClassifyExtractor` — deterministic deduplication and severity assignment
 
-**Generalization:** The marble must support both LLM and deterministic extraction. The provider is pluggable: `cursor`, `openai`, `govulncheck`, `stub`, or any registered provider. The schema defines the expected output shape; extraction fails if the response doesn't match.
+**Generalization:** The module must support both LLM and deterministic extraction. The provider is pluggable: `cursor`, `openai`, `govulncheck`, `stub`, or any registered provider. The schema defines the expected output shape; extraction fails if the response doesn't match.
 
-**Origami location:** `marbles/extract/` or integrated into framework extractor DSL.
+**Origami location:** `modules/extract/` or integrated into framework extractor DSL.
 
 ---
 
@@ -63,7 +63,7 @@ outputs:
 **Interface:**
 
 ```yaml
-marble: context-builder
+module: context-builder
 inputs:
   state: walker_state    # current walker state (visited nodes, artifacts)
   templates:
@@ -84,11 +84,11 @@ outputs:
 - `ScenarioToCatalog()` (catalog_convert.go) — converts scenario workspace config to knowledge catalog
 
 **Achilles usage:**
-- Context assembly is inline in nodes (scanNode reads prior artifact, classifyNode reads scan result). No separate transformer — the marble would formalize what Achilles does implicitly.
+- Context assembly is inline in nodes (scanNode reads prior artifact, classifyNode reads scan result). No separate transformer — the module would formalize what Achilles does implicitly.
 
-**Generalization:** The marble separates "what data goes into the prompt" from "how the prompt is rendered." Data sources are pluggable (store, envelope, file, API). Template engine is Go text/template (already framework-standard). The assembled params are domain-agnostic key-value pairs.
+**Generalization:** The module separates "what data goes into the prompt" from "how the prompt is rendered." Data sources are pluggable (store, envelope, file, API). Template engine is Go text/template (already framework-standard). The assembled params are domain-agnostic key-value pairs.
 
-**Origami location:** `marbles/context/` or enhance existing `framework.Transformer` DSL.
+**Origami location:** `modules/context/` or enhance existing `framework.Transformer` DSL.
 
 ---
 
@@ -99,7 +99,7 @@ outputs:
 **Interface:**
 
 ```yaml
-marble: persist
+module: persist
 inputs:
   artifact: object       # step output artifact
   step: string           # pipeline step name
@@ -122,11 +122,11 @@ triggers:
 - Each hook calls `apply*Effects()` functions (in runner.go) that update the store
 
 **Achilles usage:**
-- Currently no persistence. Future: save findings to a vulnerability database. The marble would provide this capability without Go code.
+- Currently no persistence. Future: save findings to a vulnerability database. The module would provide this capability without Go code.
 
-**Generalization:** The marble is a hook-triggered persistence chain. On step completion, it writes the artifact to file (JSON) and optionally executes SQLite operations via the sqlite adapter. The trigger conditions, file paths, and SQL operations are all YAML-configured.
+**Generalization:** The module is a hook-triggered persistence chain. On step completion, it writes the artifact to file (JSON) and optionally executes SQLite operations via the sqlite adapter. The trigger conditions, file paths, and SQL operations are all YAML-configured.
 
-**Origami location:** `marbles/persist/` using `adapters/sqlite/` for DB operations.
+**Origami location:** `modules/persist/` using `adapters/sqlite/` for DB operations.
 
 ---
 
@@ -137,7 +137,7 @@ triggers:
 **Interface:**
 
 ```yaml
-marble: score
+module: score
 inputs:
   results: list          # per-case analysis results
   ground_truth: list     # expected values from scenario
@@ -157,7 +157,7 @@ outputs:
 **Achilles usage:**
 - `assessNode` computes risk score (0-1) from findings, groups by severity. The scoring is simpler but structurally identical: input data + rules -> numeric scores.
 
-**Generalization:** The marble decouples scoring logic from domain-specific metrics. The ScoreCard YAML defines what to measure and how to aggregate. Individual scorers are registered functions (Go) that the framework invokes. Domain tools define their own scorers; the marble handles loading, evaluation, aggregation, and gap detection.
+**Generalization:** The module decouples scoring logic from domain-specific metrics. The ScoreCard YAML defines what to measure and how to aggregate. Individual scorers are registered functions (Go) that the framework invokes. Domain tools define their own scorers; the module handles loading, evaluation, aggregation, and gap detection.
 
 **Origami location:** Enhance `calibrate/` package with scorer registry + ScoreCard evaluation engine.
 
@@ -170,7 +170,7 @@ outputs:
 **Interface:**
 
 ```yaml
-marble: report
+module: report
 inputs:
   results: object        # scored analysis results
   format: string         # "markdown", "terminal", "json"
@@ -189,9 +189,9 @@ outputs:
 **Achilles usage:**
 - `reportNode` — colored terminal output: repo, time, risk score, findings table by severity, fix suggestions.
 
-**Generalization:** The marble provides a template-driven report engine. Report sections are defined in YAML (or Markdown templates). The engine fills templates with structured data and formats for the target medium (terminal colors, Markdown, JSON). Domain tools define their own report templates; the marble handles rendering.
+**Generalization:** The module provides a template-driven report engine. Report sections are defined in YAML (or Markdown templates). The engine fills templates with structured data and formats for the target medium (terminal colors, Markdown, JSON). Domain tools define their own report templates; the module handles rendering.
 
-**Origami location:** `marbles/report/` or enhance `format/` package.
+**Origami location:** `modules/report/` or enhance `format/` package.
 
 ---
 
@@ -202,7 +202,7 @@ outputs:
 **Interface:**
 
 ```yaml
-marble: dispatch
+module: dispatch
 inputs:
   intent: string         # what the step needs (e.g. "triage", "scan")
   providers:             # ordered provider list
@@ -221,9 +221,9 @@ outputs:
 - `RoutingRecorder` (adapt/routing.go) — 214 LOC: wraps any adapter, logs routing decisions to JSON
 
 **Achilles usage:**
-- Direct subprocess call to `govulncheck`. No fallback chain, no LLM. But future Achilles phases will add LLM-based assessment — the marble would provide that without Go code.
+- Direct subprocess call to `govulncheck`. No fallback chain, no LLM. But future Achilles phases will add LLM-based assessment — the module would provide that without Go code.
 
-**Generalization:** The marble manages the provider selection chain. Each provider is registered with a name and config. The marble tries providers in order, with configurable fallback (next provider, heuristic fallback, or error). All routing decisions are logged for observability. The `dispatch` package already exists in Origami; the marble wraps it with YAML configuration.
+**Generalization:** The module manages the provider selection chain. Each provider is registered with a name and config. The module tries providers in order, with configurable fallback (next provider, heuristic fallback, or error). All routing decisions are logged for observability. The `dispatch` package already exists in Origami; the module wraps it with YAML configuration.
 
 **Origami location:** Enhance `dispatch/` package with YAML-configured provider chains.
 
@@ -231,7 +231,7 @@ outputs:
 
 ## Implementation priority
 
-| Priority | Marble | Rationale |
+| Priority | Module | Rationale |
 |----------|--------|-----------|
 | 1 | `llm-extract` | Core primitive — every LLM-backed node needs it |
 | 2 | `context-builder` | Every prompt needs context assembly |
@@ -242,7 +242,7 @@ outputs:
 
 ## Achilles cross-validation matrix
 
-| Marble | Asterisk nodes | Achilles nodes | Shared? |
+| Module | Asterisk nodes | Achilles nodes | Shared? |
 |--------|---------------|----------------|---------|
 | `llm-extract` | recall, triage, resolve, investigate, correlate, review, report | scan (govulncheck), classify (deterministic) | Yes — provider is pluggable |
 | `context-builder` | All LLM nodes (params + template) | Inline in scan/classify/assess | Yes — formalizes implicit pattern |

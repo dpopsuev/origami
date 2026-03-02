@@ -11,5 +11,5 @@
 - `postmortem-supervisor-race.md` — Post-mortem: SupervisorTracker.Process() race condition — production symptom cascade analysis
 - `subagent-cost-model.mdc` — Cost model for serial vs batch vs batch+clustering calibration modes
 - `laws-of-ux-kabuki.md` — Laws of UX case study applied to Kabuki presentation engine: 10 UX laws mapped to design decisions, color harmony principles
-- `marble-catalog.md` — First user-discovered marbles: 6 marbles (llm-extract, context-builder, persist, score, report, dispatch) with interfaces, Asterisk source mapping, Achilles cross-validation
-- `framework-gaps.md` — 11 missing Origami primitives (G1-G11) needed to support marbles and achieve zero-Go consumer migration, with resolution path
+- `module-catalog.md` — First user-discovered modules: 6 modules (llm-extract, context-builder, persist, score, report, dispatch) with interfaces, Asterisk source mapping, Achilles cross-validation
+- `framework-gaps.md` — 11 missing Origami primitives (G1-G11) needed to support modules and achieve zero-Go consumer migration, with resolution path

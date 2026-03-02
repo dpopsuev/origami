@@ -33,7 +33,7 @@ description: Evidence-based RCA for ReportPortal test failures
 imports:
   - origami.adapters.rp
   - origami.adapters.sqlite
-  - origami.marbles.rca
+  - origami.modules.rca
 
 cli:
   commands:

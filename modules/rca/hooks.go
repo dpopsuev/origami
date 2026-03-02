@@ -5,7 +5,7 @@ import (
 
 	framework "github.com/dpopsuev/origami"
 
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca/store"
 )
 
 // StoreHooks creates a HookRegistry with per-step store effect hooks

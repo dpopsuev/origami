@@ -11,7 +11,8 @@ type resolveHeuristic struct {
 	ht *heuristicTransformer
 }
 
-func (t *resolveHeuristic) Name() string { return "resolve-heuristic" }
+func (t *resolveHeuristic) Name() string        { return "resolve-heuristic" }
+func (t *resolveHeuristic) Deterministic() bool { return true }
 
 func (t *resolveHeuristic) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
 	fp := failureFromContext(tc.WalkerState)

@@ -11,7 +11,8 @@ type recallHeuristic struct {
 	ht *heuristicTransformer
 }
 
-func (t *recallHeuristic) Name() string { return "recall-heuristic" }
+func (t *recallHeuristic) Name() string        { return "recall-heuristic" }
+func (t *recallHeuristic) Deterministic() bool { return true }
 
 func (t *recallHeuristic) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
 	fp := failureFromContext(tc.WalkerState)

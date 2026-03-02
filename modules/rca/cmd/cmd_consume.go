@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/dpopsuev/origami/adapters/rp"
-	"github.com/dpopsuev/origami/marbles/rca/scenarios"
+	"github.com/dpopsuev/origami/modules/rca/scenarios"
 	"context"
 	"fmt"
 	"os"

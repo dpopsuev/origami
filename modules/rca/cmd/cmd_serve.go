@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dpopsuev/origami/logging"
-	mcpserver "github.com/dpopsuev/origami/marbles/rca/mcpconfig"
+	mcpserver "github.com/dpopsuev/origami/modules/rca/mcpconfig"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )

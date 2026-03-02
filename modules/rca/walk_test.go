@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca/store"
 
 	framework "github.com/dpopsuev/origami"
 )

@@ -61,6 +61,9 @@ func NewRoutingRecorder(inner framework.Transformer, color string) *RoutingRecor
 }
 
 func (r *RoutingRecorder) Name() string { return r.inner.Name() }
+func (r *RoutingRecorder) Deterministic() bool {
+	return framework.IsDeterministic(r.inner)
+}
 
 func (r *RoutingRecorder) Transform(ctx context.Context, tc *framework.TransformerContext) (any, error) {
 	step := NodeNameToStep(tc.NodeName)

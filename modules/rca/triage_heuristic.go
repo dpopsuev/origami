@@ -10,7 +10,8 @@ type triageHeuristic struct {
 	ht *heuristicTransformer
 }
 
-func (t *triageHeuristic) Name() string { return "triage-heuristic" }
+func (t *triageHeuristic) Name() string        { return "triage-heuristic" }
+func (t *triageHeuristic) Deterministic() bool { return true }
 
 func (t *triageHeuristic) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
 	fp := failureFromContext(tc.WalkerState)

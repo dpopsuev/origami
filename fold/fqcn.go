@@ -20,7 +20,7 @@ func DefaultRegistry() ModuleRegistry {
 }
 
 // ResolveFQCN converts a dot-separated FQCN to a Go import path.
-// "origami.marbles.rca" → "github.com/dpopsuev/origami/marbles/rca"
+// "origami.modules.rca" → "github.com/dpopsuev/origami/modules/rca"
 func (r ModuleRegistry) ResolveFQCN(fqcn string) (string, error) {
 	if !validImportRE.MatchString(fqcn) {
 		return "", fmt.Errorf("invalid FQCN %q: must match %s", fqcn, validImportRE.String())
@@ -42,7 +42,7 @@ func (r ModuleRegistry) ResolveFQCN(fqcn string) (string, error) {
 }
 
 // ResolveProvider converts a provider FQCN into an import path and exported symbol.
-// "marbles.rca.CalibrateRunner" → import "github.com/dpopsuev/origami/marbles/rca", symbol "CalibrateRunner"
+// "modules.rca.CalibrateRunner" → import "github.com/dpopsuev/origami/modules/rca", symbol "CalibrateRunner"
 // Provider FQCNs are implicitly prefixed with the "origami" module.
 func (r ModuleRegistry) ResolveProvider(provider string) (importPath, symbol string, err error) {
 	parts := strings.Split(provider, ".")

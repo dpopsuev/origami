@@ -3,7 +3,7 @@ package rca
 import (
 	"testing"
 
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca/store"
 )
 
 func TestAdapter_NamespaceAndProvides(t *testing.T) {

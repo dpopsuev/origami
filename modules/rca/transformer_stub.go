@@ -23,7 +23,8 @@ func NewStubTransformer(scenario *Scenario) *stubTransformer {
 	}
 }
 
-func (t *stubTransformer) Name() string { return "stub" }
+func (t *stubTransformer) Name() string        { return "stub" }
+func (t *stubTransformer) Deterministic() bool { return true }
 
 func (t *stubTransformer) SetRCAID(gtID string, storeID int64) {
 	t.mu.Lock()

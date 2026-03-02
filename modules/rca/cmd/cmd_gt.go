@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/dpopsuev/origami/marbles/rca/scenarios"
-	"github.com/dpopsuev/origami/marbles/rca"
+	"github.com/dpopsuev/origami/modules/rca/scenarios"
+	"github.com/dpopsuev/origami/modules/rca"
 	"context"
 	"fmt"
 	"os"

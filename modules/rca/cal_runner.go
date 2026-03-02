@@ -14,7 +14,7 @@ import (
 	"github.com/dpopsuev/origami/logging"
 
 	"github.com/dpopsuev/origami/adapters/rp"
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca/store"
 )
 
 // IDMappable is implemented by transformers that track ground-truth-to-store

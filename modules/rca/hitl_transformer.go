@@ -17,7 +17,8 @@ type hitlTransformerNode struct {
 	step CircuitStep
 }
 
-func (t *hitlTransformerNode) Name() string { return "hitl-" + string(t.step) }
+func (t *hitlTransformerNode) Name() string        { return "hitl-" + string(t.step) }
+func (t *hitlTransformerNode) Deterministic() bool { return false }
 
 func (t *hitlTransformerNode) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
 	if input, ok := tc.WalkerState.Context["resume_input"]; ok {

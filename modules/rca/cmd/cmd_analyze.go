@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dpopsuev/origami/marbles/rca"
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/modules/rca/store"
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/knowledge"
 )

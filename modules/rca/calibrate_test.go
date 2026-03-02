@@ -8,8 +8,8 @@ import (
 	cal "github.com/dpopsuev/origami/calibrate"
 	framework "github.com/dpopsuev/origami"
 
-	"github.com/dpopsuev/origami/marbles/rca/scenarios"
-	"github.com/dpopsuev/origami/marbles/rca"
+	"github.com/dpopsuev/origami/modules/rca/scenarios"
+	"github.com/dpopsuev/origami/modules/rca"
 )
 
 func loadTestScoreCard(t *testing.T) *cal.ScoreCard {

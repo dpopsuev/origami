@@ -3,7 +3,7 @@ package cmd
 import (
 	framework "github.com/dpopsuev/origami"
 
-	"github.com/dpopsuev/origami/marbles/rca/vocabulary"
+	"github.com/dpopsuev/origami/modules/rca/vocabulary"
 )
 
 var cmdVocab = vocabulary.New()

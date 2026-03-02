@@ -10,7 +10,7 @@ func TestGenerateMain(t *testing.T) {
 		Name:        "asterisk",
 		Description: "Evidence-based RCA",
 		Version:     "1.0",
-		Imports:     []string{"origami.marbles.rca"},
+		Imports:     []string{"origami.modules.rca"},
 	}
 
 	src, err := GenerateMain(m, DefaultRegistry())
@@ -23,7 +23,7 @@ func TestGenerateMain(t *testing.T) {
 	if !strings.Contains(code, "DO NOT EDIT") {
 		t.Error("missing DO NOT EDIT comment")
 	}
-	if !strings.Contains(code, `"github.com/dpopsuev/origami/marbles/rca/cmd"`) {
+	if !strings.Contains(code, `"github.com/dpopsuev/origami/modules/rca/cmd"`) {
 		t.Errorf("missing cmd import in:\n%s", code)
 	}
 	if !strings.Contains(code, ".Execute()") {

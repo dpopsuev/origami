@@ -4,7 +4,7 @@ package rca
 
 import (
 	"github.com/dpopsuev/origami/adapters/rp"
-	"github.com/dpopsuev/origami/marbles/rca/store"
+	"github.com/dpopsuev/origami/modules/rca/store"
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/knowledge"

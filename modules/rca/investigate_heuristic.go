@@ -12,7 +12,8 @@ type investigateHeuristic struct {
 	ht *heuristicTransformer
 }
 
-func (t *investigateHeuristic) Name() string { return "investigate-heuristic" }
+func (t *investigateHeuristic) Name() string        { return "investigate-heuristic" }
+func (t *investigateHeuristic) Deterministic() bool { return true }
 
 func (t *investigateHeuristic) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
 	fp := failureFromContext(tc.WalkerState)

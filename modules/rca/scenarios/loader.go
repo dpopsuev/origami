@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dpopsuev/origami/marbles/rca"
+	"github.com/dpopsuev/origami/modules/rca"
 
 	"gopkg.in/yaml.v3"
 )

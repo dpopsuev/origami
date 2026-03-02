@@ -72,7 +72,7 @@ func buildTemplateContext(m *Manifest, reg ModuleRegistry) (*templateContext, er
 	}
 
 	if ctx.CmdImport == "" {
-		return nil, fmt.Errorf("manifest must import at least one marble with a cmd/ package")
+		return nil, fmt.Errorf("manifest must import at least one module with a cmd/ package")
 	}
 
 	return ctx, nil

@@ -23,7 +23,7 @@ These contracts are tracked in Asterisk `contracts/draft/` but require significa
 
 | Asterisk contract | Origami scope | Tier |
 |-------------------|---------------|------|
-| `naming-taxonomy` | Rename `marbles/` → `modules/` (101 files), `Deterministic() bool` on Transformer, glossary entries, lint rule. | gate |
+| `naming-taxonomy` | Rename `modules/` → `modules/` (101 files), `Deterministic() bool` on Transformer, glossary entries, lint rule. | gate |
 | `design-principle-deterministic` | `rules/universal/deterministic-first.mdc`, lint stochastic node flagging, project-standards update. | quick-win |
 | `origami-autodoc` | `origami autodoc` CLI: docs tree scaffold (Kubernetes pattern), Mermaid + Markdown generation, D/S visualization, optional stochastic enrichment. Precursor to consumer docs. | quick-win |
 

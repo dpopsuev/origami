@@ -9,7 +9,7 @@ import (
 
 	framework "github.com/dpopsuev/origami"
 
-	"github.com/dpopsuev/origami/marbles/rca"
+	"github.com/dpopsuev/origami/modules/rca"
 )
 
 // TestWeaveTranscripts_StubTransformer runs a full calibration with the stub transformer
