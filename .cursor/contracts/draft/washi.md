@@ -23,7 +23,7 @@ Global rules only, plus:
 - `contracts/completed/framework/origami-circuit-studio.md` — Completed design-only contract. Architecture sketch, API contract, data model. This contract supersedes Circuit Studio with implementation scope.
 - `contracts/completed/framework/kami-live-debugger.md` — EventBridge, KamiServer (triple-homed), Debug API, React frontend. Washi shares Kami's React Flow graph component and EventBridge data source.
 - `contracts/completed/framework/kabuki-presentation-engine.md` — Kabuki data-driven presentation SPA: KabukiConfig, section components, element selector. **Washi and Kabuki share the Origami Design System (ODS) extracted in Phase 0.**
-- `contracts/draft/origami-lsp.md` — Language Server for circuit YAML. Washi embeds Monaco + LSP for the YAML editing pane.
+- `contracts/completed/api-stabilization/origami-lsp.md` — Language Server for circuit YAML. Washi embeds Monaco + LSP for the YAML editing pane.
 - `docs/case-studies/visual-editor-landscape.md` — Case study of Excalidraw, Mermaid, and Ansible Automation Controller. Business model analysis recommending the Ansible open-core model.
 - `docs/case-studies/ansible-collections.md` — Ansible Collections and Automation Hub as second revenue stream (certified content).
 - `docs/rh-presentation-dna.md` — Red Hat brand color system, element-to-color mapping, accessibility constraints. All Washi UI must comply.

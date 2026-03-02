@@ -1,8 +1,8 @@
 # Contract — sumi
 
-**Status:** draft  
+**Status:** complete (2026-03-02)  
 **Goal:** Ship Sumi — the Origami TUI circuit viewer and debugger — with live circuit visualization, walker animation, interactive debugging, and element-colored rendering in the terminal. Extends the product family: Kami (debugger), Kabuki (demo), Washi (enterprise GUI), Sumi (terminal).  
-**Serves:** API Stabilization (vision — post-stabilization product)
+**Serves:** API Stabilization (finish-line — external dependency)
 
 ## Contract rules
 

@@ -1,8 +1,8 @@
 # Contract — viewmodel-layer
 
-**Status:** draft  
+**Status:** complete (2026-03-02)  
 **Goal:** Ship a reactive ViewModel layer (`CircuitStore`, `CircuitRenderer`, `LayoutEngine`) that decouples circuit visual state from rendering surface, enabling GUI (Washi), TUI (Sumi), and Agent consumers from one API.  
-**Serves:** API Stabilization (quick-win — unblocks vision contracts)
+**Serves:** API Stabilization (finish-line — external dependency)
 
 ## Contract rules
 

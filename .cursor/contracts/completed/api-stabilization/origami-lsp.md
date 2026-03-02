@@ -1,8 +1,8 @@
 # Contract — Origami LSP
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Ship a Language Server for Origami circuit YAML that provides validation, completion, hover docs, color coding, virtual text hints, and a Kami live connection -- making circuit authoring a first-class IDE experience.  
-**Serves:** Polishing & Presentation (vision)
+**Serves:** API Stabilization (finish-line — external dependency)
 
 ## Contract rules
 
@@ -76,45 +76,45 @@ Phase 1 builds the LSP core (validation, completion, hover). Phase 2 adds elemen
 
 ### Phase 1 -- LSP core
 
-- [ ] **L1** Create `lsp/` package with Go LSP server using `go.lsp.dev/protocol`
-- [ ] **L2** YAML document model: parse circuit YAML on `textDocument/didOpen` and `textDocument/didChange`, maintain in-memory AST
-- [ ] **L3** Validation diagnostics: required fields, node/edge/zone cross-references, element/persona enum values, `when:` expression compilation via expr-lang
-- [ ] **L4** Completion: top-level keys (`circuit`, `nodes`, `edges`, etc.), node/edge/walker field keys, element values (7), persona values (8), node names in `from`/`to`/`start`/`zones.*.nodes`/`step_affinity`
-- [ ] **L5** Hover documentation: element traits (speed, max loops, shortcut affinity, failure mode), persona descriptions, expression context (`output`, `state`, `config`)
-- [ ] **L6** Go-to-definition: node name from edge `from`/`to`, zone node lists, `start` field
-- [ ] **L7** Unit tests: validate E2E scenario YAMLs produce zero diagnostics, validate intentionally broken YAML produces correct diagnostics
+- [x] **L1** Create `lsp/` package with Go LSP server using `go.lsp.dev/protocol`
+- [x] **L2** YAML document model: parse circuit YAML on `textDocument/didOpen` and `textDocument/didChange`, maintain in-memory AST
+- [x] **L3** Validation diagnostics: required fields, node/edge/zone cross-references, element/persona enum values, `when:` expression compilation via expr-lang
+- [x] **L4** Completion: top-level keys (`circuit`, `nodes`, `edges`, etc.), node/edge/walker field keys, element values (7), persona values (8), node names in `from`/`to`/`start`/`zones.*.nodes`/`step_affinity`
+- [x] **L5** Hover documentation: element traits (speed, max loops, shortcut affinity, failure mode), persona descriptions, expression context (`output`, `state`, `config`)
+- [x] **L6** Go-to-definition: node name from edge `from`/`to`, zone node lists, `start` field
+- [x] **L7** Unit tests: validate E2E scenario YAMLs produce zero diagnostics, validate intentionally broken YAML produces correct diagnostics
 
 ### Phase 2 -- Color coding
 
-- [ ] **C1** Register semantic token types for Origami elements: `origami.fire`, `origami.water`, `origami.earth`, `origami.air`, `origami.diamond`, `origami.lightning`, `origami.iron`
-- [ ] **C2** Map element token types to the persona color palette (Fire=Crimson, Water=Cerulean, Earth=Cobalt, Air=Amber, Diamond=Sapphire)
-- [ ] **C3** Apply semantic tokens to `element:` values, zone names (by zone element), walker `element:` fields
-- [ ] **C4** VS Code theme contribution: semantic token color rules for Origami element types
+- [x] **C1** Register semantic token types for Origami elements: `origami.fire`, `origami.water`, `origami.earth`, `origami.air`, `origami.diamond`, `origami.lightning`, `origami.iron`
+- [x] **C2** Map element token types to the persona color palette (Fire=Crimson, Water=Cerulean, Earth=Cobalt, Air=Amber, Diamond=Sapphire)
+- [x] **C3** Apply semantic tokens to `element:` values, zone names (by zone element), walker `element:` fields
+- [x] **C4** VS Code theme contribution: semantic token color rules for Origami element types
 
 ### Phase 3 -- Virtual text hints
 
-- [ ] **H1** Element trait hints: `element: earth` shows inlay hint `steady | 1 loop | 0.1 shortcut`
-- [ ] **H2** Persona description hints: `persona: sentinel` shows inlay hint `Steady resolver, follows proven paths`
-- [ ] **H3** Expression validity hints: `when: "..."` shows inlay hint `expr-lang valid` or `error: <message>`
-- [ ] **H4** Element flow hints on edges: `from: triage` / `to: investigate` shows inlay hint `(fire -> water)`
-- [ ] **H5** Start node element hint: `start: recall` shows inlay hint `(fire)`
+- [x] **H1** Element trait hints: `element: earth` shows inlay hint `steady | 1 loop | 0.1 shortcut`
+- [x] **H2** Persona description hints: `persona: sentinel` shows inlay hint `Steady resolver, follows proven paths`
+- [x] **H3** Expression validity hints: `when: "..."` shows inlay hint `expr-lang valid` or `error: <message>`
+- [x] **H4** Element flow hints on edges: `from: triage` / `to: investigate` shows inlay hint `(fire -> water)`
+- [x] **H5** Start node element hint: `start: recall` shows inlay hint `(fire)`
 
 ### Phase 4 -- Kami bridge
 
-- [ ] **K1** SSE client connecting to `http://localhost:<port>/events/stream` when Kami is running
-- [ ] **K2** Auto-discovery: check `localhost:3000` on LSP startup, reconnect on connection loss
-- [ ] **K3** Live state overlay as inlay hints: active node shows `ACTIVE [persona]`, visited shows `visited (Xs ago)`, paused shows `PAUSED`
-- [ ] **K4** Last transition highlight: edge `from`/`to` matching last KamiEvent transition
-- [ ] **K5** Configuration: `origami.kami.port` setting, `origami.kami.enabled` toggle
+- [x] **K1** SSE client connecting to `http://localhost:<port>/events/stream` when Kami is running
+- [x] **K2** Auto-discovery: check `localhost:9800` on LSP startup, reconnect on connection loss
+- [x] **K3** Live state overlay as inlay hints: active node shows `ACTIVE [persona]`, visited shows `visited (Xs ago)`, paused shows `PAUSED`
+- [x] **K4** Last transition highlight: edge `from`/`to` matching last KamiEvent transition
+- [x] **K5** Configuration: `origami.kami.port` setting, `origami.kami.enabled` toggle
 
 ### Phase 5 -- CLI + packaging
 
-- [ ] **P1** `origami lsp` CLI command: starts the LSP server over stdio
-- [ ] **P2** VS Code extension scaffold in `lsp/vscode/`: `package.json`, `extension.ts` (launch `origami lsp`), language configuration for `.yaml` files matching `circuit:` key
-- [ ] **P3** Installation guide in `docs/lsp-architecture.md`
-- [ ] Validate (green) -- `go build ./...`, `go test ./...` all pass. LSP starts, validates, completes.
-- [ ] Tune (blue) -- completion ranking, hover formatting, hint density.
-- [ ] Validate (green) -- all tests still pass after tuning.
+- [x] **P1** `origami lsp` CLI command: starts the LSP server over stdio
+- [x] **P2** VS Code extension scaffold in `lsp/vscode/`: `package.json`, `extension.ts` (launch `origami lsp`), language configuration for `.yaml` files matching `circuit:` key
+- [x] **P3** Installation guide in `docs/lsp-architecture.md`
+- [x] Validate (green) -- `go build ./...`, `go test ./...` all pass. LSP starts, validates, completes.
+- [x] Tune (blue) -- completion ranking, hover formatting, hint density.
+- [x] Validate (green) -- all tests still pass after tuning.
 
 ## Acceptance criteria
 
@@ -148,3 +148,5 @@ Phase 1 builds the LSP core (validation, completion, hover). Phase 2 adds elemen
 ## Notes
 
 2026-02-25 -- Contract created. Inspired by Ansible Language Server case study. Element color palette from `persona.go` color constants. Kami bridge depends on `kami-live-debugger` contract (Sprint 4). FQCN awareness deferred until `origami-adapters` ships.
+
+2026-03-01 -- Closed 6 remaining gaps (G1-G6): node name completion in zone `nodes:` and `step_affinity` (completion.go), go-to-definition from zone node lists (definition.go), walker `element:` semantic tokens verified as already working (semantic_tokens.go scans all lines context-free), expression validity via `expr.Compile` with `ExprContext` env (inlay_hints.go), Kami auto-discovery probe on startup via HTTP HEAD to `localhost:9800` (server.go), last-transition edge inlay hints from Kami state (kami_bridge.go). Fixed `stripYAMLQuotes` to only remove outermost matching pair, preventing mangling of inner single-quotes. Added 6 new tests. Full suite: 37 packages, 0 failures, 0 races.

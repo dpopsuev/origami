@@ -13,9 +13,13 @@ description: Active goal manifest — single-read orientation for agents to know
 - [x] Quick-win contracts complete — `resilience`, `ouroboros-signal-analysis`
 - [x] Dead-code excision — `Marble` primitive removed (superseded by Components, zero consumers)
 - [x] RCA decoupled from RP — `rcatype/` + `rpconv/` boundary, zero `components/rp` imports in core
+- [x] Public API surface audit — 450+ symbols, 20+ packages, Good/Bad/Ugly assessment, test coverage matrix
 - [ ] Public API surface is stable — no breaking changes pending
 - [ ] Test coverage on public interfaces is solid
 - [ ] Root `README.md` positions Origami as a standalone framework (does not exist yet)
+- [x] ViewModel layer — `CircuitStore`, `CircuitRenderer`, `LayoutEngine` (external dependency)
+- [x] Origami LSP — validation, completion, hover docs for circuit YAML (external dependency)
+- [x] Sumi — terminal circuit viewer/debugger (external dependency)
 - [x] `examples/playground/` demonstrates all 9 concepts (Elements, Personas, DSL, Mermaid, Walk, Masks, Cycles, Dialectic, Team Walk)
 - [x] `docs/framework-guide.md` covers Three CLIs, Extractors, Elements, Personas, DSL, Walk
 - [x] `testdata/` contains canonical circuit YAMLs: `defect-dialectic.yaml`, `defect-court.yaml`, `rca-investigation.yaml`; curation in `curate/testdata/`
@@ -37,32 +41,33 @@ Phase 2 — Quick-wins (parallel)
 Phase 3 — Finish line
 ├── Dead-code excision (Marble)     ✓
 ├── RCA/RP decoupling               ✓
+├── Public API surface audit         ✓
+├── P1 quick fixes (from audit)
+├── P2 test gaps (from audit)
 ├── Root README.md
-├── Public API surface audit
-└── Test coverage audit
-
-Phase 3.5 — Quick-win (unblocks vision)
-└── viewmodel-layer
+├── viewmodel-layer                  ✓
+├── origami-lsp                      ✓
+└── sumi                             ✓
 
 Phase 4 — Vision (post-stabilization)
-├── origami-lsp
-├── washi
-└── sumi
+└── washi
+
+Asterisk pivot (post-Origami finish line)
+├── design-principle-deterministic   ✓
+├── origami-autodoc                  ✓
+├── yaml-playbook-docs
+└── kabuki-demo-revamp
 ```
 
 ## Active Contracts
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
-| `viewmodel-layer` | quick-win | 3.5 | Reactive ViewModel: `CircuitStore`, `CircuitRenderer`, `LayoutEngine`. Unblocks Washi and Sumi. |
-| `origami-lsp` | vision | 4 | LSP server: validation, completion, hover docs for circuit YAML. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
-| `sumi` | vision | 4 | Terminal circuit viewer/debugger (TUI). Bubble Tea, live animation, interactive debugging. |
-| `decouple-rca-rp` | gate | 3 | Decouple RCA engine from RP. **Complete.** `rcatype/` + `rpconv/` boundary, zero `components/rp` imports in core. |
 
 ## Completed Work
 
-73 contracts across 11 phases — all complete. Includes Thesis/Antithesis rename (polishing), Phase 1 API Stabilization gates, Phase 2 quick-wins (resilience, ouroboros-signal-analysis), and Phase 3 surface reduction (RCA/RP decoupling, Marble excision).
+79 contracts across 11 phases — all complete. Includes Thesis/Antithesis rename (polishing), Phase 1 API Stabilization gates, Phase 2 quick-wins (resilience, ouroboros-signal-analysis), Phase 3 surface reduction (RCA/RP decoupling, Marble excision, API hygiene, LSP, public API audit, ViewModel layer, Sumi).
 
 Full contract list: see git history of this file.
 

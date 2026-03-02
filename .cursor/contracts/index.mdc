@@ -6,27 +6,14 @@
 - `draft/` — planned contracts not yet being executed
 
 ## Active
+
 (No active contracts)
 
 ## Draft
 
 | Contract | Goal | Tier |
 |----------|------|------|
-| `viewmodel-layer.md` | ViewModel layer: `CircuitStore` (reactive state), `CircuitRenderer` (abstract interface), `LayoutEngine` (pluggable layout). Decouples visual state from rendering surface. Unblocks Washi and Sumi. | quick-win |
-| `origami-lsp.md` | Language Server for circuit YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
-| `sumi.md` | Sumi — terminal circuit viewer/debugger (TUI). Bubble Tea, live walker animation, interactive debugging, element-colored box-drawing rendering. Fifth interaction layer. | vision |
-| `decouple-rca-rp.md` | Decouple RCA engine from ReportPortal. Introduce RCA-native domain types, push RP imports to CLI/MCP boundary via conversion layer. | gate |
-
-### Companion contracts (primary in Asterisk)
-
-These contracts are tracked in Asterisk `contracts/draft/` but require significant Origami implementation:
-
-| Asterisk contract | Origami scope | Tier |
-|-------------------|---------------|------|
-| `naming-taxonomy` | Rename `modules/` → `modules/` (101 files), `Deterministic() bool` on Transformer, glossary entries, lint rule. | gate |
-| `design-principle-deterministic` | `rules/universal/deterministic-first.mdc`, lint stochastic node flagging, project-standards update. | quick-win |
-| `origami-autodoc` | `origami autodoc` CLI: docs tree scaffold (Kubernetes pattern), Mermaid + Markdown generation, D/S visualization, optional stochastic enrichment. Precursor to consumer docs. | quick-win |
 
 ## Completed (recent)
 
@@ -37,6 +24,15 @@ These contracts are tracked in Asterisk `contracts/draft/` but require significa
 - `completed/api-stabilization/dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.
 - `completed/api-stabilization/resilience.md` — Circuit breaker, rate limiting, thermal budget. Complete.
 - `completed/api-stabilization/ouroboros-signal-analysis.md` — GBWP probe, DimGBWP dimension, offset compensator. Complete.
+- `completed/api-stabilization/decouple-rca-rp.md` — RCA domain types (`rcatype/`), conversion boundary (`rpconv/`), zero `components/rp` imports in core. Complete.
+- `completed/api-stabilization/api-surface-hygiene.md` — P1 dead code/comment/naming cleanup + P2 test coverage for 5 partial packages. Complete.
+- `completed/api-stabilization/origami-lsp.md` — Language Server for circuit YAML (validation, completion, color coding, virtual text, Kami live connection). Complete.
+- `completed/api-stabilization/public-api-surface-audit.md` — Read-only audit of full exported API surface (~450+ symbols, 20+ packages) with test coverage matrix. Complete.
+- `completed/api-stabilization/viewmodel-layer.md` — Reactive ViewModel layer: `CircuitStore`, `CircuitRenderer`, `LayoutEngine`. Complete.
+- `completed/api-stabilization/sumi.md` — Sumi TUI circuit viewer/debugger (Bubble Tea, live walker animation, interactive debugging). Complete.
+- `completed/api-stabilization/naming-taxonomy.md` — Rename marbles/ to modules/, DeterministicTransformer marker, IsCircuitDeterministic(), B7 lint rule. Complete.
+- `completed/api-stabilization/design-principle-deterministic.md` — Deterministic-first design principle, D/S boundary docs, ADC node pattern, B7s aggregate summary lint rule. Complete.
+- `completed/api-stabilization/origami-autodoc.md` — `origami autodoc` CLI: docs tree scaffold, Mermaid + Markdown generation, D/S boundary, context flow, stochastic enrichment. Complete.
 
 ### Refinement phase
 
