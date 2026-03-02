@@ -95,7 +95,12 @@ description: Shared domain definitions for Origami
 
 ## DSL primitives
 
-- **Transformer** — A processing unit declared via `transformer:` in YAML. Implements `Transformer` interface: `Name() string`, `Transform(ctx, tc) (any, error)`. Built-in: llm, http, jq, file.
+- **Module** — A self-contained functional block with defined inputs, outputs, and internal wiring. The `modules/` directory contains exportable Go packages (e.g., `modules/rca/`) that bundle transformers, extractors, hooks, and CLI commands for a specific domain. Electronics analogy: an IC module on a PCB — a discrete, replaceable unit with a defined pinout. Distinct from the `Marble` interface (composable circuit nodes); "module" names the package, "marble" names the framework primitive.
+- **Transformer** — A processing unit declared via `transformer:` in YAML. Implements `Transformer` interface: `Name() string`, `Transform(ctx, tc) (any, error)`. Built-in: llm, http, jq, file. Classified as deterministic or stochastic (see below).
+- **Deterministic Transformer** — A transformer whose output is fully determined by its input — same input always produces same output. Zero token cost, no external LLM dependency. Examples: `core.jq`, `core.file`, `core.match`, `core.template-params`, `core.http`. Implements the optional `DeterministicTransformer` marker interface returning `true`.
+- **Stochastic Transformer** — A transformer whose output varies across invocations for the same input. Requires LLM tokens and external model calls. Example: `core.llm`. Either does not implement `DeterministicTransformer` or returns `false`. The safe default: unknown transformers are treated as stochastic.
+- **Deterministic Circuit** — A circuit where all nodes use deterministic transformers. The circuit produces identical output for identical input. Testable with simple equality assertions. Detected programmatically via `IsCircuitDeterministic()`.
+- **Stochastic Circuit** — A circuit where at least one node uses a stochastic transformer. Output varies across runs. Requires statistical validation (convergence, confidence intervals). The `origami lint` rule `B7` flags stochastic nodes at info severity.
 - **TransformerRegistry** — Maps transformer names to `Transformer` implementations for DSL integration.
 - **Hook** — A side-effect function invoked after a node completes. Implements `Hook` interface: `Name() string`, `Execute(ctx, nodeName string, art Artifact) error`. Declared via `after:` in YAML.
 - **HookRegistry** — Maps hook names to `Hook` implementations for DSL integration.
