@@ -32,27 +32,29 @@ Global rules only, plus:
 
 All Origami product names follow a Japanese paper/art tradition:
 
-| Name | Meaning | Role |
-|------|---------|------|
-| **Origami** | Paper folding | The framework |
-| **Kami** | Spirits / the paper itself | MCP debugger |
-| **Kabuki** | Theatrical performance | Demo presentation layer |
-| **Washi** | Traditional handmade paper (UNESCO heritage) | Enterprise circuit management UI |
+| Name | Kanji | Meaning | Role |
+|------|-------|---------|------|
+| **Origami** | 折り紙 | Paper folding | The framework |
+| **Kami** | 神 | Spirits / the paper itself | MCP debugger |
+| **Kabuki** | 歌舞伎 | Theatrical performance | Demo presentation layer |
+| **Washi** | 和紙 | Traditional handmade paper (UNESCO heritage) | Enterprise circuit management UI |
+| **Sumi** | 墨 | Ink for calligraphy | Terminal circuit viewer/debugger (TUI) |
 
-Washi (和紙) is the material that makes everything else possible — durable, beautiful, functional. The enterprise surface.
+Washi (和紙) is the material that makes everything else possible — durable, beautiful, functional. The enterprise surface. Sumi (墨) is the ink — text on paper. Washi is the GUI surface; Sumi is the TUI surface. Both consume the same `CircuitStore` ViewModel.
 
-### Four Layers of Circuit Interaction
+### Five Layers of Circuit Interaction
 
-Origami circuits are accessible through four interaction layers. Each layer serves a different audience and modality, but all four are first-class citizens — none is a wrapper around another.
+Origami circuits are accessible through five interaction layers. Each layer serves a different audience and modality, but all five are first-class citizens — none is a wrapper around another.
 
 | Layer | Modality | Interface | Audience |
 |-------|----------|-----------|----------|
 | **Agent** | Verbal | R/W API — guide user verbally + visual cues (focus, highlight, simulate, observe) | AI agents as co-pilots |
-| **Washi** | Visual | Drag-and-drop, no-code circuit builder + ops dashboard | Operators, managers, non-developers |
+| **Washi** | Visual (GUI) | Drag-and-drop, no-code circuit builder + ops dashboard (browser) | Operators, managers, non-developers |
+| **Sumi** | Visual (TUI) | Terminal circuit viewer + debugger (SSH, CI, headless) | Developers, CI pipelines, headless environments |
 | **DSL** | Textual | YAML circuit definitions — human and agent readable | Circuit developers |
 | **Go** | Programmatic | Framework API — Node, Edge, Graph, Walker, Extractor | Framework developers |
 
-The DSL was designed to be ingestible by both humans and agents — YAML is the shared lingua franca. Washi adds a visual programming layer (no-code) on top. The Agent layer completes the stack: a R/W API that lets AI agents guide users verbally and with extended visual cues.
+The DSL was designed to be ingestible by both humans and agents — YAML is the shared lingua franca. Washi adds a visual GUI programming layer (no-code) on top. Sumi adds a visual TUI layer for developers who want circuit observation without leaving the terminal. The Agent layer completes the stack: a R/W API that lets AI agents guide users verbally and with extended visual cues. All visual layers (Washi, Sumi) consume the same `CircuitStore` ViewModel — one source of truth, multiple rendering surfaces.
 
 **Agent layer capabilities:**
 
@@ -164,7 +166,7 @@ flowchart TB
 | Edition feature matrix | `docs/washi-editions.md` | domain |
 | Origami Design System spec | `docs/origami-design-system.md` | domain |
 | Agent Gateway API spec (OpenAPI) | `docs/washi-agent-gateway.md` | domain |
-| Four Layers interaction model | `docs/four-layers.md` | domain |
+| Five Layers interaction model | `docs/five-layers.md` | domain |
 | `Washi` glossary term | `glossary/` | domain |
 
 ## Execution strategy
@@ -384,7 +386,7 @@ The agent can launch, monitor, and manage runs — an always-on operator.
 
 ### Phase 3.5 — Agentic Editor (Verbal Layer)
 
-The verbal interaction layer. By Phase 3.5, the Agent Gateway R/W API already exists (AG1-AG9 shipped with Phases 1-3). Phase 3.5 adds the natural language UX on top: the user speaks intent, the agent decomposes it into Agent Gateway API calls, and the graph responds live. This is the top of the Four Layers stack.
+The verbal interaction layer. By Phase 3.5, the Agent Gateway R/W API already exists (AG1-AG9 shipped with Phases 1-3). Phase 3.5 adds the natural language UX on top: the user speaks intent, the agent decomposes it into Agent Gateway API calls, and the graph responds live. This is the top of the Five Layers stack.
 
 - [ ] **AE1** Agentic Editor mode — toggle in toolbar switches to "AI Assistant" mode. Chat panel in sidebar (reuses AG9 narration channel). AI agent (connected via Agent Gateway + Kami MCP) can: add/remove nodes (AG4), create/delete edges (AG4), configure zone assignments (AG4), set edge conditions (AG5), modify walker definitions (AG5), highlight relevant areas (AG3), focus the user's view (AG3). Each AI action is animated on the graph in real-time.
 - [ ] **AE2** Intent-to-graph circuit — user types natural language (e.g. "Add a retry loop around the triage node with max 3 attempts"), the AI decomposes into Agent Gateway API calls (AG4/AG5), executes them sequentially, and the graph updates live. Undo button reverts the entire AI action sequence as one unit. The decomposition is visible in the chat panel: the user sees each step the agent takes.
@@ -510,3 +512,5 @@ Features that elevate Washi from a tool to a product. Each is independently valu
 2026-02-27 — Renamed from `visual-editor` to `washi`. Added Origami Design System (ODS) as Phase 0a — shared design tokens, typography, and components between Kabuki and Washi. Added "Shared DNA with Kabuki" contract rule. Renamed `StudioObserver` to `WashiObserver`, `origami studio` to `origami washi`. Added ODS contract test (ODS5) and Kabuki/Washi visual consistency acceptance criterion.
 
 2026-02-27 — Added "Four Layers of Circuit Interaction" as foundational concept: Agent (verbal) > Washi (visual) > DSL (textual) > Go (programmatic). Added "Agent-first R/W API" contract rule. Agent Gateway R/W API (AG1-AG9) ships alongside every phase: Read API with Phase 1, Write API with Phase 2, Ops API with Phase 3. Phase 3.5 Agentic Editor reframed as the verbal layer on top of the already-complete Agent Gateway — intent decomposition, proactive narration (AE4), not the API itself. Added Agent Gateway to architecture diagram, feature tiers, coverage matrix, security assessment, and acceptance criteria.
+
+2026-03-02 — Expanded to "Five Layers of Circuit Interaction": added Sumi (TUI) between Washi (GUI) and DSL (textual). Added Sumi to naming lineage table. Updated FSC artifact from "Four Layers" to "Five Layers". Both Washi and Sumi depend on the new `viewmodel-layer` contract for `CircuitStore`.

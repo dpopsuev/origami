@@ -37,17 +37,23 @@ Phase 3 — Finish line
 ├── Public API surface audit
 └── Test coverage audit
 
+Phase 3.5 — Quick-win (unblocks vision)
+└── viewmodel-layer
+
 Phase 4 — Vision (post-stabilization)
 ├── origami-lsp
-└── washi
+├── washi
+└── sumi
 ```
 
 ## Active Contracts
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
+| `viewmodel-layer` | quick-win | 3.5 | Reactive ViewModel: `CircuitStore`, `CircuitRenderer`, `LayoutEngine`. Unblocks Washi and Sumi. |
 | `origami-lsp` | vision | 4 | LSP server: validation, completion, hover docs for circuit YAML. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
+| `sumi` | vision | 4 | Terminal circuit viewer/debugger (TUI). Bubble Tea, live animation, interactive debugging. |
 
 ## Completed Work
 

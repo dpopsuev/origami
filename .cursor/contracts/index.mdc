@@ -12,8 +12,10 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
+| `viewmodel-layer.md` | ViewModel layer: `CircuitStore` (reactive state), `CircuitRenderer` (abstract interface), `LayoutEngine` (pluggable layout). Decouples visual state from rendering surface. Unblocks Washi and Sumi. | quick-win |
 | `origami-lsp.md` | Language Server for circuit YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
+| `sumi.md` | Sumi — terminal circuit viewer/debugger (TUI). Bubble Tea, live walker animation, interactive debugging, element-colored box-drawing rendering. Fifth interaction layer. | vision |
 
 ### Companion contracts (primary in Asterisk)
 
