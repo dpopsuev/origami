@@ -5,7 +5,6 @@
 // of this generic structure.
 package framework
 
-import "math"
 
 // Element represents a behavioral archetype governing how an agent
 // moves through a circuit graph.
@@ -18,7 +17,6 @@ const (
 	ElementDiamond   Element = "diamond"
 	ElementWater     Element = "water"
 	ElementAir       Element = "air"
-	ElementIron      Element = "iron" // evolved Earth, derived via IronFromEarth
 )
 
 // SpeedClass describes an element's processing velocity.
@@ -85,8 +83,6 @@ var defaultTraits = map[Element]ElementTraits{
 	},
 }
 
-// coreElements is the ordered list of the six fundamental elements.
-// Iron is excluded because it is derived, not fundamental.
 var coreElements = []Element{
 	ElementFire, ElementLightning, ElementEarth,
 	ElementDiamond, ElementWater, ElementAir,
@@ -98,29 +94,10 @@ func DefaultTraits(e Element) ElementTraits {
 	return defaultTraits[e]
 }
 
-// AllElements returns the six core elements. Iron is excluded
-// because it is derived from Earth via IronFromEarth.
+// AllElements returns the six core elements.
 func AllElements() []Element {
 	out := make([]Element, len(coreElements))
 	copy(out, coreElements)
 	return out
 }
 
-// IronFromEarth derives Iron traits from Earth traits adjusted by
-// historical calibration accuracy. accuracy is 0.0-1.0 representing
-// correctness on the relevant step.
-//
-// Derivation: MaxLoops = max(0, Earth.MaxLoops - floor(accuracy * 2)),
-// ConvergenceThreshold = Earth.ConvergenceThreshold + (1 - accuracy) * 0.1.
-func IronFromEarth(accuracy float64) ElementTraits {
-	earth := defaultTraits[ElementEarth]
-	return ElementTraits{
-		Element:              ElementIron,
-		Speed:                earth.Speed,
-		MaxLoops:             max(0, earth.MaxLoops-int(math.Floor(accuracy*2))),
-		ConvergenceThreshold: earth.ConvergenceThreshold + (1-accuracy)*0.1,
-		ShortcutAffinity:     earth.ShortcutAffinity,
-		EvidenceDepth:        earth.EvidenceDepth,
-		FailureMode:          "rigid (over-calibrated to past data)",
-	}
-}

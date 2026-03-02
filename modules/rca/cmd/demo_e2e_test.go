@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/kami"
+	"github.com/dpopsuev/origami/view"
 )
 
 // extractAssetPath finds a hashed asset path (e.g. /assets/index-AbC123.js) in HTML.
@@ -34,8 +36,12 @@ func startDemoServer(t *testing.T, withSPA, withReplay bool) string {
 	bridge := kami.NewEventBridge(nil)
 	t.Cleanup(func() { bridge.Close() })
 
+	store := view.NewCircuitStore(&framework.CircuitDef{Circuit: "demo"})
+	t.Cleanup(func() { store.Close() })
+
 	cfg := kami.Config{
 		Bridge: bridge,
+		Store:  store,
 		Debug:  true,
 		Theme:  PoliceStationTheme{},
 		Kabuki: PoliceStationKabuki{},

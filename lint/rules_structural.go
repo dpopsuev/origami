@@ -10,7 +10,7 @@ import (
 
 var validElements = map[string]bool{
 	"fire": true, "lightning": true, "earth": true,
-	"diamond": true, "water": true, "air": true, "iron": true,
+	"diamond": true, "water": true, "air": true,
 }
 
 var validMergeStrategies = map[string]bool{
@@ -42,8 +42,7 @@ func elementSuggestion(val string) string {
 	return ""
 }
 
-// --- S1: missing-node-element ---
-
+// MissingNodeElement checks that every node declares an element.
 type MissingNodeElement struct{}
 
 func (r *MissingNodeElement) ID() string          { return "S1/missing-node-element" }
@@ -67,8 +66,7 @@ func (r *MissingNodeElement) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S2: invalid-element ---
-
+// InvalidElement checks that node element values are known elements.
 type InvalidElement struct{}
 
 func (r *InvalidElement) ID() string          { return "S2/invalid-element" }
@@ -83,7 +81,7 @@ func (r *InvalidElement) Check(ctx *LintContext) []Finding {
 			f := Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
-				Message:  fmt.Sprintf("node %q: unknown element %q (valid: fire, water, earth, air, diamond, lightning, iron)", nd.Name, nd.Element),
+				Message:  fmt.Sprintf("node %q: unknown element %q (valid: fire, water, earth, air, diamond, lightning)", nd.Name, nd.Element),
 				File:     ctx.File,
 				Line:     ctx.NodeLine(nd.Name),
 			}
@@ -97,8 +95,7 @@ func (r *InvalidElement) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S3: invalid-merge-strategy ---
-
+// InvalidMergeStrategy checks that edge merge values are valid strategies.
 type InvalidMergeStrategy struct{}
 
 func (r *InvalidMergeStrategy) ID() string          { return "S3/invalid-merge-strategy" }
@@ -122,8 +119,7 @@ func (r *InvalidMergeStrategy) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S4: missing-edge-name ---
-
+// MissingEdgeName checks that every edge has a human-readable name.
 type MissingEdgeName struct{}
 
 func (r *MissingEdgeName) ID() string          { return "S4/missing-edge-name" }
@@ -148,8 +144,7 @@ func (r *MissingEdgeName) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S5: duplicate-edge-condition ---
-
+// DuplicateEdgeCondition checks for edges from the same node sharing identical conditions.
 type DuplicateEdgeCondition struct{}
 
 func (r *DuplicateEdgeCondition) ID() string        { return "S5/duplicate-edge-condition" }
@@ -181,8 +176,7 @@ func (r *DuplicateEdgeCondition) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S6: empty-prompt ---
-
+// EmptyPrompt checks that nodes with an LLM transformer have a non-empty prompt.
 type EmptyPrompt struct{}
 
 func (r *EmptyPrompt) ID() string          { return "S6/empty-prompt" }
@@ -211,8 +205,7 @@ func (r *EmptyPrompt) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S7: invalid-cache-ttl ---
-
+// InvalidCacheTTL checks that node cache TTL values are valid Go durations.
 type InvalidCacheTTL struct{}
 
 func (r *InvalidCacheTTL) ID() string          { return "S7/invalid-cache-ttl" }
@@ -238,8 +231,7 @@ func (r *InvalidCacheTTL) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S8: missing-circuit-description ---
-
+// MissingCircuitDescription checks that the circuit has a description field.
 type MissingCircuitDescription struct{}
 
 func (r *MissingCircuitDescription) ID() string        { return "S8/missing-circuit-description" }
@@ -261,8 +253,7 @@ func (r *MissingCircuitDescription) Check(ctx *LintContext) []Finding {
 	return nil
 }
 
-// --- S9: unnamed-node ---
-
+// UnnamedNode checks that no node has an empty name.
 type UnnamedNode struct{}
 
 func (r *UnnamedNode) ID() string          { return "S9/unnamed-node" }
@@ -285,8 +276,7 @@ func (r *UnnamedNode) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S10: invalid-walker-element ---
-
+// InvalidWalkerElement checks that walker element values are known elements.
 type InvalidWalkerElement struct{}
 
 func (r *InvalidWalkerElement) ID() string          { return "S10/invalid-walker-element" }
@@ -315,8 +305,7 @@ func (r *InvalidWalkerElement) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S11: invalid-walker-persona ---
-
+// InvalidWalkerPersona checks that walker persona values are known personas.
 type InvalidWalkerPersona struct{}
 
 func (r *InvalidWalkerPersona) ID() string          { return "S11/invalid-walker-persona" }
@@ -348,8 +337,7 @@ var validDomains = map[string]bool{
 	"hybrid":       true,
 }
 
-// --- S12: schema-in-unstructured-zone ---
-
+// SchemaInUnstructuredZone checks for artifact schemas on nodes in zones without structured extractors.
 type SchemaInUnstructuredZone struct{}
 
 func (r *SchemaInUnstructuredZone) ID() string          { return "S12/schema-in-unstructured-zone" }
@@ -382,8 +370,7 @@ func (r *SchemaInUnstructuredZone) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S13: missing-zone-domain ---
-
+// MissingZoneDomain checks that zones declare a domain field.
 type MissingZoneDomain struct{}
 
 func (r *MissingZoneDomain) ID() string          { return "S13/missing-zone-domain" }
@@ -407,8 +394,7 @@ func (r *MissingZoneDomain) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- S14: invalid-zone-domain ---
-
+// InvalidZoneDomain checks that zone domain values are valid predefined domains.
 type InvalidZoneDomain struct{}
 
 func (r *InvalidZoneDomain) ID() string          { return "S14/invalid-zone-domain" }

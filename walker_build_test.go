@@ -262,7 +262,6 @@ func TestValidateElement(t *testing.T) {
 		{"fire", ElementFire, false},
 		{"Fire", ElementFire, false},
 		{"EARTH", ElementEarth, false},
-		{"iron", ElementIron, false},
 		{"plasma", "", true},
 		{"", "", true},
 	}

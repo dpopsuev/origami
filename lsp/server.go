@@ -6,7 +6,10 @@ package lsp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"sync"
+	"time"
 
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
@@ -89,6 +92,8 @@ type initializeCapabilities struct {
 	InlayHintProvider bool `json:"inlayHintProvider,omitempty"`
 }
 
+const defaultKamiPort = 9800
+
 func (s *Server) handleInitialize(ctx context.Context, reply jsonrpc2.Replier, _ jsonrpc2.Request) error {
 	s.mu.Lock()
 	s.ready = true
@@ -115,7 +120,25 @@ func (s *Server) handleInitialize(ctx context.Context, reply jsonrpc2.Replier, _
 			Version: "0.1.0",
 		},
 	}
+
+	go s.probeKami(defaultKamiPort)
+
 	return reply(ctx, result, nil)
+}
+
+// probeKami attempts to connect to a Kami server on the given port.
+// Best-effort: silently ignored if Kami is not running.
+func (s *Server) probeKami(port int) {
+	client := &http.Client{Timeout: 2 * time.Second}
+	url := fmt.Sprintf("http://localhost:%d/events/stream", port)
+	resp, err := client.Head(url)
+	if err != nil {
+		return
+	}
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusMethodNotAllowed {
+		s.configureKami(true, port)
+	}
 }
 
 func (s *Server) handleDidOpen(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) error {

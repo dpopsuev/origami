@@ -18,7 +18,6 @@ var semanticTokenTypes = []string{
 	"origami-air",
 	"origami-diamond",
 	"origami-lightning",
-	"origami-iron",
 }
 
 var elementTokenIndex = map[string]uint32{
@@ -28,7 +27,6 @@ var elementTokenIndex = map[string]uint32{
 	"air":       3,
 	"diamond":   4,
 	"lightning": 5,
-	"iron":      6,
 }
 
 // SemanticTokensLegend returns the legend for initialize response.

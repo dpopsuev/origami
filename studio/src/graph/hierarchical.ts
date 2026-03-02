@@ -165,7 +165,6 @@ function elementColor(element: string): string {
     air: "#FFBF00",
     diamond: "#0F52BA",
     lightning: "#DC143C",
-    iron: "#48494B",
   };
   return colors[element] || "#555";
 }

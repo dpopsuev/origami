@@ -10,7 +10,6 @@ export default {
         "origami-air": "#FFBF00",
         "origami-diamond": "#0F52BA",
         "origami-lightning": "#DC143C",
-        "origami-iron": "#48494B",
         "rh-red": "#EE0000",
         "rh-dark": "#151515",
       },

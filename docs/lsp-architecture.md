@@ -41,7 +41,7 @@ Integrates `origami-lint` to report YAML structure errors, invalid elements, orp
 Context-aware suggestions:
 - **Top level**: `pipeline`, `nodes`, `edges`, `walkers`, `start`, `done`, etc.
 - **Node fields**: `name`, `element`, `family`, `extractor`, etc.
-- **Element values**: `fire`, `water`, `earth`, `air`, `diamond`, `lightning`, `iron`
+- **Element values**: `fire`, `water`, `earth`, `air`, `diamond`, `lightning`
 - **Persona values**: `herald`, `seeker`, `sentinel`, `weaver`, `arbiter`, `catalyst`, `oracle`, `phantom`
 - **Node references**: in `from:`, `to:`, `start:` fields
 
@@ -55,7 +55,7 @@ Jump from `from:`, `to:`, or `start:` values to the corresponding `- name:` decl
 
 ### Semantic Tokens (Phase 2)
 
-Seven custom token types, one per Origami element:
+Six custom token types, one per Origami element:
 
 | Token Type | Element | Default Color |
 |---|---|---|
@@ -65,8 +65,6 @@ Seven custom token types, one per Origami element:
 | `origami-air` | Air | Amber (#FFBF00) |
 | `origami-diamond` | Diamond | Sapphire (#0F52BA) |
 | `origami-lightning` | Lightning | Crimson (#DC143C) |
-| `origami-iron` | Iron | Iron (#48494B) |
-
 Tokens are applied to `element:` values and zone names that carry an element.
 
 ### Inlay Hints (Phase 3)

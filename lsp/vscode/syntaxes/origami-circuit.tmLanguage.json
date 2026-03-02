@@ -27,7 +27,7 @@
       }
     },
     "element-values": {
-      "match": "\\b(element):\\s*(fire|water|earth|air|diamond|lightning|iron)\\b",
+      "match": "\\b(element):\\s*(fire|water|earth|air|diamond|lightning)\\b",
       "captures": {
         "1": { "name": "support.type.property-name.origami" },
         "2": { "name": "entity.name.type.element.origami" }

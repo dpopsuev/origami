@@ -1,0 +1,275 @@
+package view
+
+import (
+	"sync"
+	"time"
+
+	framework "github.com/dpopsuev/origami"
+)
+
+// CircuitStore is the single source of truth for a circuit's visual state.
+// It implements framework.WalkObserver, maintaining a CircuitSnapshot that
+// reflects the current walk state. Subscribers receive StateDiff values
+// as the state changes.
+//
+// Thread-safe: walk events arrive from walk goroutines while subscribers
+// read diffs from their own goroutines.
+type CircuitStore struct {
+	mu          sync.RWMutex
+	snapshot    CircuitSnapshot
+	subscribers map[int]chan StateDiff
+	nextID      int
+	closed      bool
+
+	nodeZone    map[string]string
+	nodeElement map[string]string
+}
+
+// NewCircuitStore creates a store initialized from a circuit definition.
+// All nodes start in NodeIdle state.
+func NewCircuitStore(def *framework.CircuitDef) *CircuitStore {
+	nodes := make(map[string]NodeState, len(def.Nodes))
+	nodeZone := make(map[string]string)
+	nodeElement := make(map[string]string)
+
+	for zoneName, zd := range def.Zones {
+		for _, nodeName := range zd.Nodes {
+			nodeZone[nodeName] = zoneName
+		}
+	}
+
+	for _, nd := range def.Nodes {
+		nodes[nd.Name] = NodeState{
+			Name:    nd.Name,
+			State:   NodeIdle,
+			Zone:    nodeZone[nd.Name],
+			Element: nd.Element,
+		}
+		nodeElement[nd.Name] = nd.Element
+	}
+
+	return &CircuitStore{
+		snapshot: CircuitSnapshot{
+			CircuitName: def.Circuit,
+			Nodes:       nodes,
+			Walkers:     make(map[string]WalkerPosition),
+			Breakpoints: make(map[string]bool),
+			Timestamp:   time.Now().UTC(),
+		},
+		subscribers: make(map[int]chan StateDiff),
+		nodeZone:    nodeZone,
+		nodeElement: nodeElement,
+	}
+}
+
+// OnEvent implements framework.WalkObserver. It updates the snapshot and
+// emits StateDiff values to subscribers.
+func (cs *CircuitStore) OnEvent(we framework.WalkEvent) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	now := time.Now().UTC()
+	cs.snapshot.Timestamp = now
+
+	switch we.Type {
+	case framework.EventNodeEnter:
+		cs.setNodeState(we.Node, NodeActive, now)
+		cs.moveWalker(we.Walker, we.Node, now)
+
+	case framework.EventNodeExit:
+		cs.setNodeState(we.Node, NodeCompleted, now)
+
+	case framework.EventTransition:
+		// Walker is moving to the next node; the target node state
+		// will be set by the subsequent EventNodeEnter.
+
+	case framework.EventWalkerSwitch:
+		cs.moveWalker(we.Walker, we.Node, now)
+
+	case framework.EventFanOutStart:
+		if we.Walker != "" {
+			cs.addWalker(we.Walker, we.Node, now)
+		}
+
+	case framework.EventFanOutEnd:
+		if we.Walker != "" {
+			cs.removeWalker(we.Walker, now)
+		}
+
+	case framework.EventWalkComplete:
+		cs.snapshot.Completed = true
+		cs.emit(StateDiff{Type: DiffCompleted, Timestamp: now})
+
+	case framework.EventWalkError:
+		errMsg := ""
+		if we.Error != nil {
+			errMsg = we.Error.Error()
+		}
+		if we.Node != "" {
+			cs.setNodeState(we.Node, NodeError, now)
+		}
+		cs.snapshot.Error = errMsg
+		cs.emit(StateDiff{Type: DiffError, Node: we.Node, Error: errMsg, Timestamp: now})
+
+	case framework.EventWalkInterrupted:
+		cs.snapshot.Paused = true
+		cs.emit(StateDiff{Type: DiffPaused, Node: we.Node, Timestamp: now})
+
+	case framework.EventWalkResumed:
+		cs.snapshot.Paused = false
+		cs.emit(StateDiff{Type: DiffResumed, Timestamp: now})
+	}
+}
+
+// Snapshot returns a thread-safe copy of the current circuit state.
+func (cs *CircuitStore) Snapshot() CircuitSnapshot {
+	cs.mu.RLock()
+	defer cs.mu.RUnlock()
+
+	nodes := make(map[string]NodeState, len(cs.snapshot.Nodes))
+	for k, v := range cs.snapshot.Nodes {
+		nodes[k] = v
+	}
+
+	walkers := make(map[string]WalkerPosition, len(cs.snapshot.Walkers))
+	for k, v := range cs.snapshot.Walkers {
+		walkers[k] = v
+	}
+
+	breakpoints := make(map[string]bool, len(cs.snapshot.Breakpoints))
+	for k, v := range cs.snapshot.Breakpoints {
+		breakpoints[k] = v
+	}
+
+	return CircuitSnapshot{
+		CircuitName: cs.snapshot.CircuitName,
+		Nodes:       nodes,
+		Walkers:     walkers,
+		Breakpoints: breakpoints,
+		Paused:      cs.snapshot.Paused,
+		Completed:   cs.snapshot.Completed,
+		Error:       cs.snapshot.Error,
+		Timestamp:   cs.snapshot.Timestamp,
+	}
+}
+
+// Subscribe returns a channel that receives all future StateDiff values.
+// Call Unsubscribe with the returned id when done.
+func (cs *CircuitStore) Subscribe() (id int, ch <-chan StateDiff) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	c := make(chan StateDiff, 64)
+	id = cs.nextID
+	cs.nextID++
+	cs.subscribers[id] = c
+	return id, c
+}
+
+// Unsubscribe removes a subscriber and closes its channel.
+func (cs *CircuitStore) Unsubscribe(id int) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	if c, ok := cs.subscribers[id]; ok {
+		close(c)
+		delete(cs.subscribers, id)
+	}
+}
+
+// SetBreakpoints replaces the breakpoint set. Called by debug controllers
+// (e.g. kami.Server) without requiring a kami import.
+func (cs *CircuitStore) SetBreakpoints(nodes []string) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	now := time.Now().UTC()
+
+	old := cs.snapshot.Breakpoints
+	cs.snapshot.Breakpoints = make(map[string]bool, len(nodes))
+	for _, n := range nodes {
+		cs.snapshot.Breakpoints[n] = true
+		if !old[n] {
+			cs.emit(StateDiff{Type: DiffBreakpointSet, Node: n, Timestamp: now})
+		}
+	}
+	for n := range old {
+		if !cs.snapshot.Breakpoints[n] {
+			cs.emit(StateDiff{Type: DiffBreakpointCleared, Node: n, Timestamp: now})
+		}
+	}
+}
+
+// SetPaused sets the paused state. Called by debug controllers.
+func (cs *CircuitStore) SetPaused(paused bool) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	if cs.snapshot.Paused == paused {
+		return
+	}
+	now := time.Now().UTC()
+	cs.snapshot.Paused = paused
+	if paused {
+		cs.emit(StateDiff{Type: DiffPaused, Timestamp: now})
+	} else {
+		cs.emit(StateDiff{Type: DiffResumed, Timestamp: now})
+	}
+}
+
+// Close closes all subscriber channels.
+func (cs *CircuitStore) Close() {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	if cs.closed {
+		return
+	}
+	cs.closed = true
+	for id, ch := range cs.subscribers {
+		close(ch)
+		delete(cs.subscribers, id)
+	}
+}
+
+func (cs *CircuitStore) setNodeState(node string, state NodeVisualState, ts time.Time) {
+	if ns, ok := cs.snapshot.Nodes[node]; ok {
+		ns.State = state
+		cs.snapshot.Nodes[node] = ns
+	}
+	cs.emit(StateDiff{Type: DiffNodeState, Node: node, State: state, Timestamp: ts})
+}
+
+func (cs *CircuitStore) moveWalker(walkerID, node string, ts time.Time) {
+	if walkerID == "" {
+		return
+	}
+	wp, exists := cs.snapshot.Walkers[walkerID]
+	if !exists {
+		cs.addWalker(walkerID, node, ts)
+		return
+	}
+	wp.Node = node
+	cs.snapshot.Walkers[walkerID] = wp
+	cs.emit(StateDiff{Type: DiffWalkerMoved, Walker: walkerID, Node: node, Timestamp: ts})
+}
+
+func (cs *CircuitStore) addWalker(walkerID, node string, ts time.Time) {
+	cs.snapshot.Walkers[walkerID] = WalkerPosition{
+		WalkerID: walkerID,
+		Node:     node,
+		Element:  cs.nodeElement[node],
+	}
+	cs.emit(StateDiff{Type: DiffWalkerAdded, Walker: walkerID, Node: node, Timestamp: ts})
+}
+
+func (cs *CircuitStore) removeWalker(walkerID string, ts time.Time) {
+	delete(cs.snapshot.Walkers, walkerID)
+	cs.emit(StateDiff{Type: DiffWalkerRemoved, Walker: walkerID, Timestamp: ts})
+}
+
+// emit broadcasts a diff to all subscribers. Non-blocking: slow subscribers
+// that fall behind have diffs dropped. Must be called with cs.mu held.
+func (cs *CircuitStore) emit(diff StateDiff) {
+	for _, ch := range cs.subscribers {
+		select {
+		case ch <- diff:
+		default:
+		}
+	}
+}

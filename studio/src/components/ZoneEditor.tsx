@@ -7,7 +7,7 @@ interface ZoneEditorProps {
   onUpdate: (zones: CircuitZone[]) => void;
 }
 
-const ELEMENTS = ["fire", "water", "earth", "air", "diamond", "lightning", "iron"];
+const ELEMENTS = ["fire", "water", "earth", "air", "diamond", "lightning"];
 
 export function ZoneEditor({ zones, availableNodes, onUpdate }: ZoneEditorProps) {
   const [editingZone, setEditingZone] = useState<string | null>(null);

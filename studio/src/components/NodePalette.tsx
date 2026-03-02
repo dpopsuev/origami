@@ -7,7 +7,6 @@ const ELEMENT_ITEMS = [
   { element: "air", label: "Air", color: "#FFBF00", desc: "Creative" },
   { element: "diamond", label: "Diamond", color: "#0F52BA", desc: "Skeptical" },
   { element: "lightning", label: "Lightning", color: "#DC143C", desc: "Dispatcher" },
-  { element: "iron", label: "Iron", color: "#48494B", desc: "Structural" },
 ];
 
 const FAMILY_ITEMS = [

@@ -113,7 +113,7 @@ func TestBatchWalk_Parallel(t *testing.T) {
 	}
 }
 
-func TestBatchWalk_PerCaseAdapters(t *testing.T) {
+func TestBatchWalk_PerCaseComponents(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "hook-test",
 		Start:   "step-a",
@@ -135,7 +135,7 @@ func TestBatchWalk_PerCaseAdapters(t *testing.T) {
 	}
 
 	hookCalled := make(map[string]bool)
-	hookAdapter := &Component{
+	hookComponent := &Component{
 		Namespace: "test",
 		Name:      "case-hook",
 		Hooks: HookRegistry{
@@ -146,7 +146,7 @@ func TestBatchWalk_PerCaseAdapters(t *testing.T) {
 		},
 	}
 
-	noopHookAdapter := &Component{
+	noopHookComponent := &Component{
 		Namespace: "test",
 		Name:      "noop-hook",
 		Hooks: HookRegistry{
@@ -160,8 +160,8 @@ func TestBatchWalk_PerCaseAdapters(t *testing.T) {
 		Def:    def,
 		Shared: sharedReg,
 		Cases: []BatchCase{
-			{ID: "with-hook", Components: []*Component{hookAdapter}},
-			{ID: "no-hook", Components: []*Component{noopHookAdapter}},
+			{ID: "with-hook", Components: []*Component{hookComponent}},
+			{ID: "no-hook", Components: []*Component{noopHookComponent}},
 		},
 		Parallel: 1,
 	})

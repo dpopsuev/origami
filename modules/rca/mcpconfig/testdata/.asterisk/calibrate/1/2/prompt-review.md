@@ -38,7 +38,7 @@ This step presents the investigation findings for your review. **No write to RP 
 
 | Field | Value |
 |-------|-------|
-| **RCA message** | root cause from subagent-0 |
+| **RCA message** | root cause from subagent-3 |
 | **Defect type** | `pb001` |
 | **Convergence score** | 0.85 |
 

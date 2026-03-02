@@ -75,9 +75,9 @@ func computeInlayHints(doc *document) []InlayHint {
 
 	hints = append(hints, elementTraitHints(doc, lines)...)
 	hints = append(hints, personaHints(doc, lines)...)
-	hints = append(hints, expressionHints(doc, lines)...)
-	hints = append(hints, edgeFlowHints(doc, lines)...)
-	hints = append(hints, startNodeHint(doc, lines)...)
+	hints = append(hints, shortcutHints(doc, lines)...)
+	hints = append(hints, terminalHints(doc, lines)...)
+	hints = append(hints, neighborHints(doc, lines)...)
 
 	return hints
 }
@@ -95,13 +95,18 @@ func elementTraitHints(doc *document, lines []string) []InlayHint {
 			continue
 		}
 
+		profile := elementProfile[val]
 		summary := compactTraits(info.Traits)
+		label := profile
+		if summary != "" {
+			label += " — " + summary
+		}
 		hints = append(hints, InlayHint{
 			Position:    Position{Line: uint32(i), Character: uint32(len(line))},
-			Label:       summary,
+			Label:       label,
 			Kind:        1,
 			PaddingLeft: true,
-			Tooltip:     markdownTooltip(fmt.Sprintf("### %s\n\n%s\n\n**Traits:** %s", val, info.Description, info.Traits)),
+			Tooltip:     markdownTooltip(fmt.Sprintf("### %s (%s)\n\n%s\n\n**Traits:** %s", profile, val, info.Description, info.Traits)),
 		})
 	}
 	return hints
@@ -135,64 +140,22 @@ func personaHints(doc *document, lines []string) []InlayHint {
 	return hints
 }
 
-func expressionHints(doc *document, lines []string) []InlayHint {
-	var hints []InlayHint
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(trimmed, "when:") {
-			continue
-		}
-		expr := strings.TrimSpace(strings.TrimPrefix(trimmed, "when:"))
-		expr = strings.Trim(expr, `"'`)
-
-		label := "expr"
-		if expr == "true" || expr == "false" {
-			label = "static"
-		} else if strings.Contains(expr, "output.") {
-			label = "output-dep"
-		} else if strings.Contains(expr, "state.") {
-			label = "state-dep"
-		}
-
-		hints = append(hints, InlayHint{
-			Position:    Position{Line: uint32(i), Character: uint32(len(line))},
-			Label:       label,
-			Kind:        2,
-			PaddingLeft: true,
-		})
-	}
-	return hints
-}
-
-func edgeFlowHints(doc *document, lines []string) []InlayHint {
+func shortcutHints(doc *document, lines []string) []InlayHint {
 	if doc.Def == nil {
 		return nil
 	}
-
-	nodeElements := make(map[string]string, len(doc.Def.Nodes))
-	for _, n := range doc.Def.Nodes {
-		if n.Element != "" {
-			nodeElements[n.Name] = n.Element
-		}
-	}
-
 	var hints []InlayHint
 	for _, edge := range doc.Def.Edges {
-		fromEl := nodeElements[edge.From]
-		toEl := nodeElements[edge.To]
-		if fromEl == "" && toEl == "" {
+		if !edge.Shortcut {
 			continue
 		}
-
-		flow := buildFlowLabel(fromEl, toEl)
 		line := findEdgeIDLine(lines, edge.ID)
 		if line < 0 {
 			continue
 		}
-
 		hints = append(hints, InlayHint{
 			Position:    Position{Line: uint32(line), Character: uint32(len(lines[line]))},
-			Label:       flow,
+			Label:       "shortcut",
 			Kind:        1,
 			PaddingLeft: true,
 		})
@@ -200,75 +163,168 @@ func edgeFlowHints(doc *document, lines []string) []InlayHint {
 	return hints
 }
 
-func startNodeHint(doc *document, lines []string) []InlayHint {
-	if doc.Def == nil || doc.Def.Start == "" {
+func terminalHints(doc *document, lines []string) []InlayHint {
+	if doc.Def == nil || doc.Def.Done == "" {
 		return nil
+	}
+	var hints []InlayHint
+	for _, edge := range doc.Def.Edges {
+		if edge.To != doc.Def.Done {
+			continue
+		}
+		line := findEdgeIDLine(lines, edge.ID)
+		if line < 0 {
+			continue
+		}
+		hints = append(hints, InlayHint{
+			Position:    Position{Line: uint32(line), Character: uint32(len(lines[line]))},
+			Label:       "terminal",
+			Kind:        1,
+			PaddingLeft: true,
+		})
+	}
+	return hints
+}
+
+type edgeNeighbor struct {
+	name string
+	loop bool
+}
+
+func neighborHints(doc *document, lines []string) []InlayHint {
+	if doc.Def == nil {
+		return nil
+	}
+
+	inbound := map[string][]edgeNeighbor{}
+	outbound := map[string][]edgeNeighbor{}
+	for _, e := range doc.Def.Edges {
+		outbound[e.From] = append(outbound[e.From], edgeNeighbor{e.To, e.Loop})
+		inbound[e.To] = append(inbound[e.To], edgeNeighbor{e.From, false})
 	}
 
 	var hints []InlayHint
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "start:") {
-			nodeName := strings.TrimSpace(strings.TrimPrefix(trimmed, "start:"))
-			if nodeName == doc.Def.Start {
-				for _, n := range doc.Def.Nodes {
-					if n.Name == nodeName {
-						label := "entry"
-						if n.Element != "" {
-							label = fmt.Sprintf("entry [%s]", n.Element)
-						}
-						if n.Family != "" {
-							label += fmt.Sprintf(" family=%s", n.Family)
-						}
-						hints = append(hints, InlayHint{
-							Position:    Position{Line: uint32(i), Character: uint32(len(line))},
-							Label:       label,
-							Kind:        1,
-							PaddingLeft: true,
-						})
-						break
-					}
-				}
-			}
-			break
+		if !strings.HasPrefix(trimmed, "- name:") && !strings.HasPrefix(trimmed, "name:") {
+			continue
 		}
+		raw := trimmed
+		if strings.HasPrefix(raw, "- ") {
+			raw = raw[2:]
+		}
+		nodeName := strings.TrimSpace(strings.TrimPrefix(raw, "name:"))
+		if nodeName == "" {
+			continue
+		}
+
+		found := false
+		for _, n := range doc.Def.Nodes {
+			if n.Name == nodeName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			continue
+		}
+
+		ins := inbound[nodeName]
+		outs := outbound[nodeName]
+		if len(ins) == 0 && len(outs) == 0 {
+			continue
+		}
+
+		label := compactNeighbors(ins, outs, doc.Def.Start == nodeName)
+		tooltip := neighborTooltip(nodeName, doc)
+
+		hints = append(hints, InlayHint{
+			Position:    Position{Line: uint32(i), Character: uint32(len(line))},
+			Label:       label,
+			Kind:        1,
+			PaddingLeft: true,
+			Tooltip:     markdownTooltip(tooltip),
+		})
 	}
 	return hints
 }
 
-// compactTraits turns "speed: high | max_loops: 0 | shortcut: 0.9 | failure: premature conclusions"
-// into "high | 0 loops | 0.9 shortcut"
+func compactNeighbors(inbound, outbound []edgeNeighbor, isStart bool) string {
+	dedup := func(neighbors []edgeNeighbor) []string {
+		seen := map[string]bool{}
+		var result []string
+		for _, n := range neighbors {
+			suffix := ""
+			if n.loop {
+				suffix = "\u21bb"
+			}
+			key := n.name + suffix
+			if !seen[key] {
+				seen[key] = true
+				result = append(result, n.name+suffix)
+			}
+		}
+		return result
+	}
+
+	var parts []string
+	if isStart {
+		parts = append(parts, "\u2190 start")
+	}
+	if ins := dedup(inbound); len(ins) > 0 {
+		parts = append(parts, "\u2190 "+strings.Join(ins, ", "))
+	}
+
+	outs := dedup(outbound)
+	if len(outs) > 0 {
+		parts = append(parts, "\u2192 "+strings.Join(outs, ", "))
+	}
+
+	return strings.Join(parts, " \u00b7 ")
+}
+
+func neighborTooltip(nodeName string, doc *document) string {
+	md := fmt.Sprintf("### %s — connected edges\n\n", nodeName)
+	for _, e := range doc.Def.Edges {
+		if e.From != nodeName && e.To != nodeName {
+			continue
+		}
+		cond := e.When
+		if cond == "" {
+			cond = e.Condition
+		}
+		if cond == "" {
+			cond = "unconditional"
+		}
+
+		var tags []string
+		if e.Shortcut {
+			tags = append(tags, "shortcut")
+		}
+		if e.Loop {
+			tags = append(tags, "loop")
+		}
+
+		prefix := fmt.Sprintf("- **%s** %s \u2192 %s", e.ID, e.From, e.To)
+		if len(tags) > 0 {
+			prefix += " _(" + strings.Join(tags, ", ") + ")_"
+		}
+		md += prefix + " `" + cond + "`\n"
+	}
+	return md
+}
+
+// compactTraits extracts the failure mode from traits as a concise risk label.
 func compactTraits(traits string) string {
 	parts := strings.Split(traits, "|")
-	var compact []string
 	for _, p := range parts {
 		p = strings.TrimSpace(p)
 		kv := strings.SplitN(p, ":", 2)
-		if len(kv) != 2 {
-			continue
-		}
-		key := strings.TrimSpace(kv[0])
-		val := strings.TrimSpace(kv[1])
-		switch key {
-		case "speed":
-			compact = append(compact, val)
-		case "max_loops":
-			compact = append(compact, val+" loops")
-		case "shortcut":
-			compact = append(compact, val+" shortcut")
+		if len(kv) == 2 && strings.TrimSpace(kv[0]) == "failure" {
+			return "risk: " + strings.TrimSpace(kv[1])
 		}
 	}
-	return strings.Join(compact, " | ")
-}
-
-func buildFlowLabel(fromEl, toEl string) string {
-	if fromEl != "" && toEl != "" {
-		return fromEl + " → " + toEl
-	}
-	if fromEl != "" {
-		return fromEl + " →"
-	}
-	return "→ " + toEl
+	return ""
 }
 
 func findEdgeIDLine(lines []string, edgeID string) int {

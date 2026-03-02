@@ -11,13 +11,23 @@ import (
 	"time"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/view"
 )
 
 func TestServer_SSEStreamEvents(t *testing.T) {
+	def := &framework.CircuitDef{
+		Circuit: "test",
+		Nodes: []framework.NodeDef{
+			{Name: "triage"},
+		},
+	}
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
 	bridge := NewEventBridge(nil)
 	defer bridge.Close()
 
-	srv := NewServer(Config{Bridge: bridge})
+	srv := NewServer(Config{Bridge: bridge, Store: store})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -40,7 +50,6 @@ func TestServer_SSEStreamEvents(t *testing.T) {
 		t.Fatalf("content-type = %q, want text/event-stream", ct)
 	}
 
-	// Read SSE lines in a goroutine since scanner blocks
 	type result struct {
 		evt Event
 		err error
@@ -67,9 +76,8 @@ func TestServer_SSEStreamEvents(t *testing.T) {
 		}
 	}()
 
-	// Give the SSE connection time to establish, then emit
 	time.Sleep(50 * time.Millisecond)
-	bridge.OnEvent(framework.WalkEvent{
+	store.OnEvent(framework.WalkEvent{
 		Type:   framework.EventNodeEnter,
 		Node:   "triage",
 		Walker: "sentinel",

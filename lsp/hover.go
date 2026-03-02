@@ -24,7 +24,6 @@ var elementDocs = map[string]elementInfo{
 	"air":       {Description: "Creative, lateral thinker, cross-domain correlator.", Traits: "speed: medium | max_loops: 2 | shortcut: 0.5 | failure: tangential thinking", Color: "#FFBF00 (Amber)"},
 	"diamond":   {Description: "Skeptical, evidence-demanding. The final quality gate.", Traits: "speed: low | max_loops: 2 | shortcut: 0.0 | failure: paralyzing perfectionism", Color: "#0F52BA (Sapphire)"},
 	"lightning": {Description: "Dispatcher, orchestrator. Manages the circuit queue.", Traits: "speed: highest | max_loops: 0 | shortcut: 1.0 | failure: sacrifices quality", Color: "#DC143C (Crimson)"},
-	"iron":      {Description: "Structural, load-bearing. Foundation node type.", Traits: "speed: lowest | max_loops: 0 | shortcut: 0.0 | failure: rigidity", Color: "#48494B (Iron)"},
 }
 
 var personaDocs = map[string]string{
@@ -36,6 +35,17 @@ var personaDocs = map[string]string{
 	"catalyst": "Lightning persona. Circuit orchestrator. \"New failure incoming! All units respond!\"",
 	"oracle":   "Void persona. Pattern recognizer across time. Sees trends invisible to others.",
 	"phantom":  "Antithesis persona. The adversarial counterpart used in the Dialectic system.",
+}
+
+// elementProfile maps element names to human-readable behaviour labels
+// used in inlay hints instead of the esoteric element names.
+var elementProfile = map[string]string{
+	"fire":      "fast",
+	"water":     "thorough",
+	"earth":     "steady",
+	"air":       "creative",
+	"diamond":   "rigorous",
+	"lightning": "orchestrator",
 }
 
 var exprContextDocs = map[string]string{
@@ -105,27 +115,39 @@ func computeHover(doc *document, pos protocol.Position, vocab framework.RichVoca
 		}
 	}
 
-	// Node name hover (in from:/to:/start:)
+	// Node name hover (in from:/to:/start: and - name: declarations)
+	nodeName := ""
 	for _, prefix := range []string{"from:", "to:", "start:"} {
-		if strings.HasPrefix(trimmed, prefix) && doc.Def != nil {
-			nodeName := strings.TrimSpace(strings.TrimPrefix(trimmed, prefix))
-			for _, n := range doc.Def.Nodes {
-				if n.Name == nodeName {
-					md := fmt.Sprintf("### Node: %s\n\n", n.Name)
-					if n.Family != "" {
-						md += fmt.Sprintf("**Family:** %s\n\n", n.Family)
+		if strings.HasPrefix(trimmed, prefix) {
+			nodeName = strings.TrimSpace(strings.TrimPrefix(trimmed, prefix))
+			break
+		}
+	}
+	if nodeName == "" && strings.HasPrefix(trimmed, "name:") || strings.HasPrefix(trimmed, "- name:") {
+		raw := trimmed
+		if strings.HasPrefix(raw, "- ") {
+			raw = raw[2:]
+		}
+		nodeName = strings.TrimSpace(strings.TrimPrefix(raw, "name:"))
+	}
+	if nodeName != "" && doc.Def != nil {
+		for _, n := range doc.Def.Nodes {
+			if n.Name == nodeName {
+				md := fmt.Sprintf("### Node: %s\n\n", n.Name)
+				if n.Family != "" {
+					md += fmt.Sprintf("**Family:** %s\n\n", n.Family)
+				}
+				if n.Element != "" {
+					md += fmt.Sprintf("**Element:** %s\n\n", n.Element)
+				}
+				if vocab != nil {
+					if d := vocab.Description(n.Name); d != "" {
+						md += fmt.Sprintf("---\n\n%s\n\n", d)
 					}
-					if n.Element != "" {
-						md += fmt.Sprintf("**Element:** %s\n\n", n.Element)
-					}
-					if vocab != nil {
-						if d := vocab.Description(n.Name); d != "" {
-							md += fmt.Sprintf("---\n\n%s\n", d)
-						}
-					}
-					return &protocol.Hover{
-						Contents: protocol.MarkupContent{Kind: protocol.Markdown, Value: md},
-					}
+				}
+				md += connectedEdges(doc.Def, n.Name)
+				return &protocol.Hover{
+					Contents: protocol.MarkupContent{Kind: protocol.Markdown, Value: md},
 				}
 			}
 		}
@@ -154,4 +176,55 @@ func computeHover(doc *document, pos protocol.Position, vocab framework.RichVoca
 	}
 
 	return nil
+}
+
+func connectedEdges(def *framework.CircuitDef, nodeName string) string {
+	var inbound, outbound []string
+	for _, e := range def.Edges {
+		label := formatEdgeLabel(e)
+		if e.To == nodeName {
+			inbound = append(inbound, fmt.Sprintf("- %s **%s** `%s`", e.From+" →", e.ID, label))
+		}
+		if e.From == nodeName {
+			outbound = append(outbound, fmt.Sprintf("- → %s **%s** `%s`", e.To, e.ID, label))
+		}
+	}
+	if len(inbound) == 0 && len(outbound) == 0 {
+		return ""
+	}
+
+	md := "**Connected edges:**\n\n"
+	for _, s := range inbound {
+		md += s + "\n"
+	}
+	for _, s := range outbound {
+		md += s + "\n"
+	}
+	return md
+}
+
+func formatEdgeLabel(e framework.EdgeDef) string {
+	var tags []string
+	if e.Shortcut {
+		tags = append(tags, "shortcut")
+	}
+	if e.Loop {
+		tags = append(tags, "loop")
+	}
+
+	cond := e.When
+	if cond == "" {
+		cond = e.Condition
+	}
+
+	if len(tags) > 0 && cond != "" {
+		return strings.Join(tags, ", ") + " · " + cond
+	}
+	if len(tags) > 0 {
+		return strings.Join(tags, ", ")
+	}
+	if cond != "" {
+		return cond
+	}
+	return "unconditional"
 }

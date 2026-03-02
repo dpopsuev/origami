@@ -6,7 +6,7 @@ interface WalkerEditorProps {
   onUpdate: (walkers: CircuitWalker[]) => void;
 }
 
-const ELEMENTS = ["fire", "water", "earth", "air", "diamond", "lightning", "iron"];
+const ELEMENTS = ["fire", "water", "earth", "air", "diamond", "lightning"];
 const PERSONAS = [
   "herald", "seeker", "sentinel", "weaver",
   "arbiter", "catalyst", "oracle", "phantom",

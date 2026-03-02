@@ -284,7 +284,41 @@ func (kb *KamiBridge) LiveInlayHints(doc *document) []InlayHint {
 		}
 	}
 
+	hints = append(hints, kb.lastTransitionHints(doc, state, lines)...)
+
 	return hints
+}
+
+// lastTransitionHints emits an inlay hint on the most recently traversed edge.
+func (kb *KamiBridge) lastTransitionHints(doc *document, state CircuitState, lines []string) []InlayHint {
+	if len(state.Transitions) == 0 || doc.Def == nil {
+		return nil
+	}
+
+	var latestEdge string
+	var latestTime time.Time
+	for edgeID, ts := range state.Transitions {
+		if ts.After(latestTime) {
+			latestTime = ts
+			latestEdge = edgeID
+		}
+	}
+	if latestEdge == "" {
+		return nil
+	}
+
+	line := findEdgeIDLine(lines, latestEdge)
+	if line < 0 {
+		return nil
+	}
+
+	ago := time.Since(latestTime).Truncate(time.Second)
+	return []InlayHint{{
+		Position:    Position{Line: uint32(line), Character: uint32(len(lines[line]))},
+		Label:       fmt.Sprintf("last transition (%s ago)", ago),
+		Kind:        1,
+		PaddingLeft: true,
+	}}
 }
 
 // handleWorkspaceConfiguration processes workspace/configuration responses

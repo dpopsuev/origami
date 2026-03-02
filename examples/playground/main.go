@@ -118,11 +118,6 @@ func showElements() {
 			t.ShortcutAffinity, t.EvidenceDepth, t.FailureMode)
 	}
 
-	fmt.Println()
-	fmt.Printf("  %s+ Iron%s (derived from Earth via calibration accuracy — not a core element)\n", dim, reset)
-	iron := fw.IronFromEarth(0.80)
-	fmt.Printf("    IronFromEarth(0.80): loops=%d, convergence=%.2f, failure=%q\n",
-		iron.MaxLoops, iron.ConvergenceThreshold, iron.FailureMode)
 }
 
 func elementColor(e fw.Element) string {

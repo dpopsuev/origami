@@ -28,6 +28,7 @@ __debug_bin*
 
 # Frontend (dist/ committed for go:embed; rebuild with npm run build)
 kami/frontend/node_modules/
+lsp/vscode/node_modules/
 
 # Sensitive / non-distributable assets
 rh-presentation-assets.pdf

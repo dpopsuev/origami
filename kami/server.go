@@ -11,6 +11,7 @@ import (
 	"time"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/view"
 )
 
 // Config controls the KamiServer behavior.
@@ -20,11 +21,12 @@ type Config struct {
 	Debug        bool   // enable debug API endpoints
 	Logger       *slog.Logger
 	Bridge       *EventBridge
-	SPA          http.FileSystem    // embedded frontend (nil = no SPA)
-	Theme        Theme              // consumer theme (nil = default)
-	Kabuki       KabukiConfig       // Kabuki presentation sections (nil = debugger-only mode)
-	Vocab          framework.RichVocabulary   // rich vocabulary for node tooltips (nil = Theme only)
-	MetricsHandler http.Handler               // Prometheus /metrics handler (nil = no metrics)
+	Store        *view.CircuitStore         // circuit state source for SSE streaming
+	SPA          http.FileSystem            // embedded frontend (nil = no SPA)
+	Theme        Theme                      // consumer theme (nil = default)
+	Kabuki       KabukiConfig               // Kabuki presentation sections (nil = debugger-only mode)
+	Vocab        framework.RichVocabulary   // rich vocabulary for node tooltips (nil = Theme only)
+	MetricsHandler http.Handler             // Prometheus /metrics handler (nil = no metrics)
 }
 
 func (c *Config) addr() string {
@@ -58,6 +60,7 @@ type Server struct {
 	http   *http.Server
 	ws     *http.Server
 	bridge *EventBridge
+	store  *view.CircuitStore
 	log    *slog.Logger
 
 	mu      sync.Mutex
@@ -73,6 +76,7 @@ func NewServer(cfg Config) *Server {
 	s := &Server{
 		cfg:     cfg,
 		bridge:  cfg.Bridge,
+		store:   cfg.Store,
 		log:     cfg.logger(),
 		wsConns: make(map[int]*wsConn),
 	}
@@ -148,8 +152,14 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 }
 
-// handleSSE streams KamiEvents as Server-Sent Events.
+// handleSSE streams circuit state diffs as Server-Sent Events.
+// Requires Config.Store to be set.
 func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
+	if s.store == nil {
+		http.Error(w, "CircuitStore not configured", http.StatusServiceUnavailable)
+		return
+	}
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming not supported", http.StatusInternalServerError)
@@ -162,17 +172,18 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	flusher.Flush()
 
-	id, ch := s.bridge.Subscribe()
-	defer s.bridge.Unsubscribe(id)
+	id, ch := s.store.Subscribe()
+	defer s.store.Unsubscribe(id)
 
 	for {
 		select {
 		case <-r.Context().Done():
 			return
-		case evt, ok := <-ch:
+		case diff, ok := <-ch:
 			if !ok {
 				return
 			}
+			evt := diffToEvent(diff)
 			data, err := json.Marshal(evt)
 			if err != nil {
 				continue
@@ -181,6 +192,49 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+// diffToEvent converts a view.StateDiff into a kami.Event for SSE output.
+func diffToEvent(d view.StateDiff) Event {
+	e := Event{
+		Timestamp: d.Timestamp,
+		Node:      d.Node,
+		Agent:     d.Walker,
+	}
+	switch d.Type {
+	case view.DiffNodeState:
+		switch d.State {
+		case view.NodeActive:
+			e.Type = EventNodeEnter
+		case view.NodeCompleted:
+			e.Type = EventNodeExit
+		case view.NodeError:
+			e.Type = EventWalkError
+			e.Error = d.Error
+		default:
+			e.Type = EventType(string(d.Type))
+		}
+	case view.DiffWalkerMoved:
+		e.Type = EventTransition
+	case view.DiffWalkerAdded:
+		e.Type = EventFanOutStart
+	case view.DiffWalkerRemoved:
+		e.Type = EventFanOutEnd
+	case view.DiffCompleted:
+		e.Type = EventWalkComplete
+	case view.DiffError:
+		e.Type = EventWalkError
+		e.Error = d.Error
+	case view.DiffPaused:
+		e.Type = EventPaused
+	case view.DiffResumed:
+		e.Type = EventResumed
+	case view.DiffBreakpointSet, view.DiffBreakpointCleared:
+		e.Type = EventType(string(d.Type))
+	default:
+		e.Type = EventType(string(d.Type))
+	}
+	return e
 }
 
 // handleBrowserEvent receives browser interaction events and emits them

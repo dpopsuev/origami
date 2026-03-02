@@ -8,7 +8,6 @@ const WALKER_COLORS: Record<string, string> = {
   air: "#FFBF00",
   diamond: "#0F52BA",
   lightning: "#DC143C",
-  iron: "#48494B",
 };
 
 /**

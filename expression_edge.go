@@ -81,7 +81,6 @@ func (e *expressionEdge) Evaluate(artifact Artifact, state *WalkerState) *Transi
 }
 
 // runExprProgram runs a compiled expression program against a context.
-// Exported for testing; domain code should use expressionEdge.Evaluate.
 func runExprProgram(program *vm.Program, ctx ExprContext) (any, error) {
 	return expr.Run(program, ctx)
 }

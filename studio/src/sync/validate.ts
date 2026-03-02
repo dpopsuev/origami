@@ -29,7 +29,7 @@ export function validateCircuit(def: CircuitDef): ValidationError[] {
 
   const nodeNames = new Set(def.nodes.map((n) => n.name));
   const validElements = new Set([
-    "fire", "water", "earth", "air", "diamond", "lightning", "iron",
+    "fire", "water", "earth", "air", "diamond", "lightning",
   ]);
 
   for (const node of def.nodes) {

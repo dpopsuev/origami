@@ -13,14 +13,13 @@ var validElements = map[Element]bool{
 	ElementDiamond:   true,
 	ElementWater:     true,
 	ElementAir:       true,
-	ElementIron:      true,
 }
 
 // ValidateElement checks that name is a recognized element and returns it.
 func ValidateElement(name string) (Element, error) {
 	e := Element(strings.ToLower(name))
 	if !validElements[e] {
-		return "", fmt.Errorf("unknown element %q (valid: fire, lightning, earth, diamond, water, air, iron)", name)
+		return "", fmt.Errorf("unknown element %q (valid: fire, lightning, earth, diamond, water, air)", name)
 	}
 	return e, nil
 }

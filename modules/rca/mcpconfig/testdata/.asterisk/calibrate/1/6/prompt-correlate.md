@@ -47,10 +47,13 @@ Determine whether this case's root cause matches another case in the same launch
 | Symptom | OCP-83297 PTP sync stability |
 | Status | active |
 | Occurrences | 1 |
-| First seen | 2026-03-02T16:02:26Z |
-| Last seen | 2026-03-02T16:02:26Z |
+| First seen | 2026-03-02T20:48:39Z |
+| Last seen | 2026-03-02T20:48:39Z |
 
 
+## Prior RCAs for this symptom
+
+| RCA #1 | root cause from subagent-2 | `pb001` | open | Versions:  |
 
 
 ## Sibling failures in this launch

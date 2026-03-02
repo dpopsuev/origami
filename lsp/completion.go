@@ -29,7 +29,7 @@ var walkerFieldKeys = []string{
 }
 
 var elementValues = []string{
-	"fire", "water", "earth", "air", "diamond", "lightning", "iron",
+	"fire", "water", "earth", "air", "diamond", "lightning",
 }
 
 var personaValues = []string{
@@ -80,11 +80,12 @@ func computeCompletions(doc *document, pos protocol.Position) []protocol.Complet
 	// Node references in "from:", "to:", "start:"
 	if (strings.HasPrefix(trimmed, "from:") || strings.HasPrefix(trimmed, "to:") ||
 		strings.HasPrefix(trimmed, "start:")) && doc.Def != nil {
-		names := make([]string, 0, len(doc.Def.Nodes))
-		for _, n := range doc.Def.Nodes {
-			names = append(names, n.Name)
-		}
-		return valueCompletions(names, protocol.CompletionItemKindReference)
+		return nodeNameCompletions(doc)
+	}
+
+	// Zone nodes: field at non-zero indent (inside a zone definition)
+	if indent > 0 && isZoneNodesValue(lines, int(pos.Line)) {
+		return nodeNameCompletions(doc)
 	}
 
 	// Node field completion (indent ~4-6, inside nodes list)
@@ -95,6 +96,9 @@ func computeCompletions(doc *document, pos protocol.Position) []protocol.Complet
 	case "edges":
 		return keyCompletions(edgeFieldKeys, protocol.CompletionItemKindField)
 	case "walkers":
+		if isStepAffinityChild(lines, int(pos.Line)) {
+			return nodeNameCompletions(doc)
+		}
 		return keyCompletions(walkerFieldKeys, protocol.CompletionItemKindField)
 	}
 
@@ -141,3 +145,35 @@ func valueCompletions(values []string, kind protocol.CompletionItemKind) []proto
 	return items
 }
 
+func nodeNameCompletions(doc *document) []protocol.CompletionItem {
+	if doc.Def == nil {
+		return nil
+	}
+	names := make([]string, 0, len(doc.Def.Nodes))
+	for _, n := range doc.Def.Nodes {
+		names = append(names, n.Name)
+	}
+	return valueCompletions(names, protocol.CompletionItemKindReference)
+}
+
+// isZoneNodesValue checks if the line is inside a zone's `nodes:` field value.
+// Zone nodes use inline syntax like `nodes: [recall, triage]`.
+func isZoneNodesValue(lines []string, curLine int) bool {
+	trimmed := strings.TrimSpace(lines[curLine])
+	return strings.HasPrefix(trimmed, "nodes:") || strings.HasPrefix(trimmed, "nodes: ")
+}
+
+// isStepAffinityChild checks if the cursor is on a key line inside a
+// step_affinity map (node names as keys with float values).
+func isStepAffinityChild(lines []string, curLine int) bool {
+	indent := len(lines[curLine]) - len(strings.TrimLeft(lines[curLine], " "))
+	for i := curLine - 1; i >= 0; i-- {
+		line := lines[i]
+		lineIndent := len(line) - len(strings.TrimLeft(line, " "))
+		if lineIndent < indent {
+			return strings.TrimSpace(line) == "step_affinity:" ||
+				strings.HasPrefix(strings.TrimSpace(line), "step_affinity:")
+		}
+	}
+	return false
+}

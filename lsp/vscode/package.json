@@ -94,11 +94,6 @@
         "id": "origami-lightning",
         "superType": "type",
         "description": "Lightning element — dispatcher, orchestrator"
-      },
-      {
-        "id": "origami-iron",
-        "superType": "type",
-        "description": "Iron element — structural, load-bearing"
       }
     ],
     "semanticTokenScopes": [
@@ -122,9 +117,6 @@
           ],
           "origami-lightning": [
             "entity.name.type.element.lightning.origami"
-          ],
-          "origami-iron": [
-            "entity.name.type.element.iron.origami"
           ]
         }
       }
@@ -133,17 +125,17 @@
       "editor.semanticTokenColorCustomizations": {
         "rules": {
           "origami-fire": {
-            "foreground": "#DC143C",
+            "foreground": "#E87040",
             "bold": true
           },
           "origami-water": {
-            "foreground": "#007BA7"
+            "foreground": "#2E9ECE"
           },
           "origami-earth": {
-            "foreground": "#0047AB"
+            "foreground": "#8B6914"
           },
           "origami-air": {
-            "foreground": "#FFBF00",
+            "foreground": "#20B2AA",
             "italic": true
           },
           "origami-diamond": {
@@ -153,9 +145,6 @@
           "origami-lightning": {
             "foreground": "#DC143C",
             "italic": true
-          },
-          "origami-iron": {
-            "foreground": "#48494B"
           }
         }
       }

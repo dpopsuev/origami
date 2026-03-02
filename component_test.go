@@ -192,26 +192,6 @@ func TestMergeComponents_DoesNotMutateBase(t *testing.T) {
 	}
 }
 
-func TestResolveFQCN(t *testing.T) {
-	tests := []struct {
-		input     string
-		wantNS    string
-		wantName  string
-	}{
-		{"vendor.llm", "vendor", "llm"},
-		{"llm", "", "llm"},
-		{"a.b.c", "a", "b.c"},
-		{".leading", "", ".leading"},
-	}
-	for _, tt := range tests {
-		ns, name := ResolveFQCN(tt.input)
-		if ns != tt.wantNS || name != tt.wantName {
-			t.Errorf("ResolveFQCN(%q) = (%q, %q), want (%q, %q)",
-				tt.input, ns, name, tt.wantNS, tt.wantName)
-		}
-	}
-}
-
 func TestMergeComponents_Hooks(t *testing.T) {
 	base := GraphRegistries{
 		Transformers: TransformerRegistry{},

@@ -1,9 +1,6 @@
 package framework
 
-import (
-	"math"
-	"testing"
-)
+import "testing"
 
 func TestDefaultTraits_AllSixElements(t *testing.T) {
 	tests := []struct {
@@ -77,9 +74,6 @@ func TestAllElements(t *testing.T) {
 		}
 	}
 
-	if seen[ElementIron] {
-		t.Error("Iron should not be in AllElements (it is derived, not core)")
-	}
 }
 
 func TestAllElements_ReturnsCopy(t *testing.T) {
@@ -91,73 +85,3 @@ func TestAllElements_ReturnsCopy(t *testing.T) {
 	}
 }
 
-func TestIronFromEarth_HighAccuracy(t *testing.T) {
-	iron := IronFromEarth(0.90)
-	earth := DefaultTraits(ElementEarth)
-
-	if iron.Element != ElementIron {
-		t.Errorf("Element = %s, want iron", iron.Element)
-	}
-	if iron.Speed != earth.Speed {
-		t.Errorf("Speed = %s, want %s (same as Earth)", iron.Speed, earth.Speed)
-	}
-
-	// MaxLoops = max(0, 1 - floor(0.9*2)) = max(0, 1-1) = 0
-	if iron.MaxLoops != 0 {
-		t.Errorf("MaxLoops = %d, want 0 (tightened by high accuracy)", iron.MaxLoops)
-	}
-
-	// ConvergenceThreshold = 0.70 + (1-0.90)*0.1 = 0.70 + 0.01 = 0.71
-	wantThreshold := 0.71
-	if math.Abs(iron.ConvergenceThreshold-wantThreshold) > 0.001 {
-		t.Errorf("ConvergenceThreshold = %.4f, want %.4f", iron.ConvergenceThreshold, wantThreshold)
-	}
-
-	if iron.ShortcutAffinity != earth.ShortcutAffinity {
-		t.Errorf("ShortcutAffinity = %.2f, want %.2f (same as Earth)", iron.ShortcutAffinity, earth.ShortcutAffinity)
-	}
-	if iron.EvidenceDepth != earth.EvidenceDepth {
-		t.Errorf("EvidenceDepth = %d, want %d (same as Earth)", iron.EvidenceDepth, earth.EvidenceDepth)
-	}
-}
-
-func TestIronFromEarth_LowAccuracy(t *testing.T) {
-	iron := IronFromEarth(0.0)
-
-	// MaxLoops = max(0, 1 - floor(0.0*2)) = max(0, 1-0) = 1
-	if iron.MaxLoops != 1 {
-		t.Errorf("MaxLoops = %d, want 1 (no tightening at zero accuracy)", iron.MaxLoops)
-	}
-
-	// ConvergenceThreshold = 0.70 + (1-0.0)*0.1 = 0.70 + 0.1 = 0.80
-	wantThreshold := 0.80
-	if math.Abs(iron.ConvergenceThreshold-wantThreshold) > 0.001 {
-		t.Errorf("ConvergenceThreshold = %.4f, want %.4f", iron.ConvergenceThreshold, wantThreshold)
-	}
-}
-
-func TestIronFromEarth_PerfectAccuracy(t *testing.T) {
-	iron := IronFromEarth(1.0)
-
-	// MaxLoops = max(0, 1 - floor(1.0*2)) = max(0, 1-2) = 0
-	if iron.MaxLoops != 0 {
-		t.Errorf("MaxLoops = %d, want 0", iron.MaxLoops)
-	}
-
-	// ConvergenceThreshold = 0.70 + (1-1.0)*0.1 = 0.70
-	wantThreshold := 0.70
-	if math.Abs(iron.ConvergenceThreshold-wantThreshold) > 0.001 {
-		t.Errorf("ConvergenceThreshold = %.4f, want %.4f", iron.ConvergenceThreshold, wantThreshold)
-	}
-}
-
-func TestIronFromEarth_FailureMode(t *testing.T) {
-	iron := IronFromEarth(0.5)
-	if iron.FailureMode == "" {
-		t.Error("Iron should have a distinct failure mode")
-	}
-	earth := DefaultTraits(ElementEarth)
-	if iron.FailureMode == earth.FailureMode {
-		t.Error("Iron failure mode should differ from Earth's")
-	}
-}

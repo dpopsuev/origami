@@ -3,7 +3,6 @@ package framework
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -119,15 +118,6 @@ func mergeHooks(dst HookRegistry, a *Component) error {
 		}
 	}
 	return nil
-}
-
-// ResolveFQCN splits a "namespace.name" string into parts.
-// Returns ("", name) for unqualified names.
-func ResolveFQCN(fqcn string) (namespace, name string) {
-	if idx := strings.Index(fqcn, "."); idx > 0 {
-		return fqcn[:idx], fqcn[idx+1:]
-	}
-	return "", fqcn
 }
 
 func cloneMap[K comparable, V any](src map[K]V) map[K]V {
