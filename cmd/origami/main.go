@@ -51,6 +51,8 @@ func main() {
 		err = studioCmd(os.Args[2:])
 	case "adapter":
 		err = adapterCmd(os.Args[2:])
+	case "fold":
+		err = foldCmd(os.Args[2:])
 	case "version":
 		fmt.Println("origami v1.0.0")
 	default:
@@ -79,6 +81,7 @@ Commands:
   kami serve Start Kami MCP server over stdio (co-starts HTTP/WS)
   studio     Visual Circuit Editor (embedded SPA + REST API)
   adapter    Adapter management (list, inspect, validate)
+  fold       Compile a YAML manifest into a standalone binary
   version    Print version`)
 }
 
