@@ -15,6 +15,16 @@
 | `origami-lsp.md` | Language Server for circuit YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 
+### Companion contracts (primary in Asterisk)
+
+These contracts are tracked in Asterisk `contracts/draft/` but require significant Origami implementation:
+
+| Asterisk contract | Origami scope | Tier |
+|-------------------|---------------|------|
+| `naming-taxonomy` | Rename `marbles/` → `modules/` (101 files), `Deterministic() bool` on Transformer, glossary entries, lint rule. | gate |
+| `design-principle-deterministic` | `rules/universal/deterministic-first.mdc`, lint stochastic node flagging, project-standards update. | quick-win |
+| `origami-autodoc` | New `origami autodoc` CLI command: Mermaid + Markdown generation from CircuitDef, D/S boundary visualization. | next-milestone |
+
 ## Completed (recent)
 
 ### API Stabilization phase (gate)
