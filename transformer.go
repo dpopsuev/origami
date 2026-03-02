@@ -15,6 +15,24 @@ type Transformer interface {
 	Transform(ctx context.Context, tc *TransformerContext) (any, error)
 }
 
+// DeterministicTransformer is an optional marker interface for transformers
+// that declare their determinism. Deterministic transformers produce identical
+// output for identical input (e.g., core.jq, core.file). Stochastic
+// transformers vary per invocation (e.g., core.llm). Transformers that do not
+// implement this interface are assumed stochastic (safe default).
+type DeterministicTransformer interface {
+	Deterministic() bool
+}
+
+// IsDeterministic returns true if t implements DeterministicTransformer and
+// reports itself as deterministic. Unknown transformers default to stochastic.
+func IsDeterministic(t Transformer) bool {
+	if dt, ok := t.(DeterministicTransformer); ok {
+		return dt.Deterministic()
+	}
+	return false
+}
+
 // TransformerContext carries all inputs needed by a transformer.
 type TransformerContext struct {
 	Input       any            // prior node's output (or circuit input)
@@ -181,7 +199,8 @@ const (
 // Transform(), so this transformer just captures the rendered result.
 type goTemplateTransformer struct{}
 
-func (t *goTemplateTransformer) Name() string { return BuiltinTransformerGoTemplate }
+func (t *goTemplateTransformer) Name() string            { return BuiltinTransformerGoTemplate }
+func (t *goTemplateTransformer) Deterministic() bool     { return true }
 func (t *goTemplateTransformer) Transform(_ context.Context, tc *TransformerContext) (any, error) {
 	return tc.Prompt, nil
 }
@@ -191,7 +210,8 @@ func (t *goTemplateTransformer) Transform(_ context.Context, tc *TransformerCont
 // validation without any transformation logic.
 type passthroughTransformer struct{}
 
-func (t *passthroughTransformer) Name() string { return BuiltinTransformerPassthrough }
+func (t *passthroughTransformer) Name() string            { return BuiltinTransformerPassthrough }
+func (t *passthroughTransformer) Deterministic() bool     { return true }
 func (t *passthroughTransformer) Transform(_ context.Context, tc *TransformerContext) (any, error) {
 	return tc.Input, nil
 }

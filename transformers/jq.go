@@ -16,7 +16,8 @@ type JQTransformer struct{}
 // NewJQ creates a transformer that evaluates expressions against input data.
 func NewJQ() *JQTransformer { return &JQTransformer{} }
 
-func (t *JQTransformer) Name() string { return "jq" }
+func (t *JQTransformer) Name() string        { return "jq" }
+func (t *JQTransformer) Deterministic() bool { return true }
 
 func (t *JQTransformer) Transform(ctx context.Context, tc *fw.TransformerContext) (any, error) {
 	expression, _ := metaString(tc, "expr")

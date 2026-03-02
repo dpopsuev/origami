@@ -38,7 +38,8 @@ func NewLLM(d dispatch.Dispatcher, opts ...LLMOption) *LLMTransformer {
 	return t
 }
 
-func (t *LLMTransformer) Name() string { return "llm" }
+func (t *LLMTransformer) Name() string        { return "llm" }
+func (t *LLMTransformer) Deterministic() bool { return false }
 
 func (t *LLMTransformer) Transform(ctx context.Context, tc *fw.TransformerContext) (any, error) {
 	promptPath := tc.Prompt

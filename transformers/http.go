@@ -42,7 +42,8 @@ func NewHTTP(opts ...HTTPOption) *HTTPTransformer {
 	return t
 }
 
-func (t *HTTPTransformer) Name() string { return "http" }
+func (t *HTTPTransformer) Name() string        { return "http" }
+func (t *HTTPTransformer) Deterministic() bool { return true }
 
 func (t *HTTPTransformer) Transform(ctx context.Context, tc *fw.TransformerContext) (any, error) {
 	url, _ := metaString(tc, "url")

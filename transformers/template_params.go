@@ -26,7 +26,8 @@ type TemplateParamsTransformer struct{}
 // NewTemplateParams creates a template-params transformer.
 func NewTemplateParams() *TemplateParamsTransformer { return &TemplateParamsTransformer{} }
 
-func (t *TemplateParamsTransformer) Name() string { return "template-params" }
+func (t *TemplateParamsTransformer) Name() string        { return "template-params" }
+func (t *TemplateParamsTransformer) Deterministic() bool { return true }
 
 func (t *TemplateParamsTransformer) Transform(_ context.Context, tc *fw.TransformerContext) (any, error) {
 	params := make(map[string]any)

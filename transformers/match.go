@@ -184,7 +184,8 @@ func NewMatch() fw.Transformer {
 	return &matchTransformer{}
 }
 
-func (t *matchTransformer) Name() string { return "match" }
+func (t *matchTransformer) Name() string        { return "match" }
+func (t *matchTransformer) Deterministic() bool { return true }
 
 func (t *matchTransformer) Transform(_ context.Context, tc *fw.TransformerContext) (any, error) {
 	evaluator, _ := tc.Meta["evaluator"].(*MatchEvaluator)

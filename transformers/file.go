@@ -35,7 +35,8 @@ func NewFile(opts ...FileOption) *FileTransformer {
 	return t
 }
 
-func (t *FileTransformer) Name() string { return "file" }
+func (t *FileTransformer) Name() string        { return "file" }
+func (t *FileTransformer) Deterministic() bool { return true }
 
 func (t *FileTransformer) Transform(ctx context.Context, tc *fw.TransformerContext) (any, error) {
 	path := tc.Prompt
