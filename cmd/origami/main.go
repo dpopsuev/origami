@@ -16,10 +16,11 @@ import (
 	"github.com/dpopsuev/origami/kami"
 	"github.com/dpopsuev/origami/lint"
 	originamilsp "github.com/dpopsuev/origami/lsp"
-	studiobackend "github.com/dpopsuev/origami/studio/backend"
 	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/ouroboros"
 	"github.com/dpopsuev/origami/ouroborosmcp"
+	studiobackend "github.com/dpopsuev/origami/studio/backend"
+	"github.com/dpopsuev/origami/sumi"
 	"github.com/dpopsuev/origami/transformers"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -51,8 +52,12 @@ func main() {
 		err = studioCmd(os.Args[2:])
 	case "component":
 		err = componentCmd(os.Args[2:])
+	case "sumi":
+		err = sumiCmd(os.Args[2:])
 	case "fold":
 		err = foldCmd(os.Args[2:])
+	case "autodoc":
+		err = autodocCmd(os.Args[2:])
 	case "version":
 		fmt.Println("origami v1.0.0")
 	default:
@@ -81,7 +86,9 @@ Commands:
   kami serve Start Kami MCP server over stdio (co-starts HTTP/WS)
   studio     Visual Circuit Editor (embedded SPA + REST API)
   component  Component management (list, inspect, validate)
+  sumi       Terminal circuit viewer and debugger (TUI)
   fold       Compile a YAML manifest into a standalone binary
+  autodoc    Generate documentation tree from circuit YAML
   version    Print version`)
 }
 
@@ -561,4 +568,31 @@ func lspCmd() error {
 	slog.Info("origami-lsp started", "transport", "stdio")
 	<-ctx.Done()
 	return nil
+}
+
+func sumiCmd(args []string) error {
+	fs := flag.NewFlagSet("sumi", flag.ExitOnError)
+	kamiAddr := fs.String("kami", "", "Kami server address for debug/agent features (e.g. 127.0.0.1:3000)")
+	watch := fs.String("watch", "", "connect to running Kami SSE stream at address")
+	replay := fs.String("replay", "", "replay a recorded JSONL session file")
+	noColor := fs.Bool("no-color", false, "disable ANSI colors (CI/pipe-friendly)")
+	compact := fs.Bool("compact", false, "reduced-width rendering")
+	fs.Parse(args)
+
+	circuitPath := ""
+	if fs.NArg() > 0 {
+		circuitPath = fs.Arg(0)
+	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	return sumi.Run(ctx, sumi.RunConfig{
+		CircuitPath: circuitPath,
+		KamiAddr:    *kamiAddr,
+		WatchAddr:   *watch,
+		ReplayFile:  *replay,
+		NoColor:     *noColor,
+		Compact:     *compact,
+	})
 }
