@@ -156,3 +156,5 @@ No trust boundaries affected. This is a pure internal refactoring of type owners
 ## Notes
 
 2026-03-01 22:00 — Contract drafted. Coupling inventory: 20+ files in `modules/rca/` import `components/rp/`. Key types to internalize: `Envelope`, `FailureItem`, `Attribute`, `ExternalIssue`, `EnvelopeFetcher`. Already clean: `rp.Client`, `rp.DefectPusher`, `rp.ReadAPIKey` (CLI-only).
+
+2026-03-02 — Deviation: circular import `rca → store → rca` prevented placing types in `modules/rca/`. Per user decision, types live in `modules/rca/rcatype/` sub-package. Adapter moved from `store/adapter.go` to `rpconv/conv.go` with type conversion logic. All streams A-F executed: 2 new packages created, 14 core/store files updated, 4 CLI/MCP boundary files updated, 2 files deleted.
