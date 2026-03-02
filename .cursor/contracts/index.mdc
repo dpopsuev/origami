@@ -16,6 +16,7 @@
 | `origami-lsp.md` | Language Server for circuit YAML. Validation, completion, color coding, virtual text hints, Kami live connection. | vision |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 | `sumi.md` | Sumi — terminal circuit viewer/debugger (TUI). Bubble Tea, live walker animation, interactive debugging, element-colored box-drawing rendering. Fifth interaction layer. | vision |
+| `decouple-rca-rp.md` | Decouple RCA engine from ReportPortal. Introduce RCA-native domain types, push RP imports to CLI/MCP boundary via conversion layer. | gate |
 
 ### Companion contracts (primary in Asterisk)
 

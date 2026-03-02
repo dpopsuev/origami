@@ -54,6 +54,7 @@ Phase 4 — Vision (post-stabilization)
 | `origami-lsp` | vision | 4 | LSP server: validation, completion, hover docs for circuit YAML. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
 | `sumi` | vision | 4 | Terminal circuit viewer/debugger (TUI). Bubble Tea, live animation, interactive debugging. |
+| `decouple-rca-rp` | gate | 3 | Decouple RCA engine from RP. RCA-native domain types, `rpconv` boundary, zero `components/rp` imports in core. |
 
 ## Completed Work
 
