@@ -31,6 +31,7 @@ func CoreAdapter(d dispatch.Dispatcher, opts ...CoreAdapterOption) *fw.Adapter {
 	}
 	reg["file"] = NewFile(fileOpts...)
 	reg["template-params"] = NewTemplateParams()
+	reg["match"] = NewMatch()
 
 	return &fw.Adapter{
 		Namespace:    "core",
