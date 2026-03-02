@@ -11,3 +11,4 @@
 - `reviewability-first.mdc` — Reviewability-first design principle — prefer observable, git-diffable formats over opaque binary stores
 - `security-analysis.mdc` — Security analysis — OWASP Top 10 checklist applied to every feature and trust-boundary change
 - `testing-methodology.mdc` — Testing methodology — coverage matrix, ROGYB cycle, BDD/Gherkin, security-as-test
+- `deterministic-first.mdc` — Deterministic-first design principle — prefer deterministic transformers over stochastic; D/S boundary design

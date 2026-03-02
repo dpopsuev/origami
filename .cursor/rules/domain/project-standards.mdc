@@ -17,6 +17,7 @@ alwaysApply: true
 - Start every story with Gherkin acceptance criteria (Given / When / Then).
 - Follow the **Red-Orange-Green-Yellow-Blue** cycle (see `rules/universal/testing-methodology.mdc`).
 - Run `go build ./...` and `go test ./...` after every change.
+- **Deterministic first.** Every circuit node that can be deterministic should be. Stochastic (LLM) processing is reserved for genuine reasoning tasks. See `rules/universal/deterministic-first.mdc` for the full principle, D/S boundary guidance, and ADC node pattern.
 - Prefer deterministic outputs for identical inputs; seed ordering where needed.
 - Zero domain imports: Origami must never import from consumer tools (Asterisk, Achilles, etc.).
 

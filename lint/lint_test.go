@@ -492,9 +492,9 @@ func TestFinding_String(t *testing.T) {
 
 func TestAllRules_Count(t *testing.T) {
 	rules := AllRules()
-	// 14 structural + 7 semantic + 7 best-practice = 28
-	if len(rules) != 28 {
-		t.Errorf("expected 28 rules, got %d", len(rules))
+	// 14 structural + 7 semantic + 8 best-practice = 29
+	if len(rules) != 29 {
+		t.Errorf("expected 29 rules, got %d", len(rules))
 	}
 
 	ids := make(map[string]bool)
@@ -711,6 +711,93 @@ done: _done
 	for _, f := range findings {
 		if f.RuleID == "B7/stochastic-transformer" {
 			t.Errorf("unexpected B7 finding for deterministic circuit: %s", f.Message)
+		}
+	}
+}
+
+func TestRun_StochasticSummary(t *testing.T) {
+	yml := []byte(`
+circuit: test
+description: test
+nodes:
+  - name: recall
+    element: fire
+    transformer: core.llm
+    prompt: "recall items"
+  - name: triage
+    element: earth
+    transformer: core.jq
+    meta:
+      expr: "input"
+  - name: assess
+    element: water
+    transformer: llm
+    prompt: "assess"
+edges:
+  - id: e1
+    name: e1
+    from: recall
+    to: triage
+  - id: e2
+    name: e2
+    from: triage
+    to: assess
+  - id: e3
+    name: e3
+    from: assess
+    to: _done
+start: recall
+done: _done
+`)
+	findings, err := Run(yml, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	found := false
+	for _, f := range findings {
+		if f.RuleID == "B7s/stochastic-summary" {
+			found = true
+			if !strings.Contains(f.Message, "2 stochastic") {
+				t.Errorf("expected summary to mention '2 stochastic', got %q", f.Message)
+			}
+			if !strings.Contains(f.Message, "out of 3") {
+				t.Errorf("expected summary to mention 'out of 3', got %q", f.Message)
+			}
+			if !strings.Contains(f.Message, "recall") || !strings.Contains(f.Message, "assess") {
+				t.Errorf("expected summary to list node names, got %q", f.Message)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected B7s/stochastic-summary finding")
+	}
+}
+
+func TestRun_StochasticSummary_NoneWhenAllDeterministic(t *testing.T) {
+	yml := []byte(`
+circuit: test
+description: test
+nodes:
+  - name: a
+    element: fire
+    transformer: core.jq
+    meta:
+      expr: "input"
+edges:
+  - id: e1
+    name: e1
+    from: a
+    to: _done
+start: a
+done: _done
+`)
+	findings, err := Run(yml, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, f := range findings {
+		if f.RuleID == "B7s/stochastic-summary" {
+			t.Errorf("unexpected B7s summary for deterministic circuit: %s", f.Message)
 		}
 	}
 }

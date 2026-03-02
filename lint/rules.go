@@ -46,5 +46,6 @@ func bestPracticeRules() []Rule {
 		&LargeCircuitNoZones{},
 		&ElementAffinityChain{},
 		&StochasticTransformer{},
+		&StochasticSummary{},
 	}
 }

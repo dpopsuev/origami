@@ -285,3 +285,42 @@ func isStochastic(name string, reg framework.TransformerRegistry) bool {
 	}
 	return knownStochasticTransformers[name]
 }
+
+// --- B7s: stochastic-summary ---
+
+type StochasticSummary struct{}
+
+func (r *StochasticSummary) ID() string          { return "B7s/stochastic-summary" }
+func (r *StochasticSummary) Description() string { return "aggregate count of stochastic nodes in circuit" }
+func (r *StochasticSummary) Severity() Severity   { return SeverityInfo }
+func (r *StochasticSummary) Tags() []string       { return []string{"best-practice", "determinism"} }
+
+func (r *StochasticSummary) Check(ctx *LintContext) []Finding {
+	var reg framework.TransformerRegistry
+	if ctx.Registries != nil {
+		reg = ctx.Registries.Transformers
+	}
+
+	totalWithTransformer := 0
+	var stochasticNames []string
+	for _, nd := range ctx.Def.Nodes {
+		if nd.Transformer == "" {
+			continue
+		}
+		totalWithTransformer++
+		if isStochastic(nd.Transformer, reg) {
+			stochasticNames = append(stochasticNames, nd.Name)
+		}
+	}
+
+	if len(stochasticNames) == 0 {
+		return nil
+	}
+
+	return []Finding{{
+		RuleID:   r.ID(),
+		Severity: r.Severity(),
+		Message:  fmt.Sprintf("circuit has %d stochastic node(s) out of %d transformer-bound: %s", len(stochasticNames), totalWithTransformer, strings.Join(stochasticNames, ", ")),
+		File:     ctx.File,
+	}}
+}
