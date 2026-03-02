@@ -325,6 +325,18 @@ func TestPrometheusCollector_DispatchMetrics(t *testing.T) {
 	}
 }
 
+func TestHasOTelEndpoint(t *testing.T) {
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+	if HasOTelEndpoint() {
+		t.Error("HasOTelEndpoint() = true with empty env, want false")
+	}
+
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+	if !HasOTelEndpoint() {
+		t.Error("HasOTelEndpoint() = false with env set, want true")
+	}
+}
+
 func TestPrometheusCollector_AllNineMetrics(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	col := NewPrometheusCollector(reg)

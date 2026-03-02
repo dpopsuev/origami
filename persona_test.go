@@ -169,7 +169,7 @@ func TestAgentIdentity_Tag_ZeroValue(t *testing.T) {
 func TestColorPalette_HexFormat(t *testing.T) {
 	colors := []Color{
 		ColorCrimson, ColorCerulean, ColorCobalt, ColorAmber,
-		ColorScarlet, ColorSapphire, ColorObsidian, ColorIron,
+		ColorScarlet, ColorSapphire, ColorObsidian, ColorSteel,
 	}
 	for _, c := range colors {
 		if len(c.Hex) != 7 || c.Hex[0] != '#' {

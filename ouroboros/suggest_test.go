@@ -149,47 +149,6 @@ func TestDeriveStepAffinity_FastModel_HighRecall(t *testing.T) {
 	}
 }
 
-func TestIronFromProfile_HighConvergence(t *testing.T) {
-	profile := ModelProfile{
-		Dimensions: map[Dimension]float64{
-			DimConvergenceThreshold: 0.9,
-			DimPersistence:          0.7,
-			DimEvidenceDepth:        0.8,
-		},
-	}
-
-	iron := IronFromProfile(profile)
-
-	if iron.Element != framework.ElementIron {
-		t.Errorf("Element = %q, want iron", iron.Element)
-	}
-	if iron.MaxLoops < 1 {
-		t.Errorf("MaxLoops = %d, want >= 1 (high persistence)", iron.MaxLoops)
-	}
-	if iron.EvidenceDepth < 7 {
-		t.Errorf("EvidenceDepth = %d, want >= 7 (high evidence)", iron.EvidenceDepth)
-	}
-}
-
-func TestIronFromProfile_LowConvergence(t *testing.T) {
-	profile := ModelProfile{
-		Dimensions: map[Dimension]float64{
-			DimConvergenceThreshold: 0.3,
-			DimPersistence:          0.2,
-			DimEvidenceDepth:        0.3,
-		},
-	}
-
-	iron := IronFromProfile(profile)
-
-	if iron.Element != framework.ElementIron {
-		t.Errorf("Element = %q, want iron", iron.Element)
-	}
-	if iron.ConvergenceThreshold < 0.7 {
-		t.Errorf("ConvergenceThreshold = %f, want >= 0.7 (low accuracy raises threshold)", iron.ConvergenceThreshold)
-	}
-}
-
 func TestDeriveStepAffinity_DeepModel_HighInvestigate(t *testing.T) {
 	profile := ModelProfile{
 		Dimensions: map[Dimension]float64{

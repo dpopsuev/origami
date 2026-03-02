@@ -145,28 +145,6 @@ func DeriveStepAffinity(profile ModelProfile) map[string]float64 {
 	}
 }
 
-// IronFromProfile derives Iron element traits from a meta-calibration profile.
-// This is the Ouroboros-powered alternative to framework.IronFromEarth(accuracy).
-// Instead of a single accuracy scalar, it uses the full dimension vector.
-//
-// Derivation: Earth is the base. Convergence maps to accuracy. Persistence
-// adjusts MaxLoops. EvidenceDepth adjusts the evidence depth trait.
-func IronFromProfile(profile ModelProfile) framework.ElementTraits {
-	convergence := profile.Dimensions[DimConvergenceThreshold]
-	persistence := profile.Dimensions[DimPersistence]
-	evidence := profile.Dimensions[DimEvidenceDepth]
-
-	base := framework.IronFromEarth(convergence)
-
-	if persistence > 0.5 {
-		base.MaxLoops = max(base.MaxLoops, 1)
-	}
-	if evidence > 0.7 {
-		base.EvidenceDepth = max(base.EvidenceDepth, 7)
-	}
-
-	return base
-}
 
 func avg(values ...float64) float64 {
 	if len(values) == 0 {

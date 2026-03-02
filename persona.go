@@ -20,7 +20,7 @@ var (
 	ColorScarlet  = Color{Name: "Scarlet", DisplayName: "Scarlet", Hex: "#FF2400", Family: "Reds"}
 	ColorSapphire = Color{Name: "Sapphire", DisplayName: "Sapphire", Hex: "#0F52BA", Family: "Blues"}
 	ColorObsidian = Color{Name: "Obsidian", DisplayName: "Obsidian", Hex: "#3C3C3C", Family: "Neutrals"}
-	ColorIron     = Color{Name: "Iron", DisplayName: "Iron", Hex: "#48494B", Family: "Neutrals"}
+	ColorSteel    = Color{Name: "Steel", DisplayName: "Steel", Hex: "#71797E", Family: "Neutrals"}
 )
 
 // ThesisPersonas returns the 4 perennial Thesis (Cadai) personas.
@@ -147,7 +147,7 @@ func AntithesisPersonas() []Persona {
 		{
 			Identity: AgentIdentity{
 				PersonaName:     "Bulwark",
-				Color:           ColorIron,
+				Color:           ColorSteel,
 				Element:         ElementDiamond,
 				Position:        PositionPF,
 				Alignment:       AlignmentAntithesis,
