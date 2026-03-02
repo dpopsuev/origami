@@ -45,5 +45,6 @@ func bestPracticeRules() []Rule {
 		&ZoneStickinessWithoutProvider{},
 		&LargeCircuitNoZones{},
 		&ElementAffinityChain{},
+		&StochasticTransformer{},
 	}
 }

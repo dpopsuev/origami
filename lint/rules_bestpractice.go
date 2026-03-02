@@ -3,6 +3,8 @@ package lint
 import (
 	"fmt"
 	"strings"
+
+	framework "github.com/dpopsuev/origami"
 )
 
 // --- B1: prefer-when-over-condition ---
@@ -233,4 +235,53 @@ func findElementChain(start, elem string, nodeElems map[string]string, adj map[s
 		}
 	}
 	return chain
+}
+
+// --- B7: stochastic-transformer ---
+
+// knownStochasticTransformers is the fallback list used when no
+// TransformerRegistry is available at lint time (static YAML analysis).
+var knownStochasticTransformers = map[string]bool{
+	"core.llm": true,
+	"llm":      true,
+}
+
+type StochasticTransformer struct{}
+
+func (r *StochasticTransformer) ID() string          { return "B7/stochastic-transformer" }
+func (r *StochasticTransformer) Description() string { return "node uses a stochastic (non-deterministic) transformer" }
+func (r *StochasticTransformer) Severity() Severity   { return SeverityInfo }
+func (r *StochasticTransformer) Tags() []string       { return []string{"best-practice", "determinism"} }
+
+func (r *StochasticTransformer) Check(ctx *LintContext) []Finding {
+	var reg framework.TransformerRegistry
+	if ctx.Registries != nil {
+		reg = ctx.Registries.Transformers
+	}
+
+	var out []Finding
+	for _, nd := range ctx.Def.Nodes {
+		if nd.Transformer == "" {
+			continue
+		}
+		if isStochastic(nd.Transformer, reg) {
+			out = append(out, Finding{
+				RuleID:   r.ID(),
+				Severity: r.Severity(),
+				Message:  fmt.Sprintf("node %q uses stochastic transformer %q", nd.Name, nd.Transformer),
+				File:     ctx.File,
+				Line:     ctx.NodeLine(nd.Name),
+			})
+		}
+	}
+	return out
+}
+
+func isStochastic(name string, reg framework.TransformerRegistry) bool {
+	if reg != nil {
+		if t, err := reg.Get(name); err == nil {
+			return !framework.IsDeterministic(t)
+		}
+	}
+	return knownStochasticTransformers[name]
 }

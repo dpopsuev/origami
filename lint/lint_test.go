@@ -1,11 +1,23 @@
 package lint
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	framework "github.com/dpopsuev/origami"
 )
+
+type testTransformer struct {
+	name string
+	det  bool
+}
+
+func (t *testTransformer) Name() string        { return t.name }
+func (t *testTransformer) Deterministic() bool { return t.det }
+func (t *testTransformer) Transform(_ context.Context, _ *framework.TransformerContext) (any, error) {
+	return nil, nil
+}
 
 func minimalYAML() []byte {
 	return []byte(`
@@ -14,12 +26,14 @@ description: a test circuit
 nodes:
   - name: recall
     element: fire
-    transformer: llm
-    prompt: "recall items"
+    transformer: core.jq
+    meta:
+      expr: "input"
   - name: triage
     element: earth
-    transformer: llm
-    prompt: "triage items"
+    transformer: core.jq
+    meta:
+      expr: "input"
 edges:
   - id: e1
     name: recall to triage
@@ -478,9 +492,9 @@ func TestFinding_String(t *testing.T) {
 
 func TestAllRules_Count(t *testing.T) {
 	rules := AllRules()
-	// 14 structural + 7 semantic + 6 best-practice = 27
-	if len(rules) != 27 {
-		t.Errorf("expected 27 rules, got %d", len(rules))
+	// 14 structural + 7 semantic + 7 best-practice = 28
+	if len(rules) != 28 {
+		t.Errorf("expected 28 rules, got %d", len(rules))
 	}
 
 	ids := make(map[string]bool)
@@ -573,6 +587,131 @@ func TestApplyFixes_NoFixNeeded(t *testing.T) {
 	}
 	if fixed != nil {
 		t.Error("expected nil bytes when no fixes applied")
+	}
+}
+
+func TestRun_StochasticTransformer_Fallback(t *testing.T) {
+	yml := []byte(`
+circuit: test
+description: test
+nodes:
+  - name: recall
+    element: fire
+    transformer: core.llm
+    prompt: "recall items"
+  - name: triage
+    element: earth
+    transformer: core.jq
+    meta:
+      expr: "input"
+edges:
+  - id: e1
+    name: e1
+    from: recall
+    to: triage
+  - id: e2
+    name: e2
+    from: triage
+    to: _done
+start: recall
+done: _done
+`)
+	findings, err := Run(yml, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	found := false
+	for _, f := range findings {
+		if f.RuleID == "B7/stochastic-transformer" {
+			found = true
+			if !strings.Contains(f.Message, "recall") {
+				t.Errorf("expected message to mention 'recall', got %q", f.Message)
+			}
+			if !strings.Contains(f.Message, "core.llm") {
+				t.Errorf("expected message to mention 'core.llm', got %q", f.Message)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected B7/stochastic-transformer finding for core.llm node")
+	}
+}
+
+func TestRun_StochasticTransformer_WithRegistry(t *testing.T) {
+	yml := []byte(`
+circuit: test
+description: test
+nodes:
+  - name: a
+    element: fire
+    transformer: custom.stochastic
+  - name: b
+    element: earth
+    transformer: custom.deterministic
+edges:
+  - id: e1
+    name: e1
+    from: a
+    to: b
+  - id: e2
+    name: e2
+    from: b
+    to: _done
+start: a
+done: _done
+`)
+	stoch := &testTransformer{name: "custom.stochastic", det: false}
+	deter := &testTransformer{name: "custom.deterministic", det: true}
+	reg := &framework.GraphRegistries{
+		Transformers: framework.TransformerRegistry{
+			"custom.stochastic":    stoch,
+			"custom.deterministic": deter,
+		},
+	}
+	findings, err := Run(yml, "test.yaml", WithProfile(ProfileStrict), WithRegistries(reg))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	stochCount := 0
+	for _, f := range findings {
+		if f.RuleID == "B7/stochastic-transformer" {
+			stochCount++
+			if !strings.Contains(f.Message, "custom.stochastic") {
+				t.Errorf("expected stochastic finding for custom.stochastic, got %q", f.Message)
+			}
+		}
+	}
+	if stochCount != 1 {
+		t.Errorf("expected exactly 1 B7 finding, got %d", stochCount)
+	}
+}
+
+func TestRun_StochasticTransformer_AllDeterministic(t *testing.T) {
+	yml := []byte(`
+circuit: test
+description: test
+nodes:
+  - name: a
+    element: fire
+    transformer: core.jq
+    meta:
+      expr: "input"
+edges:
+  - id: e1
+    name: e1
+    from: a
+    to: _done
+start: a
+done: _done
+`)
+	findings, err := Run(yml, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, f := range findings {
+		if f.RuleID == "B7/stochastic-transformer" {
+			t.Errorf("unexpected B7 finding for deterministic circuit: %s", f.Message)
+		}
 	}
 }
 
