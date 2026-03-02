@@ -75,8 +75,7 @@ func computeInlayHints(doc *document) []InlayHint {
 
 	hints = append(hints, elementTraitHints(doc, lines)...)
 	hints = append(hints, personaHints(doc, lines)...)
-	hints = append(hints, shortcutHints(doc, lines)...)
-	hints = append(hints, terminalHints(doc, lines)...)
+	hints = append(hints, edgeConnectionHints(doc, lines)...)
 	hints = append(hints, neighborHints(doc, lines)...)
 
 	return hints
@@ -140,47 +139,47 @@ func personaHints(doc *document, lines []string) []InlayHint {
 	return hints
 }
 
-func shortcutHints(doc *document, lines []string) []InlayHint {
+func edgeConnectionHints(doc *document, lines []string) []InlayHint {
 	if doc.Def == nil {
 		return nil
 	}
 	var hints []InlayHint
 	for _, edge := range doc.Def.Edges {
-		if !edge.Shortcut {
-			continue
-		}
 		line := findEdgeIDLine(lines, edge.ID)
 		if line < 0 {
 			continue
 		}
-		hints = append(hints, InlayHint{
-			Position:    Position{Line: uint32(line), Character: uint32(len(lines[line]))},
-			Label:       "shortcut",
-			Kind:        1,
-			PaddingLeft: true,
-		})
-	}
-	return hints
-}
 
-func terminalHints(doc *document, lines []string) []InlayHint {
-	if doc.Def == nil || doc.Def.Done == "" {
-		return nil
-	}
-	var hints []InlayHint
-	for _, edge := range doc.Def.Edges {
-		if edge.To != doc.Def.Done {
-			continue
+		label := edge.From + " \u2192 " + edge.To
+		var tags []string
+		if edge.Shortcut {
+			tags = append(tags, "shortcut")
 		}
-		line := findEdgeIDLine(lines, edge.ID)
-		if line < 0 {
-			continue
+		if edge.Loop {
+			tags = append(tags, "loop")
 		}
+		if doc.Def.Done != "" && edge.To == doc.Def.Done {
+			tags = append(tags, "terminal")
+		}
+		if len(tags) > 0 {
+			label += " \u00b7 " + strings.Join(tags, ", ")
+		}
+
+		var tooltip *HintTooltip
+		cond := edge.When
+		if cond == "" {
+			cond = edge.Condition
+		}
+		if cond != "" {
+			tooltip = markdownTooltip(fmt.Sprintf("**%s** %s \u2192 %s\n\n`when:` `%s`", edge.ID, edge.From, edge.To, cond))
+		}
+
 		hints = append(hints, InlayHint{
 			Position:    Position{Line: uint32(line), Character: uint32(len(lines[line]))},
-			Label:       "terminal",
+			Label:       label,
 			Kind:        1,
 			PaddingLeft: true,
+			Tooltip:     tooltip,
 		})
 	}
 	return hints

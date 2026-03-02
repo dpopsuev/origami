@@ -560,7 +560,7 @@ done: DONE`
 	}
 }
 
-func TestInlayHints_Shortcut(t *testing.T) {
+func TestInlayHints_EdgeConnection(t *testing.T) {
 	content := `circuit: test
 nodes:
   - name: recall
@@ -581,18 +581,24 @@ done: DONE`
 	doc := makeTestDoc(content)
 	hints := computeInlayHints(doc)
 
-	found := false
+	var normalFound, shortcutFound bool
 	for _, h := range hints {
-		if h.Label == "shortcut" {
-			found = true
+		if strings.Contains(h.Label, "recall") && strings.Contains(h.Label, "triage") && !strings.Contains(h.Label, "shortcut") {
+			normalFound = true
+		}
+		if strings.Contains(h.Label, "recall") && strings.Contains(h.Label, "DONE") && strings.Contains(h.Label, "shortcut") {
+			shortcutFound = true
 		}
 	}
-	if !found {
-		t.Error("expected 'shortcut' hint on edge with shortcut: true")
+	if !normalFound {
+		t.Error("expected edge hint showing 'recall → triage'")
+	}
+	if !shortcutFound {
+		t.Error("expected edge hint showing 'recall → DONE · shortcut'")
 	}
 }
 
-func TestInlayHints_Terminal(t *testing.T) {
+func TestInlayHints_EdgeTerminal(t *testing.T) {
 	content := `circuit: test
 nodes:
   - name: recall
@@ -614,16 +620,77 @@ done: DONE`
 
 	found := false
 	for _, h := range hints {
-		if h.Label == "terminal" {
+		if strings.Contains(h.Label, "triage") && strings.Contains(h.Label, "DONE") && strings.Contains(h.Label, "terminal") {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("expected 'terminal' hint on edge to done sentinel")
+		t.Error("expected edge hint 'triage → DONE · terminal'")
 	}
 }
 
-func TestInlayHints_NoShortcutOnNormalEdge(t *testing.T) {
+func TestInlayHints_EdgeLoop(t *testing.T) {
+	content := `circuit: test
+nodes:
+  - name: a
+  - name: b
+edges:
+  - id: E1
+    from: a
+    to: b
+    when: "true"
+  - id: E2
+    from: b
+    to: a
+    loop: true
+    when: "true"
+start: a
+done: DONE`
+
+	doc := makeTestDoc(content)
+	hints := computeInlayHints(doc)
+
+	found := false
+	for _, h := range hints {
+		if strings.Contains(h.Label, "b") && strings.Contains(h.Label, "a") && strings.Contains(h.Label, "loop") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected edge hint 'b → a · loop'")
+	}
+}
+
+func TestInlayHints_EdgeTooltipWithWhen(t *testing.T) {
+	content := `circuit: test
+nodes:
+  - name: recall
+  - name: triage
+edges:
+  - id: E1
+    from: recall
+    to: triage
+    when: "output.match == true"
+start: recall
+done: DONE`
+
+	doc := makeTestDoc(content)
+	hints := computeInlayHints(doc)
+
+	found := false
+	for _, h := range hints {
+		if strings.Contains(h.Label, "recall") && strings.Contains(h.Label, "triage") {
+			if h.Tooltip != nil && strings.Contains(h.Tooltip.Value, "output.match == true") {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Error("expected edge tooltip with when condition")
+	}
+}
+
+func TestInlayHints_AllEdgesGetConnectionHint(t *testing.T) {
 	content := `circuit: test
 nodes:
   - name: recall
@@ -639,13 +706,17 @@ done: DONE`
 	doc := makeTestDoc(content)
 	hints := computeInlayHints(doc)
 
+	edgeHintFound := false
 	for _, h := range hints {
-		if h.Label == "shortcut" {
-			t.Error("normal edge should not get 'shortcut' hint")
+		if strings.Contains(h.Label, "recall") && strings.Contains(h.Label, "triage") {
+			edgeHintFound = true
 		}
-		if h.Label == "terminal" {
-			t.Error("non-terminal edge should not get 'terminal' hint")
+		if h.Label == "shortcut" || h.Label == "terminal" {
+			t.Errorf("found bare '%s' label — should be merged into connection hint", h.Label)
 		}
+	}
+	if !edgeHintFound {
+		t.Error("expected connection hint on normal edge")
 	}
 }
 
