@@ -1,6 +1,6 @@
 # Contract — decouple-rca-rp
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Zero `components/rp` imports in `modules/rca/` core files — RP becomes a pluggable data source wired at the CLI/MCP boundary.  
 **Serves:** API Stabilization
 

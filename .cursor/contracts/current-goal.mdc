@@ -11,7 +11,9 @@ description: Active goal manifest — single-read orientation for agents to know
 
 - [x] Gate contracts complete — `signal-domains`, `signal-integrity`, `dialectic-hardening`
 - [x] Quick-win contracts complete — `resilience`, `ouroboros-signal-analysis`
-- [ ] Public API surface is stable — no breaking changes pending (blocked by gate contracts)
+- [x] Dead-code excision — `Marble` primitive removed (superseded by Components, zero consumers)
+- [x] RCA decoupled from RP — `rcatype/` + `rpconv/` boundary, zero `components/rp` imports in core
+- [ ] Public API surface is stable — no breaking changes pending
 - [ ] Test coverage on public interfaces is solid
 - [ ] Root `README.md` positions Origami as a standalone framework (does not exist yet)
 - [x] `examples/playground/` demonstrates all 9 concepts (Elements, Personas, DSL, Mermaid, Walk, Masks, Cycles, Dialectic, Team Walk)
@@ -33,6 +35,8 @@ Phase 2 — Quick-wins (parallel)
 └── ouroboros-signal-analysis
 
 Phase 3 — Finish line
+├── Dead-code excision (Marble)     ✓
+├── RCA/RP decoupling               ✓
 ├── Root README.md
 ├── Public API surface audit
 └── Test coverage audit
@@ -54,11 +58,11 @@ Phase 4 — Vision (post-stabilization)
 | `origami-lsp` | vision | 4 | LSP server: validation, completion, hover docs for circuit YAML. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
 | `sumi` | vision | 4 | Terminal circuit viewer/debugger (TUI). Bubble Tea, live animation, interactive debugging. |
-| `decouple-rca-rp` | gate | 3 | Decouple RCA engine from RP. RCA-native domain types, `rpconv` boundary, zero `components/rp` imports in core. |
+| `decouple-rca-rp` | gate | 3 | Decouple RCA engine from RP. **Complete.** `rcatype/` + `rpconv/` boundary, zero `components/rp` imports in core. |
 
 ## Completed Work
 
-73 contracts across 11 phases — all complete. Includes Thesis/Antithesis rename (polishing), Phase 1 API Stabilization gates, and Phase 2 quick-wins (resilience, ouroboros-signal-analysis).
+73 contracts across 11 phases — all complete. Includes Thesis/Antithesis rename (polishing), Phase 1 API Stabilization gates, Phase 2 quick-wins (resilience, ouroboros-signal-analysis), and Phase 3 surface reduction (RCA/RP decoupling, Marble excision).
 
 Full contract list: see git history of this file.
 

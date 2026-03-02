@@ -9,3 +9,4 @@
 - `dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.
 - `resilience.md` — Circuit breaker, rate limiting, thermal budget. Complete.
 - `ouroboros-signal-analysis.md` — GBWP probe, DimGBWP dimension, offset compensator. Complete.
+- `decouple-rca-rp.md` — RCA domain types (`rcatype/`), conversion boundary (`rpconv/`), zero `components/rp` imports in core. Complete.
