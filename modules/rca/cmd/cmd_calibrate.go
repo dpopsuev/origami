@@ -15,6 +15,8 @@ import (
 	"github.com/dpopsuev/origami/dispatch"
 
 	"github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
+	"github.com/dpopsuev/origami/modules/rca/rpconv"
 	"github.com/dpopsuev/origami/modules/rca/scenarios"
 	"github.com/dpopsuev/origami/modules/rca/store"
 	"github.com/dpopsuev/origami/components/rp"
@@ -76,7 +78,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Resolve RP-sourced cases before adapter creation so adapters see real data.
-	var rpFetcher rp.EnvelopeFetcher
+	var rpFetcher rcatype.EnvelopeFetcher
 	if calibrateFlags.rpBase != "" {
 		rpProject := resolveRPProject(calibrateFlags.rpProject)
 		if rpProject == "" {
@@ -90,7 +92,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("create RP client: %w", err)
 		}
-		rpFetcher = rp.NewFetcher(client, rpProject)
+		rpFetcher = &rpconv.RPFetcherAdapter{Inner: rp.NewFetcher(client, rpProject)}
 		if err := rca.ResolveRPCases(rpFetcher, scenario); err != nil {
 			return fmt.Errorf("resolve RP-sourced cases: %w", err)
 		}

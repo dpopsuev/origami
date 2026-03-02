@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 	"github.com/dpopsuev/origami/modules/rca/store"
 	"github.com/dpopsuev/origami/knowledge"
 )
@@ -15,7 +15,7 @@ import (
 type HITLConfig struct {
 	Store     store.Store
 	CaseData  *store.Case
-	Envelope  *rp.Envelope
+	Envelope  *rcatype.Envelope
 	Catalog   *knowledge.KnowledgeSourceCatalog
 	PromptDir string
 	CaseDir   string

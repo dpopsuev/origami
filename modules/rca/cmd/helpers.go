@@ -12,6 +12,8 @@ import (
 	"github.com/dpopsuev/origami/dispatch"
 
 	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
+	"github.com/dpopsuev/origami/modules/rca/rpconv"
 	"github.com/dpopsuev/origami/modules/rca/store"
 )
 
@@ -104,13 +106,13 @@ func resolveRPProject(flagValue string) string {
 }
 
 // loadEnvelopeForAnalyze resolves the envelope from a file path or launch ID.
-func loadEnvelopeForAnalyze(launch, dbPath, rpBase, rpKeyPath, rpProject string) *rp.Envelope {
+func loadEnvelopeForAnalyze(launch, dbPath, rpBase, rpKeyPath, rpProject string) *rcatype.Envelope {
 	if _, err := os.Stat(launch); err == nil {
 		data, err := os.ReadFile(launch)
 		if err != nil {
 			return nil
 		}
-		var env rp.Envelope
+		var env rcatype.Envelope
 		if err := json.Unmarshal(data, &env); err != nil {
 			return nil
 		}
@@ -135,23 +137,23 @@ func loadEnvelopeForAnalyze(launch, dbPath, rpBase, rpKeyPath, rpProject string)
 			return nil
 		}
 		fetcher := rp.NewFetcher(client, rpProject)
-		adapter := &store.EnvelopeStoreAdapter{Store: st}
+		adapter := &rpconv.EnvelopeStoreAdapter{Store: st}
 		if err := rp.FetchAndSave(fetcher, adapter, launchID); err != nil {
 			return nil
 		}
-		env, _ = adapter.Get(launchID)
+		env, _ = st.GetEnvelope(launchID)
 	}
 	return env
 }
 
 // loadEnvelopeForCursor resolves the envelope from a file path or launch ID for cursor mode.
-func loadEnvelopeForCursor(launch string, dbPath string) (*rp.Envelope, int) {
+func loadEnvelopeForCursor(launch string, dbPath string) (*rcatype.Envelope, int) {
 	if _, err := os.Stat(launch); err == nil {
 		data, err := os.ReadFile(launch)
 		if err != nil {
 			return nil, 0
 		}
-		var env rp.Envelope
+		var env rcatype.Envelope
 		if err := json.Unmarshal(data, &env); err != nil {
 			return nil, 0
 		}
@@ -170,8 +172,7 @@ func loadEnvelopeForCursor(launch string, dbPath string) (*rp.Envelope, int) {
 		return nil, 0
 	}
 	defer st.Close()
-	adapter := &store.EnvelopeStoreAdapter{Store: st}
-	env, _ := adapter.Get(launchID)
+	env, _ := st.GetEnvelope(launchID)
 	if env == nil {
 		return nil, 0
 	}
@@ -179,7 +180,7 @@ func loadEnvelopeForCursor(launch string, dbPath string) (*rp.Envelope, int) {
 }
 
 // createAnalysisScaffolding creates v2 store entities for all failures in the envelope.
-func createAnalysisScaffolding(st store.Store, env *rp.Envelope) (int64, []*store.Case) {
+func createAnalysisScaffolding(st store.Store, env *rcatype.Envelope) (int64, []*store.Case) {
 	rpLaunchID, _ := strconv.Atoi(env.RunID)
 
 	suiteID, _ := st.CreateSuite(&store.InvestigationSuite{
@@ -236,7 +237,7 @@ func createAnalysisScaffolding(st store.Store, env *rp.Envelope) (int64, []*stor
 }
 
 // ensureCaseInStore finds or creates the full v2 scaffolding for a failure item.
-func ensureCaseInStore(st store.Store, env *rp.Envelope, rpLaunchID int, item rp.FailureItem) *store.Case {
+func ensureCaseInStore(st store.Store, env *rcatype.Envelope, rpLaunchID int, item rcatype.FailureItem) *store.Case {
 	suites, _ := st.ListSuites()
 	for _, suite := range suites {
 		if suite.Status != "open" {

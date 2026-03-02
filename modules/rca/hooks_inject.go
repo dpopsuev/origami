@@ -4,7 +4,7 @@ import (
 	"context"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 	"github.com/dpopsuev/origami/modules/rca/store"
 	"github.com/dpopsuev/origami/knowledge"
 )
@@ -24,7 +24,7 @@ const (
 // InjectHooks creates a HookRegistry with the inject.* before-hooks
 // that populate walker.Context with per-concern template data.
 // Each hook uses WalkerStateFromContext to write into walker.Context.
-func InjectHooks(st store.Store, caseData *store.Case, env *rp.Envelope, catalog *knowledge.KnowledgeSourceCatalog, caseDir string) framework.HookRegistry {
+func InjectHooks(st store.Store, caseData *store.Case, env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, caseDir string) framework.HookRegistry {
 	reg := framework.HookRegistry{}
 
 	reg.Register(newInjectEnvelopeHook(env))
@@ -39,7 +39,7 @@ func InjectHooks(st store.Store, caseData *store.Case, env *rp.Envelope, catalog
 	return reg
 }
 
-func newInjectEnvelopeHook(env *rp.Envelope) framework.Hook {
+func newInjectEnvelopeHook(env *rcatype.Envelope) framework.Hook {
 	return framework.NewHookFunc("inject.envelope", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
@@ -61,7 +61,7 @@ func newInjectFailureHook(caseData *store.Case) framework.Hook {
 	})
 }
 
-func newInjectWorkspaceHook(env *rp.Envelope, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+func newInjectWorkspaceHook(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
 	return framework.NewHookFunc("inject.workspace", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
@@ -172,7 +172,7 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 	}
 
 	if _, ok := walkerCtx[KeyParamsEnvelope].(*EnvelopeParams); ok {
-		if env, ok := walkerCtx[KeyEnvelope].(*rp.Envelope); ok {
+		if env, ok := walkerCtx[KeyEnvelope].(*rcatype.Envelope); ok {
 			for _, f := range env.FailureList {
 				params.Siblings = append(params.Siblings, SiblingParams{
 					ID: f.ID, Name: f.Name, Status: f.Status,
@@ -192,7 +192,7 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 
 // Concrete implementations that actually inject data into walker context.
 
-func injectEnvelopeData(env *rp.Envelope, walkerCtx map[string]any) {
+func injectEnvelopeData(env *rcatype.Envelope, walkerCtx map[string]any) {
 	if env == nil {
 		return
 	}
@@ -215,7 +215,7 @@ func injectFailureData(caseData *store.Case, walkerCtx map[string]any) {
 	}
 }
 
-func injectWorkspaceData(env *rp.Envelope, catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
+func injectWorkspaceData(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
 	walkerCtx[KeyParamsWorkspace] = buildWorkspaceParams(env, catalog)
 }
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 )
 
 func TestSqlStore_Integration(t *testing.T) {
@@ -18,10 +18,10 @@ func TestSqlStore_Integration(t *testing.T) {
 	defer s.Close()
 
 	// Envelope (stored on launch via v1 envelope API)
-	env := &rp.Envelope{
+	env := &rcatype.Envelope{
 		RunID: "33195",
 		Name:  "test-launch",
-		FailureList: []rp.FailureItem{
+		FailureList: []rcatype.FailureItem{
 			{ID: 1, Name: "fail1", Status: "FAILED"},
 			{ID: 2, Name: "fail2", Status: "FAILED"},
 		},

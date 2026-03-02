@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
+	"github.com/dpopsuev/origami/modules/rca/rpconv"
 	"github.com/dpopsuev/origami/modules/rca/scenarios"
 	"github.com/dpopsuev/origami/modules/rca/store"
 	framework "github.com/dpopsuev/origami"
@@ -75,7 +77,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		return nil, fwmcp.SessionMeta{}, err
 	}
 
-	var rpFetcher rp.EnvelopeFetcher
+	var rpFetcher rcatype.EnvelopeFetcher
 	if rpBaseURL != "" {
 		if rpProject == "" {
 			rpProject = os.Getenv("ASTERISK_RP_PROJECT")
@@ -91,7 +93,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		if err != nil {
 			return nil, fwmcp.SessionMeta{}, fmt.Errorf("create RP client: %w", err)
 		}
-		rpFetcher = rp.NewFetcher(client, rpProject)
+		rpFetcher = &rpconv.RPFetcherAdapter{Inner: rp.NewFetcher(client, rpProject)}
 		if err := rca.ResolveRPCases(rpFetcher, scenario); err != nil {
 			return nil, fwmcp.SessionMeta{}, fmt.Errorf("resolve RP-sourced cases: %w", err)
 		}

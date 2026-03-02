@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 	"github.com/dpopsuev/origami/components/sqlite"
 )
 
@@ -195,7 +195,7 @@ func (s *SqlStore) ListRCAs() ([]*RCA, error) {
 	return list, nil
 }
 
-func (s *SqlStore) SaveEnvelope(launchID int, env *rp.Envelope) error {
+func (s *SqlStore) SaveEnvelope(launchID int, env *rcatype.Envelope) error {
 	if env == nil {
 		return errors.New("envelope is nil")
 	}
@@ -283,7 +283,7 @@ func (s *SqlStore) SaveEnvelope(launchID int, env *rp.Envelope) error {
 	return nil
 }
 
-func (s *SqlStore) GetEnvelope(launchID int) (*rp.Envelope, error) {
+func (s *SqlStore) GetEnvelope(launchID int) (*rcatype.Envelope, error) {
 	var payload []byte
 	err := s.db.QueryRow(
 		"SELECT envelope_payload FROM launches WHERE rp_launch_id = ? LIMIT 1",
@@ -298,7 +298,7 @@ func (s *SqlStore) GetEnvelope(launchID int) (*rp.Envelope, error) {
 	if payload == nil {
 		return nil, nil
 	}
-	var env rp.Envelope
+	var env rcatype.Envelope
 	if err := json.Unmarshal(payload, &env); err != nil {
 		return nil, fmt.Errorf("unmarshal envelope: %w", err)
 	}

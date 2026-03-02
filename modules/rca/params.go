@@ -3,12 +3,12 @@ package rca
 import (
 	"os"
 
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 	"github.com/dpopsuev/origami/modules/rca/store"
 	"github.com/dpopsuev/origami/knowledge"
 )
 
-func buildWorkspaceParams(env *rp.Envelope, catalog *knowledge.KnowledgeSourceCatalog) *WorkspaceParams {
+func buildWorkspaceParams(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) *WorkspaceParams {
 	wsp := &WorkspaceParams{}
 
 	if catalog != nil && len(catalog.Sources) > 0 {

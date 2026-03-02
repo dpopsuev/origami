@@ -6,16 +6,16 @@ import (
 
 	"github.com/dpopsuev/origami/logging"
 
-	orirp "github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 )
 
 // ResolveRPCases fetches real failure data from ReportPortal for cases that
 // have RPLaunchID set, updating their ErrorMessage and LogSnippet in place.
 // Cases without RPLaunchID are left unchanged. Envelopes are cached by launch
 // ID so multiple cases sharing a launch only trigger one API call.
-func ResolveRPCases(fetcher orirp.EnvelopeFetcher, scenario *Scenario) error {
+func ResolveRPCases(fetcher rcatype.EnvelopeFetcher, scenario *Scenario) error {
 	logger := logging.New("rp-source")
-	cache := make(map[int]*orirp.Envelope)
+	cache := make(map[int]*rcatype.Envelope)
 
 	for i := range scenario.Cases {
 		c := &scenario.Cases[i]
@@ -56,7 +56,7 @@ func ResolveRPCases(fetcher orirp.EnvelopeFetcher, scenario *Scenario) error {
 	return nil
 }
 
-func matchFailureItem(env *orirp.Envelope, c *GroundTruthCase) *orirp.FailureItem {
+func matchFailureItem(env *rcatype.Envelope, c *GroundTruthCase) *rcatype.FailureItem {
 	if c.RPItemID > 0 {
 		for i := range env.FailureList {
 			if env.FailureList[i].ID == c.RPItemID {

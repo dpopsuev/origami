@@ -13,7 +13,7 @@ import (
 	"github.com/dpopsuev/origami/dispatch"
 	"github.com/dpopsuev/origami/logging"
 
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 	"github.com/dpopsuev/origami/modules/rca/store"
 )
 
@@ -39,7 +39,7 @@ type RunConfig struct {
 	TokenBudget  int          // max concurrent dispatches (token semaphore); 0 = Parallel
 	BatchSize    int          // max signals per batch for batch-file dispatch mode; 0 = Parallel
 	BasePath     string       // root directory for investigation artifacts; defaults to DefaultBasePath
-	RPFetcher    rp.EnvelopeFetcher // optional; when set, RP-sourced cases fetch real failure data
+	RPFetcher    rcatype.EnvelopeFetcher // optional; when set, RP-sourced cases fetch real failure data
 	ScoreCard    *cal.ScoreCard // declarative metric definitions; loaded from YAML at startup
 
 	GapConfidentThreshold    float64 // convergence >= this → confident (no gap brief); 0 uses default 0.80
@@ -248,9 +248,9 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 		}
 		caseData.ID = caseID
 
-		env := &rp.Envelope{
+		env := &rcatype.Envelope{
 			Name:        caseData.Name,
-			FailureList: []rp.FailureItem{{Name: caseData.Name}},
+			FailureList: []rcatype.FailureItem{{Name: caseData.Name}},
 		}
 		caseDir, _ := EnsureCaseDir(cfg.BasePath, suiteID, caseData.ID)
 

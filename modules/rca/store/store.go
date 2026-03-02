@@ -1,6 +1,6 @@
 package store
 
-import "github.com/dpopsuev/origami/components/rp"
+import "github.com/dpopsuev/origami/modules/rca/rcatype"
 
 // DefaultDBPath is the default relative path for the SQLite DB (per-workspace).
 // Resolve against cwd or workspace root; Open() creates the parent dir (e.g. .asterisk).
@@ -38,9 +38,9 @@ type Store interface {
 	GetLaunchByRPID(circuitID int64, rpLaunchID int) (*Launch, error)
 	ListLaunchesByCircuit(circuitID int64) ([]*Launch, error)
 	// SaveEnvelope stores an envelope blob by RP launch ID.
-	SaveEnvelope(launchID int, env *rp.Envelope) error
+	SaveEnvelope(launchID int, env *rcatype.Envelope) error
 	// GetEnvelope returns the envelope for the RP launch ID.
-	GetEnvelope(launchID int) (*rp.Envelope, error)
+	GetEnvelope(launchID int) (*rcatype.Envelope, error)
 
 	// Job operations
 	CreateJob(j *Job) (int64, error)

@@ -4,20 +4,20 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 )
 
 // MemStore is an in-memory Store for tests. Implements Store.
 type MemStore struct {
 	mu        sync.Mutex
-	envelopes map[int]*rp.Envelope
+	envelopes map[int]*rcatype.Envelope
 	data    *memStoreData // lazy-initialized entity storage
 }
 
 // NewMemStore returns a new in-memory Store.
 func NewMemStore() *MemStore {
 	return &MemStore{
-		envelopes: make(map[int]*rp.Envelope),
+		envelopes: make(map[int]*rcatype.Envelope),
 	}
 }
 
@@ -47,7 +47,7 @@ func (s *MemStore) ListRCAs() ([]*RCA, error) {
 }
 
 // SaveEnvelope implements Store.
-func (s *MemStore) SaveEnvelope(launchID int, env *rp.Envelope) error {
+func (s *MemStore) SaveEnvelope(launchID int, env *rcatype.Envelope) error {
 	if env == nil {
 		return errors.New("envelope is nil")
 	}
@@ -58,7 +58,7 @@ func (s *MemStore) SaveEnvelope(launchID int, env *rp.Envelope) error {
 }
 
 // GetEnvelope implements Store.
-func (s *MemStore) GetEnvelope(launchID int) (*rp.Envelope, error) {
+func (s *MemStore) GetEnvelope(launchID int) (*rcatype.Envelope, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.envelopes[launchID], nil

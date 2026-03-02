@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 )
 
 func TestAnalyzeAndPush_FileEnvelope(t *testing.T) {
@@ -15,10 +15,10 @@ func TestAnalyzeAndPush_FileEnvelope(t *testing.T) {
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, "envelope.json")
 	artifactPath := filepath.Join(dir, "artifact.json")
-	env := &rp.Envelope{
+	env := &rcatype.Envelope{
 		RunID:  "99",
 		Name:   "test",
-		FailureList: []rp.FailureItem{{ID: 1, Name: "fail1", Status: "FAILED"}},
+		FailureList: []rcatype.FailureItem{{ID: 1, Name: "fail1", Status: "FAILED"}},
 	}
 	data, _ := json.MarshalIndent(env, "", "  ")
 	if err := os.WriteFile(envPath, data, 0644); err != nil {

@@ -3,7 +3,7 @@
 package rca
 
 import (
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca/rcatype"
 	"github.com/dpopsuev/origami/modules/rca/store"
 
 	framework "github.com/dpopsuev/origami"
@@ -14,7 +14,7 @@ import (
 type ComponentConfig struct {
 	Store     store.Store
 	CaseData  *store.Case
-	Envelope  *rp.Envelope
+	Envelope  *rcatype.Envelope
 	Catalog   *knowledge.KnowledgeSourceCatalog
 	PromptDir string
 	CaseDir   string
