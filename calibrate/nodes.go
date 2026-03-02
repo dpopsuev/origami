@@ -41,7 +41,7 @@ func (f CaseScorerFunc) ScoreCase(caseResult, groundTruth any) (map[string]float
 // needed by the 7 calibration nodes.
 type CalibrationInput struct {
 	Scenario    string
-	Adapter     string
+	Transformer string
 	Runs        int
 	Cases       []CaseInput
 	GroundTruth map[string]any // caseID → ground truth
@@ -304,7 +304,7 @@ func (n *ReportNode) Process(_ context.Context, nc framework.NodeContext) (frame
 
 	report := &CalibrationReport{
 		Scenario: ci.Scenario,
-		Adapter:  ci.Adapter,
+		Transformer: ci.Transformer,
 		Runs:     ci.Runs,
 		Metrics:  ms,
 	}

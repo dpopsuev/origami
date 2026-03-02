@@ -181,7 +181,7 @@ func (sc *ScoreCard) ComputeAggregate(ms MetricSet) (Metric, error) {
 
 // Report evaluates metrics, computes the aggregate (if configured),
 // and returns a CalibrationReport ready for formatting.
-func (sc *ScoreCard) Report(scenario, adapter string, runs int, values map[string]float64, details map[string]string) (*CalibrationReport, error) {
+func (sc *ScoreCard) Report(scenario, transformer string, runs int, values map[string]float64, details map[string]string) (*CalibrationReport, error) {
 	ms := sc.Evaluate(values, details)
 
 	if sc.Aggregate != nil {
@@ -193,10 +193,10 @@ func (sc *ScoreCard) Report(scenario, adapter string, runs int, values map[strin
 	}
 
 	return &CalibrationReport{
-		Scenario: scenario,
-		Adapter:  adapter,
-		Runs:     runs,
-		Metrics:  ms,
+		Scenario:    scenario,
+		Transformer: transformer,
+		Runs:        runs,
+		Metrics:     ms,
 	}, nil
 }
 

@@ -11,7 +11,7 @@ import (
 func testReport() *calibrate.CalibrationReport {
 	return &calibrate.CalibrationReport{
 		Scenario: "unit-test",
-		Adapter:  "stub",
+		Transformer: "stub",
 		Runs:     1,
 		Metrics: calibrate.MetricSet{
 			Metrics: []calibrate.Metric{
@@ -57,7 +57,7 @@ func TestFormatReport_PassFail(t *testing.T) {
 func TestFormatReport_AllPass(t *testing.T) {
 	r := &calibrate.CalibrationReport{
 		Scenario: "pass-test",
-		Adapter:  "stub",
+		Transformer: "stub",
 		Runs:     1,
 		Metrics: calibrate.MetricSet{
 			Metrics: []calibrate.Metric{
@@ -109,7 +109,7 @@ func TestFormatReport_WithTokens(t *testing.T) {
 func TestFormatReport_DryCappedMark(t *testing.T) {
 	r := &calibrate.CalibrationReport{
 		Scenario: "dry-test",
-		Adapter:  "stub",
+		Transformer: "stub",
 		Runs:     1,
 		Metrics: calibrate.MetricSet{
 			Metrics: []calibrate.Metric{
@@ -130,7 +130,7 @@ func TestFormatReport_DryCappedMark(t *testing.T) {
 func TestFormatReport_Empty(t *testing.T) {
 	r := &calibrate.CalibrationReport{
 		Scenario: "empty",
-		Adapter:  "stub",
+		Transformer: "stub",
 		Runs:     0,
 		Metrics:  calibrate.MetricSet{},
 	}

@@ -67,7 +67,7 @@ func FormatReport(report *CalibrationReport, cfg FormatConfig) string {
 	}
 	b.WriteString(fmt.Sprintf("=== %s ===\n", title))
 	b.WriteString(fmt.Sprintf("Scenario: %s\n", report.Scenario))
-	b.WriteString(fmt.Sprintf("Adapter:  %s\n", report.Adapter))
+	b.WriteString(fmt.Sprintf("Transformer: %s\n", report.Transformer))
 	b.WriteString(fmt.Sprintf("Runs:     %d\n\n", report.Runs))
 
 	nameFunc := cfg.MetricNameFunc

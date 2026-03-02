@@ -90,7 +90,7 @@ func (ms *MetricSet) ByID() map[string]Metric {
 // (e.g. CaseResults, DatasetHealth).
 type CalibrationReport struct {
 	Scenario   string                 `json:"scenario"`
-	Adapter    string                 `json:"adapter"`
+	Transformer string                 `json:"transformer"`
 	Runs       int                    `json:"runs"`
 	Metrics    MetricSet              `json:"metrics"`
 	RunMetrics []MetricSet            `json:"run_metrics,omitempty"`

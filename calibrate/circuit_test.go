@@ -65,7 +65,7 @@ func TestRunCircuit_EndToEnd(t *testing.T) {
 
 	input := &CalibrationInput{
 		Scenario: "test-scenario",
-		Adapter:  "stub",
+		Transformer: "stub",
 		Runs:     1,
 		Cases: []CaseInput{
 			{ID: "case-1", Input: map[string]any{"data": "hello"}},
@@ -94,8 +94,8 @@ func TestRunCircuit_EndToEnd(t *testing.T) {
 	if report.Scenario != "test-scenario" {
 		t.Errorf("scenario = %q, want test-scenario", report.Scenario)
 	}
-	if report.Adapter != "stub" {
-		t.Errorf("adapter = %q, want stub", report.Adapter)
+	if report.Transformer != "stub" {
+		t.Errorf("transformer = %q, want stub", report.Transformer)
 	}
 
 	byID := report.Metrics.ByID()
@@ -149,7 +149,7 @@ func TestRunCircuit_ParallelExecution(t *testing.T) {
 
 	input := &CalibrationInput{
 		Scenario:  "parallel-test",
-		Adapter:   "stub",
+		Transformer: "stub",
 		Runs:      1,
 		Cases:     cases,
 		GroundTruth: gt,
@@ -181,7 +181,7 @@ func TestRunCircuit_CaseRunnerError(t *testing.T) {
 
 	input := &CalibrationInput{
 		Scenario: "error-test",
-		Adapter:  "stub",
+		Transformer: "stub",
 		Runs:     1,
 		Cases: []CaseInput{
 			{ID: "good-case", Input: nil},
@@ -223,7 +223,7 @@ func TestRunCircuit_WithObserver(t *testing.T) {
 
 	input := &CalibrationInput{
 		Scenario:    "observer-test",
-		Adapter:     "stub",
+		Transformer: "stub",
 		Runs:        1,
 		Cases:       []CaseInput{{ID: "c1", Input: nil}},
 		GroundTruth: map[string]any{"c1": nil},
@@ -282,7 +282,7 @@ func TestRunCircuit_IdenticalToProceduralScoring(t *testing.T) {
 
 	input := &CalibrationInput{
 		Scenario:    "compare",
-		Adapter:     "stub",
+		Transformer: "stub",
 		Runs:        1,
 		Cases:       []CaseInput{{ID: "c1"}, {ID: "c2"}, {ID: "c3"}},
 		GroundTruth: map[string]any{"c1": nil, "c2": nil, "c3": nil},
