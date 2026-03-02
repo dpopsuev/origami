@@ -11,3 +11,4 @@
 - `wet-ouroboros-results.md` — Wet Ouroboros run results
 - `wet-run-2026-02-21.md` — 10-iteration wet discovery run — 2026-02-21
 - `origami-fold-concept.md` — origami fold — compile YAML project to standalone binary (vision)
+- `adapter-component-evaluation.md` — Adapter → Component rename evaluation — deferred during PoC (naming-taxonomy Phase 4)
