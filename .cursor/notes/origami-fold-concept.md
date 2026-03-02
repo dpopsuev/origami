@@ -6,7 +6,7 @@
 
 In origami, a fold transforms flat paper into a shaped form. `origami fold` transforms a flat YAML project into a shaped binary.
 
-Consumer repositories (Asterisk, Achilles) contain **zero Go files** — only YAML circuits, scenarios, schemas, prompt templates, and configuration. The Go lives in Origami (the engine) and in Origami's adapters/marbles (the collections). `origami fold` compiles the YAML project into a standalone binary with a custom name.
+Consumer repositories (Asterisk, Achilles) contain **zero Go files** — only YAML circuits, scenarios, schemas, prompt templates, and configuration. The Go lives in Origami (the engine) and in Origami's components and modules. `origami fold` compiles the YAML project into a standalone binary with a custom name.
 
 ## How it works
 

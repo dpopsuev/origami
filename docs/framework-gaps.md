@@ -1,10 +1,10 @@
 # Framework Gaps Inventory
 
-Missing Origami primitives needed to support the marbles defined in `marble-catalog.md`. Each gap blocks zero-Go migration of consumer code. Gaps are ordered by marble dependency — resolving top gaps unblocks the most downstream work.
+Missing Origami primitives needed to support zero-Go migration of consumer code. Gaps are ordered by dependency — resolving top gaps unblocks the most downstream work.
 
 ## Summary
 
-| # | Gap | Blocks marble | Severity | Est. effort |
+| # | Gap | Blocks | Severity | Est. effort |
 |---|-----|---------------|----------|-------------|
 | G1 | Declarative extractor DSL | `llm-extract` | Critical | Medium |
 | G2 | Declarative transformer DSL | `context-builder` | Critical | Medium |
@@ -12,7 +12,7 @@ Missing Origami primitives needed to support the marbles defined in `marble-cata
 | G4 | Hook persistence DSL | `persist` | High | Small |
 | G5 | Scorer registry + evaluation engine | `score` | High | Medium |
 | G6 | Report template engine | `report` | Medium | Medium |
-| G7 | `NodeDef meta:` field | All marbles | High | Small |
+| G7 | `NodeDef meta:` field | All components | High | Small |
 | G8 | `origami fold` | CLI, MCP config | Medium | Large |
 | G9 | Generic transformers | `ingest` migration | Medium | Medium |
 | G10 | Step schema DSL | MCP config | Low | Small |
@@ -22,7 +22,7 @@ Missing Origami primitives needed to support the marbles defined in `marble-cata
 
 ## G1: Declarative extractor DSL
 
-**Blocks:** `llm-extract` marble
+**Blocks:** `llm-extract` component
 
 **Current state:** Extractors are Go types implementing `framework.Extractor` interface (`Name()`, `Extract(ctx, input) (any, error)`). Consumers write Go code per extractor. Asterisk has `StepExtractor[T]` — a generic JSON unmarshaler. Achilles has `GovulncheckExtractor` and `ClassifyExtractor`.
 
@@ -49,7 +49,7 @@ Built-in extractor types handle common patterns (JSON schema validation, regex c
 
 ## G2: Declarative transformer DSL
 
-**Blocks:** `context-builder` marble
+**Blocks:** `context-builder` component
 
 **Current state:** Transformers are Go types implementing `framework.Transformer` (`Name()`, `Transform(ctx, tc) (any, error)`). Asterisk has `ContextBuilder` (reads store/envelope/catalog) and `PromptFiller` (fills Go text/template).
 
@@ -80,7 +80,7 @@ The `template-params` type defines which data sources feed into the template. Th
 
 ## G3: YAML-configured provider chains
 
-**Blocks:** `dispatch` marble
+**Blocks:** `dispatch` component
 
 **Current state:** `dispatch.MuxDispatcher` routes to providers (Cursor, OpenAI) with signal bus and cost tracking. But provider selection, fallback order, and adapter configuration are wired in Go (`LLMAdapter`, `BasicAdapter`, `StubAdapter`).
 
@@ -110,7 +110,7 @@ The `rules` provider type loads heuristic rules from YAML (keyword lists, patter
 
 ## G4: Hook persistence DSL
 
-**Blocks:** `persist` marble
+**Blocks:** `persist` component
 
 **Current state:** `framework.HookRegistry` with `NewHookFunc()` allows registering Go functions on step completion. Asterisk has 5 hooks in `hooks.go` (32 LOC) that delegate to `apply*Effects()` functions in `runner.go`.
 
@@ -139,7 +139,7 @@ Hook actions are YAML-declared operations: file writes, SQLite queries, HTTP cal
 
 ## G5: Scorer registry + evaluation engine
 
-**Blocks:** `score` marble
+**Blocks:** `score` component
 
 **Current state:** Asterisk's `metrics.go` (646 LOC) has 21 hand-coded scorer functions. The `ScoreCard` YAML defines thresholds and weights but the scorers themselves are Go functions.
 
@@ -169,7 +169,7 @@ Domain-specific scorers (like M5 serial killer detection) remain Go but are regi
 
 ## G6: Report template engine
 
-**Blocks:** `report` marble
+**Blocks:** `report` component
 
 **Current state:** Asterisk has 5 report types across 5 files (~865 LOC), each hand-coded with go-pretty tables and string formatting. Achilles has a terminal report in `reportNode`.
 
@@ -198,7 +198,7 @@ Report sections are composable YAML blocks: tables, text, Markdown, headers. The
 
 ## G7: `NodeDef meta:` field
 
-**Blocks:** All marbles (configurable nodes)
+**Blocks:** All components (configurable nodes)
 
 **Current state:** `NodeDef` in YAML defines `name`, `element`, `family`, `zone`. Nodes receive the `NodeDef` in their `Process()` call but cannot read arbitrary configuration from the YAML.
 
@@ -217,7 +217,7 @@ nodes:
       extractor: recall-extractor
 ```
 
-Add `Meta map[string]any` to `NodeDef`. Nodes access configuration via `nc.NodeDef().Meta["key"]`. This is the smallest gap with the highest leverage — it makes all other marbles configurable from YAML.
+Add `Meta map[string]any` to `NodeDef`. Nodes access configuration via `nc.NodeDef().Meta["key"]`. This is the smallest gap with the highest leverage — it makes all other components configurable from YAML.
 
 ---
 
@@ -237,7 +237,7 @@ Add `Meta map[string]any` to `NodeDef`. Nodes access configuration via `nc.NodeD
 
 Generates a `main.go` + `go.mod`, builds, produces a binary. See `notes/origami-fold-concept.md` for full design.
 
-**Effort:** Large — involves code generation, adapter discovery, and build toolchain. Deferred to post-marble implementation.
+**Effort:** Large — involves code generation, adapter discovery, and build toolchain. Deferred to post-PoC implementation.
 
 ---
 
@@ -296,7 +296,7 @@ The MCP server loads step schemas from YAML. Smallest gap, lowest priority — a
 
 ## G11: Calibration-as-pipeline
 
-**Blocks:** `score` and `report` marbles (full DSL)
+**Blocks:** `score` and `report` components (full DSL)
 
 **Current state:** Asterisk's calibration runner (`cal_runner.go`, 684 LOC) and parallel executor (`parallel.go`, 752 LOC) orchestrate multi-case calibration. This is procedural Go code that drives the pipeline, scores results, and formats reports.
 
@@ -314,9 +314,9 @@ nodes:
   - name: report           # uses report template
 ```
 
-The calibration pipeline walks the scoring/reporting marbles. Cases are fan-out sub-walks of the domain pipeline (RCA or security scan).
+The calibration pipeline walks the scoring/reporting components. Cases are fan-out sub-walks of the domain pipeline (RCA or security scan).
 
-**Effort:** Large — requires meta-pipeline support (pipeline-walks-pipeline). Deferred to post-marble implementation.
+**Effort:** Large — requires meta-pipeline support (pipeline-walks-pipeline). Deferred to post-PoC implementation.
 
 ---
 
@@ -325,10 +325,10 @@ The calibration pipeline walks the scoring/reporting marbles. Cases are fan-out 
 | Phase | Gaps addressed | Outcome |
 |-------|---------------|---------|
 | Phase 2a (foundation) | G7 (`NodeDef meta:`), G4 (hook DSL) | Configurable nodes, declarative persistence |
-| Phase 2b (extraction) | G1 (extractor DSL), G2 (transformer DSL) | `llm-extract` + `context-builder` marbles |
-| Phase 2c (dispatch) | G3 (provider chains) | `dispatch` marble |
-| Phase 2d (scoring) | G5 (scorer registry) | `score` marble |
-| Phase 2e (reporting) | G6 (report templates) | `report` marble |
+| Phase 2b (extraction) | G1 (extractor DSL), G2 (transformer DSL) | `llm-extract` + `context-builder` components |
+| Phase 2c (dispatch) | G3 (provider chains) | `dispatch` component |
+| Phase 2d (scoring) | G5 (scorer registry) | `score` component |
+| Phase 2e (reporting) | G6 (report templates) | `report` component |
 | Phase 3 (infrastructure) | G9 (generic transformers), G10 (step schema DSL) | Ingest + MCP migration |
 | Phase 4 (compilation) | G8 (`origami fold`) | CLI + MCP wiring migration |
 | Phase 5 (meta) | G11 (calibration-as-pipeline) | Full calibration DSL |

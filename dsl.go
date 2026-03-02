@@ -79,7 +79,6 @@ type NodeDef struct {
 	After       []string        `yaml:"after,omitempty"`
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
 	Cache       *CacheDef       `yaml:"cache,omitempty"`
-	Marble      string          `yaml:"marble,omitempty"`
 	Meta        map[string]any  `yaml:"meta,omitempty"`
 }
 
@@ -214,7 +213,6 @@ type GraphRegistries struct {
 	Renderers    RendererRegistry
 	Transformers TransformerRegistry
 	Hooks        HookRegistry
-	Marbles      MarbleRegistry
 	Components   ComponentLoader
 }
 
@@ -293,10 +291,6 @@ func (def *CircuitDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 // Transformer > Extractor > NodeRegistry (Family/Name).
 func (def *CircuitDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error) {
 	elem := Element(strings.ToLower(nd.Element))
-
-	if nd.Marble != "" {
-		return resolveMarble(nd, reg.Marbles, 0)
-	}
 
 	if nd.Transformer != "" {
 		var t Transformer

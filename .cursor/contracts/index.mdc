@@ -47,7 +47,7 @@ These contracts are tracked in Asterisk `contracts/draft/` but require significa
 - `completed/framework/memory-evolution.md` — MemoryStore: namespaced, searchable, persistent. WithTaggedMemory. Complete.
 - `completed/framework/origami-observability.md` — 9 Prometheus metrics + OTel traces. `/metrics` on KamiServer. Complete.
 - `completed/framework/origami-api-hygiene.md` — Configurable `ModelRegistry`. Parameterized probe stimuli. Complete.
-- `completed/framework/origami-marbles.md` — `Marble` interface, `marble:` on NodeDef, composite subgraph, Kami fold/unfold. Complete.
+- `completed/framework/origami-marbles.md` — `Marble` interface, `marble:` on NodeDef, composite subgraph, Kami fold/unfold. Complete. **Superseded by Components; Marble primitive excised.**
 - `completed/framework/circuit-efficiency.md` — Node caching (InMemoryCache with TTL), fan-in merge strategies (ListArtifact). Complete.
 - `completed/framework/provider-resilience.md` — Dispatch fallback chains + intent classifier + OnFallback callback. Complete.
 - `completed/framework/prompt-calibration.md` — StepAnalyzer, TuningProposal, PromptCalibrationLoop types with synthetic tests. Complete.

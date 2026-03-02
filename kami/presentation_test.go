@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-
-	framework "github.com/dpopsuev/origami"
 )
 
 // mockTheme is a minimal Theme for testing API endpoints.
@@ -208,71 +206,6 @@ func TestAPI_KabukiNilSectionOrder(t *testing.T) {
 
 	if body["section_order"] != nil {
 		t.Errorf("section_order should be nil when SectionOrder returns nil, got %v", body["section_order"])
-	}
-}
-
-func TestAPI_MarbleComposite(t *testing.T) {
-	marbles := framework.MarbleRegistry{
-		"scorer": func(nd framework.NodeDef) framework.Marble {
-			def := &framework.CircuitDef{
-				Circuit: "scorer-sub",
-				Nodes: []framework.NodeDef{
-					{Name: "calc"},
-					{Name: "normalize"},
-				},
-				Edges: []framework.EdgeDef{
-					{ID: "e1", From: "calc", To: "normalize"},
-					{ID: "e2", From: "normalize", To: "DONE"},
-				},
-				Start: "calc",
-				Done:  "DONE",
-			}
-			return framework.NewCompositeMarble(nd.Name, "fire", def, framework.GraphRegistries{})
-		},
-	}
-
-	addr := startTestServer(t, Config{Marbles: marbles})
-	resp, err := http.Get(fmt.Sprintf("http://%s/api/marble/scorer", addr))
-	if err != nil {
-		t.Fatalf("GET marble: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		t.Fatalf("status = %d, want 200", resp.StatusCode)
-	}
-
-	var body map[string]any
-	json.NewDecoder(resp.Body).Decode(&body)
-	if body["circuit"] != "scorer-sub" {
-		t.Errorf("circuit = %v, want scorer-sub", body["circuit"])
-	}
-	nodes, ok := body["nodes"].([]any)
-	if !ok || len(nodes) != 2 {
-		t.Errorf("nodes count = %v, want 2", len(nodes))
-	}
-}
-
-func TestAPI_MarbleNotFound(t *testing.T) {
-	addr := startTestServer(t, Config{Marbles: framework.MarbleRegistry{}})
-	resp, err := http.Get(fmt.Sprintf("http://%s/api/marble/missing", addr))
-	if err != nil {
-		t.Fatalf("GET marble: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 404 {
-		t.Fatalf("status = %d, want 404", resp.StatusCode)
-	}
-}
-
-func TestAPI_MarbleNoRegistry(t *testing.T) {
-	addr := startTestServer(t, Config{})
-	resp, err := http.Get(fmt.Sprintf("http://%s/api/marble/any", addr))
-	if err != nil {
-		t.Fatalf("GET marble: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 404 {
-		t.Fatalf("status = %d, want 404", resp.StatusCode)
 	}
 }
 

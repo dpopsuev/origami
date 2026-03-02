@@ -186,7 +186,7 @@ func (r *DuplicateEdgeCondition) Check(ctx *LintContext) []Finding {
 type EmptyPrompt struct{}
 
 func (r *EmptyPrompt) ID() string          { return "S6/empty-prompt" }
-func (r *EmptyPrompt) Description() string { return "node with no prompt, transformer, extractor, renderer, or marble may produce empty output" }
+func (r *EmptyPrompt) Description() string { return "node with no prompt, transformer, extractor, or renderer may produce empty output" }
 func (r *EmptyPrompt) Severity() Severity   { return SeverityWarning }
 func (r *EmptyPrompt) Tags() []string       { return []string{"structural"} }
 
@@ -198,11 +198,11 @@ func (r *EmptyPrompt) Check(ctx *LintContext) []Finding {
 		if nd.Family != "" {
 			continue
 		}
-		if nd.Prompt == "" && nd.Transformer == "" && nd.Extractor == "" && nd.Renderer == "" && nd.Marble == "" {
+		if nd.Prompt == "" && nd.Transformer == "" && nd.Extractor == "" && nd.Renderer == "" {
 			out = append(out, Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
-				Message:  fmt.Sprintf("node %q has no prompt, transformer, extractor, or marble", nd.Name),
+				Message:  fmt.Sprintf("node %q has no prompt, transformer, extractor, or renderer", nd.Name),
 				File:     ctx.File,
 				Line:     ctx.NodeLine(nd.Name),
 			})

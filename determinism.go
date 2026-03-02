@@ -2,7 +2,7 @@ package framework
 
 // IsCircuitDeterministic returns true if every node in the circuit that
 // references a transformer resolves to a deterministic transformer.
-// Nodes without a transformer field (e.g., marble-based or custom nodes)
+// Nodes without a transformer field (e.g., custom nodes)
 // are skipped. Returns false if any transformer is unresolvable or stochastic.
 func IsCircuitDeterministic(def *CircuitDef, reg TransformerRegistry) bool {
 	if reg == nil {

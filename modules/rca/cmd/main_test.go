@@ -11,7 +11,7 @@ import (
 )
 
 func TestAnalyzeAndPush_FileEnvelope(t *testing.T) {
-	t.Skip("integration test requires external binary build — redesign for marble structure")
+	t.Skip("integration test requires external binary build — redesign for module structure")
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, "envelope.json")
 	artifactPath := filepath.Join(dir, "artifact.json")

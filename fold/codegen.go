@@ -9,7 +9,7 @@ import (
 )
 
 // GenerateMain produces Go source for a main.go that builds the CLI
-// from the manifest. The generated code imports the marble cmd package
+// from the manifest. The generated code imports the module cmd package
 // and calls its Execute() function.
 func GenerateMain(m *Manifest, reg ModuleRegistry) ([]byte, error) {
 	ctx, err := buildTemplateContext(m, reg)

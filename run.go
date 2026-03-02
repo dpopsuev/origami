@@ -17,7 +17,6 @@ type runConfig struct {
 	nodes          NodeRegistry
 	edges          EdgeFactory
 	components     ComponentLoader
-	marbles        MarbleRegistry
 	overrides      map[string]any
 	walker         Walker
 	team           *Team
@@ -62,12 +61,6 @@ func WithEdges(reg EdgeFactory) RunOption {
 // and the resulting components are merged into the registries.
 func WithComponents(loader ComponentLoader) RunOption {
 	return func(c *runConfig) { c.components = loader }
-}
-
-// WithMarbles registers a marble registry for the run. Nodes that declare
-// marble: <name> are resolved from this registry.
-func WithMarbles(reg MarbleRegistry) RunOption {
-	return func(c *runConfig) { c.marbles = reg }
 }
 
 // WithOverrides sets variable overrides (equivalent to --set key=value).
@@ -186,7 +179,6 @@ func Run(ctx context.Context, circuitPath string, input any, opts ...RunOption) 
 		Extractors:   cfg.extractors,
 		Transformers: cfg.transformers,
 		Hooks:        cfg.hooks,
-		Marbles:      cfg.marbles,
 		Components:   cfg.components,
 	}
 
@@ -317,7 +309,6 @@ func Validate(circuitPath string, opts ...RunOption) error {
 		Extractors:   cfg.extractors,
 		Transformers: cfg.transformers,
 		Hooks:        cfg.hooks,
-		Marbles:      cfg.marbles,
 		Components:   cfg.components,
 	}
 

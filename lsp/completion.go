@@ -16,7 +16,7 @@ var topLevelKeys = []string{
 
 var nodeFieldKeys = []string{
 	"name", "element", "family", "extractor", "transformer",
-	"provider", "prompt", "input", "after", "schema", "cache", "marble",
+	"provider", "prompt", "input", "after", "schema", "cache",
 }
 
 var edgeFieldKeys = []string{
