@@ -498,3 +498,78 @@ func TestModel_SessionStartAfterWatch(t *testing.T) {
 	t.Logf("after session start: nodeOrder=%d, walkers=%d, view contains circuit=%v",
 		len(m.nodeOrder), len(m.snap.Walkers), !strings.Contains(m.View(), "(empty circuit)"))
 }
+
+// TestModel_InitSubscription_SurvivesUpdateLoop verifies that the store
+// subscription created in Init() persists across the Bubble Tea Update loop.
+//
+// BUG reproduced: Init() has a value receiver, so m.subCh is set on a copy.
+// The first Cmd's closure captures the copy's channel (non-nil) and delivers
+// one diff. But Update returns waitForDiff(m.subCh) using the Program's model
+// where subCh is nil. Reading from nil blocks forever — the TUI freezes after
+// exactly 1 diff.
+func TestModel_InitSubscription_SurvivesUpdateLoop(t *testing.T) {
+	def := testCircuit()
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	m := New(Config{
+		Def:    def,
+		Store:  store,
+		Layout: layout,
+		Opts:   RenderOpts{NoColor: true},
+	})
+
+	// Simulate Bubble Tea's lifecycle:
+	// 1. Init() → returns first Cmd (with captured channel)
+	initCmd := m.Init()
+	if initCmd == nil {
+		t.Fatal("Init() returned nil Cmd")
+	}
+
+	// 2. Send an event to the store so the channel has a message.
+	store.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "w1",
+	})
+
+	// 3. Execute the first Cmd to get the first DiffMsg.
+	msg := initCmd()
+	if _, ok := msg.(DiffMsg); !ok {
+		t.Fatalf("first Cmd returned %T, want DiffMsg", msg)
+	}
+
+	// 4. Pass the DiffMsg to Update (simulates Program.Update).
+	//    With the fix, subCh is set in New(), so it persists across the loop.
+	updated, nextCmd := m.Update(msg)
+
+	// 5. The nextCmd should be non-nil (waiting for next diff).
+	if nextCmd == nil {
+		t.Fatal("Update returned nil Cmd — no further diffs will be received")
+	}
+
+	// 6. Send another event.
+	store.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "triage", Walker: "w1",
+	})
+
+	// 7. Execute the next Cmd — it should deliver the second diff.
+	//    If subCh is nil, this blocks forever (the bug).
+	done := make(chan tea.Msg, 1)
+	go func() {
+		done <- nextCmd()
+	}()
+
+	select {
+	case msg2 := <-done:
+		if _, ok := msg2.(DiffMsg); !ok {
+			t.Fatalf("second Cmd returned %T, want DiffMsg", msg2)
+		}
+		t.Log("second diff received — subscription survives Update loop")
+	case <-time.After(2 * time.Second):
+		t.Fatal("BUG: second Cmd blocked forever — m.subCh is nil after Init() value receiver")
+	}
+
+	_ = updated
+}

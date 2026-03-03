@@ -95,6 +95,8 @@ func New(cfg Config) Model {
 		order = append(order, nd.Name)
 	}
 
+	subID, subCh := cfg.Store.Subscribe()
+
 	m := Model{
 		def:       cfg.Def,
 		store:     cfg.Store,
@@ -106,13 +108,14 @@ func New(cfg Config) Model {
 		registry:  NewPanelRegistry(),
 		timeline:  NewTimelineRingBuffer(timelineMaxEntries),
 		recorder:  cfg.Recorder,
+		subID:     subID,
+		subCh:     subCh,
 	}
 	return m
 }
 
-// Init subscribes to the CircuitStore diff channel.
+// Init returns the initial Cmd that starts listening for store diffs.
 func (m Model) Init() tea.Cmd {
-	m.subID, m.subCh = m.store.Subscribe()
 	return waitForDiff(m.subCh)
 }
 
