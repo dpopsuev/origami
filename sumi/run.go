@@ -154,12 +154,12 @@ func runWatch(ctx context.Context, cfg RunConfig) error {
 
 const framePushInterval = 500 * time.Millisecond
 
-// framePushLoop polls the recorder and POSTs new frames to Kami.
-// Runs at most 2 pushes/second. Errors are silently ignored.
+// framePushLoop polls the recorder and POSTs the latest frame to Kami.
+// Runs at most 2 pushes/second. Always re-pushes the current frame even
+// when idle so that a Kami server restart is self-healing within one tick.
 func framePushLoop(ctx context.Context, rec *ViewRecorder, kamiAddr string, log *slog.Logger) {
 	url := fmt.Sprintf("http://%s/api/sumi/frame", kamiAddr)
 	client := &http.Client{Timeout: 2 * time.Second}
-	var lastTS time.Time
 
 	ticker := time.NewTicker(framePushInterval)
 	defer ticker.Stop()
@@ -170,10 +170,9 @@ func framePushLoop(ctx context.Context, rec *ViewRecorder, kamiAddr string, log 
 			return
 		case <-ticker.C:
 			f := rec.Latest()
-			if f == nil || f.Timestamp.Equal(lastTS) {
+			if f == nil {
 				continue
 			}
-			lastTS = f.Timestamp
 
 			body, err := json.Marshal(f)
 			if err != nil {
