@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/kami"
 	"github.com/dpopsuev/origami/sumi"
 	"github.com/dpopsuev/origami/view"
@@ -470,4 +471,159 @@ waitComplete:
 
 	t.Logf("client store pipeline: completed=%v, nodes=%d, completedNodes=%d, walkers=%d",
 		clientSnap.Completed, len(clientSnap.Nodes), completedNodes, len(clientSnap.Walkers))
+}
+
+// TestStaleness_ForceReplaceCleansPreviousSession starts a circuit,
+// dispatches a step (creating a walker), then force-starts a new session.
+// The snapshot after the force-replace should have no walkers from the
+// old session — OnSessionEnd fires WalkComplete which clears them.
+func TestStaleness_ForceReplaceCleansPreviousSession(t *testing.T) {
+	srv, httpAddr := newTestServerWithKami(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startCircuit(t, ctx, session, "ptp-mock", "llm", 1)
+	sessionID := srv.SessionID()
+
+	step := callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+	})
+	if step["done"] == true {
+		t.Fatal("expected a step, got done=true")
+	}
+
+	resp, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
+	if err != nil {
+		t.Fatalf("GET snapshot: %v", err)
+	}
+	var midSnap view.CircuitSnapshot
+	json.NewDecoder(resp.Body).Decode(&midSnap)
+	resp.Body.Close()
+
+	if len(midSnap.Walkers) == 0 {
+		t.Fatal("expected walkers mid-flight, got 0")
+	}
+	t.Logf("mid-flight: walkers=%d", len(midSnap.Walkers))
+
+	// Force-replace with a new session. OnSessionEnd should fire.
+	callTool(t, ctx, session, "start_circuit", map[string]any{
+		"force": true,
+		"extra": map[string]any{
+			"scenario": "ptp-mock",
+			"backend":  "llm",
+		},
+	})
+
+	// The new session creates a fresh store. Snapshot should be clean.
+	resp2, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
+	if err != nil {
+		t.Fatalf("GET snapshot after force: %v", err)
+	}
+	var newSnap view.CircuitSnapshot
+	json.NewDecoder(resp2.Body).Decode(&newSnap)
+	resp2.Body.Close()
+
+	if len(newSnap.Walkers) > 0 {
+		t.Errorf("expected 0 walkers after force-replace, got %d", len(newSnap.Walkers))
+	}
+	if newSnap.Completed {
+		t.Error("new session should not be completed yet")
+	}
+	t.Logf("after force-replace: walkers=%d, completed=%v, nodes=%d",
+		len(newSnap.Walkers), newSnap.Completed, len(newSnap.Nodes))
+}
+
+// TestStaleness_HTTPResetEndpoint verifies that POST /api/store/reset
+// clears nodes, walkers, and completion from the store.
+func TestStaleness_HTTPResetEndpoint(t *testing.T) {
+	srv, httpAddr := newTestServerWithKami(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startCircuit(t, ctx, session, "ptp-mock", "llm", 1)
+	sessionID := srv.SessionID()
+
+	// Dispatch a step so there's a walker.
+	callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+	})
+
+	// Verify state exists before reset.
+	resp, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
+	if err != nil {
+		t.Fatalf("GET snapshot: %v", err)
+	}
+	var beforeSnap view.CircuitSnapshot
+	json.NewDecoder(resp.Body).Decode(&beforeSnap)
+	resp.Body.Close()
+
+	if len(beforeSnap.Nodes) == 0 {
+		t.Fatal("expected nodes before reset")
+	}
+
+	// POST /api/store/reset
+	resp2, err := http.Post(fmt.Sprintf("http://%s/api/store/reset", httpAddr), "application/json", nil)
+	if err != nil {
+		t.Fatalf("POST reset: %v", err)
+	}
+	resp2.Body.Close()
+
+	if resp2.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp2.StatusCode)
+	}
+
+	// Snapshot after reset should be empty.
+	resp3, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
+	if err != nil {
+		t.Fatalf("GET snapshot after reset: %v", err)
+	}
+	var afterSnap view.CircuitSnapshot
+	json.NewDecoder(resp3.Body).Decode(&afterSnap)
+	resp3.Body.Close()
+
+	if len(afterSnap.Nodes) > 0 {
+		t.Errorf("expected 0 nodes after reset, got %d", len(afterSnap.Nodes))
+	}
+	if len(afterSnap.Walkers) > 0 {
+		t.Errorf("expected 0 walkers after reset, got %d", len(afterSnap.Walkers))
+	}
+	if afterSnap.Completed {
+		t.Error("expected completed=false after reset")
+	}
+	t.Logf("after reset: nodes=%d, walkers=%d, completed=%v",
+		len(afterSnap.Nodes), len(afterSnap.Walkers), afterSnap.Completed)
+}
+
+// TestStaleness_ResetNilDef verifies CircuitStore.Reset(nil) produces
+// an empty store without panicking.
+func TestStaleness_ResetNilDef(t *testing.T) {
+	def := &framework.CircuitDef{
+		Circuit: "test",
+		Nodes:   []framework.NodeDef{{Name: "A"}, {Name: "B"}},
+	}
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	snap := store.Snapshot()
+	if len(snap.Nodes) != 2 {
+		t.Fatalf("expected 2 nodes, got %d", len(snap.Nodes))
+	}
+
+	store.Reset(nil)
+	snap = store.Snapshot()
+	if len(snap.Nodes) != 0 {
+		t.Errorf("expected 0 nodes after Reset(nil), got %d", len(snap.Nodes))
+	}
+	if len(snap.Walkers) != 0 {
+		t.Errorf("expected 0 walkers after Reset(nil), got %d", len(snap.Walkers))
+	}
+	if snap.CircuitName != "" {
+		t.Errorf("expected empty circuit name after Reset(nil), got %q", snap.CircuitName)
+	}
 }

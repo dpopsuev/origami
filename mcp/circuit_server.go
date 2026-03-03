@@ -219,6 +219,9 @@ func (s *CircuitServer) handleStartCircuit(ctx context.Context, _ *sdkmcp.CallTo
 				return nil, startCircuitOutput{}, fmt.Errorf("a circuit session is already running (id=%s)", s.session.ID)
 			}
 		}
+		if s.Config.OnSessionEnd != nil {
+			s.Config.OnSessionEnd()
+		}
 	}
 	s.session = nil
 	s.mu.Unlock()

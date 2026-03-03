@@ -70,6 +70,10 @@ func (cs *CircuitStore) Reset(def *framework.CircuitDef) {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
+	if def == nil {
+		def = &framework.CircuitDef{}
+	}
+
 	nodes := make(map[string]NodeState, len(def.Nodes))
 	nodeZone := make(map[string]string)
 	nodeElement := make(map[string]string)

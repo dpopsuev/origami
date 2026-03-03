@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -170,6 +171,9 @@ func kamiCmd(args []string) error {
 	if len(args) > 0 && args[0] == "serve" {
 		return kamiServe(args[1:])
 	}
+	if len(args) > 0 && args[0] == "reset" {
+		return kamiReset(args[1:])
+	}
 
 	fs := flag.NewFlagSet("kami", flag.ExitOnError)
 	port := fs.Int("port", 3000, "HTTP port (WS on port+1)")
@@ -210,6 +214,24 @@ func kamiCmd(args []string) error {
 	}
 
 	return srv.Start(ctx)
+}
+
+func kamiReset(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("usage: origami kami reset <addr> (e.g. 127.0.0.1:3001)")
+	}
+	addr := args[0]
+	url := fmt.Sprintf("http://%s/api/store/reset", addr)
+
+	resp, err := http.Post(url, "application/json", nil)
+	if err != nil {
+		return fmt.Errorf("reset failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(body))
+	return nil
 }
 
 func kamiServe(args []string) error {
@@ -596,6 +618,7 @@ func sumiCmd(args []string) error {
 	replay := fs.String("replay", "", "replay a recorded JSONL session file")
 	noColor := fs.Bool("no-color", false, "disable ANSI colors (CI/pipe-friendly)")
 	compact := fs.Bool("compact", false, "reduced-width rendering")
+	clean := fs.Bool("clean", false, "reset Kami store before connecting (--watch only)")
 	fs.Parse(args)
 
 	circuitPath := ""
@@ -613,5 +636,6 @@ func sumiCmd(args []string) error {
 		ReplayFile:  *replay,
 		NoColor:     *noColor,
 		Compact:     *compact,
+		Clean:       *clean,
 	})
 }

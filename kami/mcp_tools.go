@@ -91,6 +91,12 @@ func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
 		Description: "Set the visualization playback speed multiplier.",
 	}, noOut(handleSetSpeed(srv)))
 
+	// Store management
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "kami_reset_store",
+		Description: "Reset the circuit store, clearing all node states, walkers, and completion status. SSE clients receive a reset event.",
+	}, noOut(handleResetStore(srv)))
+
 	// Sumi TUI frame tool
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
 		Name:        "sumi_get_view",
@@ -309,6 +315,13 @@ func handleSetSpeed(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, 
 			return nil, "", err
 		}
 		return textResult(fmt.Sprintf("speed set to %.1fx", input.Speed)), "ok", nil
+	}
+}
+
+func handleResetStore(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, string, error) {
+		srv.ResetStore()
+		return textResult("store reset"), "ok", nil
 	}
 }
 

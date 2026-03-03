@@ -112,6 +112,14 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 		}
 	}
 
+	cfg.OnSessionEnd = func() {
+		if s.KamiServer != nil && s.store != nil {
+			s.store.OnEvent(framework.WalkEvent{
+				Type: framework.EventWalkComplete,
+			})
+		}
+	}
+
 	return cfg
 }
 

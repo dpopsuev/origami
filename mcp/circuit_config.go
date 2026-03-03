@@ -90,6 +90,11 @@ type CircuitConfig struct {
 	// for the first time. Use it to emit WalkComplete to the Kami store
 	// so observers (Sumi) see the circuit as completed. Nil is safe.
 	OnCircuitDone func()
+
+	// OnSessionEnd is called when a session terminates for any reason:
+	// successful completion, abort, force-replace, or TTL expiry. Use it
+	// to clear stale walkers from the Kami store. Nil is safe.
+	OnSessionEnd func()
 }
 
 // FindSchema returns the StepSchema for the given step name, or an error

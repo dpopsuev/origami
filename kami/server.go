@@ -155,6 +155,7 @@ func (s *Server) buildHTTPMux() *http.ServeMux {
 	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
 	mux.HandleFunc("POST /api/sumi/frame", s.handleStoreFrame)
 	mux.HandleFunc("GET /api/sumi/frame", s.handleGetFrame)
+	mux.HandleFunc("POST /api/store/reset", s.handleStoreReset)
 
 	if s.cfg.MetricsHandler != nil {
 		mux.Handle("GET /metrics", s.cfg.MetricsHandler)
@@ -186,6 +187,18 @@ func (s *Server) SetStore(store *view.CircuitStore) {
 
 	if old != nil {
 		old.Close()
+	}
+}
+
+// ResetStore clears the active CircuitStore. All node states, walkers,
+// and completion status are removed. SSE clients receive a DiffReset.
+// Safe to call when no store is set.
+func (s *Server) ResetStore() {
+	s.mu.Lock()
+	store := s.store
+	s.mu.Unlock()
+	if store != nil {
+		store.Reset(nil)
 	}
 }
 
@@ -335,6 +348,15 @@ func (s *Server) handleSnapshotAPI(w http.ResponseWriter, _ *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(store.Snapshot())
+}
+
+// handleStoreReset clears the server's CircuitStore, removing all node
+// states, walkers, and completion status. SSE clients will receive a
+// DiffReset and can re-bootstrap. Safe to call when no store is set.
+func (s *Server) handleStoreReset(w http.ResponseWriter, _ *http.Request) {
+	s.ResetStore()
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"ok":"store reset"}`)
 }
 
 // ListenAddr returns the HTTP listener address after the server starts.

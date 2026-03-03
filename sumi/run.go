@@ -27,6 +27,7 @@ type RunConfig struct {
 	ReplayFile  string
 	NoColor     bool
 	Compact     bool
+	Clean       bool
 }
 
 // Run starts the Sumi TUI.
@@ -107,6 +108,10 @@ func runCircuit(_ context.Context, cfg RunConfig) error {
 func runWatch(ctx context.Context, cfg RunConfig) error {
 	addr := cfg.WatchAddr
 	log := slog.Default().With("component", "sumi-sse")
+
+	if cfg.Clean {
+		resetStoreHTTP(addr, log)
+	}
 
 	var debug *DebugClient
 	if cfg.KamiAddr != "" {
@@ -191,6 +196,18 @@ func framePushLoop(ctx context.Context, rec *ViewRecorder, kamiAddr string, log 
 // bootstrapFromSnapshot fetches /api/snapshot from Kami to build the
 // CircuitDef and CircuitStore with the correct node set. Falls back to
 // an empty def if Kami is unreachable (SSE will populate walkers later).
+func resetStoreHTTP(addr string, log *slog.Logger) {
+	url := fmt.Sprintf("http://%s/api/store/reset", addr)
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Post(url, "application/json", nil)
+	if err != nil {
+		log.Warn("failed to reset store", "error", err)
+		return
+	}
+	resp.Body.Close()
+	log.Info("store reset via --clean", "status", resp.StatusCode)
+}
+
 func bootstrapFromSnapshot(addr string, log *slog.Logger) (*framework.CircuitDef, *view.CircuitStore) {
 	url := fmt.Sprintf("http://%s/api/snapshot", addr)
 
