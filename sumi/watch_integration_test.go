@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -347,6 +348,372 @@ func TestWatch_SnapshotBootstrap(t *testing.T) {
 	}
 
 	t.Log("snapshot bootstrap: client store created with 7 nodes from server snapshot")
+}
+
+// --- Multi-worker integration tests ---
+// These simulate 4 concurrent subagents sending events through a real Kami
+// SSE pipeline and verify the client store receives everything correctly.
+
+// warmupSSE retries sending probe events until the SSE pipeline delivers
+// one to the client store, proving the connection is fully established.
+func warmupSSE(t *testing.T, serverStore *view.CircuitStore, clientCh <-chan view.StateDiff) {
+	t.Helper()
+	deadline := time.After(5 * time.Second)
+	probe := time.NewTicker(100 * time.Millisecond)
+	defer probe.Stop()
+
+	for {
+		select {
+		case <-probe.C:
+			serverStore.OnEvent(framework.WalkEvent{
+				Type: framework.EventNodeEnter, Node: "recall", Walker: "_warmup",
+			})
+		case <-clientCh:
+			// At least one diff arrived — SSE is live.
+			// Remove the warmup walker and drain remaining diffs.
+			serverStore.OnEvent(framework.WalkEvent{
+				Type: framework.EventFanOutEnd, Walker: "_warmup",
+			})
+			time.Sleep(100 * time.Millisecond)
+			for {
+				select {
+				case <-clientCh:
+				default:
+					return
+				}
+			}
+		case <-deadline:
+			t.Fatal("timeout waiting for SSE warmup — connection not established")
+		}
+	}
+}
+
+func TestWatch_FourWorkersConcurrentEvents(t *testing.T) {
+	def := rcaDef()
+	serverStore := view.NewCircuitStore(def)
+	defer serverStore.Close()
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	clientStore := view.NewCircuitStore(def)
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	go sseClientLoop(ctx, httpAddr, clientStore, quietLog())
+	warmupSSE(t, serverStore, clientCh)
+
+	workers := []string{"C01", "C02", "C03", "C04"}
+	allNodes := []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
+
+	// 20ms between events: with 4 workers and ~3 diffs per event, this keeps
+	// the 64-buffer subscriber channel from overflowing.
+	var wg sync.WaitGroup
+	for _, w := range workers {
+		wg.Add(1)
+		go func(walkerID string) {
+			defer wg.Done()
+			for _, node := range allNodes {
+				serverStore.OnEvent(framework.WalkEvent{
+					Type: framework.EventNodeEnter, Node: node, Walker: walkerID,
+				})
+				time.Sleep(20 * time.Millisecond)
+				serverStore.OnEvent(framework.WalkEvent{
+					Type: framework.EventNodeExit, Node: node,
+				})
+				time.Sleep(20 * time.Millisecond)
+			}
+		}(w)
+	}
+	wg.Wait()
+
+	// Drain: wait for events to flow through SSE, with a 1s quiet-period exit.
+	deadline := time.After(10 * time.Second)
+	received := 0
+	for {
+		select {
+		case _, ok := <-clientCh:
+			if !ok {
+				t.Fatal("client channel closed unexpectedly")
+			}
+			received++
+		case <-deadline:
+			goto done
+		case <-time.After(1 * time.Second):
+			goto done
+		}
+	}
+done:
+	if received < 20 {
+		t.Fatalf("expected significant event delivery, got only %d diffs", received)
+	}
+
+	snap := clientStore.Snapshot()
+
+	for _, w := range workers {
+		wp, ok := snap.Walkers[w]
+		if !ok {
+			t.Errorf("walker %s missing from client snapshot (SSE diff dropped?)", w)
+			continue
+		}
+		_ = wp
+	}
+
+	for _, node := range allNodes {
+		ns, ok := snap.Nodes[node]
+		if !ok {
+			t.Errorf("node %q missing from client snapshot", node)
+			continue
+		}
+		if ns.State != view.NodeCompleted {
+			t.Errorf("node %q state = %q, want completed", node, ns.State)
+		}
+	}
+
+	t.Logf("4-worker test: %d diffs received, %d walkers, %d nodes",
+		received, len(snap.Walkers), len(snap.Nodes))
+}
+
+func TestWatch_SessionRestart_SSEReconnects(t *testing.T) {
+	def1 := rcaDef()
+	serverStore1 := view.NewCircuitStore(def1)
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore1})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	clientStore := view.NewCircuitStore(def1)
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	go sseClientLoop(ctx, httpAddr, clientStore, quietLog())
+	warmupSSE(t, serverStore1, clientCh)
+
+	// Session 1: send event for C01
+	serverStore1.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "triage", Walker: "C01",
+	})
+
+	deadline := time.After(3 * time.Second)
+	for {
+		select {
+		case <-clientCh:
+			snap := clientStore.Snapshot()
+			if _, ok := snap.Walkers["C01"]; ok {
+				goto session1Done
+			}
+		case <-deadline:
+			t.Fatal("timeout waiting for session-1 walker C01")
+		}
+	}
+session1Done:
+	t.Log("session 1: walker C01 received")
+
+	// Session restart: swap the server store (simulates new start_circuit)
+	def2 := rcaDef()
+	serverStore2 := view.NewCircuitStore(def2)
+	defer serverStore2.Close()
+	srv.SetStore(serverStore2)
+
+	// SSE client reconnects with exponential backoff (100ms min). Wait for
+	// the reconnection, then send a session-2 event in a retry loop so the
+	// event hits a store that has an SSE subscriber.
+	deadline2 := time.After(10 * time.Second)
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-clientCh:
+			snap2 := clientStore.Snapshot()
+			if _, ok := snap2.Walkers["C10"]; ok {
+				t.Log("session restart: SSE reconnected and delivered session-2 events")
+				return
+			}
+		case <-ticker.C:
+			serverStore2.OnEvent(framework.WalkEvent{
+				Type: framework.EventNodeEnter, Node: "triage", Walker: "C10",
+			})
+		case <-deadline2:
+			t.Fatal("timeout waiting for session-2 events after store swap")
+		}
+	}
+}
+
+func TestWatch_SessionRestart_SnapshotReflectsNewSession(t *testing.T) {
+	def := rcaDef()
+	serverStore1 := view.NewCircuitStore(def)
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore1})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	// Session 1: advance recall to completed
+	serverStore1.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C01",
+	})
+	serverStore1.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeExit, Node: "recall",
+	})
+
+	resp1, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
+	if err != nil {
+		t.Fatalf("GET snapshot session-1: %v", err)
+	}
+	var snap1 view.CircuitSnapshot
+	json.NewDecoder(resp1.Body).Decode(&snap1)
+	resp1.Body.Close()
+
+	if snap1.Nodes["recall"].State != view.NodeCompleted {
+		t.Fatalf("session-1: recall state = %q, want completed", snap1.Nodes["recall"].State)
+	}
+
+	// Session restart
+	serverStore2 := view.NewCircuitStore(def)
+	defer serverStore2.Close()
+	srv.SetStore(serverStore2)
+
+	// New session snapshot should show all nodes idle
+	resp2, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
+	if err != nil {
+		t.Fatalf("GET snapshot session-2: %v", err)
+	}
+	var snap2 view.CircuitSnapshot
+	json.NewDecoder(resp2.Body).Decode(&snap2)
+	resp2.Body.Close()
+
+	for _, node := range []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"} {
+		ns, ok := snap2.Nodes[node]
+		if !ok {
+			t.Errorf("session-2 snapshot missing node %q", node)
+			continue
+		}
+		if ns.State != view.NodeIdle {
+			t.Errorf("session-2: node %q state = %q, want idle (fresh session)", node, ns.State)
+		}
+	}
+
+	if len(snap2.Walkers) != 0 {
+		t.Errorf("session-2: expected 0 walkers, got %d", len(snap2.Walkers))
+	}
+
+	t.Log("session restart: snapshot correctly reflects fresh session state")
+}
+
+func TestWatch_FourWorkersInterleavedTraversals(t *testing.T) {
+	def := rcaDef()
+	serverStore := view.NewCircuitStore(def)
+	defer serverStore.Close()
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	clientStore := view.NewCircuitStore(def)
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	go sseClientLoop(ctx, httpAddr, clientStore, quietLog())
+	warmupSSE(t, serverStore, clientCh)
+
+	// Simulate realistic interleaving: workers at different stages
+	trajectories := map[string][]string{
+		"C01": {"recall", "triage", "resolve"},
+		"C02": {"recall", "triage"},
+		"C03": {"recall"},
+		"C04": {"recall", "triage", "resolve", "investigate", "correlate", "review", "report"},
+	}
+
+	var wg sync.WaitGroup
+	for walker, path := range trajectories {
+		wg.Add(1)
+		go func(w string, nodes []string) {
+			defer wg.Done()
+			for i, node := range nodes {
+				serverStore.OnEvent(framework.WalkEvent{
+					Type: framework.EventNodeEnter, Node: node, Walker: w,
+				})
+				time.Sleep(25 * time.Millisecond)
+				if i < len(nodes)-1 {
+					serverStore.OnEvent(framework.WalkEvent{
+						Type: framework.EventNodeExit, Node: node,
+					})
+					time.Sleep(15 * time.Millisecond)
+				}
+			}
+		}(walker, path)
+	}
+	wg.Wait()
+
+	// Drain events from client
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case _, ok := <-clientCh:
+			if !ok {
+				t.Fatal("client channel closed")
+			}
+		case <-deadline:
+			goto verify
+		case <-time.After(1 * time.Second):
+			goto verify
+		}
+	}
+verify:
+	snap := clientStore.Snapshot()
+
+	if len(snap.Walkers) != 4 {
+		t.Errorf("expected 4 walkers, got %d", len(snap.Walkers))
+		for w := range snap.Walkers {
+			t.Logf("  walker present: %s @ %s", w, snap.Walkers[w].Node)
+		}
+	}
+
+	// Walker positions: SSE maps DiffWalkerMoved → EventTransition, which
+	// is a no-op in the client CircuitStore. So the client only knows the
+	// FIRST node each walker entered (from DiffWalkerAdded → EventFanOutStart).
+	// This is a known architectural gap — the test documents it.
+	for w := range snap.Walkers {
+		wp := snap.Walkers[w]
+		t.Logf("walker %s at %q (expected: first entered node due to SSE translation gap)", w, wp.Node)
+	}
+
+	t.Logf("interleaved 4-worker test: %d walkers tracked", len(snap.Walkers))
 }
 
 // TestWatch_EventToWalkEvent_MappingComplete verifies all kami event types
