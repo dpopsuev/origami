@@ -202,7 +202,7 @@ func (cs *CircuitStore) Snapshot() CircuitSnapshot {
 func (cs *CircuitStore) Subscribe() (id int, ch <-chan StateDiff) {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
-	c := make(chan StateDiff, 64)
+	c := make(chan StateDiff, 512)
 	id = cs.nextID
 	cs.nextID++
 	if cs.closed {

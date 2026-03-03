@@ -1,10 +1,13 @@
 package sumi
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/view"
 )
 
@@ -100,4 +103,39 @@ func truncateContent(content string, width, maxLines int) string {
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+// BootstrapStoreFromSnapshot builds a client-side CircuitStore from
+// a CircuitSnapshot (as returned by Kami's /api/snapshot endpoint).
+func BootstrapStoreFromSnapshot(snap view.CircuitSnapshot) *view.CircuitStore {
+	def := &framework.CircuitDef{Circuit: snap.CircuitName}
+	for name := range snap.Nodes {
+		def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+	}
+
+	store := view.NewCircuitStore(def)
+
+	for name, ns := range snap.Nodes {
+		if ns.State == view.NodeActive || ns.State == view.NodeCompleted || ns.State == view.NodeError {
+			var evtType framework.WalkEventType
+			switch ns.State {
+			case view.NodeActive:
+				evtType = framework.EventNodeEnter
+			case view.NodeCompleted:
+				evtType = framework.EventNodeExit
+			case view.NodeError:
+				evtType = framework.EventWalkError
+			}
+			store.OnEvent(framework.WalkEvent{Type: evtType, Node: name})
+		}
+	}
+
+	return store
+}
+
+// SSEClientLoop is the public entry point for the SSE client loop.
+// It connects to a Kami SSE endpoint and feeds events into the store,
+// reconnecting with exponential backoff on disconnect.
+func SSEClientLoop(ctx context.Context, addr string, store *view.CircuitStore) {
+	sseClientLoop(ctx, addr, store, slog.Default())
 }

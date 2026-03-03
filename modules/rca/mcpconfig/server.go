@@ -97,8 +97,9 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 	cfg.OnStepCompleted = func(caseID, step string, dispatchID int64) {
 		if s.KamiServer != nil && s.store != nil {
 			s.store.OnEvent(framework.WalkEvent{
-				Type: framework.EventNodeExit,
-				Node: stepToNode(step),
+				Type:   framework.EventNodeExit,
+				Node:   stepToNode(step),
+				Walker: caseID,
 			})
 		}
 	}
