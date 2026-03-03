@@ -103,6 +103,14 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 		}
 	}
 
+	cfg.OnCircuitDone = func() {
+		if s.KamiServer != nil && s.store != nil {
+			s.store.OnEvent(framework.WalkEvent{
+				Type: framework.EventWalkComplete,
+			})
+		}
+	}
+
 	return cfg
 }
 

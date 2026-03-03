@@ -85,6 +85,11 @@ type CircuitConfig struct {
 	// OnStepCompleted is called after a worker submits an artifact via
 	// submit_step. Nil is safe (no-op).
 	OnStepCompleted func(caseID, step string, dispatchID int64)
+
+	// OnCircuitDone is called once when get_next_step returns done=true
+	// for the first time. Use it to emit WalkComplete to the Kami store
+	// so observers (Sumi) see the circuit as completed. Nil is safe.
+	OnCircuitDone func()
 }
 
 // FindSchema returns the StepSchema for the given step name, or an error

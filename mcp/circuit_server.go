@@ -306,6 +306,9 @@ func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToo
 	if done {
 		sess.SetGateExempt()
 		sess.Bus.Emit("circuit_done", "server", "", "", nil)
+		if s.Config.OnCircuitDone != nil {
+			s.Config.OnCircuitDone()
+		}
 		return nil, getNextStepOutput{Done: true}, nil
 	}
 

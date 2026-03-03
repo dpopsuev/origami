@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/kami"
 	"github.com/dpopsuev/origami/view"
 )
@@ -21,10 +22,17 @@ const (
 
 // sseClientLoop connects to a Kami SSE endpoint and feeds events into
 // the store. On disconnect (e.g. session swap), it reconnects with
-// exponential backoff. Exits when ctx is cancelled.
+// exponential backoff and re-bootstraps from /api/snapshot so the client
+// picks up the new circuit definition and clears stale walkers.
 func sseClientLoop(ctx context.Context, addr string, store *view.CircuitStore, log *slog.Logger) {
 	backoff := minBackoff
+	first := true
 	for {
+		if !first {
+			rebootstrapStore(addr, store, log)
+		}
+		first = false
+
 		err := streamSSE(ctx, addr, store)
 		if ctx.Err() != nil {
 			return
@@ -46,6 +54,39 @@ func sseClientLoop(ctx context.Context, addr string, store *view.CircuitStore, l
 			backoff = maxBackoff
 		}
 	}
+}
+
+// rebootstrapStore fetches /api/snapshot from Kami and resets the client
+// store with the new circuit definition. This clears stale walkers and
+// picks up any new session's node set.
+func rebootstrapStore(addr string, store *view.CircuitStore, log *slog.Logger) {
+	url := fmt.Sprintf("http://%s/api/snapshot", addr)
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		log.Debug("re-bootstrap snapshot unavailable", "error", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Debug("re-bootstrap snapshot non-200", "status", resp.StatusCode)
+		return
+	}
+
+	var snap view.CircuitSnapshot
+	if err := json.NewDecoder(resp.Body).Decode(&snap); err != nil {
+		log.Debug("re-bootstrap snapshot decode failed", "error", err)
+		return
+	}
+
+	def := &framework.CircuitDef{Circuit: snap.CircuitName}
+	for name := range snap.Nodes {
+		def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+	}
+
+	store.Reset(def)
+	log.Debug("re-bootstrapped store from snapshot", "circuit", snap.CircuitName, "nodes", len(snap.Nodes))
 }
 
 func streamSSE(ctx context.Context, addr string, store *view.CircuitStore) error {

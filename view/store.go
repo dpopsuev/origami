@@ -62,6 +62,48 @@ func NewCircuitStore(def *framework.CircuitDef) *CircuitStore {
 	}
 }
 
+// Reset clears all state and reinitializes the store from a new circuit
+// definition. Existing subscribers are preserved and receive a DiffReset
+// diff so they know to discard cached state. Used by Sumi's SSE client
+// when reconnecting after a server-side session swap.
+func (cs *CircuitStore) Reset(def *framework.CircuitDef) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	nodes := make(map[string]NodeState, len(def.Nodes))
+	nodeZone := make(map[string]string)
+	nodeElement := make(map[string]string)
+
+	for zoneName, zd := range def.Zones {
+		for _, nodeName := range zd.Nodes {
+			nodeZone[nodeName] = zoneName
+		}
+	}
+
+	for _, nd := range def.Nodes {
+		nodes[nd.Name] = NodeState{
+			Name:    nd.Name,
+			State:   NodeIdle,
+			Zone:    nodeZone[nd.Name],
+			Element: nd.Element,
+		}
+		nodeElement[nd.Name] = nd.Element
+	}
+
+	now := time.Now().UTC()
+	cs.snapshot = CircuitSnapshot{
+		CircuitName: def.Circuit,
+		Nodes:       nodes,
+		Walkers:     make(map[string]WalkerPosition),
+		Breakpoints: make(map[string]bool),
+		Timestamp:   now,
+	}
+	cs.nodeZone = nodeZone
+	cs.nodeElement = nodeElement
+
+	cs.emit(StateDiff{Type: DiffReset, Timestamp: now})
+}
+
 // OnEvent implements framework.WalkObserver. It updates the snapshot and
 // emits StateDiff values to subscribers.
 func (cs *CircuitStore) OnEvent(we framework.WalkEvent) {
@@ -80,8 +122,7 @@ func (cs *CircuitStore) OnEvent(we framework.WalkEvent) {
 		cs.setNodeState(we.Node, NodeCompleted, now)
 
 	case framework.EventTransition:
-		// Walker is moving to the next node; the target node state
-		// will be set by the subsequent EventNodeEnter.
+		cs.moveWalker(we.Walker, we.Node, now)
 
 	case framework.EventWalkerSwitch:
 		cs.moveWalker(we.Walker, we.Node, now)
@@ -249,6 +290,9 @@ func (cs *CircuitStore) moveWalker(walkerID, node string, ts time.Time) {
 	wp, exists := cs.snapshot.Walkers[walkerID]
 	if !exists {
 		cs.addWalker(walkerID, node, ts)
+		return
+	}
+	if wp.Node == node {
 		return
 	}
 	wp.Node = node

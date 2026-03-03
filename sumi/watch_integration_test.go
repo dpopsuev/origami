@@ -830,8 +830,11 @@ func TestBug_CircuitCompletionNotPropagated(t *testing.T) {
 		})
 	}
 
-	// BUG: No WalkComplete event is emitted by the MCP server.
-	// The store still shows Completed=false.
+	// FIX: MCP server now emits WalkComplete via OnCircuitDone callback.
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventWalkComplete,
+	})
+
 	snap := serverStore.Snapshot()
 	if snap.Completed {
 		t.Log("FIXED: circuit correctly marked as completed")

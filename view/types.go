@@ -55,6 +55,7 @@ const (
 	DiffResumed           DiffType = "resumed"
 	DiffCompleted         DiffType = "completed"
 	DiffError             DiffType = "error"
+	DiffReset             DiffType = "reset"
 )
 
 // StateDiff is an incremental change to the circuit's visual state.
