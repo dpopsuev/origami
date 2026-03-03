@@ -48,6 +48,7 @@ func runServe(cmd *cobra.Command, _ []string) error {
 			Bridge: bridge,
 		})
 		srv.KamiServer = kamiSrv
+		kami.RegisterMCPTools(srv.MCPServer, nil, kamiSrv)
 
 		kamiErr := make(chan error, 1)
 		go func() {

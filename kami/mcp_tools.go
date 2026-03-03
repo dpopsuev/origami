@@ -8,51 +8,51 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// RegisterMCPTools registers all Kami debug and visualization tools
-// on an MCP server. The debug controller and server must be provided
-// for tools that interact with the circuit state.
+// RegisterMCPTools registers Kami debug and visualization tools on an MCP
+// server. When dc is nil, debug/control tools (pause, resume, breakpoints,
+// circuit state) are skipped — only visualization and Sumi tools are registered.
 func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
-	// Read tools
-	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_get_circuit_state",
-		Description: "Get the current circuit state: running/paused, current node, visited nodes.",
-	}, noOut(handleGetCircuitState(dc)))
+	if dc != nil {
+		sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+			Name:        "kami_get_circuit_state",
+			Description: "Get the current circuit state: running/paused, current node, visited nodes.",
+		}, noOut(handleGetCircuitState(dc)))
 
-	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_get_snapshot",
-		Description: "Get a full circuit snapshot: state, breakpoints, visited nodes, artifacts.",
-	}, noOut(handleGetSnapshot(dc)))
+		sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+			Name:        "kami_get_snapshot",
+			Description: "Get a full circuit snapshot: state, breakpoints, visited nodes, artifacts.",
+		}, noOut(handleGetSnapshot(dc)))
 
-	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_get_assertions",
-		Description: "Run all registered assertions and return results.",
-	}, noOut(handleGetAssertions(dc)))
+		sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+			Name:        "kami_get_assertions",
+			Description: "Run all registered assertions and return results.",
+		}, noOut(handleGetAssertions(dc)))
 
-	// Write tools
-	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_pause",
-		Description: "Pause circuit execution at the next node boundary.",
-	}, noOut(handlePause(dc)))
+		sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+			Name:        "kami_pause",
+			Description: "Pause circuit execution at the next node boundary.",
+		}, noOut(handlePause(dc)))
 
-	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_resume",
-		Description: "Resume circuit execution from a paused state.",
-	}, noOut(handleResume(dc)))
+		sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+			Name:        "kami_resume",
+			Description: "Resume circuit execution from a paused state.",
+		}, noOut(handleResume(dc)))
 
-	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_advance_node",
-		Description: "Step to the next node and pause again.",
-	}, noOut(handleAdvanceNode(dc)))
+		sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+			Name:        "kami_advance_node",
+			Description: "Step to the next node and pause again.",
+		}, noOut(handleAdvanceNode(dc)))
 
-	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_set_breakpoint",
-		Description: "Set a breakpoint on a node. Execution pauses when the walk enters this node.",
-	}, noOut(handleSetBreakpoint(dc)))
+		sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+			Name:        "kami_set_breakpoint",
+			Description: "Set a breakpoint on a node. Execution pauses when the walk enters this node.",
+		}, noOut(handleSetBreakpoint(dc)))
 
-	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
-		Name:        "kami_clear_breakpoint",
-		Description: "Clear a breakpoint from a node.",
-	}, noOut(handleClearBreakpoint(dc)))
+		sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+			Name:        "kami_clear_breakpoint",
+			Description: "Clear a breakpoint from a node.",
+		}, noOut(handleClearBreakpoint(dc)))
+	}
 
 	// Selection tools
 	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
@@ -98,11 +98,14 @@ func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
 	}, noOut(handleGetSumiView(srv)))
 }
 
-// noOut wraps a handler to suppress outputSchema (same pattern as circuit_server).
+// noOut wraps a handler to suppress outputSchema and discard the structured
+// content value. All Kami tools pack their response into CallToolResult text
+// content; returning a non-nil Out (especially a plain string) causes MCP
+// clients to fail with "expected record, received string" on structuredContent.
 func noOut[In, Out any](h func(context.Context, *sdkmcp.CallToolRequest, In) (*sdkmcp.CallToolResult, Out, error)) sdkmcp.ToolHandlerFor[In, any] {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, input In) (*sdkmcp.CallToolResult, any, error) {
-		res, out, err := h(ctx, req, input)
-		return res, out, err
+		res, _, err := h(ctx, req, input)
+		return res, nil, err
 	}
 }
 

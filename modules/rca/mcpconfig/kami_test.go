@@ -31,6 +31,7 @@ func newTestServerWithKami(t *testing.T) (*mcpserver.Server, string) {
 	}
 
 	srv.KamiServer = kamiSrv
+	kami.RegisterMCPTools(srv.MCPServer, nil, kamiSrv)
 
 	t.Cleanup(func() {
 		srv.Shutdown()
@@ -257,6 +258,59 @@ func readSSEEvents(ctx context.Context, httpAddr string, out chan<- kami.Event) 
 		}
 		resp.Body.Close()
 	}
+}
+
+func TestKamiWiring_ToolDiscovery(t *testing.T) {
+	srv, _ := newTestServerWithKami(t)
+	ctx := context.Background()
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	tools, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+
+	registered := make(map[string]bool)
+	for _, tool := range tools.Tools {
+		registered[tool.Name] = true
+	}
+
+	circuitTools := []string{
+		"start_circuit", "get_next_step", "submit_step",
+		"get_report", "emit_signal", "get_signals", "get_worker_health",
+	}
+	kamiTools := []string{
+		"sumi_get_view",
+		"kami_get_selection",
+		"kami_highlight_nodes", "kami_highlight_zone", "kami_zoom_to_zone",
+		"kami_place_marker", "kami_clear_all", "kami_set_speed",
+	}
+
+	for _, name := range circuitTools {
+		if !registered[name] {
+			t.Errorf("circuit tool %q missing", name)
+		}
+	}
+	for _, name := range kamiTools {
+		if !registered[name] {
+			t.Errorf("kami tool %q missing — wiring gap in serve command", name)
+		}
+	}
+
+	debugTools := []string{
+		"kami_get_circuit_state", "kami_get_snapshot", "kami_get_assertions",
+		"kami_pause", "kami_resume", "kami_advance_node",
+		"kami_set_breakpoint", "kami_clear_breakpoint",
+	}
+	for _, name := range debugTools {
+		if registered[name] {
+			t.Errorf("debug tool %q should not be registered (dc=nil in serve mode)", name)
+		}
+	}
+
+	t.Logf("tool discovery: %d circuit + %d kami tools registered, %d debug tools correctly absent",
+		len(circuitTools), len(kamiTools), len(debugTools))
 }
 
 // Suppress unused import warning.

@@ -3,6 +3,7 @@ package kami
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	framework "github.com/dpopsuev/origami"
@@ -185,7 +186,208 @@ func TestMCPTools_RegistersAllTools(t *testing.T) {
 	)
 	RegisterMCPTools(mcpSrv, dc, srv)
 
-	// RegisterMCPTools should not panic — if we got here, all 14 tools
-	// were registered successfully. Test that the function is callable
-	// and completes without error.
+	ctx := context.Background()
+	client := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "test", Version: "0.0.0"}, nil)
+	t1, t2 := sdkmcp.NewInMemoryTransports()
+	if _, err := mcpSrv.Connect(ctx, t1, nil); err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	session, err := client.Connect(ctx, t2, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+
+	tools, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+
+	want := []string{
+		"kami_get_circuit_state", "kami_get_snapshot", "kami_get_assertions",
+		"kami_pause", "kami_resume", "kami_advance_node",
+		"kami_set_breakpoint", "kami_clear_breakpoint",
+		"kami_get_selection",
+		"kami_highlight_nodes", "kami_highlight_zone", "kami_zoom_to_zone",
+		"kami_place_marker", "kami_clear_all", "kami_set_speed",
+		"sumi_get_view",
+	}
+	registered := make(map[string]bool)
+	for _, tool := range tools.Tools {
+		registered[tool.Name] = true
+	}
+	for _, name := range want {
+		if !registered[name] {
+			t.Errorf("tool %q not registered (dc=non-nil)", name)
+		}
+	}
+	t.Logf("all %d tools registered with dc=non-nil", len(want))
+}
+
+func connectKami(t *testing.T, mcpSrv *sdkmcp.Server) *sdkmcp.ClientSession {
+	t.Helper()
+	ctx := context.Background()
+	client := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "test", Version: "0.0.0"}, nil)
+	t1, t2 := sdkmcp.NewInMemoryTransports()
+	serverSess, err := mcpSrv.Connect(ctx, t1, nil)
+	if err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	t.Cleanup(func() { serverSess.Close() })
+	session, err := client.Connect(ctx, t2, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() { session.Close() })
+	return session
+}
+
+func TestMCPProtocol_SumiGetView_NoFrame(t *testing.T) {
+	_, srv := setupMCPTest()
+	mcpSrv := sdkmcp.NewServer(
+		&sdkmcp.Implementation{Name: "kami-test", Version: "0.0.0"},
+		nil,
+	)
+	RegisterMCPTools(mcpSrv, nil, srv)
+	session := connectKami(t, mcpSrv)
+
+	res, err := session.CallTool(context.Background(), &sdkmcp.CallToolParams{
+		Name: "sumi_get_view",
+	})
+	if err != nil {
+		t.Fatalf("CallTool(sumi_get_view): %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected tool error")
+	}
+	tc, ok := res.Content[0].(*sdkmcp.TextContent)
+	if !ok {
+		t.Fatalf("expected *TextContent, got %T", res.Content[0])
+	}
+	if !strings.Contains(tc.Text, "not connected") {
+		t.Fatalf("expected 'not connected' message, got %q", tc.Text)
+	}
+}
+
+func TestMCPProtocol_SumiGetView_WithFrame(t *testing.T) {
+	_, srv := setupMCPTest()
+	srv.frameStore.Store(sampleFrame())
+
+	mcpSrv := sdkmcp.NewServer(
+		&sdkmcp.Implementation{Name: "kami-test", Version: "0.0.0"},
+		nil,
+	)
+	RegisterMCPTools(mcpSrv, nil, srv)
+	session := connectKami(t, mcpSrv)
+
+	res, err := session.CallTool(context.Background(), &sdkmcp.CallToolParams{
+		Name: "sumi_get_view",
+	})
+	if err != nil {
+		t.Fatalf("CallTool(sumi_get_view): %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("unexpected tool error")
+	}
+	tc := res.Content[0].(*sdkmcp.TextContent)
+	if !strings.Contains(tc.Text, "Selected node: triage") {
+		t.Fatalf("missing selected node: %s", tc.Text)
+	}
+	if !strings.Contains(tc.Text, "[triage]") {
+		t.Fatalf("missing view text: %s", tc.Text)
+	}
+}
+
+func TestMCPProtocol_VisualizationTools_NoError(t *testing.T) {
+	_, srv := setupMCPTest()
+	mcpSrv := sdkmcp.NewServer(
+		&sdkmcp.Implementation{Name: "kami-test", Version: "0.0.0"},
+		nil,
+	)
+	RegisterMCPTools(mcpSrv, nil, srv)
+	session := connectKami(t, mcpSrv)
+
+	tools := []struct {
+		name string
+		args map[string]any
+	}{
+		{"kami_get_selection", nil},
+		{"kami_clear_all", nil},
+		{"kami_set_speed", map[string]any{"speed": 2.0}},
+	}
+
+	for _, tc := range tools {
+		res, err := session.CallTool(context.Background(), &sdkmcp.CallToolParams{
+			Name:      tc.name,
+			Arguments: tc.args,
+		})
+		if err != nil {
+			t.Errorf("CallTool(%s): %v", tc.name, err)
+			continue
+		}
+		if res.IsError {
+			for _, c := range res.Content {
+				if txt, ok := c.(*sdkmcp.TextContent); ok {
+					t.Errorf("CallTool(%s) error: %s", tc.name, txt.Text)
+				}
+			}
+			continue
+		}
+		t.Logf("%s: OK", tc.name)
+	}
+}
+
+func TestMCPTools_RegisterNilDC(t *testing.T) {
+	srv := NewServer(Config{Bridge: NewEventBridge(nil)})
+	mcpSrv := sdkmcp.NewServer(
+		&sdkmcp.Implementation{Name: "kami-test-nil-dc", Version: "0.0.0"},
+		nil,
+	)
+	RegisterMCPTools(mcpSrv, nil, srv)
+
+	ctx := context.Background()
+	client := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "test", Version: "0.0.0"}, nil)
+	t1, t2 := sdkmcp.NewInMemoryTransports()
+	if _, err := mcpSrv.Connect(ctx, t1, nil); err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	session, err := client.Connect(ctx, t2, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+
+	tools, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+
+	registered := make(map[string]bool)
+	for _, tool := range tools.Tools {
+		registered[tool.Name] = true
+	}
+
+	mustPresent := []string{
+		"kami_get_selection",
+		"kami_highlight_nodes", "kami_highlight_zone", "kami_zoom_to_zone",
+		"kami_place_marker", "kami_clear_all", "kami_set_speed",
+		"sumi_get_view",
+	}
+	for _, name := range mustPresent {
+		if !registered[name] {
+			t.Errorf("tool %q should be registered even with dc=nil", name)
+		}
+	}
+
+	mustAbsent := []string{
+		"kami_get_circuit_state", "kami_get_snapshot", "kami_get_assertions",
+		"kami_pause", "kami_resume", "kami_advance_node",
+		"kami_set_breakpoint", "kami_clear_breakpoint",
+	}
+	for _, name := range mustAbsent {
+		if registered[name] {
+			t.Errorf("tool %q should NOT be registered when dc=nil", name)
+		}
+	}
+
+	t.Logf("nil-dc: %d tools registered, %d debug tools correctly skipped",
+		len(mustPresent), len(mustAbsent))
 }
