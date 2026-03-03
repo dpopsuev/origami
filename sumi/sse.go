@@ -86,7 +86,34 @@ func rebootstrapStore(addr string, store *view.CircuitStore, log *slog.Logger) {
 	}
 
 	store.Reset(def)
-	log.Debug("re-bootstrapped store from snapshot", "circuit", snap.CircuitName, "nodes", len(snap.Nodes))
+
+	for name, ns := range snap.Nodes {
+		if ns.State == view.NodeActive || ns.State == view.NodeCompleted || ns.State == view.NodeError {
+			var evtType framework.WalkEventType
+			switch ns.State {
+			case view.NodeActive:
+				evtType = framework.EventNodeEnter
+			case view.NodeCompleted:
+				evtType = framework.EventNodeExit
+			case view.NodeError:
+				evtType = framework.EventWalkError
+			}
+			store.OnEvent(framework.WalkEvent{Type: evtType, Node: name})
+		}
+	}
+
+	for walkerID, wp := range snap.Walkers {
+		store.OnEvent(framework.WalkEvent{
+			Type:   framework.EventNodeEnter,
+			Node:   wp.Node,
+			Walker: walkerID,
+		})
+	}
+
+	log.Debug("re-bootstrapped store from snapshot",
+		"circuit", snap.CircuitName,
+		"nodes", len(snap.Nodes),
+		"walkers", len(snap.Walkers))
 }
 
 func streamSSE(ctx context.Context, addr string, store *view.CircuitStore) error {

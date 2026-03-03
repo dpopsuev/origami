@@ -1074,6 +1074,320 @@ reconnected:
 	t.Logf("client nodes after session swap: %d (want 7)", len(clientSnap.Nodes))
 }
 
+// --- E2E simulation tests ---
+// These tests simulate the full Sumi experience: server emits events,
+// Sumi's SSE client connects, and we verify the client store reflects
+// the server's state accurately — including after reconnects.
+
+// TestE2E_RebootstrapReplaysSnapshotState verifies that when sseClientLoop
+// reconnects (e.g. after a session swap), the client store picks up
+// existing node states and walkers from the snapshot — not just the
+// node definitions. Without this, Sumi starts with a blank slate and
+// misses all events that occurred before the reconnect.
+func TestE2E_RebootstrapReplaysSnapshotState(t *testing.T) {
+	def := rcaDef()
+	serverStore := view.NewCircuitStore(def)
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	// Connect Sumi to the ORIGINAL store.
+	clientStore := BootstrapStoreFromSnapshot(serverStore.Snapshot())
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	go sseClientLoop(ctx, httpAddr, clientStore, quietLog())
+	warmupSSE(t, serverStore, clientCh)
+
+	// Session swap: create a new store with mid-circuit state, simulating
+	// what happens when start_circuit is called with force=true.
+	serverStore2 := view.NewCircuitStore(def)
+	defer serverStore2.Close()
+
+	serverStore2.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C01",
+	})
+	serverStore2.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeExit, Node: "recall", Walker: "C01",
+	})
+	serverStore2.OnEvent(framework.WalkEvent{
+		Type: framework.EventTransition, Node: "triage", Walker: "C01",
+	})
+	serverStore2.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "triage", Walker: "C01",
+	})
+	serverStore2.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C02",
+	})
+	serverStore2.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C03",
+	})
+
+	// Swap: triggers SSE disconnect, sseClientLoop reconnects and
+	// calls rebootstrapStore on the reconnect iteration.
+	srv.SetStore(serverStore2)
+
+	// Wait for re-bootstrap (DiffReset event from Reset call).
+	deadline := time.After(10 * time.Second)
+	for {
+		select {
+		case <-clientCh:
+			snap := clientStore.Snapshot()
+			if snap.CircuitName == "asterisk-rca" && len(snap.Nodes) >= 7 {
+				goto bootstrapped
+			}
+		case <-deadline:
+			snap := clientStore.Snapshot()
+			t.Fatalf("timeout waiting for client re-bootstrap (nodes=%d, walkers=%d, circuit=%s)",
+				len(snap.Nodes), len(snap.Walkers), snap.CircuitName)
+		}
+	}
+bootstrapped:
+
+	// Give time for snapshot replay events to propagate.
+	time.Sleep(300 * time.Millisecond)
+	clientSnap := clientStore.Snapshot()
+
+	if len(clientSnap.Walkers) < 3 {
+		t.Errorf("client has %d walkers after re-bootstrap, want >= 3 (C01, C02, C03) — "+
+			"rebootstrapStore does not replay snapshot walkers", len(clientSnap.Walkers))
+	}
+
+	recallState := clientSnap.Nodes["recall"].State
+	if recallState == view.NodeIdle {
+		t.Errorf("client node 'recall' is %q after re-bootstrap, want active or completed — "+
+			"rebootstrapStore does not replay snapshot node states", recallState)
+	}
+
+	if wp, ok := clientSnap.Walkers["C01"]; ok {
+		if wp.Node != "triage" {
+			t.Errorf("walker C01 at %q, want 'triage' — snapshot walker positions not replayed", wp.Node)
+		}
+	}
+
+	t.Logf("client after re-bootstrap: walkers=%d, recall=%s, nodes=%d",
+		len(clientSnap.Walkers), recallState, len(clientSnap.Nodes))
+}
+
+// TestE2E_FourWorkerSimulation simulates 4 workers processing 12 cases
+// through the full circuit while Sumi's SSE client watches. Verifies
+// the client store accumulates correct state throughout the run.
+func TestE2E_FourWorkerSimulation(t *testing.T) {
+	def := rcaDef()
+	serverStore := view.NewCircuitStore(def)
+	defer serverStore.Close()
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	// Sumi connects.
+	clientStore := BootstrapStoreFromSnapshot(serverStore.Snapshot())
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	go SSEClientLoop(ctx, httpAddr, clientStore)
+	warmupSSE(t, serverStore, clientCh)
+
+	// Simulate 4 workers processing 12 cases through all 7 nodes.
+	allNodes := []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
+
+	var wg sync.WaitGroup
+	for w := 0; w < 4; w++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			startCase := workerID * 3
+			for c := startCase; c < startCase+3; c++ {
+				caseID := fmt.Sprintf("C%02d", c+1)
+				for _, node := range allNodes {
+					serverStore.OnEvent(framework.WalkEvent{
+						Type: framework.EventNodeEnter, Node: node, Walker: caseID,
+					})
+					time.Sleep(5 * time.Millisecond)
+					serverStore.OnEvent(framework.WalkEvent{
+						Type: framework.EventNodeExit, Node: node, Walker: caseID,
+					})
+					time.Sleep(5 * time.Millisecond)
+				}
+			}
+		}(w)
+	}
+	wg.Wait()
+
+	// Emit walk complete.
+	serverStore.OnEvent(framework.WalkEvent{Type: framework.EventWalkComplete})
+
+	// Wait for client to receive completion.
+	deadline := time.After(5 * time.Second)
+waitDone:
+	for {
+		select {
+		case <-clientCh:
+			snap := clientStore.Snapshot()
+			if snap.Completed {
+				break waitDone
+			}
+		case <-deadline:
+			t.Fatal("timeout waiting for client to see walk_complete")
+		}
+	}
+
+	clientSnap := clientStore.Snapshot()
+
+	if !clientSnap.Completed {
+		t.Error("client should see completed=true")
+	}
+
+	// All 7 nodes should be completed on the client.
+	for _, node := range allNodes {
+		ns, ok := clientSnap.Nodes[node]
+		if !ok {
+			t.Errorf("client missing node %q", node)
+			continue
+		}
+		if ns.State != view.NodeCompleted {
+			t.Errorf("client node %q = %q, want completed", node, ns.State)
+		}
+	}
+
+	// Walkers should be cleared after walk_complete.
+	if len(clientSnap.Walkers) > 0 {
+		t.Errorf("expected 0 walkers after completion, got %d", len(clientSnap.Walkers))
+	}
+
+	t.Logf("E2E 4-worker simulation: completed=%v, all nodes completed, walkers cleared",
+		clientSnap.Completed)
+}
+
+// TestE2E_LateJoiner verifies that a Sumi client connecting mid-circuit
+// (after several cases have already been processed) correctly picks up
+// the current state from the snapshot.
+func TestE2E_LateJoiner(t *testing.T) {
+	def := rcaDef()
+	serverStore := view.NewCircuitStore(def)
+	defer serverStore.Close()
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	// Run 6 cases to completion BEFORE Sumi connects.
+	allNodes := []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
+	for c := 0; c < 6; c++ {
+		caseID := fmt.Sprintf("C%02d", c+1)
+		for _, node := range allNodes {
+			serverStore.OnEvent(framework.WalkEvent{
+				Type: framework.EventNodeEnter, Node: node, Walker: caseID,
+			})
+			serverStore.OnEvent(framework.WalkEvent{
+				Type: framework.EventNodeExit, Node: node, Walker: caseID,
+			})
+		}
+	}
+
+	// Case C07 is mid-flight at "investigate".
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C07",
+	})
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeExit, Node: "recall", Walker: "C07",
+	})
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventTransition, Node: "investigate", Walker: "C07",
+	})
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "investigate", Walker: "C07",
+	})
+
+	// NOW Sumi connects (late joiner).
+	resp, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
+	if err != nil {
+		t.Fatalf("GET snapshot: %v", err)
+	}
+	var snap view.CircuitSnapshot
+	json.NewDecoder(resp.Body).Decode(&snap)
+	resp.Body.Close()
+
+	clientStore := BootstrapStoreFromSnapshot(snap)
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	go SSEClientLoop(ctx, httpAddr, clientStore)
+	time.Sleep(200 * time.Millisecond)
+
+	clientSnap := clientStore.Snapshot()
+
+	// Client should see C07 as a walker.
+	if _, ok := clientSnap.Walkers["C07"]; !ok {
+		t.Error("late-joining client should see walker C07 from snapshot bootstrap")
+	}
+
+	// Client should see "investigate" as active (C07 is there).
+	if clientSnap.Nodes["investigate"].State != view.NodeActive {
+		t.Errorf("investigate = %q, want active (C07 is mid-flight there)",
+			clientSnap.Nodes["investigate"].State)
+	}
+
+	// Complete C07 and remaining cases via SSE.
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeExit, Node: "investigate", Walker: "C07",
+	})
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventWalkComplete,
+	})
+
+	deadline := time.After(3 * time.Second)
+waitComplete:
+	for {
+		select {
+		case <-clientCh:
+			s := clientStore.Snapshot()
+			if s.Completed {
+				break waitComplete
+			}
+		case <-deadline:
+			t.Fatal("timeout waiting for late-joining client to see completion")
+		}
+	}
+
+	finalSnap := clientStore.Snapshot()
+	if !finalSnap.Completed {
+		t.Error("late-joining client should see completed=true")
+	}
+
+	t.Logf("late joiner: saw C07 mid-flight, then completed. walkers=%d, completed=%v",
+		len(finalSnap.Walkers), finalSnap.Completed)
+}
+
 // TestWatch_EventToWalkEvent_MappingComplete verifies all kami event types
 // map correctly to framework walk events.
 func TestWatch_EventToWalkEvent_MappingComplete(t *testing.T) {

@@ -130,6 +130,14 @@ func BootstrapStoreFromSnapshot(snap view.CircuitSnapshot) *view.CircuitStore {
 		}
 	}
 
+	for walkerID, wp := range snap.Walkers {
+		store.OnEvent(framework.WalkEvent{
+			Type:   framework.EventNodeEnter,
+			Node:   wp.Node,
+			Walker: walkerID,
+		})
+	}
+
 	return store
 }
 
