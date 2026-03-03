@@ -3,7 +3,6 @@ package sumi
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -145,5 +144,5 @@ func BootstrapStoreFromSnapshot(snap view.CircuitSnapshot) *view.CircuitStore {
 // It connects to a Kami SSE endpoint and feeds events into the store,
 // reconnecting with exponential backoff on disconnect.
 func SSEClientLoop(ctx context.Context, addr string, store *view.CircuitStore) {
-	sseClientLoop(ctx, addr, store, slog.Default())
+	sseClientLoop(ctx, addr, store, sumiLogger())
 }

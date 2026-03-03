@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -105,9 +106,21 @@ func runCircuit(_ context.Context, cfg RunConfig) error {
 	return nil
 }
 
+func sumiLogger() *slog.Logger {
+	logPath := os.Getenv("SUMI_LOG")
+	if logPath == "" {
+		return slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+	return slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug}))
+}
+
 func runWatch(ctx context.Context, cfg RunConfig) error {
 	addr := cfg.WatchAddr
-	log := slog.Default().With("component", "sumi-sse")
+	log := sumiLogger().With("component", "sumi-sse")
 
 	if cfg.Clean {
 		resetStoreHTTP(addr, log)
