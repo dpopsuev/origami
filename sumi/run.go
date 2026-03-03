@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -108,7 +109,13 @@ func runCircuit(_ context.Context, cfg RunConfig) error {
 
 func sumiLogger() *slog.Logger {
 	logPath := os.Getenv("SUMI_LOG")
+	if logPath == "off" {
+		return slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
 	if logPath == "" {
+		logPath = defaultLogPath()
+	}
+	if err := os.MkdirAll(filepath.Dir(logPath), 0750); err != nil {
 		return slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -116,6 +123,17 @@ func sumiLogger() *slog.Logger {
 		return slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	return slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug}))
+}
+
+func defaultLogPath() string {
+	if dir := os.Getenv("XDG_STATE_HOME"); dir != "" {
+		return filepath.Join(dir, "origami", "sumi.log")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(os.TempDir(), "origami-sumi.log")
+	}
+	return filepath.Join(home, ".local", "state", "origami", "sumi.log")
 }
 
 func runWatch(ctx context.Context, cfg RunConfig) error {
