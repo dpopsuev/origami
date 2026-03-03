@@ -13,7 +13,6 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
-| `sumi-war-room.md` | Sumi War Room — ops-grade multi-panel TUI debugger. Mouse interaction, event timeline, worker selector, rich inspector. | next-milestone |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 
 ## Completed (recent)
