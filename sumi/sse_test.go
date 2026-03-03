@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -445,4 +446,262 @@ func TestSSE_Logging_ReconnectCycle(t *testing.T) {
 	}
 
 	t.Logf("log counts: %v", counts)
+}
+
+// --- Server-restart reconnect tests ---
+
+// TestSSE_ServerRestart_Reconnects simulates MCP disable→re-enable: the server
+// goes away (connection refused), then comes back on the same port with a new
+// circuit definition. The SSE client must reconnect, re-bootstrap the store from
+// the new server's snapshot, and deliver events from the new session.
+func TestSSE_ServerRestart_Reconnects(t *testing.T) {
+	def := testDef()
+	clientStore := view.NewCircuitStore(def)
+	defer clientStore.Close()
+
+	id, ch := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(id)
+
+	// Phase 1: start a server, send one event, then shut it down.
+	phase1Done := make(chan struct{})
+	ts1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/snapshot":
+			snap := view.CircuitSnapshot{
+				CircuitName: "test",
+				Nodes: map[string]view.NodeState{
+					"recall": {Name: "recall", State: view.NodeIdle},
+					"triage": {Name: "triage", State: view.NodeIdle},
+				},
+				Walkers: map[string]view.WalkerPosition{},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(snap)
+		case "/events/stream":
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.WriteHeader(200)
+			evt := kami.Event{Type: kami.EventNodeEnter, Node: "recall", Agent: "w1"}
+			data, _ := json.Marshal(evt)
+			fmt.Fprintf(w, "data: %s\n\n", data)
+			w.(http.Flusher).Flush()
+			<-phase1Done
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	addr := ts1.Listener.Addr().String()
+	go sseClientLoop(ctx, addr, clientStore, quietLog())
+
+	// Wait for the phase-1 event.
+	drainUntil(t, ch, 3*time.Second, func() bool {
+		snap := clientStore.Snapshot()
+		_, ok := snap.Walkers["w1"]
+		return ok
+	})
+
+	// Kill the server — SSE loop will start failing.
+	close(phase1Done)
+	ts1.Close()
+
+	// Phase 2: start a NEW server on the SAME address with an expanded circuit.
+	ln, err := newListenerOnAddr(addr)
+	if err != nil {
+		t.Skipf("cannot rebind addr %s: %v", addr, err)
+	}
+
+	ts2 := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/snapshot":
+			snap := view.CircuitSnapshot{
+				CircuitName: "circuit-v2",
+				Nodes: map[string]view.NodeState{
+					"recall":      {Name: "recall", State: view.NodeIdle},
+					"triage":      {Name: "triage", State: view.NodeIdle},
+					"investigate": {Name: "investigate", State: view.NodeIdle},
+				},
+				Walkers: map[string]view.WalkerPosition{},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(snap)
+		case "/events/stream":
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.WriteHeader(200)
+			evt := kami.Event{Type: kami.EventNodeEnter, Node: "recall", Agent: "w2"}
+			data, _ := json.Marshal(evt)
+			fmt.Fprintf(w, "data: %s\n\n", data)
+			w.(http.Flusher).Flush()
+			<-r.Context().Done()
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	ts2.Listener.Close()
+	ts2.Listener = ln
+	ts2.Start()
+
+	// Poll until the store reflects the new circuit, nodes, AND walker.
+	drainUntil(t, ch, 15*time.Second, func() bool {
+		snap := clientStore.Snapshot()
+		_, hasW2 := snap.Walkers["w2"]
+		return snap.CircuitName == "circuit-v2" && len(snap.Nodes) == 3 && hasW2
+	})
+
+	// Cancel SSE client before closing server to avoid ts2.Close() blocking.
+	cancel()
+
+	snap := clientStore.Snapshot()
+	if snap.CircuitName != "circuit-v2" {
+		t.Errorf("circuit = %q, want circuit-v2", snap.CircuitName)
+	}
+	if len(snap.Nodes) != 3 {
+		t.Errorf("nodes = %d, want 3", len(snap.Nodes))
+	}
+	if _, ok := snap.Walkers["w2"]; !ok {
+		t.Error("walker w2 should exist from new session")
+	}
+
+	ts2.Close()
+}
+
+// TestSSE_BackoffResetsAfterSuccess verifies that after a successful connection,
+// the exponential backoff resets to the minimum so the next failure recovers fast.
+func TestSSE_BackoffResetsAfterSuccess(t *testing.T) {
+	store := view.NewCircuitStore(testDef())
+	defer store.Close()
+
+	id, ch := store.Subscribe()
+	defer store.Unsubscribe(id)
+
+	var sseConnCount atomic.Int32
+
+	evt := kami.Event{Type: kami.EventNodeEnter, Node: "recall", Agent: "w1"}
+	data, _ := json.Marshal(evt)
+
+	// Path-aware server: /api/snapshot always returns a valid snapshot,
+	// /events/stream follows the 503→503→success→close→success pattern.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/snapshot":
+			snap := view.CircuitSnapshot{
+				CircuitName: "test",
+				Nodes: map[string]view.NodeState{
+					"recall": {Name: "recall", State: view.NodeIdle},
+					"triage": {Name: "triage", State: view.NodeIdle},
+				},
+				Walkers: map[string]view.WalkerPosition{},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(snap)
+		case "/events/stream":
+			n := sseConnCount.Add(1)
+			switch {
+			case n <= 2:
+				w.WriteHeader(http.StatusServiceUnavailable)
+			case n == 3:
+				w.Header().Set("Content-Type", "text/event-stream")
+				w.WriteHeader(200)
+				fmt.Fprintf(w, "data: %s\n\n", data)
+				w.(http.Flusher).Flush()
+			default:
+				w.Header().Set("Content-Type", "text/event-stream")
+				w.WriteHeader(200)
+				fmt.Fprintf(w, "data: %s\n\n", data)
+				w.(http.Flusher).Flush()
+				<-r.Context().Done()
+			}
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer ts.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	log, entries := capturingLog()
+	go sseClientLoop(ctx, ts.Listener.Addr().String(), store, log)
+
+	// Wait until at least 2 SSE events are received (connections 3 and 4).
+	drainUntil(t, ch, 10*time.Second, func() bool {
+		return sseConnCount.Load() >= 4
+	})
+
+	// Find the reconnect log for the iteration AFTER a successful connection.
+	// Iterations: 1=first(no log), 2=reconnect(503), 3=reconnect(503), 4=reconnect(success→close), 5=reconnect.
+	// With path-aware routing, SSE connections are: 1=503, 2=503, 3=success, 4=success.
+	// sseClientLoop iterations: 1(no log,503), 2(log,503), 3(log,success+close), 4(log,success).
+	// If backoff resets after success at iteration 3, iteration 4 should have backoff ~100ms.
+	captured := entries.snapshot()
+	var foundBackoff bool
+	var backoffValue time.Duration
+	for _, e := range captured {
+		if e.Msg == "SSE reconnecting" {
+			if b, ok := e.Attrs["backoff"]; ok {
+				d, _ := time.ParseDuration(b)
+				backoffValue = d
+			}
+		}
+	}
+	// The last logged backoff should be ≤200ms if reset worked.
+	// Without reset, it grows: 100→200→400→800ms.
+	foundBackoff = backoffValue > 0
+	if !foundBackoff {
+		t.Fatal("no 'SSE reconnecting' log entries with backoff found")
+	}
+	if backoffValue > 200*time.Millisecond {
+		t.Errorf("last reconnect backoff = %v, want <= 200ms (backoff should reset after success)", backoffValue)
+	}
+}
+
+// TestModel_KamiStatusTransitionsOnReconnect verifies that the Model's kamiStatus
+// field transitions from KamiOffline to KamiConnected when a DiffReset arrives
+// (indicating the SSE client reconnected and re-bootstrapped the store).
+func TestModel_KamiStatusTransitionsOnReconnect(t *testing.T) {
+	def := testDef()
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	m := New(Config{
+		Def:    def,
+		Store:  store,
+		Layout: layout,
+	})
+
+	if m.kamiStatus != KamiOffline {
+		t.Fatalf("initial kamiStatus = %d, want KamiOffline", m.kamiStatus)
+	}
+
+	// Simulate a DiffReset from SSE reconnect (store was re-bootstrapped).
+	m.applyDiff(view.StateDiff{Type: view.DiffReset})
+	m.snap = store.Snapshot()
+
+	if m.kamiStatus != KamiConnected {
+		t.Errorf("kamiStatus after DiffReset = %d, want KamiConnected (%d)", m.kamiStatus, KamiConnected)
+	}
+}
+
+// drainUntil reads diffs from ch until pred() returns true or the deadline expires.
+func drainUntil(t *testing.T, ch <-chan view.StateDiff, deadline time.Duration, pred func() bool) {
+	t.Helper()
+	timeout := time.After(deadline)
+	for {
+		if pred() {
+			return
+		}
+		select {
+		case <-ch:
+		case <-timeout:
+			t.Fatalf("drainUntil: timed out after %v", deadline)
+		}
+	}
+}
+
+func newListenerOnAddr(addr string) (net.Listener, error) {
+	return net.Listen("tcp", addr)
 }

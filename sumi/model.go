@@ -166,6 +166,7 @@ func (m *Model) applyDiff(diff view.StateDiff) {
 	switch diff.Type {
 	case view.DiffReset:
 		m.rebuildFromStore()
+		m.kamiStatus = KamiConnected
 	case view.DiffNodeState:
 		if diff.State == view.NodeActive {
 			for i, name := range m.nodeOrder {

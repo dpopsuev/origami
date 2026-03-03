@@ -36,11 +36,16 @@ func sseClientLoop(ctx context.Context, addr string, store *view.CircuitStore, l
 		}
 		first = false
 
-		err := streamSSE(ctx, addr, store, log)
+		connected, err := streamSSE(ctx, addr, store, log)
 		if ctx.Err() != nil {
 			log.Info("SSE client stopped (context cancelled)")
 			return
 		}
+
+		if connected {
+			backoff = minBackoff
+		}
+
 		if err != nil {
 			log.Info("SSE stream ended", "error", err, "reconnect_in", backoff, "iteration", iteration)
 		} else {
@@ -120,24 +125,25 @@ func rebootstrapStore(addr string, store *view.CircuitStore, log *slog.Logger) {
 		"walkers", len(snap.Walkers))
 }
 
-func streamSSE(ctx context.Context, addr string, store *view.CircuitStore, log *slog.Logger) error {
+func streamSSE(ctx context.Context, addr string, store *view.CircuitStore, log *slog.Logger) (connected bool, err error) {
 	url := fmt.Sprintf("http://%s/events/stream", addr)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("create request: %w", err)
+		return false, fmt.Errorf("create request: %w", err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("connect: %w", err)
+		return false, fmt.Errorf("connect: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+		return false, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
+	connected = true
 	log.Info("SSE connected", "addr", addr)
 
 	eventCount := 0
@@ -169,7 +175,7 @@ func streamSSE(ctx context.Context, addr string, store *view.CircuitStore, log *
 	log.Info("SSE stream ended", "total_events", eventCount)
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("read: %w", err)
+		return true, fmt.Errorf("read: %w", err)
 	}
-	return nil
+	return true, nil
 }
