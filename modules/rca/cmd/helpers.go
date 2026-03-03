@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/dpopsuev/origami/dispatch"
 
 	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/modules/rca"
 	"github.com/dpopsuev/origami/modules/rca/rcatype"
 	"github.com/dpopsuev/origami/modules/rca/rpconv"
 	"github.com/dpopsuev/origami/modules/rca/store"
@@ -94,6 +96,16 @@ func defaultWorkspaceRepos() []string {
 		"ptp-operator-must-gather",
 		"cluster-etcd-operator",
 	}
+}
+
+// resolvePromptFS returns an fs.FS for prompt templates. When dir is non-empty
+// the prompts are read from that disk directory (wrapped via os.DirFS); when
+// empty the compiled-in DefaultPromptFS is used.
+func resolvePromptFS(dir string) fs.FS {
+	if dir != "" {
+		return os.DirFS(dir)
+	}
+	return rca.DefaultPromptFS
 }
 
 // resolveRPProject returns the RP project name from the given flag value,

@@ -5,18 +5,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
+	framework "github.com/dpopsuev/origami"
+	cal "github.com/dpopsuev/origami/calibrate"
+	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/dispatch"
+	"github.com/dpopsuev/origami/kami"
+	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/modules/rca"
 	"github.com/dpopsuev/origami/modules/rca/rcatype"
 	"github.com/dpopsuev/origami/modules/rca/rpconv"
 	"github.com/dpopsuev/origami/modules/rca/scenarios"
 	"github.com/dpopsuev/origami/modules/rca/store"
-	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/components/rp"
-	cal "github.com/dpopsuev/origami/calibrate"
-	"github.com/dpopsuev/origami/dispatch"
-	fwmcp "github.com/dpopsuev/origami/mcp"
+	"github.com/dpopsuev/origami/view"
 )
 
 var (
@@ -28,6 +32,10 @@ var (
 type Server struct {
 	*fwmcp.CircuitServer
 	ProjectRoot string
+
+	KamiServer *kami.Server
+	store      *view.CircuitStore
+	bridge     *kami.EventBridge
 }
 
 // NewServer creates an Asterisk MCP server by configuring the generic
@@ -39,8 +47,22 @@ func NewServer() *Server {
 	return s
 }
 
+// Shutdown closes any active Kami bridge and store, then shuts down
+// the underlying CircuitServer.
+func (s *Server) Shutdown() {
+	if s.bridge != nil {
+		s.bridge.Close()
+		s.bridge = nil
+	}
+	if s.store != nil {
+		s.store.Close()
+		s.store = nil
+	}
+	s.CircuitServer.Shutdown()
+}
+
 func (s *Server) buildConfig() fwmcp.CircuitConfig {
-	return fwmcp.CircuitConfig{
+	cfg := fwmcp.CircuitConfig{
 		Name:        "asterisk",
 		Version:     "dev",
 		StepSchemas: asteriskStepSchemas(),
@@ -48,7 +70,7 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 		DefaultGetNextStepTimeout: int(DefaultGetNextStepTimeout / time.Millisecond),
 		DefaultSessionTTL:         int(DefaultSessionTTL / time.Millisecond),
 		CreateSession: func(ctx context.Context, params fwmcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
-			return s.createSession(ctx, params, disp)
+			return s.createSession(ctx, params, disp, bus)
 		},
 		FormatReport: func(result any) (string, any, error) {
 			report, ok := result.(*rca.CalibrationReport)
@@ -62,9 +84,45 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 			return formatted, report, nil
 		},
 	}
+
+	cfg.OnStepDispatched = func(caseID, step string) {
+		if s.KamiServer != nil && s.store != nil {
+			s.store.OnEvent(framework.WalkEvent{
+				Type:   framework.EventNodeEnter,
+				Node:   stepToNode(step),
+				Walker: caseID,
+			})
+		}
+	}
+	cfg.OnStepCompleted = func(caseID, step string, dispatchID int64) {
+		if s.KamiServer != nil && s.store != nil {
+			s.store.OnEvent(framework.WalkEvent{
+				Type: framework.EventNodeExit,
+				Node: stepToNode(step),
+			})
+		}
+	}
+
+	return cfg
 }
 
-func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, disp *dispatch.MuxDispatcher) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
+func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
+	if s.KamiServer != nil {
+		if s.bridge != nil {
+			s.bridge.Close()
+		}
+
+		def, err := rca.AsteriskCircuitDef(rca.DefaultThresholds())
+		if err == nil {
+			st := view.NewCircuitStore(def)
+			br := kami.NewEventBridge(bus)
+			br.StartPolling(100 * time.Millisecond)
+			s.KamiServer.SetStore(st)
+			s.store = st
+			s.bridge = br
+		}
+	}
+
 	extra := params.Extra
 
 	scenarioName, _ := extra["scenario"].(string)
@@ -100,7 +158,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	}
 
 	root := s.ProjectRoot
-	promptDir := filepath.Join(root, ".cursor/prompts")
+	promptFS := rca.DefaultPromptFS
 	basePath := filepath.Join(root, ".asterisk/calibrate")
 
 	tokenTracker := dispatch.NewTokenTracker()
@@ -129,7 +187,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	default:
 		t := rca.NewRCATransformer(
 			tracked,
-			promptDir,
+			promptFS,
 			rca.WithRCABasePath(basePath),
 		)
 		comps = []*framework.Component{rca.TransformerComponent(t)}
@@ -157,7 +215,6 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		TransformerName: transformerLabel,
 		IDMapper:     idMapper,
 		Runs:         1,
-		PromptDir:    promptDir,
 		Thresholds:   rca.DefaultThresholds(),
 		TokenTracker: tokenTracker,
 		Parallel:     parallel,
@@ -257,4 +314,12 @@ func asteriskStepSchemas() []fwmcp.StepSchema {
 
 func loadScenario(name string) (*rca.Scenario, error) {
 	return scenarios.LoadScenario(name)
+}
+
+var stepPrefixRE = regexp.MustCompile(`^F\d+_`)
+
+// stepToNode maps an MCP step name (e.g. "F0_RECALL") to a circuit node
+// name (e.g. "recall") by stripping the F{n}_ prefix and lowercasing.
+func stepToNode(step string) string {
+	return strings.ToLower(stepPrefixRE.ReplaceAllString(step, ""))
 }

@@ -304,6 +304,61 @@ func TestLoadCircuit_RealDefectDialectic(t *testing.T) {
 	}
 }
 
+func TestLoadCircuit_NodeDescription(t *testing.T) {
+	data := []byte(`
+circuit: desc-test
+nodes:
+  - name: recall
+    description: "Pattern-match against known failures database"
+    element: fire
+  - name: triage
+    element: earth
+edges:
+  - id: E1
+    name: proceed
+    from: recall
+    to: triage
+start: recall
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	if def.Nodes[0].Description != "Pattern-match against known failures database" {
+		t.Errorf("Nodes[0].Description = %q, want pattern-match description", def.Nodes[0].Description)
+	}
+	if def.Nodes[1].Description != "" {
+		t.Errorf("Nodes[1].Description = %q, want empty (optional field)", def.Nodes[1].Description)
+	}
+}
+
+func TestLoadCircuit_NodeDescription_RoundTrip(t *testing.T) {
+	data := []byte(`
+circuit: roundtrip
+nodes:
+  - name: a
+    description: "First node"
+  - name: b
+    description: "Second node"
+edges:
+  - id: E1
+    from: a
+    to: b
+start: a
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	for i, want := range []string{"First node", "Second node"} {
+		if def.Nodes[i].Description != want {
+			t.Errorf("Nodes[%d].Description = %q, want %q", i, def.Nodes[i].Description, want)
+		}
+	}
+}
+
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstr(s, substr))
 }

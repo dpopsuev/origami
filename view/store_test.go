@@ -494,3 +494,99 @@ func TestCircuitStore_Close(t *testing.T) {
 	// Double close is safe
 	store.Close()
 }
+
+func TestCircuitStore_WalkComplete_ClearsWalkers(t *testing.T) {
+	store := NewCircuitStore(testCircuitDef())
+	store.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "recall", Walker: "w1"})
+
+	snap := store.Snapshot()
+	if len(snap.Walkers) != 1 {
+		t.Fatalf("expected 1 walker before complete, got %d", len(snap.Walkers))
+	}
+
+	id, ch := store.Subscribe()
+	defer store.Unsubscribe(id)
+
+	store.OnEvent(framework.WalkEvent{Type: framework.EventWalkComplete})
+
+	diffs := collectDiffs(ch, 50*time.Millisecond)
+
+	snap = store.Snapshot()
+	if len(snap.Walkers) != 0 {
+		t.Errorf("walkers should be empty after walk_complete, got %d: %v",
+			len(snap.Walkers), snap.Walkers)
+	}
+
+	var hasRemoved bool
+	for _, d := range diffs {
+		if d.Type == DiffWalkerRemoved && d.Walker == "w1" {
+			hasRemoved = true
+		}
+	}
+	if !hasRemoved {
+		t.Error("expected walker_removed diff for w1 on walk_complete")
+	}
+}
+
+func TestCircuitStore_WalkComplete_ClearsMultipleWalkers(t *testing.T) {
+	store := NewCircuitStore(testCircuitDef())
+
+	store.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "recall", Walker: "w1"})
+	store.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "triage", Walker: "w2"})
+	store.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "investigate", Walker: "w3"})
+
+	snap := store.Snapshot()
+	if len(snap.Walkers) != 3 {
+		t.Fatalf("expected 3 walkers before complete, got %d", len(snap.Walkers))
+	}
+
+	store.OnEvent(framework.WalkEvent{Type: framework.EventWalkComplete})
+
+	snap = store.Snapshot()
+	if len(snap.Walkers) != 0 {
+		t.Errorf("all walkers should be cleared after walk_complete, got %d: %v",
+			len(snap.Walkers), snap.Walkers)
+	}
+}
+
+func TestCircuitStore_CalibrationMultiCase_NoStaleWalkers(t *testing.T) {
+	store := NewCircuitStore(testCircuitDef())
+
+	for i := 0; i < 30; i++ {
+		walker := framework.WalkEvent{Walker: "C" + string(rune('0'+i/10)) + string(rune('0'+i%10))}
+
+		store.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "recall", Walker: walker.Walker})
+		store.OnEvent(framework.WalkEvent{Type: framework.EventNodeExit, Node: "recall", Walker: walker.Walker})
+		store.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "triage", Walker: walker.Walker})
+		store.OnEvent(framework.WalkEvent{Type: framework.EventNodeExit, Node: "triage", Walker: walker.Walker})
+		store.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "report", Walker: walker.Walker})
+		store.OnEvent(framework.WalkEvent{Type: framework.EventNodeExit, Node: "report", Walker: walker.Walker})
+		store.OnEvent(framework.WalkEvent{Type: framework.EventWalkComplete, Walker: walker.Walker})
+	}
+
+	snap := store.Snapshot()
+	if len(snap.Walkers) != 0 {
+		t.Errorf("after 30 completed cases, expected 0 stale walkers, got %d", len(snap.Walkers))
+		for wid := range snap.Walkers {
+			t.Logf("  stale walker: %s", wid)
+		}
+	}
+}
+
+func TestCircuitStore_WalkError_ClearsWalker(t *testing.T) {
+	store := NewCircuitStore(testCircuitDef())
+	store.OnEvent(framework.WalkEvent{Type: framework.EventNodeEnter, Node: "recall", Walker: "w1"})
+
+	store.OnEvent(framework.WalkEvent{
+		Type:   framework.EventWalkError,
+		Node:   "recall",
+		Walker: "w1",
+		Error:  errors.New("timeout"),
+	})
+
+	snap := store.Snapshot()
+	if len(snap.Walkers) != 0 {
+		t.Errorf("walker should be cleared after walk_error, got %d: %v",
+			len(snap.Walkers), snap.Walkers)
+	}
+}

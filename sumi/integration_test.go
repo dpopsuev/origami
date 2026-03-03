@@ -103,7 +103,11 @@ func TestIntegration_WalkAndRender(t *testing.T) {
 	store.OnEvent(framework.WalkEvent{
 		Type: framework.EventWalkComplete,
 	})
+	// walk_complete now clears walkers first, then emits DiffCompleted
 	diff = <-ch
+	if diff.Type == view.DiffWalkerRemoved {
+		diff = <-ch // consume walker removal, read next
+	}
 	if diff.Type != view.DiffCompleted {
 		t.Errorf("final diff: got %+v", diff)
 	}

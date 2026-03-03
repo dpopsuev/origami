@@ -77,6 +77,14 @@ type CircuitConfig struct {
 	// artifact submission arrives for this duration, the session aborts.
 	// Defaults to 300s (5min) if zero.
 	DefaultSessionTTL int // milliseconds
+
+	// OnStepDispatched is called after a step is dispatched to a worker
+	// via get_next_step. Nil is safe (no-op).
+	OnStepDispatched func(caseID, step string)
+
+	// OnStepCompleted is called after a worker submits an artifact via
+	// submit_step. Nil is safe (no-op).
+	OnStepCompleted func(caseID, step string, dispatchID int64)
 }
 
 // FindSchema returns the StepSchema for the given step name, or an error

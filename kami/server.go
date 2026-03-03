@@ -69,32 +69,92 @@ type Server struct {
 
 	selMu     sync.RWMutex
 	selection map[string]any
+
+	frameStore *FrameStore
 }
 
 // NewServer creates a KamiServer. Call Start to begin serving.
 func NewServer(cfg Config) *Server {
 	s := &Server{
-		cfg:     cfg,
-		bridge:  cfg.Bridge,
-		store:   cfg.Store,
-		log:     cfg.logger(),
-		wsConns: make(map[int]*wsConn),
+		cfg:        cfg,
+		bridge:     cfg.Bridge,
+		store:      cfg.Store,
+		log:        cfg.logger(),
+		wsConns:    make(map[int]*wsConn),
+		frameStore: NewFrameStore(),
 	}
 	return s
 }
 
 // Start begins serving HTTP and WS on the configured ports.
-// Blocks until ctx is cancelled or an error occurs.
+// Both ports are bound synchronously before any goroutine launches,
+// so a port conflict is returned immediately. Blocks until ctx is
+// cancelled or a serve error occurs.
 func (s *Server) Start(ctx context.Context) error {
+	mux := s.buildHTTPMux()
+
+	httpLn, err := net.Listen("tcp", s.cfg.addr())
+	if err != nil {
+		return fmt.Errorf("HTTP listen %s: %w", s.cfg.addr(), err)
+	}
+
+	wsMux := http.NewServeMux()
+	wsMux.HandleFunc("/", s.handleWS)
+
+	wsLn, err := net.Listen("tcp", s.cfg.wsAddr())
+	if err != nil {
+		httpLn.Close()
+		return fmt.Errorf("WS listen %s: %w", s.cfg.wsAddr(), err)
+	}
+
+	s.http = &http.Server{Handler: mux}
+	s.ws = &http.Server{Handler: wsMux}
+
+	errCh := make(chan error, 2)
+
+	go func() {
+		s.log.Info("kami HTTP server started", "addr", httpLn.Addr())
+		if err := s.http.Serve(httpLn); err != nil && err != http.ErrServerClosed {
+			errCh <- fmt.Errorf("HTTP: %w", err)
+		}
+	}()
+
+	go func() {
+		s.log.Info("kami WS server started", "addr", wsLn.Addr())
+		if err := s.ws.Serve(wsLn); err != nil && err != http.ErrServerClosed {
+			errCh <- fmt.Errorf("WS: %w", err)
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		s.http.Shutdown(shutCtx)
+		s.ws.Shutdown(shutCtx)
+		return ctx.Err()
+	case err := <-errCh:
+		shutCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		s.http.Shutdown(shutCtx)
+		s.ws.Shutdown(shutCtx)
+		return err
+	}
+}
+
+func (s *Server) buildHTTPMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /events/stream", s.handleSSE)
 	mux.HandleFunc("POST /events/click", s.handleBrowserEvent("click"))
 	mux.HandleFunc("POST /events/hover", s.handleBrowserEvent("hover"))
 	mux.HandleFunc("POST /events/selection", s.handleBrowserEvent("selection"))
 	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("GET /api/snapshot", s.handleSnapshotAPI)
 	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
 	mux.HandleFunc("GET /api/circuit", s.handleCircuitAPI)
 	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
+	mux.HandleFunc("POST /api/sumi/frame", s.handleStoreFrame)
+	mux.HandleFunc("GET /api/sumi/frame", s.handleGetFrame)
 
 	if s.cfg.MetricsHandler != nil {
 		mux.Handle("GET /metrics", s.cfg.MetricsHandler)
@@ -111,51 +171,34 @@ func (s *Server) Start(ctx context.Context) error {
 			fmt.Fprintf(w, "Kami debugger running. Frontend not embedded.")
 		})
 	}
+	return mux
+}
 
-	s.http = &http.Server{
-		Addr:    s.cfg.addr(),
-		Handler: mux,
-	}
+// SetStore replaces the active CircuitStore. The old store (if any) is
+// closed, which terminates all SSE connections subscribed to it. SSE
+// clients are expected to reconnect and will pick up the new store.
+// Thread-safe; may be called while SSE handlers are active.
+func (s *Server) SetStore(store *view.CircuitStore) {
+	s.mu.Lock()
+	old := s.store
+	s.store = store
+	s.mu.Unlock()
 
-	wsMux := http.NewServeMux()
-	wsMux.HandleFunc("/", s.handleWS)
-	s.ws = &http.Server{
-		Addr:    s.cfg.wsAddr(),
-		Handler: wsMux,
-	}
-
-	errCh := make(chan error, 2)
-
-	go func() {
-		s.log.Info("kami HTTP server starting", "addr", s.cfg.addr())
-		if err := s.http.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			errCh <- fmt.Errorf("HTTP: %w", err)
-		}
-	}()
-
-	go func() {
-		s.log.Info("kami WS server starting", "addr", s.cfg.wsAddr())
-		if err := s.ws.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			errCh <- fmt.Errorf("WS: %w", err)
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		s.http.Shutdown(shutCtx)
-		s.ws.Shutdown(shutCtx)
-		return ctx.Err()
-	case err := <-errCh:
-		return err
+	if old != nil {
+		old.Close()
 	}
 }
 
 // handleSSE streams circuit state diffs as Server-Sent Events.
-// Requires Config.Store to be set.
+// The store reference is captured at handler entry so that subscribe
+// and unsubscribe always operate on the same object, even if SetStore
+// swaps the server's store mid-stream.
 func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	s.mu.Lock()
+	store := s.store
+	s.mu.Unlock()
+
+	if store == nil {
 		http.Error(w, "CircuitStore not configured", http.StatusServiceUnavailable)
 		return
 	}
@@ -172,8 +215,8 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	flusher.Flush()
 
-	id, ch := s.store.Subscribe()
-	defer s.store.Unsubscribe(id)
+	id, ch := store.Subscribe()
+	defer store.Unsubscribe(id)
 
 	for {
 		select {
@@ -277,6 +320,23 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
+// handleSnapshotAPI returns the current CircuitSnapshot as JSON.
+// Sumi uses this to bootstrap its local CircuitStore with the correct
+// circuit definition and current state before streaming SSE diffs.
+func (s *Server) handleSnapshotAPI(w http.ResponseWriter, _ *http.Request) {
+	s.mu.Lock()
+	store := s.store
+	s.mu.Unlock()
+
+	if store == nil {
+		http.Error(w, "CircuitStore not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(store.Snapshot())
+}
+
 // ListenAddr returns the HTTP listener address after the server starts.
 // Useful for tests that use port 0.
 func (s *Server) ListenAddr() string {
@@ -286,23 +346,7 @@ func (s *Server) ListenAddr() string {
 // StartOnAvailablePort starts on OS-assigned ports and returns them.
 // This is primarily for testing.
 func (s *Server) StartOnAvailablePort(ctx context.Context) (httpAddr, wsAddr string, err error) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /events/stream", s.handleSSE)
-	mux.HandleFunc("POST /events/click", s.handleBrowserEvent("click"))
-	mux.HandleFunc("POST /events/hover", s.handleBrowserEvent("hover"))
-	mux.HandleFunc("POST /events/selection", s.handleBrowserEvent("selection"))
-	mux.HandleFunc("GET /api/health", s.handleHealth)
-	mux.HandleFunc("GET /api/theme", s.handleThemeAPI)
-	mux.HandleFunc("GET /api/circuit", s.handleCircuitAPI)
-	mux.HandleFunc("GET /api/kabuki", s.handleKabukiAPI)
-
-	if s.cfg.SPA != nil {
-		mux.Handle("GET /", http.FileServer(s.cfg.SPA))
-	} else {
-		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, "Kami debugger running.")
-		})
-	}
+	mux := s.buildHTTPMux()
 
 	httpLn, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -332,4 +376,29 @@ func (s *Server) StartOnAvailablePort(ctx context.Context) (httpAddr, wsAddr str
 	}()
 
 	return httpLn.Addr().String(), wsLn.Addr().String(), nil
+}
+
+// FrameStore returns the server's frame store for MCP tool registration.
+func (s *Server) FrameStore() *FrameStore {
+	return s.frameStore
+}
+
+func (s *Server) handleStoreFrame(w http.ResponseWriter, r *http.Request) {
+	var f view.RecordedFrame
+	if err := json.NewDecoder(r.Body).Decode(&f); err != nil {
+		http.Error(w, "invalid frame JSON", http.StatusBadRequest)
+		return
+	}
+	s.frameStore.Store(f)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleGetFrame(w http.ResponseWriter, r *http.Request) {
+	f := s.frameStore.Latest()
+	if f == nil {
+		http.Error(w, "no frame available", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(f)
 }

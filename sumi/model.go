@@ -2,7 +2,9 @@ package sumi
 
 import (
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/view"
@@ -16,6 +18,7 @@ type DiffMsg view.StateDiff
 
 // Model is the Bubble Tea model for Sumi.
 // It holds the circuit definition, layout, store subscription, and UI state.
+// The War Room layout uses a PanelRegistry for extensible multi-panel composition.
 type Model struct {
 	def     *framework.CircuitDef
 	store   *view.CircuitStore
@@ -44,6 +47,19 @@ type Model struct {
 	chatOpen    bool
 	chatMsgs    []ChatMessage
 	chatInput   string
+
+	// War Room layout
+	registry     *PanelRegistry
+	warLayout    WarRoomLayout
+	graphHitMap  map[[2]int]string
+	eventCount   int
+	workerFilter string // selected worker ID for filtering, "" = all
+	timeline     *TimelineRingBuffer
+	helpOpen     bool
+
+	// ViewRecorder captures NoColor frames for agent MCP access and F12 dump.
+	recorder    *ViewRecorder
+	statusFlash string
 }
 
 // KamiStatus represents the Kami MCP connection state.
@@ -62,11 +78,12 @@ type ChatMessage struct {
 
 // Config holds initialization parameters for a Sumi Model.
 type Config struct {
-	Def    *framework.CircuitDef
-	Store  *view.CircuitStore
-	Layout view.CircuitLayout
-	Opts   RenderOpts
-	Debug  *DebugClient
+	Def      *framework.CircuitDef
+	Store    *view.CircuitStore
+	Layout   view.CircuitLayout
+	Opts     RenderOpts
+	Debug    *DebugClient
+	Recorder *ViewRecorder // optional; nil disables frame recording
 }
 
 // New creates a Sumi Model ready for Bubble Tea.
@@ -86,6 +103,9 @@ func New(cfg Config) Model {
 		opts:      cfg.Opts,
 		nodeOrder: order,
 		debug:     cfg.Debug,
+		registry:  NewPanelRegistry(),
+		timeline:  NewTimelineRingBuffer(timelineMaxEntries),
+		recorder:  cfg.Recorder,
 	}
 	return m
 }
@@ -106,20 +126,35 @@ func waitForDiff(ch <-chan view.StateDiff) tea.Cmd {
 	}
 }
 
+// clearFlashMsg signals the status flash should be cleared.
+type clearFlashMsg struct{}
+
 // Update processes Bubble Tea messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.warLayout = ComputeLayout(m.width, m.height)
 		m.ready = true
+		m.maybeRecordFrame()
 		return m, nil
 
 	case DiffMsg:
 		diff := view.StateDiff(msg)
 		m.applyDiff(diff)
+		m.eventCount++
+		m.timeline.Push(DiffToTimelineEntry(diff))
 		m.snap = m.store.Snapshot()
+		m.maybeRecordFrame()
 		return m, waitForDiff(m.subCh)
+
+	case clearFlashMsg:
+		m.statusFlash = ""
+		return m, nil
+
+	case tea.MouseMsg:
+		return m.handleMouse(msg)
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
@@ -140,7 +175,38 @@ func (m *Model) applyDiff(diff view.StateDiff) {
 	}
 }
 
+func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if !IsClick(msg) {
+		return m, nil
+	}
+
+	graphRect := m.warLayout.Center
+	target := DispatchMouse(msg, m.warLayout, m.registry, m.graphHitMap, graphRect)
+
+	if target.PanelID != "" {
+		m.registry.SetFocusByID(target.PanelID)
+	}
+
+	if target.Node != "" {
+		for i, name := range m.nodeOrder {
+			if name == target.Node {
+				m.selected = i
+				break
+			}
+		}
+	}
+
+	return m, nil
+}
+
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.helpOpen {
+		switch msg.String() {
+		case "?", "esc", "q":
+			m.helpOpen = false
+		}
+		return m, nil
+	}
 	if m.searching {
 		return m.handleSearchKey(msg)
 	}
@@ -149,6 +215,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg.String() {
+	case "?":
+		m.helpOpen = true
+		return m, nil
+
 	case "q", "ctrl+c":
 		return m, tea.Quit
 
@@ -205,6 +275,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.chatOpen = !m.chatOpen
 		}
 		return m, nil
+
+	case "f12":
+		return m.dumpDebugSnapshot()
 	}
 
 	return m, nil
@@ -369,17 +442,233 @@ func (m Model) stepNode() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+const debugSnapshotPath = ".sumi/debug-snapshot.txt"
+const flashDuration = 2 * time.Second
+
+func (m Model) dumpDebugSnapshot() (tea.Model, tea.Cmd) {
+	if m.recorder == nil {
+		return m, nil
+	}
+	flash := func(msg string) (tea.Model, tea.Cmd) {
+		m.statusFlash = msg
+		return m, tea.Tick(flashDuration, func(time.Time) tea.Msg { return clearFlashMsg{} })
+	}
+
+	f := m.recorder.Latest()
+	if f == nil {
+		return flash("No frames recorded")
+	}
+
+	if err := os.MkdirAll(".sumi", 0o755); err != nil {
+		return flash(fmt.Sprintf("Error: %v", err))
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Timestamp: %s\n", f.Timestamp.Format(time.RFC3339))
+	fmt.Fprintf(&sb, "Dimensions: %dx%d\n", f.Width, f.Height)
+	fmt.Fprintf(&sb, "Layout tier: %s\n", f.LayoutTier)
+	fmt.Fprintf(&sb, "Selected node: %s\n", f.SelectedNode)
+	fmt.Fprintf(&sb, "Focused panel: %s\n", f.FocusedPanel)
+	fmt.Fprintf(&sb, "Workers: %d\n", f.WorkerCount)
+	fmt.Fprintf(&sb, "Events: %d\n", f.EventCount)
+	sb.WriteString("---\n")
+	sb.WriteString(f.ViewText)
+
+	if err := os.WriteFile(debugSnapshotPath, []byte(sb.String()), 0o644); err != nil {
+		return flash(fmt.Sprintf("Error: %v", err))
+	}
+	return flash("Snapshot saved")
+}
+
 // View renders the complete Sumi TUI.
 func (m Model) View() string {
 	if !m.ready {
 		return "Loading..."
 	}
 
-	// Mark selected node in snapshot (ephemeral, doesn't affect store)
-	graph := RenderGraph(m.def, m.layout, m.snap, m.opts)
+	opts := m.opts
+	if m.selected < len(m.nodeOrder) {
+		opts.SelectedNode = m.nodeOrder[m.selected]
+	}
+
+	if m.warLayout.Tier >= TierCompact && !opts.NoColor {
+		return m.viewWarRoom(opts)
+	}
+	return m.viewLegacy(opts)
+}
+
+func (m *Model) maybeRecordFrame() {
+	if m.recorder == nil || !m.ready {
+		return
+	}
+	opts := m.opts
+	if m.selected < len(m.nodeOrder) {
+		opts.SelectedNode = m.nodeOrder[m.selected]
+	}
+	m.recordFrame(opts)
+}
+
+func (m *Model) recordFrame(baseOpts RenderOpts) {
+	ncOpts := baseOpts
+	ncOpts.NoColor = true
+
+	var viewText string
+	if m.warLayout.Tier >= TierCompact {
+		viewText = m.viewWarRoom(ncOpts)
+	} else {
+		viewText = m.viewLegacy(ncOpts)
+	}
+
+	tierName := "minimal"
+	switch m.warLayout.Tier {
+	case TierCompact:
+		tierName = "compact"
+	case TierStandard:
+		tierName = "standard"
+	case TierFull:
+		tierName = "full"
+	}
+
+	focusedPanel := ""
+	if m.registry != nil {
+		focusedPanel = m.registry.FocusedID()
+	}
+
+	m.recorder.Record(view.RecordedFrame{
+		Timestamp:    time.Now(),
+		Width:        m.width,
+		Height:       m.height,
+		LayoutTier:   tierName,
+		SelectedNode: baseOpts.SelectedNode,
+		FocusedPanel: focusedPanel,
+		WorkerCount:  len(m.snap.Walkers),
+		EventCount:   m.eventCount,
+		ViewText:     viewText,
+	})
+}
+
+// viewWarRoom renders the multi-panel War Room layout.
+func (m *Model) viewWarRoom(opts RenderOpts) string {
+	wl := m.warLayout
+
+	graphStr, hitMap := RenderGraphWithHitMap(m.def, m.layout, m.snap, opts)
+	m.graphHitMap = hitMap
+
+	canvas := make([][]rune, wl.Height)
+	for y := range canvas {
+		canvas[y] = []rune(strings.Repeat(" ", wl.Width))
+	}
+
+	statusData := StatusBarDataFromModel(m)
+	blitString(canvas, wl.TopBar.X, wl.TopBar.Y, RenderWarRoomStatusBar(statusData), wl.TopBar.W)
+
+	focusedID := m.registry.FocusedID()
+
+	if wl.LeftSidebar.W > 0 && wl.LeftSidebar.H > 0 {
+		workerContent := m.renderWorkersContent()
+		frame := RenderPanelFrame("Workers", workerContent, wl.LeftSidebar, focusedID == "workers", opts.NoColor)
+		blitString(canvas, wl.LeftSidebar.X, wl.LeftSidebar.Y, frame, wl.LeftSidebar.W)
+	}
+
+	if wl.Center.W > 0 && wl.Center.H > 0 {
+		frame := RenderPanelFrame("Circuit", graphStr, wl.Center, focusedID == "graph", opts.NoColor)
+		blitString(canvas, wl.Center.X, wl.Center.Y, frame, wl.Center.W)
+	}
+
+	if wl.RightSidebar.W > 0 && wl.RightSidebar.H > 0 {
+		inspectorContent := ""
+		if m.selected < len(m.nodeOrder) {
+			inspectorContent = m.renderInspectorContent()
+		}
+		frame := RenderPanelFrame("Inspector", inspectorContent, wl.RightSidebar, focusedID == "inspector" || focusedID == "", opts.NoColor)
+		blitString(canvas, wl.RightSidebar.X, wl.RightSidebar.Y, frame, wl.RightSidebar.W)
+	}
+
+	if wl.Bottom.W > 0 && wl.Bottom.H > 0 {
+		timelineContent := m.renderTimelineContent()
+		frame := RenderPanelFrame("Events", timelineContent, wl.Bottom, focusedID == "timeline", opts.NoColor)
+		blitString(canvas, wl.Bottom.X, wl.Bottom.Y, frame, wl.Bottom.W)
+	}
+
+	if m.searching {
+		searchBar := m.renderSearchBar()
+		lastLine := len(canvas) - 1
+		if lastLine >= 0 {
+			blitString(canvas, 0, lastLine, searchBar, wl.Width)
+		}
+	}
+
+	var sb strings.Builder
+	for y, row := range canvas {
+		sb.WriteString(strings.TrimRight(string(row), " "))
+		if y < len(canvas)-1 {
+			sb.WriteByte('\n')
+		}
+	}
+	output := sb.String()
+
+	if m.helpOpen {
+		helpOverlay := RenderHelpOverlay(wl.Width, wl.Height, opts.NoColor)
+		output = overlayCenter(output, helpOverlay, wl.Width, wl.Height)
+	}
+
+	return output
+}
+
+// overlayCenter places the overlay string centered on the base string.
+func overlayCenter(base, overlay string, width, height int) string {
+	baseLines := strings.Split(base, "\n")
+	for len(baseLines) < height {
+		baseLines = append(baseLines, "")
+	}
+
+	ovLines := strings.Split(overlay, "\n")
+	ovH := len(ovLines)
+	ovW := 0
+	for _, l := range ovLines {
+		if len([]rune(l)) > ovW {
+			ovW = len([]rune(l))
+		}
+	}
+
+	startY := (height - ovH) / 2
+	startX := (width - ovW) / 2
+	if startY < 0 {
+		startY = 0
+	}
+	if startX < 0 {
+		startX = 0
+	}
+
+	for i, ovLine := range ovLines {
+		y := startY + i
+		if y >= len(baseLines) {
+			break
+		}
+		baseRunes := []rune(baseLines[y])
+		for len(baseRunes) < width {
+			baseRunes = append(baseRunes, ' ')
+		}
+		ovRunes := []rune(ovLine)
+		for j, ch := range ovRunes {
+			x := startX + j
+			if x < len(baseRunes) {
+				baseRunes[x] = ch
+			}
+		}
+		baseLines[y] = string(baseRunes)
+	}
+
+	return strings.Join(baseLines[:height], "\n")
+}
+
+// viewLegacy renders the original single-panel view for small terminals or --no-color.
+func (m *Model) viewLegacy(opts RenderOpts) string {
+	graphStr, hitMap := RenderGraphWithHitMap(m.def, m.layout, m.snap, opts)
+	m.graphHitMap = hitMap
 
 	var sections []string
-	sections = append(sections, graph)
+	sections = append(sections, graphStr)
 
 	if m.inspecting && m.selected < len(m.nodeOrder) {
 		sections = append(sections, m.renderInspector())
@@ -396,6 +685,104 @@ func (m Model) View() string {
 	}
 
 	return strings.Join(sections, "\n")
+}
+
+// renderWorkersContent produces the worker list content (panel body only).
+func (m Model) renderWorkersContent() string {
+	if len(m.snap.Walkers) == 0 {
+		return "No active workers"
+	}
+	var sb strings.Builder
+	for _, wp := range m.snap.Walkers {
+		sb.WriteString(fmt.Sprintf("● %s @ %s\n", wp.WalkerID, wp.Node))
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// renderInspectorContent produces the inspector body without the border frame.
+func (m Model) renderInspectorContent() string {
+	if m.selected >= len(m.nodeOrder) {
+		return ""
+	}
+	name := m.nodeOrder[m.selected]
+	var nd *framework.NodeDef
+	for i := range m.def.Nodes {
+		if m.def.Nodes[i].Name == name {
+			nd = &m.def.Nodes[i]
+			break
+		}
+	}
+	if nd == nil {
+		return ""
+	}
+
+	ns := m.snap.Nodes[name]
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Name:    %s\n", nd.Name))
+	sb.WriteString(fmt.Sprintf("Element: %s\n", nd.Element))
+	sb.WriteString(fmt.Sprintf("State:   %s\n", ns.State))
+	if nd.Transformer != "" {
+		sb.WriteString(fmt.Sprintf("Xformer: %s\n", nd.Transformer))
+	}
+	if nd.Extractor != "" {
+		sb.WriteString(fmt.Sprintf("Extract: %s\n", nd.Extractor))
+	}
+	if nd.Family != "" {
+		sb.WriteString(fmt.Sprintf("Family:  %s\n", nd.Family))
+	}
+	badge := DSBadge(nd.Transformer)
+	if badge != "" {
+		sb.WriteString(fmt.Sprintf("D/S:     %s\n", badge))
+	}
+	zone := ns.Zone
+	if zone == "" {
+		zone = "(none)"
+	}
+	sb.WriteString(fmt.Sprintf("Zone:    %s\n", zone))
+
+	for _, wp := range m.snap.Walkers {
+		if wp.Node == nd.Name {
+			sb.WriteString(fmt.Sprintf("Walker:  %s\n", wp.WalkerID))
+		}
+	}
+
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// renderTimelineContent produces the event timeline body from the ring buffer.
+func (m Model) renderTimelineContent() string {
+	entries := m.timeline.Filtered(m.workerFilter)
+	if len(entries) == 0 {
+		return "Waiting for events..."
+	}
+	var sb strings.Builder
+	for i, e := range entries {
+		sb.WriteString(e.FormatEntry(m.opts.NoColor))
+		if i < len(entries)-1 {
+			sb.WriteByte('\n')
+		}
+	}
+	return sb.String()
+}
+
+// blitString writes a multi-line string onto a rune canvas at (ox, oy), clipping to maxW.
+func blitString(canvas [][]rune, ox, oy int, s string, maxW int) {
+	lines := strings.Split(s, "\n")
+	for dy, line := range lines {
+		y := oy + dy
+		if y < 0 || y >= len(canvas) {
+			continue
+		}
+		runes := []rune(line)
+		for dx, ch := range runes {
+			x := ox + dx
+			if x < 0 || x >= len(canvas[y]) || dx >= maxW {
+				continue
+			}
+			canvas[y][x] = ch
+		}
+	}
 }
 
 func (m Model) renderStatusBar() string {

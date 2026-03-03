@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -35,7 +36,7 @@ const calibrationPreamble = `> **CALIBRATION MODE — BLIND EVALUATION**
 
 type rcaTransformer struct {
 	dispatcher dispatch.Dispatcher
-	promptDir  string
+	promptFS   fs.FS
 	basePath   string
 }
 
@@ -45,10 +46,13 @@ func WithRCABasePath(p string) RCATransformerOption {
 	return func(t *rcaTransformer) { t.basePath = p }
 }
 
-func NewRCATransformer(d dispatch.Dispatcher, promptDir string, opts ...RCATransformerOption) framework.Transformer {
+// NewRCATransformer creates an RCA transformer that reads prompt templates
+// from promptFS. Pass DefaultPromptFS for embedded prompts, or os.DirFS(dir)
+// to override with a custom prompt directory.
+func NewRCATransformer(d dispatch.Dispatcher, promptFS fs.FS, opts ...RCATransformerOption) framework.Transformer {
 	t := &rcaTransformer{
 		dispatcher: d,
-		promptDir:  promptDir,
+		promptFS:   promptFS,
 		basePath:   DefaultBasePath,
 	}
 	for _, opt := range opts {
@@ -69,12 +73,12 @@ func (t *rcaTransformer) Transform(ctx context.Context, tc *framework.Transforme
 	params := ParamsFromContext(tc.WalkerState.Context)
 	params.StepName = string(step)
 
-	templatePath := TemplatePathForStep(t.promptDir, step)
+	templatePath := TemplatePathForStep(step)
 	if templatePath == "" {
 		return nil, fmt.Errorf("rca transformer: no template for step %s", step)
 	}
 
-	prompt, err := FillTemplate(templatePath, params)
+	prompt, err := FillTemplateFS(t.promptFS, templatePath, params)
 	if err != nil {
 		return nil, fmt.Errorf("rca transformer: fill template for %s: %w", step, err)
 	}

@@ -134,6 +134,9 @@ func computeHover(doc *document, pos protocol.Position, vocab framework.RichVoca
 		for _, n := range doc.Def.Nodes {
 			if n.Name == nodeName {
 				md := fmt.Sprintf("### Node: %s\n\n", n.Name)
+				if n.Description != "" {
+					md += n.Description + "\n\n"
+				}
 				if n.Family != "" {
 					md += fmt.Sprintf("**Family:** %s\n\n", n.Family)
 				}

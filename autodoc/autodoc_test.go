@@ -278,6 +278,26 @@ func TestRenderNodeTable(t *testing.T) {
 	if !strings.Contains(out, "| Node |") {
 		t.Error("missing table header")
 	}
+	if !strings.Contains(out, "| Description |") {
+		t.Error("missing Description column header")
+	}
+}
+
+func TestRenderNodeTable_WithDescription(t *testing.T) {
+	def := &framework.CircuitDef{
+		Nodes: []framework.NodeDef{
+			{Name: "a", Description: "First node"},
+			{Name: "b"},
+		},
+		Edges: []framework.EdgeDef{{ID: "E1", From: "a", To: "b"}},
+	}
+	out := RenderNodeTable(def, nil)
+	if !strings.Contains(out, "First node") {
+		t.Error("missing description in table")
+	}
+	if !strings.Contains(out, "| b | - |") {
+		t.Error("missing dash for empty description")
+	}
 }
 
 func TestRenderNodeTable_DSColumn(t *testing.T) {

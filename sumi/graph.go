@@ -21,8 +21,16 @@ const (
 // It uses GridLayout positions for cell placement, draws zone borders,
 // node rectangles with D/S badges, element colors, and edge lines.
 func RenderGraph(def *framework.CircuitDef, layout view.CircuitLayout, snap view.CircuitSnapshot, opts RenderOpts) string {
-	if layout.Grid == nil || len(layout.Grid) == 0 {
-		return "(empty circuit)"
+	result, _ := RenderGraphWithHitMap(def, layout, snap, opts)
+	return result
+}
+
+// RenderGraphWithHitMap renders the graph and returns both the rendered string
+// and a hit-map that maps canvas (x,y) coordinates to node names. The hit-map
+// enables mouse interaction: given a click coordinate, look up the node.
+func RenderGraphWithHitMap(def *framework.CircuitDef, layout view.CircuitLayout, snap view.CircuitSnapshot, opts RenderOpts) (string, map[[2]int]string) {
+	if len(layout.Grid) == 0 {
+		return "(empty circuit)", nil
 	}
 
 	maxRow, maxCol := gridBounds(layout.Grid)
@@ -35,7 +43,27 @@ func RenderGraph(def *framework.CircuitDef, layout view.CircuitLayout, snap view
 	drawEdges(canvas, def, layout, opts)
 	drawNodes(canvas, def, layout, snap, opts)
 
-	return canvas.Render(opts)
+	hitMap := buildHitMap(def, layout)
+
+	return canvas.Render(opts), hitMap
+}
+
+// buildHitMap maps every (x, y) cell inside a node box to the node's name.
+func buildHitMap(def *framework.CircuitDef, layout view.CircuitLayout) map[[2]int]string {
+	hm := make(map[[2]int]string)
+	for _, nd := range def.Nodes {
+		gc, ok := layout.Grid[nd.Name]
+		if !ok {
+			continue
+		}
+		ox, oy := cellOrigin(gc)
+		for dy := 0; dy < nodeHeight; dy++ {
+			for dx := 0; dx < nodeWidth; dx++ {
+				hm[[2]int{ox + dx, oy + dy}] = nd.Name
+			}
+		}
+	}
+	return hm
 }
 
 func gridBounds(grid map[string]view.GridCell) (maxRow, maxCol int) {
@@ -136,9 +164,10 @@ func (c *canvas) renderLine(y int, opts RenderOpts) string {
 
 // RenderOpts controls rendering behavior.
 type RenderOpts struct {
-	NoColor bool
-	Compact bool
-	Width   int
+	NoColor      bool
+	Compact      bool
+	Width        int
+	SelectedNode string // node name to highlight with selection border
 }
 
 // --- Node drawing ---
@@ -161,6 +190,7 @@ func drawNodes(c *canvas, def *framework.CircuitDef, layout view.CircuitLayout, 
 }
 
 func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, snap view.CircuitSnapshot, opts RenderOpts) {
+	selected := opts.SelectedNode == nd.Name
 	style := nodeStyle(ns, opts)
 	elemStyle := ElementFg(nd.Element)
 	if opts.NoColor {
@@ -168,10 +198,13 @@ func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, sna
 		style = lipgloss.NewStyle()
 	}
 
+	if selected && !opts.NoColor {
+		style = StyleSelected
+	}
+
 	badge := DSBadge(nd.Transformer)
 	stateIcon := stateIndicator(ns.State)
 
-	// Walker marker
 	walkerMark := ""
 	for _, wp := range snap.Walkers {
 		if wp.Node == nd.Name {
@@ -180,17 +213,22 @@ func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, sna
 		}
 	}
 
-	// Breakpoint marker
 	bpMark := ""
 	if snap.Breakpoints[nd.Name] {
 		bpMark = "◉"
 	}
 
-	// Top border
-	topBorder := "┌" + strings.Repeat("─", nodeWidth-2) + "┐"
+	// Selected nodes use double-line borders for visibility
+	topCh, botCh, side := "┌", "└", '│'
+	hBar := "─"
+	if selected {
+		topCh, botCh, side = "╔", "╚", '║'
+		hBar = "═"
+	}
+
+	topBorder := topCh + strings.Repeat(hBar, nodeWidth-2) + mirrorCorner(topCh)
 	c.putString(x, y, topBorder, style)
 
-	// Label line: "[D] name ● ✓"
 	label := nd.Name
 	if badge != "" {
 		label = badge + " " + label
@@ -216,17 +254,31 @@ func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, sna
 	}
 	padded := content + strings.Repeat(" ", inner-contentLen)
 
-	c.set(x, y+1, '│', style)
+	c.set(x, y+1, side, style)
 	if !opts.NoColor {
 		c.putString(x+1, y+1, padded, elemStyle)
 	} else {
 		c.putString(x+1, y+1, padded, lipgloss.NewStyle())
 	}
-	c.set(x+nodeWidth-1, y+1, '│', style)
+	c.set(x+nodeWidth-1, y+1, side, style)
 
-	// Bottom border
-	bottomBorder := "└" + strings.Repeat("─", nodeWidth-2) + "┘"
+	bottomBorder := botCh + strings.Repeat(hBar, nodeWidth-2) + mirrorCorner(botCh)
 	c.putString(x, y+2, bottomBorder, style)
+}
+
+func mirrorCorner(corner string) string {
+	switch corner {
+	case "┌":
+		return "┐"
+	case "└":
+		return "┘"
+	case "╔":
+		return "╗"
+	case "╚":
+		return "╝"
+	default:
+		return corner
+	}
 }
 
 func nodeStyle(ns view.NodeState, opts RenderOpts) lipgloss.Style {

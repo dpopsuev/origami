@@ -16,8 +16,7 @@ type ComponentConfig struct {
 	CaseData  *store.Case
 	Envelope  *rcatype.Envelope
 	Catalog   *knowledge.KnowledgeSourceCatalog
-	PromptDir string
-	CaseDir   string
+	CaseDir string
 }
 
 // Component returns an Origami Component bundling all RCA circuit plumbing

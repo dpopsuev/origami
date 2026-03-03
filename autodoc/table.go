@@ -13,10 +13,14 @@ func RenderNodeTable(def *framework.CircuitDef, opts *MermaidOptions) string {
 	zoneOf := buildZoneMap(def)
 
 	var b strings.Builder
-	b.WriteString("| Node | Zone | Family | Transformer | Element | Hooks | D/S |\n")
-	b.WriteString("|------|------|--------|-------------|---------|-------|-----|\n")
+	b.WriteString("| Node | Description | Zone | Family | Transformer | Element | Hooks | D/S |\n")
+	b.WriteString("|------|-------------|------|--------|-------------|---------|-------|-----|\n")
 
 	for _, nd := range def.Nodes {
+		desc := nd.Description
+		if desc == "" {
+			desc = "-"
+		}
 		zone := zoneOf[nd.Name]
 		if zone == "" {
 			zone = "-"
@@ -46,8 +50,8 @@ func RenderNodeTable(def *framework.CircuitDef, opts *MermaidOptions) string {
 			ds = "S"
 		}
 
-		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s |\n",
-			nd.Name, zone, family, transformer, element, hooks, ds)
+		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			nd.Name, desc, zone, family, transformer, element, hooks, ds)
 	}
 
 	return b.String()

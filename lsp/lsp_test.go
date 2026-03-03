@@ -296,6 +296,83 @@ done: DONE`
 	}
 }
 
+func TestHover_NodeDescription(t *testing.T) {
+	content := `circuit: test
+nodes:
+  - name: recall
+    description: "Pattern-match against known failures"
+    element: fire
+  - name: triage
+edges:
+  - id: E1
+    from: recall
+    to: triage
+    when: "true"
+start: recall
+done: DONE`
+
+	raw := []byte(content)
+	lctx, _ := lint.NewLintContext(raw, "test.yaml")
+	doc := &document{
+		URI:     uri.URI("file:///test.yaml"),
+		Content: content,
+	}
+	if lctx != nil {
+		doc.Def = lctx.Def
+	}
+
+	lines := strings.Split(content, "\n")
+	nameLine := -1
+	for i, l := range lines {
+		if strings.TrimSpace(l) == "- name: recall" {
+			nameLine = i
+			break
+		}
+	}
+	if nameLine < 0 {
+		t.Fatal("could not find '- name: recall' line")
+	}
+
+	hover := computeHover(doc, protocol.Position{Line: uint32(nameLine)}, nil)
+	if hover == nil {
+		t.Fatal("expected hover on node name")
+	}
+	if !strings.Contains(hover.Contents.Value, "Pattern-match against known failures") {
+		t.Errorf("hover should include node description, got: %s", hover.Contents.Value)
+	}
+}
+
+func TestHover_NodeNoDescription(t *testing.T) {
+	content := `circuit: test
+nodes:
+  - name: triage
+edges:
+  - id: E1
+    from: triage
+    to: DONE
+    when: "true"
+start: triage
+done: DONE`
+
+	raw := []byte(content)
+	lctx, _ := lint.NewLintContext(raw, "test.yaml")
+	doc := &document{
+		URI:     uri.URI("file:///test.yaml"),
+		Content: content,
+	}
+	if lctx != nil {
+		doc.Def = lctx.Def
+	}
+
+	hover := computeHover(doc, protocol.Position{Line: 2}, nil)
+	if hover == nil {
+		t.Fatal("expected hover on node name")
+	}
+	if strings.Contains(hover.Contents.Value, "description") {
+		t.Error("hover should not mention description when empty")
+	}
+}
+
 func TestDefinition_EdgeToNode(t *testing.T) {
 	content := `circuit: test
 nodes:

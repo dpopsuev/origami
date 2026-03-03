@@ -97,6 +97,7 @@ func (cs *CircuitStore) OnEvent(we framework.WalkEvent) {
 		}
 
 	case framework.EventWalkComplete:
+		cs.clearWalkers(we.Walker, now)
 		cs.snapshot.Completed = true
 		cs.emit(StateDiff{Type: DiffCompleted, Timestamp: now})
 
@@ -108,6 +109,7 @@ func (cs *CircuitStore) OnEvent(we framework.WalkEvent) {
 		if we.Node != "" {
 			cs.setNodeState(we.Node, NodeError, now)
 		}
+		cs.clearWalkers(we.Walker, now)
 		cs.snapshot.Error = errMsg
 		cs.emit(StateDiff{Type: DiffError, Node: we.Node, Error: errMsg, Timestamp: now})
 
@@ -154,13 +156,18 @@ func (cs *CircuitStore) Snapshot() CircuitSnapshot {
 }
 
 // Subscribe returns a channel that receives all future StateDiff values.
-// Call Unsubscribe with the returned id when done.
+// Call Unsubscribe with the returned id when done. If the store is
+// already closed, the returned channel is immediately closed.
 func (cs *CircuitStore) Subscribe() (id int, ch <-chan StateDiff) {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 	c := make(chan StateDiff, 64)
 	id = cs.nextID
 	cs.nextID++
+	if cs.closed {
+		close(c)
+		return id, c
+	}
 	cs.subscribers[id] = c
 	return id, c
 }
@@ -261,6 +268,21 @@ func (cs *CircuitStore) addWalker(walkerID, node string, ts time.Time) {
 func (cs *CircuitStore) removeWalker(walkerID string, ts time.Time) {
 	delete(cs.snapshot.Walkers, walkerID)
 	cs.emit(StateDiff{Type: DiffWalkerRemoved, Walker: walkerID, Timestamp: ts})
+}
+
+// clearWalkers removes walkers on terminal events (complete, error).
+// If walkerID is non-empty, only that walker is removed.
+// If walkerID is empty, all walkers are removed (session-level event).
+func (cs *CircuitStore) clearWalkers(walkerID string, ts time.Time) {
+	if walkerID != "" {
+		if _, exists := cs.snapshot.Walkers[walkerID]; exists {
+			cs.removeWalker(walkerID, ts)
+		}
+		return
+	}
+	for wid := range cs.snapshot.Walkers {
+		cs.removeWalker(wid, ts)
+	}
 }
 
 // emit broadcasts a diff to all subscribers. Non-blocking: slow subscribers

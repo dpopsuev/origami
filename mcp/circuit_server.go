@@ -318,6 +318,10 @@ func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToo
 		"prompt_path": dc.PromptPath,
 	})
 
+	if s.Config.OnStepDispatched != nil {
+		s.Config.OnStepDispatched(dc.CaseID, dc.Step)
+	}
+
 	sess.Supervisor.Process()
 	inFlight := sess.AgentPull()
 	desired := sess.DesiredCapacity
@@ -398,6 +402,10 @@ func (s *CircuitServer) handleSubmitStep(ctx context.Context, _ *sdkmcp.CallTool
 		"in_flight": fmt.Sprintf("%d", remaining),
 		"via":       "submit_step",
 	})
+
+	if s.Config.OnStepCompleted != nil {
+		s.Config.OnStepCompleted("", input.Step, input.DispatchID)
+	}
 
 	return nil, submitStepOutput{OK: "step accepted"}, nil
 }

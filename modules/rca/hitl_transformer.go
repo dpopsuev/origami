@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 
 	framework "github.com/dpopsuev/origami"
 )
@@ -30,22 +31,22 @@ func (t *hitlTransformerNode) Transform(_ context.Context, tc *framework.Transfo
 		return parseTypedArtifact(t.step, json.RawMessage(data))
 	}
 
-	promptDir, _ := tc.WalkerState.Context[KeyPromptDir].(string)
 	caseDir, _ := tc.WalkerState.Context[KeyCaseDir].(string)
 
-	if promptDir == "" {
-		promptDir = ".cursor/prompts"
+	promptFS, _ := tc.WalkerState.Context[KeyPromptFS].(fs.FS)
+	if promptFS == nil {
+		promptFS = DefaultPromptFS
 	}
 
 	params := ParamsFromContext(tc.WalkerState.Context)
 	params.StepName = string(t.step)
 
-	templatePath := TemplatePathForStep(promptDir, t.step)
+	templatePath := TemplatePathForStep(t.step)
 	if templatePath == "" {
 		return nil, fmt.Errorf("hitl %s: no template for step", t.step)
 	}
 
-	prompt, err := FillTemplate(templatePath, params)
+	prompt, err := FillTemplateFS(promptFS, templatePath, params)
 	if err != nil {
 		return nil, fmt.Errorf("hitl %s: fill template: %w", t.step, err)
 	}

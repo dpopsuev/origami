@@ -57,7 +57,7 @@ func init() {
 	f.StringVar(&calibrateFlags.dispatchMode, "dispatch", "stdin", "Dispatch mode for cursor backend (stdin, file, batch-file)")
 	f.BoolVar(&calibrateFlags.agentDebug, "agent-debug", false, "Enable verbose debug logging for dispatcher/agent communication")
 	f.IntVar(&calibrateFlags.runs, "runs", 1, "Number of calibration runs")
-	f.StringVar(&calibrateFlags.promptDir, "prompt-dir", ".cursor/prompts", "Prompt template directory")
+	f.StringVar(&calibrateFlags.promptDir, "prompt-dir", "", "Prompt template directory (default: embedded prompts)")
 	f.BoolVar(&calibrateFlags.clean, "clean", true, "Remove .asterisk/calibrate/ before starting (cursor backend only)")
 	f.BoolVar(&calibrateFlags.costReport, "cost-report", false, "Write token-report.json with per-case token/cost breakdown")
 	f.IntVar(&calibrateFlags.parallel, "parallel", 1, "Number of parallel workers for triage/investigation (1 = serial)")
@@ -144,7 +144,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		trackedDispatcher := dispatch.NewTokenTrackingDispatcher(dispatcher, tokenTracker)
-		var t framework.Transformer = rca.NewRCATransformer(trackedDispatcher, calibrateFlags.promptDir, rca.WithRCABasePath(calibDir))
+		var t framework.Transformer = rca.NewRCATransformer(trackedDispatcher, resolvePromptFS(calibrateFlags.promptDir), rca.WithRCABasePath(calibDir))
 		if calibrateFlags.routingLog != "" {
 			routingRecorder = rca.NewRoutingRecorder(t, backendColor(calibrateFlags.backend))
 			t = routingRecorder
@@ -216,7 +216,6 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		TransformerName: transformerLabel,
 		IDMapper:     idMapper,
 		Runs:         calibrateFlags.runs,
-		PromptDir:    calibrateFlags.promptDir,
 		Thresholds:   rca.DefaultThresholds(),
 		TokenTracker: tokenTracker,
 		Parallel:     parallelN,

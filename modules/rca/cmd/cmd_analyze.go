@@ -60,7 +60,7 @@ func init() {
 	f.StringVar(&analyzeFlags.dbPath, "db", store.DefaultDBPath, "Store DB path")
 	f.StringVar(&analyzeFlags.backendName, "backend", "basic", "Backend: basic (heuristic) or llm (AI via LLM agent)")
 	f.StringVar(&analyzeFlags.dispatchMode, "dispatch", "file", "Dispatch mode for cursor backend (stdin, file)")
-	f.StringVar(&analyzeFlags.promptDir, "prompt-dir", ".cursor/prompts", "Prompt template directory")
+	f.StringVar(&analyzeFlags.promptDir, "prompt-dir", "", "Prompt template directory (default: embedded prompts)")
 	f.StringVar(&analyzeFlags.rpBase, "rp-base-url", "", "RP base URL (default: $ASTERISK_RP_URL)")
 	f.StringVar(&analyzeFlags.rpKeyPath, "rp-api-key", ".rp-api-key", "Path to RP API key file")
 	f.StringVar(&analyzeFlags.rpProject, "rp-project", "", "RP project name (default: $ASTERISK_RP_PROJECT)")
@@ -159,7 +159,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		if err := os.MkdirAll(basePath, 0755); err != nil {
 			return fmt.Errorf("create analyze dir: %w", err)
 		}
-		t := rca.NewRCATransformer(dispatcher, analyzeFlags.promptDir,
+		t := rca.NewRCATransformer(dispatcher, resolvePromptFS(analyzeFlags.promptDir),
 			rca.WithRCABasePath(basePath),
 		)
 		cfg.Components = []*framework.Component{rca.TransformerComponent(t)}

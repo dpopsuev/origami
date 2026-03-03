@@ -2,9 +2,12 @@ package sumi
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -78,12 +81,15 @@ func runCircuit(_ context.Context, cfg RunConfig) error {
 		debug = NewDebugClient(cfg.KamiAddr)
 	}
 
+	recorder := NewViewRecorder(defaultRecorderCapacity)
+
 	m := New(Config{
-		Def:    def,
-		Store:  store,
-		Layout: layout,
-		Opts:   opts,
-		Debug:  debug,
+		Def:      def,
+		Store:    store,
+		Layout:   layout,
+		Opts:     opts,
+		Debug:    debug,
+		Recorder: recorder,
 	})
 
 	if debug != nil && debug.HealthCheck() {
@@ -91,21 +97,16 @@ func runCircuit(_ context.Context, cfg RunConfig) error {
 		m.debugAvail = true
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("sumi: %w", err)
 	}
 	return nil
 }
 
-func runWatch(_ context.Context, cfg RunConfig) error {
+func runWatch(ctx context.Context, cfg RunConfig) error {
 	addr := cfg.WatchAddr
-	def := &framework.CircuitDef{Circuit: "watch"}
-	store := view.NewCircuitStore(def)
-	defer store.Close()
-
-	engine := &view.GridLayout{}
-	layout, _ := engine.Layout(def)
+	log := slog.Default().With("component", "sumi-sse")
 
 	var debug *DebugClient
 	if cfg.KamiAddr != "" {
@@ -114,12 +115,21 @@ func runWatch(_ context.Context, cfg RunConfig) error {
 		debug = NewDebugClient(addr)
 	}
 
+	def, store := bootstrapFromSnapshot(addr, log)
+	defer store.Close()
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	recorder := NewViewRecorder(defaultRecorderCapacity)
+
 	m := New(Config{
-		Def:    def,
-		Store:  store,
-		Layout: layout,
-		Opts:   RenderOpts{NoColor: cfg.NoColor, Compact: cfg.Compact},
-		Debug:  debug,
+		Def:      def,
+		Store:    store,
+		Layout:   layout,
+		Opts:     RenderOpts{NoColor: cfg.NoColor, Compact: cfg.Compact},
+		Debug:    debug,
+		Recorder: recorder,
 	})
 
 	if debug.HealthCheck() {
@@ -127,11 +137,118 @@ func runWatch(_ context.Context, cfg RunConfig) error {
 		m.debugAvail = true
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	sseCtx, sseCancel := context.WithCancel(ctx)
+	defer sseCancel()
+	go sseClientLoop(sseCtx, addr, store, log)
+
+	pushCtx, pushCancel := context.WithCancel(ctx)
+	defer pushCancel()
+	go framePushLoop(pushCtx, recorder, addr, log)
+
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("sumi watch: %w", err)
 	}
 	return nil
+}
+
+const framePushInterval = 500 * time.Millisecond
+
+// framePushLoop polls the recorder and POSTs new frames to Kami.
+// Runs at most 2 pushes/second. Errors are silently ignored.
+func framePushLoop(ctx context.Context, rec *ViewRecorder, kamiAddr string, log *slog.Logger) {
+	url := fmt.Sprintf("http://%s/api/sumi/frame", kamiAddr)
+	client := &http.Client{Timeout: 2 * time.Second}
+	var lastTS time.Time
+
+	ticker := time.NewTicker(framePushInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			f := rec.Latest()
+			if f == nil || f.Timestamp.Equal(lastTS) {
+				continue
+			}
+			lastTS = f.Timestamp
+
+			body, err := json.Marshal(f)
+			if err != nil {
+				continue
+			}
+			resp, err := client.Post(url, "application/json", bytes.NewReader(body))
+			if err != nil {
+				log.Debug("frame push failed", "error", err)
+				continue
+			}
+			resp.Body.Close()
+		}
+	}
+}
+
+// bootstrapFromSnapshot fetches /api/snapshot from Kami to build the
+// CircuitDef and CircuitStore with the correct node set. Falls back to
+// an empty def if Kami is unreachable (SSE will populate walkers later).
+func bootstrapFromSnapshot(addr string, log *slog.Logger) (*framework.CircuitDef, *view.CircuitStore) {
+	url := fmt.Sprintf("http://%s/api/snapshot", addr)
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		log.Debug("snapshot unavailable, starting with empty circuit", "error", err)
+		def := &framework.CircuitDef{Circuit: "watch"}
+		return def, view.NewCircuitStore(def)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Debug("snapshot returned non-200, starting with empty circuit", "status", resp.StatusCode)
+		def := &framework.CircuitDef{Circuit: "watch"}
+		return def, view.NewCircuitStore(def)
+	}
+
+	var snap view.CircuitSnapshot
+	if err := json.NewDecoder(resp.Body).Decode(&snap); err != nil {
+		log.Debug("snapshot decode failed, starting with empty circuit", "error", err)
+		def := &framework.CircuitDef{Circuit: "watch"}
+		return def, view.NewCircuitStore(def)
+	}
+
+	def := &framework.CircuitDef{Circuit: snap.CircuitName}
+	for name := range snap.Nodes {
+		def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+	}
+
+	store := view.NewCircuitStore(def)
+
+	for name, ns := range snap.Nodes {
+		if ns.State == view.NodeActive || ns.State == view.NodeCompleted || ns.State == view.NodeError {
+			var evtType framework.WalkEventType
+			switch ns.State {
+			case view.NodeActive:
+				evtType = framework.EventNodeEnter
+			case view.NodeCompleted:
+				evtType = framework.EventNodeExit
+			case view.NodeError:
+				evtType = framework.EventWalkError
+			}
+			store.OnEvent(framework.WalkEvent{Type: evtType, Node: name})
+		}
+	}
+
+	for walkerID, wp := range snap.Walkers {
+		store.OnEvent(framework.WalkEvent{
+			Type:   framework.EventNodeEnter,
+			Node:   wp.Node,
+			Walker: walkerID,
+		})
+	}
+
+	log.Info("bootstrapped from snapshot", "circuit", snap.CircuitName, "nodes", len(snap.Nodes), "walkers", len(snap.Walkers))
+	return def, store
 }
 
 func runReplay(_ context.Context, cfg RunConfig) error {
@@ -160,7 +277,7 @@ func runReplay(_ context.Context, cfg RunConfig) error {
 		Opts:   opts,
 	})
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	go func() {
 		scanner := bufio.NewScanner(f)

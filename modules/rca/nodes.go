@@ -14,7 +14,7 @@ const (
 	KeyEnvelope  = "rca.envelope"
 	KeyCatalog   = "rca.catalog"
 	KeyCaseDir   = "rca.case_dir"
-	KeyPromptDir = "rca.prompt_dir"
+	KeyPromptFS  = "rca.prompt_fs"
 )
 
 // parseTypedArtifact parses a JSON response into the appropriate typed artifact

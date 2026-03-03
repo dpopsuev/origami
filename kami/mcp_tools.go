@@ -90,6 +90,12 @@ func RegisterMCPTools(mcpSrv *sdkmcp.Server, dc *DebugController, srv *Server) {
 		Name:        "kami_set_speed",
 		Description: "Set the visualization playback speed multiplier.",
 	}, noOut(handleSetSpeed(srv)))
+
+	// Sumi TUI frame tool
+	sdkmcp.AddTool(mcpSrv, &sdkmcp.Tool{
+		Name:        "sumi_get_view",
+		Description: "Get the latest Sumi TUI rendered frame. Returns the terminal text the user currently sees, plus metadata (timestamp, dimensions, selected node, focused panel, worker/event counts).",
+	}, noOut(handleGetSumiView(srv)))
 }
 
 // noOut wraps a handler to suppress outputSchema (same pattern as circuit_server).
@@ -300,5 +306,25 @@ func handleSetSpeed(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, 
 			return nil, "", err
 		}
 		return textResult(fmt.Sprintf("speed set to %.1fx", input.Speed)), "ok", nil
+	}
+}
+
+func handleGetSumiView(srv *Server) func(context.Context, *sdkmcp.CallToolRequest, emptyInput) (*sdkmcp.CallToolResult, string, error) {
+	return func(_ context.Context, _ *sdkmcp.CallToolRequest, _ emptyInput) (*sdkmcp.CallToolResult, string, error) {
+		f := srv.frameStore.Latest()
+		if f == nil {
+			return textResult("Sumi not connected or no frames recorded."), "", nil
+		}
+		header := fmt.Sprintf(
+			"Timestamp: %s\nDimensions: %dx%d\nLayout: %s\nSelected node: %s\nFocused panel: %s\nWorkers: %d\nEvents: %d\n---\n",
+			f.Timestamp.Format("2006-01-02 15:04:05"),
+			f.Width, f.Height,
+			f.LayoutTier,
+			f.SelectedNode,
+			f.FocusedPanel,
+			f.WorkerCount,
+			f.EventCount,
+		)
+		return textResult(header + f.ViewText), "ok", nil
 	}
 }

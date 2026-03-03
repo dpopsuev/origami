@@ -67,6 +67,7 @@ type ZoneDef struct {
 // Transformer is the DSL-first path; Extractor and NodeRegistry are escape hatches.
 type NodeDef struct {
 	Name        string          `yaml:"name"`
+	Description string          `yaml:"description,omitempty"`
 	Element     string          `yaml:"element,omitempty"`
 	Family      string          `yaml:"family,omitempty"`
 	Extractor   string          `yaml:"extractor,omitempty"`

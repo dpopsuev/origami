@@ -34,14 +34,21 @@ var (
 	StyleCompleted = lipgloss.NewStyle().Foreground(lipgloss.Color("34"))  // green
 	StyleError     = lipgloss.NewStyle().Foreground(lipgloss.Color("196")) // red
 
-	StyleSelected  = lipgloss.NewStyle().Reverse(true)
+	StyleSelected   = lipgloss.NewStyle().Foreground(lipgloss.Color("33")).Bold(true)
 	StyleZoneBorder = lipgloss.NewStyle().Faint(true)
 
-	StyleBreakpoint = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true) // red bold
+	StyleBreakpoint = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
 	StyleWalker     = lipgloss.NewStyle().Bold(true)
 
-	StyleStatusBar  = lipgloss.NewStyle().Background(lipgloss.Color("236")).Padding(0, 1)
-	StyleSearchBar  = lipgloss.NewStyle().Foreground(lipgloss.Color("226"))
+	StyleStatusBar = lipgloss.NewStyle().Background(lipgloss.Color("236")).Padding(0, 1)
+	StyleSearchBar = lipgloss.NewStyle().Foreground(lipgloss.Color("226"))
+
+	// War Room panel styles
+	StylePanelFocused   = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("33"))
+	StylePanelUnfocused = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("240"))
+	StylePanelTitle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33"))
+	StyleWorkerActive   = lipgloss.NewStyle().Bold(true)
+	StyleWorkerIdle     = lipgloss.NewStyle().Faint(true)
 )
 
 // DSBadge returns the determinism badge for a node's transformer type.

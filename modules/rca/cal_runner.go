@@ -32,7 +32,6 @@ type RunConfig struct {
 	TransformerName string             // label for reports
 	IDMapper     IDMappable           // optional; stub cross-case references
 	Runs         int
-	PromptDir    string
 	Thresholds   Thresholds
 	TokenTracker dispatch.TokenTracker // optional; when set, records per-step token usage
 	Parallel     int          // number of parallel workers (default 1 = serial)
@@ -53,7 +52,6 @@ func DefaultRunConfig(scenario *Scenario, comps []*framework.Component, transfor
 		Components:               comps,
 		TransformerName:         transformerName,
 		Runs:                     1,
-		PromptDir:                ".cursor/prompts",
 		Thresholds:               DefaultThresholds(),
 		BasePath:                 DefaultBasePath,
 		GapConfidentThreshold:    DefaultGapConfidentThreshold,

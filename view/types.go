@@ -38,6 +38,7 @@ type CircuitSnapshot struct {
 	Completed   bool                       `json:"completed"`
 	Error       string                     `json:"error,omitempty"`
 	Timestamp   time.Time                  `json:"timestamp"`
+	CaseResults []CaseResult               `json:"case_results,omitempty"`
 }
 
 // DiffType classifies the kind of state change in a StateDiff.

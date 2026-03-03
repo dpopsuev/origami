@@ -32,7 +32,7 @@ func init() {
 	f.StringVar(&cursorFlags.launch, "launch", "", "Path to envelope JSON or launch ID (required)")
 	f.StringVar(&cursorFlags.workspacePath, "workspace", "", "Path to context workspace file (YAML/JSON)")
 	f.IntVar(&cursorFlags.itemID, "case-id", 0, "Failure (test item) RP ID; default first from envelope")
-	f.StringVar(&cursorFlags.promptDir, "prompt-dir", ".cursor/prompts", "Directory containing prompt templates")
+	f.StringVar(&cursorFlags.promptDir, "prompt-dir", "", "Prompt template directory (default: embedded prompts)")
 	f.StringVar(&cursorFlags.dbPath, "db", store.DefaultDBPath, "Store DB path")
 
 	_ = cursorCmd.MarkFlagRequired("launch")
@@ -82,12 +82,12 @@ func runCursor(cmd *cobra.Command, _ []string) error {
 	}
 
 	result, err := rca.RunHITLStep(context.Background(), rca.HITLConfig{
-		Store:     st,
-		CaseData:  caseData,
-		Envelope:  env,
-		Catalog:   catalog,
-		PromptDir: cursorFlags.promptDir,
-		CaseDir:   caseDir,
+		Store:    st,
+		CaseData: caseData,
+		Envelope: env,
+		Catalog:  catalog,
+		PromptFS: resolvePromptFS(cursorFlags.promptDir),
+		CaseDir:  caseDir,
 	})
 	if err != nil {
 		return fmt.Errorf("orchestrate: %w", err)

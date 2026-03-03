@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/modules/rca/rcatype"
@@ -17,7 +18,7 @@ type HITLConfig struct {
 	CaseData  *store.Case
 	Envelope  *rcatype.Envelope
 	Catalog   *knowledge.KnowledgeSourceCatalog
-	PromptDir string
+	PromptFS  fs.FS
 	CaseDir   string
 }
 
@@ -142,7 +143,9 @@ func injectHITLContext(state *framework.WalkerState, cfg HITLConfig) {
 	state.Context[KeyEnvelope] = cfg.Envelope
 	state.Context[KeyCatalog] = cfg.Catalog
 	state.Context[KeyCaseDir] = cfg.CaseDir
-	state.Context[KeyPromptDir] = cfg.PromptDir
+	if cfg.PromptFS != nil {
+		state.Context[KeyPromptFS] = cfg.PromptFS
+	}
 }
 
 func buildResult(walker framework.Walker, walkErr error) (*HITLResult, error) {
