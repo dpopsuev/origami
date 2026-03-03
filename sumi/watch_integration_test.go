@@ -716,6 +716,361 @@ verify:
 	t.Logf("interleaved 4-worker test: %d walkers tracked", len(snap.Walkers))
 }
 
+// --- Bug reproduction tests ---
+// These tests document known architectural gaps in the SSE pipeline.
+// Each test exposes one specific bug. When the bug is fixed, the test
+// should be updated to assert the correct behavior.
+
+// BUG: DiffWalkerMoved maps to EventTransition, which is a no-op in the
+// client CircuitStore. Walker positions are never updated after initial add.
+func TestBug_WalkerPositionNotUpdatedOnMove(t *testing.T) {
+	def := rcaDef()
+	serverStore := view.NewCircuitStore(def)
+	defer serverStore.Close()
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	clientStore := view.NewCircuitStore(def)
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	go sseClientLoop(ctx, httpAddr, clientStore, quietLog())
+	warmupSSE(t, serverStore, clientCh)
+
+	// Walker C01 enters recall, then moves to triage.
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C01",
+	})
+	time.Sleep(50 * time.Millisecond)
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeExit, Node: "recall",
+	})
+	time.Sleep(50 * time.Millisecond)
+	serverStore.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "triage", Walker: "C01",
+	})
+
+	// Server store should show walker at triage.
+	time.Sleep(100 * time.Millisecond)
+	serverSnap := serverStore.Snapshot()
+	if serverSnap.Walkers["C01"].Node != "triage" {
+		t.Fatalf("server: walker C01 at %q, want triage", serverSnap.Walkers["C01"].Node)
+	}
+
+	// Wait for SSE delivery.
+	deadline := time.After(3 * time.Second)
+	for {
+		select {
+		case <-clientCh:
+		case <-deadline:
+			goto check
+		case <-time.After(500 * time.Millisecond):
+			goto check
+		}
+	}
+check:
+	clientSnap := clientStore.Snapshot()
+	wp, ok := clientSnap.Walkers["C01"]
+	if !ok {
+		t.Fatal("BUG: walker C01 missing entirely from client store")
+	}
+
+	// This is the bug: the client thinks C01 is still at "recall" because
+	// DiffWalkerMoved → EventTransition is a no-op in CircuitStore.OnEvent.
+	if wp.Node == "recall" {
+		t.Log("BUG CONFIRMED: walker C01 stuck at 'recall' on client — " +
+			"DiffWalkerMoved → EventTransition is a no-op, " +
+			"server has C01 at 'triage'")
+	}
+	if wp.Node != "triage" {
+		t.Errorf("walker C01 at %q on client, want 'triage' (server has 'triage')", wp.Node)
+	}
+}
+
+// BUG: The MCP server never emits WalkComplete to the CircuitStore when
+// all cases finish. The store's circuit remains in a non-completed state
+// indefinitely, causing Sumi to show stale active data.
+func TestBug_CircuitCompletionNotPropagated(t *testing.T) {
+	def := rcaDef()
+	serverStore := view.NewCircuitStore(def)
+	defer serverStore.Close()
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	// Simulate a complete circuit traversal on the server (what the MCP
+	// server does via OnStepDispatched/OnStepCompleted callbacks).
+	allNodes := []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
+	for _, node := range allNodes {
+		serverStore.OnEvent(framework.WalkEvent{
+			Type: framework.EventNodeEnter, Node: node, Walker: "C01",
+		})
+		serverStore.OnEvent(framework.WalkEvent{
+			Type: framework.EventNodeExit, Node: node,
+		})
+	}
+
+	// BUG: No WalkComplete event is emitted by the MCP server.
+	// The store still shows Completed=false.
+	snap := serverStore.Snapshot()
+	if snap.Completed {
+		t.Log("FIXED: circuit correctly marked as completed")
+	} else {
+		t.Log("BUG CONFIRMED: all nodes completed but circuit.Completed=false — " +
+			"no WalkComplete event emitted after last case")
+	}
+
+	if !snap.Completed {
+		t.Error("circuit should be marked as completed after all nodes finish")
+	}
+
+	// Sumi bootstrap from this snapshot will show the full stale session.
+	resp, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
+	if err != nil {
+		t.Fatalf("GET snapshot: %v", err)
+	}
+	var apiSnap view.CircuitSnapshot
+	json.NewDecoder(resp.Body).Decode(&apiSnap)
+	resp.Body.Close()
+
+	if !apiSnap.Completed {
+		t.Error("snapshot API should report completed=true")
+	}
+
+	// Walker should be cleared on completion.
+	if len(apiSnap.Walkers) > 0 {
+		t.Errorf("expected 0 walkers after completion, got %d", len(apiSnap.Walkers))
+	}
+}
+
+// BUG: After a session restart (SetStore swap), the SSE client reconnects
+// to the new store, but the client-side CircuitStore is never reset. Old
+// walkers and node states from the previous session persist.
+func TestBug_SessionSwapAccumulatesStaleWalkers(t *testing.T) {
+	def := rcaDef()
+	serverStore1 := view.NewCircuitStore(def)
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore1})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	clientStore := view.NewCircuitStore(def)
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	go sseClientLoop(ctx, httpAddr, clientStore, quietLog())
+	warmupSSE(t, serverStore1, clientCh)
+
+	// Session 1: walker C01 enters recall.
+	serverStore1.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C01",
+	})
+
+	deadline := time.After(3 * time.Second)
+	for {
+		select {
+		case <-clientCh:
+			snap := clientStore.Snapshot()
+			if _, ok := snap.Walkers["C01"]; ok {
+				goto session1Done
+			}
+		case <-deadline:
+			t.Fatal("timeout waiting for session-1 walker C01")
+		}
+	}
+session1Done:
+
+	// Session 2: new store, new walker C10.
+	serverStore2 := view.NewCircuitStore(def)
+	defer serverStore2.Close()
+	srv.SetStore(serverStore2)
+
+	// Re-send until SSE reconnects to store2.
+	deadline2 := time.After(10 * time.Second)
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-clientCh:
+			snap := clientStore.Snapshot()
+			if _, ok := snap.Walkers["C10"]; ok {
+				goto session2Done
+			}
+		case <-ticker.C:
+			serverStore2.OnEvent(framework.WalkEvent{
+				Type: framework.EventNodeEnter, Node: "triage", Walker: "C10",
+			})
+		case <-deadline2:
+			t.Fatal("timeout waiting for session-2 walker C10")
+		}
+	}
+session2Done:
+
+	// BUG: The client store should only have session-2 walkers (C10).
+	// But session-1 walker (C01) is still present because the client
+	// store was never reset on reconnect.
+	clientSnap := clientStore.Snapshot()
+
+	hasC01 := false
+	if _, ok := clientSnap.Walkers["C01"]; ok {
+		hasC01 = true
+	}
+	hasC10 := false
+	if _, ok := clientSnap.Walkers["C10"]; ok {
+		hasC10 = true
+	}
+
+	if hasC01 && hasC10 {
+		t.Log("BUG CONFIRMED: client has both C01 (session-1) and C10 (session-2) — " +
+			"stale walker from old session not cleared on reconnect")
+	}
+
+	if hasC01 {
+		t.Error("session-1 walker C01 should not persist after session restart")
+	}
+	if !hasC10 {
+		t.Error("session-2 walker C10 should be present")
+	}
+
+	t.Logf("client walkers after session swap: %v", func() []string {
+		var names []string
+		for k := range clientSnap.Walkers {
+			names = append(names, k)
+		}
+		return names
+	}())
+}
+
+// BUG: sseClientLoop reconnects after a store swap but does not re-bootstrap
+// the client store from /api/snapshot. The client store retains the old
+// circuit definition and node set, which may not match the new session.
+func TestBug_NoRebootstrapOnSSEReconnect(t *testing.T) {
+	// Session 1: a 2-node circuit.
+	def1 := &framework.CircuitDef{
+		Circuit: "session-1",
+		Nodes: []framework.NodeDef{
+			{Name: "alpha"},
+			{Name: "beta"},
+		},
+	}
+	serverStore1 := view.NewCircuitStore(def1)
+
+	bridge := kami.NewEventBridge(nil)
+	defer bridge.Close()
+	srv := kami.NewServer(kami.Config{Bridge: bridge, Store: serverStore1})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	httpAddr, _, err := srv.StartOnAvailablePort(ctx)
+	if err != nil {
+		t.Fatalf("kami start: %v", err)
+	}
+
+	// Client bootstraps from session-1 snapshot: knows alpha, beta.
+	clientDef, clientStore := bootstrapFromSnapshot(httpAddr, quietLog())
+	defer clientStore.Close()
+	subID, clientCh := clientStore.Subscribe()
+	defer clientStore.Unsubscribe(subID)
+
+	if clientDef.Circuit != "session-1" {
+		t.Fatalf("bootstrap circuit = %q, want session-1", clientDef.Circuit)
+	}
+	if len(clientDef.Nodes) != 2 {
+		t.Fatalf("bootstrap nodes = %d, want 2", len(clientDef.Nodes))
+	}
+
+	go sseClientLoop(ctx, httpAddr, clientStore, quietLog())
+	warmupSSE(t, serverStore1, clientCh)
+
+	// Session 2: a different circuit with 7 nodes.
+	def2 := rcaDef()
+	serverStore2 := view.NewCircuitStore(def2)
+	defer serverStore2.Close()
+	srv.SetStore(serverStore2)
+
+	// Wait for SSE to reconnect and deliver a session-2 event.
+	// Use "alpha" (a node that exists in the client's def) to detect
+	// that SSE reconnected, since events for "recall" won't produce
+	// node-state diffs in a client that doesn't know about "recall".
+	deadline := time.After(10 * time.Second)
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-clientCh:
+			clientSnap := clientStore.Snapshot()
+			if _, ok := clientSnap.Walkers["W1"]; ok {
+				goto reconnected
+			}
+		case <-ticker.C:
+			// Send an event with walker W1; the walker-added diff gets
+			// through even if the node isn't in the client's def.
+			serverStore2.OnEvent(framework.WalkEvent{
+				Type: framework.EventNodeEnter, Node: "recall", Walker: "W1",
+			})
+		case <-deadline:
+			t.Fatal("timeout waiting for session-2 events")
+		}
+	}
+reconnected:
+
+	// BUG: The client store was never re-bootstrapped. It still has the
+	// session-1 node set (alpha, beta). Session-2 events for "recall" etc.
+	// create walker entries but no node state updates (nodes don't exist
+	// in the client def).
+	clientSnap := clientStore.Snapshot()
+
+	// Client should have session-2's 7 nodes, but it has session-1's 2.
+	if len(clientSnap.Nodes) == 2 {
+		t.Log("BUG CONFIRMED: client still has session-1 nodes (alpha, beta) — " +
+			"no re-bootstrap on SSE reconnect")
+	}
+
+	if len(clientSnap.Nodes) != 7 {
+		t.Errorf("client has %d nodes, want 7 (session-2 circuit) — "+
+			"sseClientLoop does not re-bootstrap on reconnect", len(clientSnap.Nodes))
+	}
+
+	// Check if session-2 nodes exist in client store.
+	for _, node := range []string{"recall", "triage", "resolve"} {
+		if _, ok := clientSnap.Nodes[node]; !ok {
+			t.Errorf("session-2 node %q missing from client store", node)
+		}
+	}
+
+	t.Logf("client nodes after session swap: %d (want 7)", len(clientSnap.Nodes))
+}
+
 // TestWatch_EventToWalkEvent_MappingComplete verifies all kami event types
 // map correctly to framework walk events.
 func TestWatch_EventToWalkEvent_MappingComplete(t *testing.T) {
