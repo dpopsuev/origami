@@ -65,7 +65,7 @@ func TestInspectorPanel_ShowsNodeDetails(t *testing.T) {
 
 	content := p.View(Rect{0, 0, 40, 30})
 
-	checks := []string{"recall", "fire", "completed", "core.llm", "rca.recall", "rca", "[S]", "analysis"}
+	checks := []string{"recall", "fire", "completed", "core.llm", "rca.recall", "rca", "✦", "analysis"}
 	for _, want := range checks {
 		if !strings.Contains(content, want) {
 			t.Errorf("inspector should contain %q, got:\n%s", want, content)
@@ -134,8 +134,8 @@ func TestInspectorPanel_DeterministicBadge(t *testing.T) {
 
 	content := p.View(Rect{0, 0, 40, 30})
 
-	if !strings.Contains(content, "[D]") {
-		t.Errorf("triage (core.jq) should show [D] badge, got:\n%s", content)
+	if !strings.Contains(content, "⚙") {
+		t.Errorf("triage (core.jq) should show ⚙ badge, got:\n%s", content)
 	}
 }
 

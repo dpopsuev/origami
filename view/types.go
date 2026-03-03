@@ -27,12 +27,31 @@ type WalkerPosition struct {
 	Element  string `json:"element,omitempty"`
 }
 
+// CaseVisualState represents the lifecycle state of a case in the TUI.
+type CaseVisualState string
+
+const (
+	CasePending   CaseVisualState = "pending"
+	CaseActive    CaseVisualState = "active"
+	CaseCompleted CaseVisualState = "completed"
+	CaseError     CaseVisualState = "error"
+)
+
+// CaseInfo tracks a case's lifecycle state and current position.
+type CaseInfo struct {
+	CaseID  string          `json:"case_id"`
+	State   CaseVisualState `json:"state"`
+	Node    string          `json:"node"`
+	Element string          `json:"element,omitempty"`
+}
+
 // CircuitSnapshot is the full point-in-time state of a circuit:
 // topology metadata, node visual states, walker positions, debug state.
 type CircuitSnapshot struct {
 	CircuitName string                     `json:"circuit_name"`
 	Nodes       map[string]NodeState       `json:"nodes"`
 	Walkers     map[string]WalkerPosition  `json:"walkers"`
+	Cases       map[string]CaseInfo        `json:"cases,omitempty"`
 	Breakpoints map[string]bool            `json:"breakpoints"`
 	Paused      bool                       `json:"paused"`
 	Completed   bool                       `json:"completed"`

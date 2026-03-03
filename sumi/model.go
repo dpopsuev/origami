@@ -3,6 +3,7 @@ package sumi
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -57,6 +58,11 @@ type Model struct {
 	timeline     *TimelineRingBuffer
 	helpOpen     bool
 
+	// Animation state
+	animFrame      int
+	edgeHighlights map[string]int
+	nodeFlash      map[string]int
+
 	// ViewRecorder captures NoColor frames for agent MCP access and F12 dump.
 	recorder    *ViewRecorder
 	statusFlash string
@@ -98,25 +104,34 @@ func New(cfg Config) Model {
 	subID, subCh := cfg.Store.Subscribe()
 
 	m := Model{
-		def:       cfg.Def,
-		store:     cfg.Store,
-		layout:    cfg.Layout,
-		snap:      snap,
-		opts:      cfg.Opts,
-		nodeOrder: order,
-		debug:     cfg.Debug,
-		registry:  NewPanelRegistry(),
-		timeline:  NewTimelineRingBuffer(timelineMaxEntries),
-		recorder:  cfg.Recorder,
-		subID:     subID,
-		subCh:     subCh,
+		def:            cfg.Def,
+		store:          cfg.Store,
+		layout:         cfg.Layout,
+		snap:           snap,
+		opts:           cfg.Opts,
+		nodeOrder:      order,
+		debug:          cfg.Debug,
+		registry:       NewPanelRegistry(),
+		timeline:       NewTimelineRingBuffer(timelineMaxEntries),
+		edgeHighlights: make(map[string]int),
+		nodeFlash:      make(map[string]int),
+		recorder:       cfg.Recorder,
+		subID:          subID,
+		subCh:          subCh,
 	}
 	return m
 }
 
+type tickMsg time.Time
+
+const animTickInterval = 100 * time.Millisecond
+
 // Init returns the initial Cmd that starts listening for store diffs.
 func (m Model) Init() tea.Cmd {
-	return waitForDiff(m.subCh)
+	return tea.Batch(
+		waitForDiff(m.subCh),
+		tea.Tick(animTickInterval, func(t time.Time) tea.Msg { return tickMsg(t) }),
+	)
 }
 
 func waitForDiff(ch <-chan view.StateDiff) tea.Cmd {
@@ -152,6 +167,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.maybeRecordFrame()
 		return m, waitForDiff(m.subCh)
 
+	case tickMsg:
+		m.animFrame++
+		for k, v := range m.edgeHighlights {
+			if v <= 1 {
+				delete(m.edgeHighlights, k)
+			} else {
+				m.edgeHighlights[k] = v - 1
+			}
+		}
+		for k, v := range m.nodeFlash {
+			if v <= 1 {
+				delete(m.nodeFlash, k)
+			} else {
+				m.nodeFlash[k] = v - 1
+			}
+		}
+		return m, tea.Tick(animTickInterval, func(t time.Time) tea.Msg { return tickMsg(t) })
+
 	case clearFlashMsg:
 		m.statusFlash = ""
 		return m, nil
@@ -177,6 +210,16 @@ func (m *Model) applyDiff(diff view.StateDiff) {
 					m.selected = i
 					break
 				}
+			}
+		}
+		if diff.State == view.NodeCompleted {
+			m.nodeFlash[diff.Node] = 8
+		}
+	case view.DiffWalkerMoved:
+		if diff.Walker != "" {
+			if wp, ok := m.snap.Walkers[diff.Walker]; ok {
+				edgeKey := wp.Node + "->" + diff.Node
+				m.edgeHighlights[edgeKey] = 8
 			}
 		}
 	}
@@ -533,6 +576,8 @@ func (m Model) View() string {
 	if m.selected < len(m.nodeOrder) {
 		opts.SelectedNode = m.nodeOrder[m.selected]
 	}
+	opts.AnimFrame = m.animFrame
+	opts.EdgeHighlights = m.edgeHighlights
 
 	if m.warLayout.Tier >= TierCompact && !opts.NoColor {
 		return m.viewWarRoom(opts)
@@ -590,32 +635,36 @@ func (m *Model) recordFrame(baseOpts RenderOpts) {
 	})
 }
 
-// viewWarRoom renders the multi-panel War Room layout.
+// viewWarRoom renders the multi-panel War Room layout using lipgloss
+// composition instead of a rune canvas, ensuring ANSI escape codes
+// do not corrupt the layout.
 func (m *Model) viewWarRoom(opts RenderOpts) string {
 	wl := m.warLayout
 
 	graphStr, hitMap := RenderGraphWithHitMap(m.def, m.layout, m.snap, opts)
 	m.graphHitMap = hitMap
 
-	canvas := make([][]rune, wl.Height)
-	for y := range canvas {
-		canvas[y] = []rune(strings.Repeat(" ", wl.Width))
-	}
-
 	statusData := StatusBarDataFromModel(m)
-	blitString(canvas, wl.TopBar.X, wl.TopBar.Y, RenderWarRoomStatusBar(statusData), wl.TopBar.W)
+	topBar := RenderWarRoomStatusBar(statusData)
 
 	focusedID := m.registry.FocusedID()
 
+	var middlePanels []string
+
 	if wl.LeftSidebar.W > 0 && wl.LeftSidebar.H > 0 {
-		workerContent := m.renderWorkersContent()
-		frame := RenderPanelFrame("Workers", workerContent, wl.LeftSidebar, focusedID == "workers", opts.NoColor)
-		blitString(canvas, wl.LeftSidebar.X, wl.LeftSidebar.Y, frame, wl.LeftSidebar.W)
+		casesContent := m.renderCasesContent()
+		middlePanels = append(middlePanels,
+			RenderPanelFrame("Cases", casesContent, wl.LeftSidebar, focusedID == "workers", opts.NoColor))
 	}
 
 	if wl.Center.W > 0 && wl.Center.H > 0 {
-		frame := RenderPanelFrame("Circuit", graphStr, wl.Center, focusedID == "graph", opts.NoColor)
-		blitString(canvas, wl.Center.X, wl.Center.Y, frame, wl.Center.W)
+		innerW := wl.Center.W - 2
+		innerH := wl.Center.H - 2
+		if innerW > 0 && innerH > 0 {
+			graphStr = lipgloss.Place(innerW, innerH, lipgloss.Center, lipgloss.Center, graphStr)
+		}
+		middlePanels = append(middlePanels,
+			RenderPanelFrame("Circuit", graphStr, wl.Center, focusedID == "graph", opts.NoColor))
 	}
 
 	if wl.RightSidebar.W > 0 && wl.RightSidebar.H > 0 {
@@ -623,32 +672,43 @@ func (m *Model) viewWarRoom(opts RenderOpts) string {
 		if m.selected < len(m.nodeOrder) {
 			inspectorContent = m.renderInspectorContent()
 		}
-		frame := RenderPanelFrame("Inspector", inspectorContent, wl.RightSidebar, focusedID == "inspector" || focusedID == "", opts.NoColor)
-		blitString(canvas, wl.RightSidebar.X, wl.RightSidebar.Y, frame, wl.RightSidebar.W)
+		middlePanels = append(middlePanels,
+			RenderPanelFrame("Inspector", inspectorContent, wl.RightSidebar, focusedID == "inspector" || focusedID == "", opts.NoColor))
+	}
+
+	var rows []string
+	rows = append(rows, topBar)
+
+	if len(middlePanels) > 0 {
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, middlePanels...))
 	}
 
 	if wl.Bottom.W > 0 && wl.Bottom.H > 0 {
 		timelineContent := m.renderTimelineContent()
-		frame := RenderPanelFrame("Events", timelineContent, wl.Bottom, focusedID == "timeline", opts.NoColor)
-		blitString(canvas, wl.Bottom.X, wl.Bottom.Y, frame, wl.Bottom.W)
+		rows = append(rows,
+			RenderPanelFrame("Events", timelineContent, wl.Bottom, focusedID == "timeline", opts.NoColor))
+	}
+
+	output := lipgloss.JoinVertical(lipgloss.Left, rows...)
+
+	outputLines := strings.Split(output, "\n")
+	for len(outputLines) < wl.Height {
+		outputLines = append(outputLines, strings.Repeat(" ", wl.Width))
+	}
+	if len(outputLines) > wl.Height {
+		outputLines = outputLines[:wl.Height]
 	}
 
 	if m.searching {
 		searchBar := m.renderSearchBar()
-		lastLine := len(canvas) - 1
-		if lastLine >= 0 {
-			blitString(canvas, 0, lastLine, searchBar, wl.Width)
+		searchW := lipgloss.Width(searchBar)
+		if searchW < wl.Width {
+			searchBar += strings.Repeat(" ", wl.Width-searchW)
 		}
+		outputLines[wl.Height-1] = searchBar
 	}
 
-	var sb strings.Builder
-	for y, row := range canvas {
-		sb.WriteString(strings.TrimRight(string(row), " "))
-		if y < len(canvas)-1 {
-			sb.WriteByte('\n')
-		}
-	}
-	output := sb.String()
+	output = strings.Join(outputLines, "\n")
 
 	if m.helpOpen {
 		helpOverlay := RenderHelpOverlay(wl.Width, wl.Height, opts.NoColor)
@@ -730,7 +790,52 @@ func (m *Model) viewLegacy(opts RenderOpts) string {
 	return strings.Join(sections, "\n")
 }
 
+// renderCasesContent produces the case list content (panel body only).
+// Shows all cases with their lifecycle state, not just active walkers.
+func (m Model) renderCasesContent() string {
+	if len(m.snap.Cases) == 0 {
+		if len(m.snap.Walkers) == 0 {
+			return "No cases"
+		}
+		var sb strings.Builder
+		for _, wp := range m.snap.Walkers {
+			sb.WriteString(fmt.Sprintf("● %s @ %s\n", wp.WalkerID, wp.Node))
+		}
+		return strings.TrimRight(sb.String(), "\n")
+	}
+
+	ids := make([]string, 0, len(m.snap.Cases))
+	for id := range m.snap.Cases {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	var sb strings.Builder
+	for _, id := range ids {
+		ci := m.snap.Cases[id]
+		icon := caseStateIcon(ci.State)
+		line := fmt.Sprintf("%s %s @ %s", icon, ci.CaseID, ci.Node)
+		sb.WriteString(line)
+		sb.WriteByte('\n')
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+func caseStateIcon(s view.CaseVisualState) string {
+	switch s {
+	case view.CaseActive:
+		return "▶"
+	case view.CaseCompleted:
+		return "✓"
+	case view.CaseError:
+		return "✗"
+	default:
+		return "○"
+	}
+}
+
 // renderWorkersContent produces the worker list content (panel body only).
+// Deprecated: use renderCasesContent for full case lifecycle tracking.
 func (m Model) renderWorkersContent() string {
 	if len(m.snap.Walkers) == 0 {
 		return "No active workers"
@@ -794,39 +899,23 @@ func (m Model) renderInspectorContent() string {
 }
 
 // renderTimelineContent produces the event timeline body from the ring buffer.
+// Events are shown newest-first so the most recent events are visible
+// when the panel clips to its inner height.
 func (m Model) renderTimelineContent() string {
 	entries := m.timeline.Filtered(m.workerFilter)
 	if len(entries) == 0 {
 		return "Waiting for events..."
 	}
 	var sb strings.Builder
-	for i, e := range entries {
-		sb.WriteString(e.FormatEntry(m.opts.NoColor))
-		if i < len(entries)-1 {
+	for i := len(entries) - 1; i >= 0; i-- {
+		sb.WriteString(entries[i].FormatEntry(m.opts.NoColor))
+		if i > 0 {
 			sb.WriteByte('\n')
 		}
 	}
 	return sb.String()
 }
 
-// blitString writes a multi-line string onto a rune canvas at (ox, oy), clipping to maxW.
-func blitString(canvas [][]rune, ox, oy int, s string, maxW int) {
-	lines := strings.Split(s, "\n")
-	for dy, line := range lines {
-		y := oy + dy
-		if y < 0 || y >= len(canvas) {
-			continue
-		}
-		runes := []rune(line)
-		for dx, ch := range runes {
-			x := ox + dx
-			if x < 0 || x >= len(canvas[y]) || dx >= maxW {
-				continue
-			}
-			canvas[y][x] = ch
-		}
-	}
-}
 
 func (m Model) renderStatusBar() string {
 	parts := []string{}

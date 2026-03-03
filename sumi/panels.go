@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // Rect describes a panel's position and size in terminal coordinates.
@@ -344,16 +345,29 @@ func RenderPanelFrame(title, content string, rect Rect, focused bool, noColor bo
 		Height(innerH).
 		Render(strings.Join(lines, "\n"))
 
-	if title != "" && !noColor {
-		titleStr := lipgloss.NewStyle().Bold(true).Render(" " + title + " ")
+	if title != "" {
 		renderedLines := strings.Split(rendered, "\n")
 		if len(renderedLines) > 0 {
-			top := renderedLines[0]
-			if len(top) > 4 && len(title)+4 < len(top) {
-				runes := []rune(top)
-				titleRunes := []rune(titleStr)
-				copy(runes[2:], titleRunes)
-				renderedLines[0] = string(runes)
+			titleText := " " + title + " "
+			if !noColor {
+				titleText = lipgloss.NewStyle().Bold(true).Render(titleText)
+			}
+			titleW := lipgloss.Width(titleText)
+			borderW := rect.W - 2 - titleW
+			if borderW < 0 {
+				borderW = 0
+			}
+
+			borderFg := style.GetBorderTopForeground()
+			border := lipgloss.RoundedBorder()
+			fgStyle := lipgloss.NewStyle().Foreground(borderFg)
+
+			if noColor {
+				renderedLines[0] = border.TopLeft + titleText +
+					strings.Repeat(border.Top, borderW) + border.TopRight
+			} else {
+				renderedLines[0] = fgStyle.Render(border.TopLeft) + titleText +
+					fgStyle.Render(strings.Repeat(border.Top, borderW)+border.TopRight)
 			}
 		}
 		rendered = strings.Join(renderedLines, "\n")
@@ -363,9 +377,9 @@ func RenderPanelFrame(title, content string, rect Rect, focused bool, noColor bo
 }
 
 func padOrTruncate(s string, width int) string {
-	r := []rune(s)
-	if len(r) > width {
-		return string(r[:width])
+	w := lipgloss.Width(s)
+	if w > width {
+		return ansi.Truncate(s, width, "")
 	}
-	return s + strings.Repeat(" ", width-len(r))
+	return s + strings.Repeat(" ", width-w)
 }

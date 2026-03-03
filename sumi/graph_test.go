@@ -163,14 +163,14 @@ func TestRenderGraph_DSBadges(t *testing.T) {
 
 	output := RenderGraph(def, layout, snap, RenderOpts{NoColor: true})
 
-	if !strings.Contains(output, "[D]") {
-		t.Error("expected [D] badge for deterministic transformer")
+	if !strings.Contains(output, "⚙") {
+		t.Error("expected ⚙ badge for deterministic transformer")
 	}
-	if !strings.Contains(output, "[S]") {
-		t.Error("expected [S] badge for stochastic transformer")
+	if !strings.Contains(output, "✦") {
+		t.Error("expected ✦ badge for stochastic transformer")
 	}
-	if !strings.Contains(output, "[Δ]") {
-		t.Error("expected [Δ] badge for dialectic transformer")
+	if !strings.Contains(output, "Δ") {
+		t.Error("expected Δ badge for dialectic transformer")
 	}
 }
 
@@ -227,12 +227,12 @@ func TestDSBadge(t *testing.T) {
 		want        string
 	}{
 		{"", ""},
-		{"core.jq", "[D]"},
-		{"core.file", "[D]"},
-		{"core.template", "[D]"},
-		{"core.llm", "[S]"},
-		{"custom.analyzer", "[S]"},
-		{"core.dialectic", "[Δ]"},
+		{"core.jq", "⚙"},
+		{"core.file", "⚙"},
+		{"core.template", "⚙"},
+		{"core.llm", "✦"},
+		{"custom.analyzer", "✦"},
+		{"core.dialectic", "Δ"},
 	}
 	for _, tt := range tests {
 		got := DSBadge(tt.transformer)

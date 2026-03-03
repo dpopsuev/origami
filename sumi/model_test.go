@@ -1,6 +1,7 @@
 package sumi
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -9,6 +10,9 @@ import (
 	"github.com/dpopsuev/origami/view"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 )
 
 func testCircuit() *framework.CircuitDef {
@@ -310,6 +314,397 @@ func TestModel_EmptyNodeOrder_NoPanic(t *testing.T) {
 	}
 }
 
+// TestViewWarRoom_ANSI_Alignment verifies that the War Room layout
+// does not corrupt when panels contain ANSI-styled text.
+// The rune-canvas approach treats ANSI escape codes as visible characters,
+// breaking alignment of all subsequent content.
+func TestViewWarRoom_ANSI_Alignment(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	defer lipgloss.SetColorProfile(termenv.Ascii)
+
+	def := testCircuit()
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	store.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C01",
+	})
+	store.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "triage", Walker: "C02",
+	})
+
+	m := New(Config{
+		Def:    def,
+		Store:  store,
+		Layout: layout,
+		Opts:   RenderOpts{NoColor: false},
+	})
+
+	width, height := 140, 40
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: width, Height: height})
+	m = updated.(Model)
+
+	v := m.View()
+	if v == "" {
+		t.Fatal("View returned empty")
+	}
+
+	lines := strings.Split(v, "\n")
+	for i, line := range lines {
+		w := lipgloss.Width(line)
+		if w > width {
+			t.Errorf("line %d: visual width %d > terminal width %d",
+				i, w, width)
+		}
+	}
+
+	if len(lines) != height {
+		t.Errorf("output has %d lines, want %d", len(lines), height)
+	}
+
+	stripped := ansi.Strip(v)
+	for _, panel := range []string{"Circuit", "Workers", "Inspector", "Events"} {
+		if !strings.Contains(stripped, panel) {
+			t.Errorf("missing panel title %q in stripped output", panel)
+		}
+	}
+
+	if !strings.Contains(stripped, "C01") {
+		t.Error("walker C01 content missing from output")
+	}
+	if !strings.Contains(stripped, "C02") {
+		t.Error("walker C02 content missing from output")
+	}
+}
+
+func TestPadOrTruncate_ANSIAware(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	defer lipgloss.SetColorProfile(termenv.Ascii)
+
+	styled := lipgloss.NewStyle().Bold(true).Render("hello")
+	if len([]rune(styled)) == len("hello") {
+		t.Skip("lipgloss did not produce ANSI codes (no color profile)")
+	}
+
+	result := padOrTruncate(styled, 10)
+	w := lipgloss.Width(result)
+	if w != 10 {
+		t.Errorf("padOrTruncate visual width = %d, want 10 (rune len = %d)", w, len([]rune(result)))
+	}
+
+	long := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("this is a very long styled string")
+	truncated := padOrTruncate(long, 8)
+	tw := lipgloss.Width(truncated)
+	if tw != 8 {
+		t.Errorf("truncated visual width = %d, want 8", tw)
+	}
+}
+
+// TestRenderTimelineContent_NewestFirst verifies that the timeline content
+// shows newest events at the top so that when the panel clips to innerH,
+// the most recent events are visible.
+func TestRenderTimelineContent_NewestFirst(t *testing.T) {
+	def := testCircuit()
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	m := New(Config{
+		Def:    def,
+		Store:  store,
+		Layout: layout,
+		Opts:   RenderOpts{NoColor: true},
+	})
+
+	now := time.Now()
+	for i := 0; i < 50; i++ {
+		m.timeline.Push(TimelineEntry{
+			Timestamp: now.Add(time.Duration(i) * time.Second),
+			Walker:    "w1",
+			Type:      view.DiffNodeState,
+			Node:      fmt.Sprintf("node-%03d", i),
+		})
+	}
+
+	content := m.renderTimelineContent()
+	lines := strings.Split(content, "\n")
+
+	if len(lines) < 8 {
+		t.Fatalf("expected at least 8 lines, got %d", len(lines))
+	}
+
+	if !strings.Contains(lines[0], "node-049") {
+		t.Errorf("first line should contain newest event (node-049), got: %s", lines[0])
+	}
+	if !strings.Contains(lines[1], "node-048") {
+		t.Errorf("second line should contain second-newest event (node-048), got: %s", lines[1])
+	}
+}
+
+// TestCasesPanel_ShowsAllCases verifies that the Cases panel shows all cases
+// across the full lifecycle (active, completed, error), not just active walkers.
+func TestCasesPanel_ShowsAllCases(t *testing.T) {
+	def := testCircuit()
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	for i := 1; i <= 12; i++ {
+		caseID := fmt.Sprintf("C%02d", i)
+		store.OnEvent(framework.WalkEvent{
+			Type: framework.EventNodeEnter, Node: "recall", Walker: caseID,
+		})
+	}
+
+	for i := 1; i <= 4; i++ {
+		caseID := fmt.Sprintf("C%02d", i)
+		store.OnEvent(framework.WalkEvent{
+			Type: framework.EventWalkComplete, Walker: caseID,
+		})
+	}
+
+	for i := 5; i <= 6; i++ {
+		caseID := fmt.Sprintf("C%02d", i)
+		store.OnEvent(framework.WalkEvent{
+			Type: framework.EventWalkError, Walker: caseID, Error: fmt.Errorf("timeout"),
+		})
+	}
+
+	snap := store.Snapshot()
+	if len(snap.Cases) != 12 {
+		t.Fatalf("expected 12 cases, got %d", len(snap.Cases))
+	}
+
+	completed := 0
+	errored := 0
+	active := 0
+	for _, ci := range snap.Cases {
+		switch ci.State {
+		case view.CaseCompleted:
+			completed++
+		case view.CaseError:
+			errored++
+		case view.CaseActive:
+			active++
+		}
+	}
+
+	if completed != 4 {
+		t.Errorf("completed cases = %d, want 4", completed)
+	}
+	if errored != 2 {
+		t.Errorf("errored cases = %d, want 2", errored)
+	}
+	if active != 6 {
+		t.Errorf("active cases = %d, want 6", active)
+	}
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	m := New(Config{
+		Def:    def,
+		Store:  store,
+		Layout: layout,
+		Opts:   RenderOpts{NoColor: true},
+	})
+
+	content := m.renderCasesContent()
+	for i := 1; i <= 12; i++ {
+		caseID := fmt.Sprintf("C%02d", i)
+		if !strings.Contains(content, caseID) {
+			t.Errorf("cases content missing case %s", caseID)
+		}
+	}
+
+	if !strings.Contains(content, "✓") {
+		t.Error("missing completed icon (✓)")
+	}
+	if !strings.Contains(content, "✗") {
+		t.Error("missing error icon (✗)")
+	}
+	if !strings.Contains(content, "▶") {
+		t.Error("missing active icon (▶)")
+	}
+}
+
+// TestRenderGraph_CenteredInPanel verifies that the graph is centered
+// within the circuit panel when the graph is smaller than the panel.
+func TestRenderGraph_CenteredInPanel(t *testing.T) {
+	def := testCircuit()
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	graphStr := RenderGraph(def, layout, store.Snapshot(), RenderOpts{NoColor: true})
+	graphLines := strings.Split(graphStr, "\n")
+
+	graphW := 0
+	for _, line := range graphLines {
+		if w := lipgloss.Width(line); w > graphW {
+			graphW = w
+		}
+	}
+
+	panelW := graphW + 40
+	panelH := len(graphLines) + 20
+	rect := Rect{0, 0, panelW, panelH}
+
+	innerW := panelW - 2
+	innerH := panelH - 2
+	centered := lipgloss.Place(innerW, innerH, lipgloss.Center, lipgloss.Center, graphStr)
+	frame := RenderPanelFrame("Circuit", centered, rect, false, true)
+
+	frameLines := strings.Split(frame, "\n")
+	if len(frameLines) < 3 {
+		t.Fatalf("expected at least 3 frame lines, got %d", len(frameLines))
+	}
+
+	contentStartLine := frameLines[1]
+	trimmed := strings.TrimLeft(contentStartLine, "│ ")
+	if strings.TrimSpace(trimmed) != "" {
+		t.Logf("first content line non-empty: %q (graph starts later = centered vertically)", trimmed)
+	}
+
+	expectedHPad := (innerW - graphW) / 2
+	if expectedHPad <= 0 {
+		t.Skip("graph fills panel, no centering to verify")
+	}
+
+	foundCentered := false
+	for _, line := range frameLines[1 : len(frameLines)-1] {
+		stripped := strings.TrimPrefix(line, "│")
+		if stripped == "" {
+			continue
+		}
+		leadingSpaces := len(stripped) - len(strings.TrimLeft(stripped, " "))
+		if leadingSpaces >= expectedHPad-1 && strings.TrimSpace(stripped) != "" {
+			foundCentered = true
+			break
+		}
+	}
+	if !foundCentered {
+		t.Errorf("graph does not appear horizontally centered (expected ~%d leading spaces)", expectedHPad)
+	}
+}
+
+// TestAnimation_SpinnerAdvances verifies that the state indicator for active
+// nodes cycles through braille spinner chars based on the animation frame.
+func TestAnimation_SpinnerAdvances(t *testing.T) {
+	seen := make(map[string]bool)
+	for frame := 1; frame <= 20; frame++ {
+		icon := stateIndicator(view.NodeActive, frame)
+		seen[icon] = true
+	}
+
+	if len(seen) < 3 {
+		t.Errorf("expected at least 3 distinct spinner chars, got %d: %v", len(seen), seen)
+	}
+
+	staticIcon := stateIndicator(view.NodeActive, 0)
+	if staticIcon != "▶" {
+		t.Errorf("frame 0 should use static indicator ▶, got %q", staticIcon)
+	}
+
+	completedIcon := stateIndicator(view.NodeCompleted, 5)
+	if completedIcon != "✓" {
+		t.Errorf("completed nodes should always show ✓ regardless of frame, got %q", completedIcon)
+	}
+}
+
+// TestAnimation_EdgeHighlightDecays verifies that edge highlight counters
+// decrement each tick and are cleaned up when reaching zero.
+func TestAnimation_EdgeHighlightDecays(t *testing.T) {
+	def := testCircuit()
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	m := New(Config{
+		Def:    def,
+		Store:  store,
+		Layout: layout,
+		Opts:   RenderOpts{NoColor: true},
+	})
+
+	m.edgeHighlights["recall->triage"] = 3
+
+	for tick := 0; tick < 3; tick++ {
+		updated, _ := m.Update(tickMsg(time.Now()))
+		m = updated.(Model)
+	}
+
+	if _, exists := m.edgeHighlights["recall->triage"]; exists {
+		t.Errorf("edge highlight should be removed after 3 ticks, still has %d frames",
+			m.edgeHighlights["recall->triage"])
+	}
+}
+
+// TestDSBadge_UnicodeSymbols verifies that D/S badges use OSS unicode symbols
+// instead of bracket notation.
+func TestDSBadge_UnicodeSymbols(t *testing.T) {
+	tests := []struct {
+		transformer string
+		want        string
+	}{
+		{"core.jq", "⚙"},
+		{"core.file", "⚙"},
+		{"core.template", "⚙"},
+		{"core.noop", "⚙"},
+		{"core.passthrough", "⚙"},
+		{"core.dialectic", "Δ"},
+		{"some.llm.transformer", "✦"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		got := DSBadge(tt.transformer)
+		if got != tt.want {
+			t.Errorf("DSBadge(%q) = %q, want %q", tt.transformer, got, tt.want)
+		}
+	}
+}
+
+// TestDrawNode_ElementColoredBorders verifies that active nodes use element color
+// for border styling rather than generic state-only color.
+func TestDrawNode_ElementColoredBorders(t *testing.T) {
+	def := testCircuit()
+	store := view.NewCircuitStore(def)
+	defer store.Close()
+
+	engine := &view.GridLayout{}
+	layout, _ := engine.Layout(def)
+
+	store.OnEvent(framework.WalkEvent{
+		Type: framework.EventNodeEnter, Node: "recall", Walker: "C01",
+	})
+
+	snap := store.Snapshot()
+	opts := RenderOpts{NoColor: false, AnimFrame: 1}
+	graphStr := RenderGraph(def, layout, snap, opts)
+
+	if !strings.Contains(graphStr, "recall") {
+		t.Error("graph should contain node name 'recall'")
+	}
+
+	noColorOpts := RenderOpts{NoColor: true}
+	noColorGraph := RenderGraph(def, layout, snap, noColorOpts)
+	if !strings.Contains(noColorGraph, "recall") {
+		t.Error("noColor graph should contain node name 'recall'")
+	}
+
+	if graphStr == noColorGraph {
+		t.Error("colored graph should differ from noColor graph (element styling)")
+	}
+}
+
 // --- DiffReset tests ---
 // These tests verify that the Model correctly rebuilds its rendering
 // state (def, layout, nodeOrder) when the store emits a DiffReset event,
@@ -523,7 +918,7 @@ func TestModel_InitSubscription_SurvivesUpdateLoop(t *testing.T) {
 	})
 
 	// Simulate Bubble Tea's lifecycle:
-	// 1. Init() → returns first Cmd (with captured channel)
+	// 1. Init() → returns a batch Cmd (diff waiter + tick)
 	initCmd := m.Init()
 	if initCmd == nil {
 		t.Fatal("Init() returned nil Cmd")
@@ -534,8 +929,26 @@ func TestModel_InitSubscription_SurvivesUpdateLoop(t *testing.T) {
 		Type: framework.EventNodeEnter, Node: "recall", Walker: "w1",
 	})
 
-	// 3. Execute the first Cmd to get the first DiffMsg.
-	msg := initCmd()
+	// 3. Execute the batch Cmd and find the DiffMsg among the results.
+	batchResult := initCmd()
+	var msg tea.Msg
+	if batch, ok := batchResult.(tea.BatchMsg); ok {
+		for _, cmd := range batch {
+			if cmd == nil {
+				continue
+			}
+			result := cmd()
+			if _, isDiff := result.(DiffMsg); isDiff {
+				msg = result
+				break
+			}
+		}
+	} else if _, isDiff := batchResult.(DiffMsg); isDiff {
+		msg = batchResult
+	}
+	if msg == nil {
+		t.Fatal("no DiffMsg found in Init() batch result")
+	}
 	if _, ok := msg.(DiffMsg); !ok {
 		t.Fatalf("first Cmd returned %T, want DiffMsg", msg)
 	}

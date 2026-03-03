@@ -51,18 +51,18 @@ var (
 	StyleWorkerIdle     = lipgloss.NewStyle().Faint(true)
 )
 
-// DSBadge returns the determinism badge for a node's transformer type.
-// [D] = deterministic, [S] = stochastic, [Δ] = dialectic.
+// DSBadge returns the OSS unicode symbol for a node's transformer type.
+// ⚙ = deterministic, ✦ = stochastic, Δ = dialectic.
 func DSBadge(transformer string) string {
 	switch {
 	case transformer == "":
 		return ""
 	case isDeterministicTransformer(transformer):
-		return "[D]"
+		return "⚙"
 	case transformer == "core.dialectic":
-		return "[Δ]"
+		return "Δ"
 	default:
-		return "[S]"
+		return "✦"
 	}
 }
 

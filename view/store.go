@@ -53,6 +53,7 @@ func NewCircuitStore(def *framework.CircuitDef) *CircuitStore {
 			CircuitName: def.Circuit,
 			Nodes:       nodes,
 			Walkers:     make(map[string]WalkerPosition),
+			Cases:       make(map[string]CaseInfo),
 			Breakpoints: make(map[string]bool),
 			Timestamp:   time.Now().UTC(),
 		},
@@ -99,6 +100,7 @@ func (cs *CircuitStore) Reset(def *framework.CircuitDef) {
 		CircuitName: def.Circuit,
 		Nodes:       nodes,
 		Walkers:     make(map[string]WalkerPosition),
+		Cases:       make(map[string]CaseInfo),
 		Breakpoints: make(map[string]bool),
 		Timestamp:   now,
 	}
@@ -142,6 +144,19 @@ func (cs *CircuitStore) OnEvent(we framework.WalkEvent) {
 		}
 
 	case framework.EventWalkComplete:
+		if we.Walker != "" {
+			if ci, ok := cs.snapshot.Cases[we.Walker]; ok {
+				ci.State = CaseCompleted
+				cs.snapshot.Cases[we.Walker] = ci
+			}
+		} else {
+			for id, ci := range cs.snapshot.Cases {
+				if ci.State == CaseActive {
+					ci.State = CaseCompleted
+					cs.snapshot.Cases[id] = ci
+				}
+			}
+		}
 		cs.clearWalkers(we.Walker, now)
 		cs.snapshot.Completed = true
 		cs.emit(StateDiff{Type: DiffCompleted, Timestamp: now})
@@ -153,6 +168,12 @@ func (cs *CircuitStore) OnEvent(we framework.WalkEvent) {
 		}
 		if we.Node != "" {
 			cs.setNodeState(we.Node, NodeError, now)
+		}
+		if we.Walker != "" {
+			if ci, ok := cs.snapshot.Cases[we.Walker]; ok {
+				ci.State = CaseError
+				cs.snapshot.Cases[we.Walker] = ci
+			}
 		}
 		cs.clearWalkers(we.Walker, now)
 		cs.snapshot.Error = errMsg
@@ -188,10 +209,16 @@ func (cs *CircuitStore) Snapshot() CircuitSnapshot {
 		breakpoints[k] = v
 	}
 
+	cases := make(map[string]CaseInfo, len(cs.snapshot.Cases))
+	for k, v := range cs.snapshot.Cases {
+		cases[k] = v
+	}
+
 	return CircuitSnapshot{
 		CircuitName: cs.snapshot.CircuitName,
 		Nodes:       nodes,
 		Walkers:     walkers,
+		Cases:       cases,
 		Breakpoints: breakpoints,
 		Paused:      cs.snapshot.Paused,
 		Completed:   cs.snapshot.Completed,
@@ -301,6 +328,11 @@ func (cs *CircuitStore) moveWalker(walkerID, node string, ts time.Time) {
 	}
 	wp.Node = node
 	cs.snapshot.Walkers[walkerID] = wp
+	if ci, ok := cs.snapshot.Cases[walkerID]; ok {
+		ci.Node = node
+		ci.Element = cs.nodeElement[node]
+		cs.snapshot.Cases[walkerID] = ci
+	}
 	cs.emit(StateDiff{Type: DiffWalkerMoved, Walker: walkerID, Node: node, Timestamp: ts})
 }
 
@@ -309,6 +341,14 @@ func (cs *CircuitStore) addWalker(walkerID, node string, ts time.Time) {
 		WalkerID: walkerID,
 		Node:     node,
 		Element:  cs.nodeElement[node],
+	}
+	if _, exists := cs.snapshot.Cases[walkerID]; !exists {
+		cs.snapshot.Cases[walkerID] = CaseInfo{
+			CaseID:  walkerID,
+			State:   CaseActive,
+			Node:    node,
+			Element: cs.nodeElement[node],
+		}
 	}
 	cs.emit(StateDiff{Type: DiffWalkerAdded, Walker: walkerID, Node: node, Timestamp: ts})
 }

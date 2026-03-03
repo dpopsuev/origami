@@ -164,10 +164,12 @@ func (c *canvas) renderLine(y int, opts RenderOpts) string {
 
 // RenderOpts controls rendering behavior.
 type RenderOpts struct {
-	NoColor      bool
-	Compact      bool
-	Width        int
-	SelectedNode string // node name to highlight with selection border
+	NoColor        bool
+	Compact        bool
+	Width          int
+	SelectedNode   string // node name to highlight with selection border
+	AnimFrame      int    // monotonic frame counter for animations
+	EdgeHighlights map[string]int // "from->to" -> frames remaining
 }
 
 // --- Node drawing ---
@@ -198,12 +200,16 @@ func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, sna
 		style = lipgloss.NewStyle()
 	}
 
+	if ns.State == view.NodeActive && !opts.NoColor && !selected {
+		style = ElementFg(nd.Element).Bold(true)
+	}
+
 	if selected && !opts.NoColor {
 		style = StyleSelected
 	}
 
 	badge := DSBadge(nd.Transformer)
-	stateIcon := stateIndicator(ns.State)
+	stateIcon := stateIndicator(ns.State, opts.AnimFrame)
 
 	walkerMark := ""
 	for _, wp := range snap.Walkers {
@@ -297,9 +303,14 @@ func nodeStyle(ns view.NodeState, opts RenderOpts) lipgloss.Style {
 	}
 }
 
-func stateIndicator(state view.NodeVisualState) string {
+var spinnerChars = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+func stateIndicator(state view.NodeVisualState, animFrame int) string {
 	switch state {
 	case view.NodeActive:
+		if animFrame > 0 {
+			return spinnerChars[animFrame%len(spinnerChars)]
+		}
 		return "▶"
 	case view.NodeCompleted:
 		return "✓"
@@ -334,6 +345,12 @@ func drawEdges(c *canvas, def *framework.CircuitDef, layout view.CircuitLayout, 
 		}
 		if edge.Loop {
 			edgeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+		}
+
+		edgeKey := edge.From + "->" + edge.To
+		highlighted := opts.EdgeHighlights[edgeKey] > 0
+		if highlighted && !opts.NoColor {
+			edgeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
 		}
 		if opts.NoColor {
 			edgeStyle = lipgloss.NewStyle()
