@@ -27,20 +27,24 @@ const (
 func sseClientLoop(ctx context.Context, addr string, store *view.CircuitStore, log *slog.Logger) {
 	backoff := minBackoff
 	first := true
+	iteration := 0
 	for {
+		iteration++
 		if !first {
+			log.Info("SSE reconnecting", "iteration", iteration, "backoff", backoff)
 			rebootstrapStore(addr, store, log)
 		}
 		first = false
 
-		err := streamSSE(ctx, addr, store)
+		err := streamSSE(ctx, addr, store, log)
 		if ctx.Err() != nil {
+			log.Info("SSE client stopped (context cancelled)")
 			return
 		}
 		if err != nil {
-			log.Debug("SSE stream ended", "error", err, "reconnect_in", backoff)
+			log.Info("SSE stream ended", "error", err, "reconnect_in", backoff, "iteration", iteration)
 		} else {
-			log.Debug("SSE stream closed by server", "reconnect_in", backoff)
+			log.Info("SSE stream closed by server", "reconnect_in", backoff, "iteration", iteration)
 		}
 
 		select {
@@ -110,13 +114,13 @@ func rebootstrapStore(addr string, store *view.CircuitStore, log *slog.Logger) {
 		})
 	}
 
-	log.Debug("re-bootstrapped store from snapshot",
+	log.Info("re-bootstrapped store from snapshot",
 		"circuit", snap.CircuitName,
 		"nodes", len(snap.Nodes),
 		"walkers", len(snap.Walkers))
 }
 
-func streamSSE(ctx context.Context, addr string, store *view.CircuitStore) error {
+func streamSSE(ctx context.Context, addr string, store *view.CircuitStore, log *slog.Logger) error {
 	url := fmt.Sprintf("http://%s/events/stream", addr)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -134,6 +138,9 @@ func streamSSE(ctx context.Context, addr string, store *view.CircuitStore) error
 		return fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
+	log.Info("SSE connected", "addr", addr)
+
+	eventCount := 0
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -144,12 +151,22 @@ func streamSSE(ctx context.Context, addr string, store *view.CircuitStore) error
 
 		var evt kami.Event
 		if err := json.Unmarshal([]byte(payload), &evt); err != nil {
+			log.Debug("SSE event parse error", "error", err, "payload", payload[:min(len(payload), 100)])
 			continue
 		}
+
+		eventCount++
+		log.Info("SSE event received",
+			"type", string(evt.Type),
+			"node", evt.Node,
+			"agent", evt.Agent,
+			"event_num", eventCount)
 
 		we := eventToWalkEvent(evt)
 		store.OnEvent(we)
 	}
+
+	log.Info("SSE stream ended", "total_events", eventCount)
 
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("read: %w", err)

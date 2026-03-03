@@ -163,16 +163,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) applyDiff(diff view.StateDiff) {
-	// The store already updates the snapshot; we just track
-	// extra UI state here if needed (e.g., auto-select active node).
-	if diff.Type == view.DiffNodeState && diff.State == view.NodeActive {
-		for i, name := range m.nodeOrder {
-			if name == diff.Node {
-				m.selected = i
-				break
+	switch diff.Type {
+	case view.DiffReset:
+		m.rebuildFromStore()
+	case view.DiffNodeState:
+		if diff.State == view.NodeActive {
+			for i, name := range m.nodeOrder {
+				if name == diff.Node {
+					m.selected = i
+					break
+				}
 			}
 		}
 	}
+}
+
+// rebuildFromStore reconstructs the Model's rendering state (def, layout,
+// nodeOrder) from the store's current snapshot. Called on DiffReset when
+// the SSE client reconnects after a session swap and rebootstraps.
+func (m *Model) rebuildFromStore() {
+	snap := m.store.Snapshot()
+	if len(snap.Nodes) == 0 {
+		return
+	}
+
+	def := &framework.CircuitDef{Circuit: snap.CircuitName}
+	for name := range snap.Nodes {
+		def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+	}
+
+	engine := &view.GridLayout{}
+	layout, err := engine.Layout(def)
+	if err != nil {
+		return
+	}
+
+	order := make([]string, 0, len(def.Nodes))
+	for _, nd := range def.Nodes {
+		order = append(order, nd.Name)
+	}
+
+	m.def = def
+	m.layout = layout
+	m.nodeOrder = order
+	m.selected = 0
+	m.snap = snap
 }
 
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
