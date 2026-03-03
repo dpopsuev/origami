@@ -1,8 +1,6 @@
 {
-  "case_id": "C15",
-  "component": "linuxptp-daemon",
+  "case_id": "auto",
   "defect_type": "pb001",
-  "jira_id": "OCPBUGS-70178",
-  "summary": "",
-  "test_name": ""
+  "subagent": 1,
+  "summary": "test summary"
 }

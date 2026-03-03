@@ -61,11 +61,11 @@ FAIL: Expected clock state to be LOCKED within 300s timeout
 
 ## Repo selection (from F2)
 
-### test-repo
+### linuxptp-daemon-operator
 - **Path:** 
 - **Focus paths:** 
 - **Branch:** 
-- **Reason:** test
+- **Reason:** Product code with holdover config
 
 
 

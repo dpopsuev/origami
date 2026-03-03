@@ -49,7 +49,7 @@ Given the triage classification and the available repos, select which repo(s) to
 
 Previous investigation converged at **0.85** with defect type `pb001`:
 
-> root cause from subagent-2
+> root cause from subagent-3
 
 The convergence was too low. Select a different repo or broader scope for the retry.
 

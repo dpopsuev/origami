@@ -1,9 +1,9 @@
 {
-  "symptom_category": "infra",
-  "severity": "medium",
-  "defect_type_hypothesis": "en001",
+  "symptom_category": "product",
+  "severity": "high",
+  "defect_type_hypothesis": "pb001",
   "candidate_repos": [
-    "linuxptp-daemon"
+    "test-repo"
   ],
-  "skip_investigation": true
+  "skip_investigation": false
 }

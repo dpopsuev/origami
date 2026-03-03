@@ -1,8 +1,6 @@
 {
-  "case_id": "C17",
-  "component": "cloud-event-proxy",
+  "case_id": "auto",
   "defect_type": "pb001",
-  "jira_id": "OCPBUGS-74377",
-  "summary": "",
-  "test_name": ""
+  "subagent": 0,
+  "summary": "test summary"
 }

@@ -1,11 +1,11 @@
 {
   "launch_id": "",
   "case_ids": null,
-  "rca_message": "Holdover timeout reduced from 300s to 60s in linuxptp-daemon config (commit abc1234 on release-4.21). The ptp4l process enters FREERUN state and cannot recover because the holdover period is too short.",
+  "rca_message": "root cause from subagent-0",
   "defect_type": "pb001",
-  "component": "linuxptp-daemon",
+  "component": "test-component",
   "convergence_score": 0.85,
   "evidence_refs": [
-    "linuxptp-daemon-operator:pkg/daemon/config.go:abc1234"
+    "ref-1"
   ]
 }

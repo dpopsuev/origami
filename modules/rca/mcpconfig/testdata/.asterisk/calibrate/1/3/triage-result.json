@@ -1,9 +1,9 @@
 {
   "symptom_category": "product",
-  "severity": "critical",
+  "severity": "high",
   "defect_type_hypothesis": "pb001",
   "candidate_repos": [
-    "cloud-event-proxy"
+    "test-repo"
   ],
   "skip_investigation": false
 }

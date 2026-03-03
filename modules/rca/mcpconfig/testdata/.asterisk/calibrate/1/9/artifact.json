@@ -1,11 +1,11 @@
 {
   "launch_id": "",
   "case_ids": null,
-  "rca_message": "t-bc/t-tsc upstream clock loss \u0026 unassisted holdover /var/lib/jenkins/workspace/ocp-far-edge-vran-tests/cnf-gotests/test/ran/ptp/tests/ptp_recovery.go:2062",
+  "rca_message": "root cause from subagent-1",
   "defect_type": "pb001",
-  "component": "linuxptp-daemon",
-  "convergence_score": 0.8,
+  "component": "test-component",
+  "convergence_score": 0.85,
   "evidence_refs": [
-    "openshift/linuxptp-daemon#520"
+    "ref-1"
   ]
 }

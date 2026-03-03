@@ -1,12 +1,11 @@
 {
   "launch_id": "",
   "case_ids": null,
-  "rca_message": "PTP Events and Metrics - interface down /var/lib/jenkins/workspace/ocp-far-edge-vran-tests/cnf-gotests/test/ran/ptp/tests/ptp_interfaces.go:753 Ran 19 of 39 Specs in 5903.299 seconds",
+  "rca_message": "root cause from subagent-0",
   "defect_type": "pb001",
-  "component": "linuxptp-daemon",
-  "convergence_score": 0.8,
+  "component": "test-component",
+  "convergence_score": 0.85,
   "evidence_refs": [
-    "openshift/linuxptp-daemon#520",
-    "k8snetworkplumbingwg/linuxptp-daemon#135"
+    "ref-1"
   ]
 }
