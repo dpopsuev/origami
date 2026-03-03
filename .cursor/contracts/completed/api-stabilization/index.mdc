@@ -4,6 +4,7 @@
 (No directories)
 
 ## Files
+- `prompt-first-class.md` — Prompt templates as first-class citizens: go:embed, template field validator, P1 lint rule, golden render tests, coverage test. Complete.
 - `signal-domains.md` — Renderer interface (DAC symmetry), zone domain annotations, context filter. Complete.
 - `signal-integrity.md` — Evidence SNR, per-node cost tracking, mismatch scoring, convergence trajectory. Complete.
 - `dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.

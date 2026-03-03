@@ -1,9 +1,12 @@
 package lint
 
 // AllRules returns all built-in lint rules ordered by category:
-// structural (S), semantic (G), best-practice (B).
+// structural (S), semantic (G), best-practice (B), prompt (P).
 func AllRules() []Rule {
-	return append(append(structuralRules(), semanticRules()...), bestPracticeRules()...)
+	all := append(structuralRules(), semanticRules()...)
+	all = append(all, bestPracticeRules()...)
+	all = append(all, promptRules()...)
+	return all
 }
 
 func structuralRules() []Rule {
@@ -47,5 +50,11 @@ func bestPracticeRules() []Rule {
 		&ElementAffinityChain{},
 		&StochasticTransformer{},
 		&StochasticSummary{},
+	}
+}
+
+func promptRules() []Rule {
+	return []Rule{
+		&TemplateParamValidity{},
 	}
 }

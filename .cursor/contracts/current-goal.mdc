@@ -63,6 +63,7 @@ Asterisk pivot (post-Origami finish line)
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
+| `sumi-war-room` | next-milestone | 3+ | Ops-grade War Room TUI: multi-panel layout, mouse, event timeline, worker selector, rich inspector. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
 
 ## Completed Work

@@ -7,6 +7,7 @@ package lint
 
 import (
 	"fmt"
+	"io/fs"
 	"sort"
 	"strings"
 
@@ -90,14 +91,27 @@ type Fixable interface {
 	Fix(ctx *LintContext) []Fix
 }
 
+// PromptFieldError describes an invalid field reference in a prompt template.
+type PromptFieldError struct {
+	Field   string
+	Message string
+}
+
+// PromptValidator checks a prompt template's field references and returns
+// errors for any that cannot be resolved against the expected parameter type.
+// Implementations are provided by domain modules (e.g. modules/rca).
+type PromptValidator func(content string) []PromptFieldError
+
 // LintContext holds all data available to lint rules during checking.
 type LintContext struct {
-	Def          *framework.CircuitDef
-	Raw          []byte
-	File         string
-	Registries   *framework.GraphRegistries
-	yamlRoot     *yaml.Node
-	fieldLineMap map[string]int
+	Def             *framework.CircuitDef
+	Raw             []byte
+	File            string
+	Registries      *framework.GraphRegistries
+	PromptFS        fs.FS
+	PromptValidator PromptValidator
+	yamlRoot        *yaml.Node
+	fieldLineMap    map[string]int
 }
 
 // NewLintContext creates a LintContext from raw YAML bytes.
@@ -227,9 +241,11 @@ func (p Profile) maxSeverity() Severity {
 type Option func(*runConfig)
 
 type runConfig struct {
-	profile    Profile
-	tags       []string
-	registries *framework.GraphRegistries
+	profile         Profile
+	tags            []string
+	registries      *framework.GraphRegistries
+	promptFS        fs.FS
+	promptValidator PromptValidator
 }
 
 // WithProfile sets the lint profile.
@@ -245,6 +261,19 @@ func WithTags(tags ...string) Option {
 // WithRegistries provides graph registries for deeper semantic checks.
 func WithRegistries(reg *framework.GraphRegistries) Option {
 	return func(c *runConfig) { c.registries = reg }
+}
+
+// WithPromptFS provides an fs.FS containing prompt templates for the
+// P1/template-param-validity rule. Typically rca.DefaultPromptFS.
+func WithPromptFS(fsys fs.FS) Option {
+	return func(c *runConfig) { c.promptFS = fsys }
+}
+
+// WithPromptValidator provides a callback that validates prompt template
+// field references. The callback is domain-specific; the lint package
+// does not import domain modules.
+func WithPromptValidator(v PromptValidator) Option {
+	return func(c *runConfig) { c.promptValidator = v }
 }
 
 // Runner holds a set of rules and executes them against circuit definitions.
@@ -271,6 +300,12 @@ func (r *Runner) Run(ctx *LintContext, opts ...Option) []Finding {
 	}
 	if cfg.registries != nil {
 		ctx.Registries = cfg.registries
+	}
+	if cfg.promptFS != nil {
+		ctx.PromptFS = cfg.promptFS
+	}
+	if cfg.promptValidator != nil {
+		ctx.PromptValidator = cfg.promptValidator
 	}
 
 	maxSev := cfg.profile.maxSeverity()

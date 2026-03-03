@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	framework "github.com/dpopsuev/origami"
 )
@@ -492,9 +493,9 @@ func TestFinding_String(t *testing.T) {
 
 func TestAllRules_Count(t *testing.T) {
 	rules := AllRules()
-	// 14 structural + 7 semantic + 8 best-practice = 29
-	if len(rules) != 29 {
-		t.Errorf("expected 29 rules, got %d", len(rules))
+	// 14 structural + 7 semantic + 8 best-practice + 1 prompt = 30
+	if len(rules) != 30 {
+		t.Errorf("expected 30 rules, got %d", len(rules))
 	}
 
 	ids := make(map[string]bool)
@@ -813,6 +814,95 @@ func TestLevenshtein(t *testing.T) {
 	for _, tt := range tests {
 		if got := levenshtein(tt.a, tt.b); got != tt.want {
 			t.Errorf("levenshtein(%q, %q) = %d, want %d", tt.a, tt.b, got, tt.want)
+		}
+	}
+}
+
+func TestRun_TemplateParamValidity(t *testing.T) {
+	validTemplate := `# Case {{.CaseID}}
+Step: {{.StepName}}`
+	invalidTemplate := `# Case {{.CaseID}}
+Error: {{.Failure.ErrorMesage}}`
+	referenceDoc := `# Gap Analysis
+No template directives here.`
+
+	promptFS := fstest.MapFS{
+		"prompts/recall/judge-similarity.md": &fstest.MapFile{Data: []byte(validTemplate)},
+		"prompts/triage/classify-symptoms.md": &fstest.MapFile{Data: []byte(invalidTemplate)},
+		"prompts/review/gap-analysis.md":      &fstest.MapFile{Data: []byte(referenceDoc)},
+	}
+
+	validator := PromptValidator(func(content string) []PromptFieldError {
+		if strings.Contains(content, "ErrorMesage") {
+			return []PromptFieldError{{Field: "Failure.ErrorMesage", Message: `type FailureParams has no field "ErrorMesage"`}}
+		}
+		return nil
+	})
+
+	circuitYAML := []byte(`
+circuit: test
+description: test circuit
+nodes:
+  - name: init
+    element: water
+  - name: done
+    element: water
+edges:
+  - id: e1
+    name: start
+    from: init
+    to: done
+    when: "true"
+`)
+
+	findings, err := Run(circuitYAML, "test.yaml",
+		WithProfile(ProfileStrict),
+		WithPromptFS(promptFS),
+		WithPromptValidator(validator),
+	)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	var p1Findings []Finding
+	for _, f := range findings {
+		if f.RuleID == "P1/template-param-validity" {
+			p1Findings = append(p1Findings, f)
+		}
+	}
+
+	if len(p1Findings) != 1 {
+		t.Fatalf("expected 1 P1 finding, got %d: %+v", len(p1Findings), p1Findings)
+	}
+	if !strings.Contains(p1Findings[0].Message, "ErrorMesage") {
+		t.Errorf("expected finding to mention ErrorMesage, got: %s", p1Findings[0].Message)
+	}
+}
+
+func TestRun_TemplateParamValidity_NoOpWithoutOptions(t *testing.T) {
+	circuitYAML := []byte(`
+circuit: test
+description: test
+nodes:
+  - name: init
+    element: water
+  - name: done
+    element: water
+edges:
+  - id: e1
+    name: start
+    from: init
+    to: done
+    when: "true"
+`)
+
+	findings, err := Run(circuitYAML, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, f := range findings {
+		if f.RuleID == "P1/template-param-validity" {
+			t.Errorf("unexpected P1 finding without options: %+v", f)
 		}
 	}
 }

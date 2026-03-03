@@ -11,6 +11,7 @@
 - `absorbed/` — contracts whose scope was absorbed by other contracts
 - `polishing/` — completed polishing & presentation-phase contracts
 - `api-stabilization/` — completed API stabilization gate contracts (signal-domains, signal-integrity, dialectic-hardening)
+- `sumi/` — completed Sumi TUI contracts (war-room)
 
 ## Files
 (No files)

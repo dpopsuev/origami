@@ -12,11 +12,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"reflect"
+
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/kami"
 	"github.com/dpopsuev/origami/lint"
 	originamilsp "github.com/dpopsuev/origami/lsp"
 	fwmcp "github.com/dpopsuev/origami/mcp"
+	"github.com/dpopsuev/origami/modules/rca"
 	"github.com/dpopsuev/origami/ouroboros"
 	"github.com/dpopsuev/origami/ouroborosmcp"
 	studiobackend "github.com/dpopsuev/origami/studio/backend"
@@ -480,6 +483,21 @@ func lintCmd(args []string) error {
 	p := lint.Profile(*profile)
 	exitCode := 0
 
+	paramType := reflect.TypeOf(rca.TemplateParams{})
+	funcMap := rca.PromptFuncMap
+	promptValidator := lint.PromptValidator(func(content string) []lint.PromptFieldError {
+		errs := rca.ValidateTemplateFields(content, paramType, funcMap)
+		out := make([]lint.PromptFieldError, len(errs))
+		for i, e := range errs {
+			out[i] = lint.PromptFieldError{Field: e.Field, Message: e.Message}
+		}
+		return out
+	})
+	promptOpts := []lint.Option{
+		lint.WithPromptFS(rca.DefaultPromptFS),
+		lint.WithPromptValidator(promptValidator),
+	}
+
 	for _, file := range fs.Args() {
 		raw, err := os.ReadFile(file)
 		if err != nil {
@@ -508,7 +526,8 @@ func lintCmd(args []string) error {
 			continue
 		}
 
-		findings, err := lint.Run(raw, file, lint.WithProfile(p))
+		opts := append([]lint.Option{lint.WithProfile(p)}, promptOpts...)
+		findings, err := lint.Run(raw, file, opts...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %s: %v\n", file, err)
 			exitCode = 2

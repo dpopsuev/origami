@@ -13,12 +13,19 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
+| `sumi-war-room.md` | Sumi War Room — ops-grade multi-panel TUI debugger. Mouse interaction, event timeline, worker selector, rich inspector. | next-milestone |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 
 ## Completed (recent)
 
+### Sumi phase
+
+- `completed/sumi/sumi-debug-eyes.md` — Ring-buffer ViewRecorder + MCP `sumi_get_view` tool for agent TUI visibility. Complete.
+- `completed/sumi/sumi-war-room.md` — Ops-grade War Room TUI: multi-panel layout, mouse, event timeline, worker selector, rich inspector. Complete.
+
 ### API Stabilization phase (gate)
 
+- `completed/api-stabilization/prompt-first-class.md` — Prompt templates as first-class citizens: go:embed, template field validator, P1 lint rule, golden render tests, coverage test. Complete.
 - `completed/api-stabilization/signal-domains.md` — Renderer interface (DAC symmetry), zone domain annotations, context filter. Complete.
 - `completed/api-stabilization/signal-integrity.md` — Evidence SNR, per-node cost tracking, mismatch scoring, convergence trajectory. Complete.
 - `completed/api-stabilization/dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.
