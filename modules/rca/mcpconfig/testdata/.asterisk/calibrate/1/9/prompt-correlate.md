@@ -40,20 +40,6 @@ Determine whether this case's root cause matches another case in the same launch
 | Evidence | `ref-1`  |
 
 
-## Symptom context
-
-| Field | Value |
-|-------|-------|
-| Symptom | OCP-83297 PTP sync stability |
-| Status | active |
-| Occurrences | 1 |
-| First seen | 2026-03-03T19:43:21Z |
-| Last seen | 2026-03-03T19:43:21Z |
-
-
-## Prior RCAs for this symptom
-
-| RCA #1 | root cause from subagent-1 | `pb001` | open | Versions:  |
 
 
 ## Sibling failures in this launch
