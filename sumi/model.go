@@ -258,11 +258,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "tab":
-		m.selected = (m.selected + 1) % len(m.nodeOrder)
+		if len(m.nodeOrder) > 0 {
+			m.selected = (m.selected + 1) % len(m.nodeOrder)
+		}
 		return m, nil
 
 	case "shift+tab":
-		m.selected = (m.selected - 1 + len(m.nodeOrder)) % len(m.nodeOrder)
+		if len(m.nodeOrder) > 0 {
+			m.selected = (m.selected - 1 + len(m.nodeOrder)) % len(m.nodeOrder)
+		}
 		return m, nil
 
 	case "up":
@@ -444,7 +448,7 @@ func abs(n int) int {
 // --- Debug actions ---
 
 func (m Model) toggleBreakpoint() (tea.Model, tea.Cmd) {
-	if m.debug == nil {
+	if m.debug == nil || len(m.nodeOrder) == 0 {
 		return m, nil
 	}
 	name := m.nodeOrder[m.selected]

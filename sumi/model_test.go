@@ -239,6 +239,77 @@ func TestSumiRenderer_ImplementsInterface(t *testing.T) {
 	var _ view.CircuitRenderer = (*SumiRenderer)(nil)
 }
 
+// TestModel_EmptyNodeOrder_NoPanic verifies that all key handlers
+// are safe when nodeOrder is empty (Sumi started before any session).
+// Reproduces the panic: "index out of range [0] with length 0"
+// in toggleBreakpoint when the user presses 'b' on an empty circuit.
+func TestModel_EmptyNodeOrder_NoPanic(t *testing.T) {
+	emptyDef := &framework.CircuitDef{Circuit: "watch"}
+	store := view.NewCircuitStore(emptyDef)
+	defer store.Close()
+
+	m := New(Config{
+		Def:    emptyDef,
+		Store:  store,
+		Layout: view.CircuitLayout{},
+		Opts:   RenderOpts{NoColor: true},
+	})
+	m.Init()
+
+	// Set window size so View() works.
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = updated.(Model)
+
+	// Every key that touches m.nodeOrder[m.selected] must not panic.
+	dangerousKeys := []string{
+		"b",         // toggleBreakpoint
+		"tab",       // cycle forward
+		"shift+tab", // cycle backward
+		"enter",     // toggle inspector
+		"up",        // findAdjacentNode
+		"down",
+		"left",
+		"right",
+	}
+
+	for _, key := range dangerousKeys {
+		t.Run(key, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("PANIC on key %q with empty nodeOrder: %v", key, r)
+				}
+			}()
+
+			var msg tea.KeyMsg
+			switch key {
+			case "tab":
+				msg = tea.KeyMsg{Type: tea.KeyTab}
+			case "shift+tab":
+				msg = tea.KeyMsg{Type: tea.KeyShiftTab}
+			case "enter":
+				msg = tea.KeyMsg{Type: tea.KeyEnter}
+			case "up":
+				msg = tea.KeyMsg{Type: tea.KeyUp}
+			case "down":
+				msg = tea.KeyMsg{Type: tea.KeyDown}
+			case "left":
+				msg = tea.KeyMsg{Type: tea.KeyLeft}
+			case "right":
+				msg = tea.KeyMsg{Type: tea.KeyRight}
+			default:
+				msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
+			}
+			m.Update(msg)
+		})
+	}
+
+	// View() should also not panic with empty nodeOrder.
+	v := m.View()
+	if v == "" {
+		t.Error("View() returned empty string with empty nodeOrder")
+	}
+}
+
 // --- DiffReset tests ---
 // These tests verify that the Model correctly rebuilds its rendering
 // state (def, layout, nodeOrder) when the store emits a DiffReset event,
