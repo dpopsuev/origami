@@ -13,6 +13,7 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
+| `graph-drawing.md` | Graph Drawing — 4-level testing methodology for graph rendering: structural layout/routing assertions, abstract renderer, golden snapshots. | quick-win |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 
 ## Completed (recent)
