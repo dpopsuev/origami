@@ -127,7 +127,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("envelope has no failures")
 	}
 
-	st, err := store.Open(analyzeFlags.dbPath)
+	st, err := openStore(analyzeFlags.dbPath)
 	if err != nil {
 		return fmt.Errorf("open store: %w", err)
 	}

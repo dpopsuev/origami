@@ -42,7 +42,7 @@ func runSave(cmd *cobra.Command, _ []string) error {
 }
 
 func runSaveOrchestrated(cmd *cobra.Command) error {
-	st, err := store.Open(saveFlags.dbPath)
+	st, err := openStore(saveFlags.dbPath)
 	if err != nil {
 		return fmt.Errorf("open store: %w", err)
 	}

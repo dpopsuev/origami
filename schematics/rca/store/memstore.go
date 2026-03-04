@@ -21,6 +21,9 @@ func NewMemStore() *MemStore {
 	}
 }
 
+// Close is a no-op for in-memory stores.
+func (s *MemStore) Close() error { return nil }
+
 // LinkCaseToRCA implements Store.
 func (s *MemStore) LinkCaseToRCA(caseID, rcaID int64) error {
 	s.mu.Lock()

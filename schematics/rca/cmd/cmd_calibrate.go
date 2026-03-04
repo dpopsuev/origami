@@ -118,7 +118,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		transformerLabel = "stub"
 		idMapper = stub
 	case "basic":
-		basicSt, err := store.Open(":memory:")
+		basicSt, err := openStore(":memory:")
 		if err != nil {
 			return fmt.Errorf("basic transformer: open store: %w", err)
 		}

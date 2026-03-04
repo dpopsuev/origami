@@ -11,6 +11,9 @@ const DefaultDBPath = ".asterisk/asterisk.db"
 // Tier 2: global knowledge entities (symptom, rca, symptom_rca).
 // Domain and CLI code use only this interface; implementation is SQLite or in-memory.
 type Store interface {
+	// Close releases underlying resources (e.g. database connections).
+	Close() error
+
 	// ---------------------------------------------------------------
 	// Investigation-scoped entities
 	// ---------------------------------------------------------------

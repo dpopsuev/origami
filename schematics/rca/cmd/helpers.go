@@ -105,6 +105,15 @@ func resolvePromptFS(dir string) fs.FS {
 	return rca.DefaultPromptFS
 }
 
+// openStore creates a Store via the injected factory, falling back to
+// the built-in SQLite implementation when no factory was provided.
+func openStore(path string) (store.Store, error) {
+	if cfg.storeFactory != nil {
+		return cfg.storeFactory(path)
+	}
+	return store.Open(path)
+}
+
 // resolveRPProject returns the RP project name from the given flag value,
 // falling back to $ASTERISK_RP_PROJECT. Returns "" if neither is set.
 func resolveRPProject(flagValue string) string {
@@ -134,7 +143,7 @@ func loadEnvelopeForAnalyze(launch, dbPath string, source rca.SourceReader) *rca
 	if err != nil || launchID <= 0 {
 		return nil
 	}
-	st, err := store.Open(dbPath)
+	st, err := openStore(dbPath)
 	if err != nil {
 		return nil
 	}
@@ -173,7 +182,7 @@ func loadEnvelopeForCursor(launch string, dbPath string) (*rcatype.Envelope, int
 	if err != nil || launchID <= 0 {
 		return nil, 0
 	}
-	st, err := store.Open(dbPath)
+	st, err := openStore(dbPath)
 	if err != nil {
 		return nil, 0
 	}

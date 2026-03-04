@@ -13,6 +13,7 @@ type schematicDeps struct {
 	readerFactory     rca.SourceReaderFactory
 	writerFactory     rca.DefectWriterFactory
 	discovererFactory rca.RunDiscovererFactory
+	storeFactory      rca.StoreFactory
 	tokenChecker      rca.TokenChecker
 }
 
@@ -41,6 +42,12 @@ func WithDefectWriter(f rca.DefectWriterFactory) Option {
 // for the ingest/consume circuit.
 func WithRunDiscoverer(f rca.RunDiscovererFactory) Option {
 	return func(d *schematicDeps) { d.discovererFactory = f }
+}
+
+// WithStore injects a factory that creates a store.Store from a database path.
+// When not set, the built-in SQLite implementation (store.Open) is used.
+func WithStore(f rca.StoreFactory) Option {
+	return func(d *schematicDeps) { d.storeFactory = f }
 }
 
 // WithTokenChecker injects a function that validates token file existence

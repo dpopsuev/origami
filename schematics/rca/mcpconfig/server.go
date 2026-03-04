@@ -32,6 +32,7 @@ type Server struct {
 	ProductName   string
 	ProjectRoot   string
 	ReaderFactory rca.SourceReaderFactory
+	StoreFactory  rca.StoreFactory
 
 	KamiServer *kami.Server
 	store      *view.CircuitStore
@@ -202,9 +203,15 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		transformerLabel = "stub"
 		idMapper = stub
 	case "basic":
-		basicSt, err := store.Open(":memory:")
-		if err != nil {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("basic transformer: open store: %w", err)
+		var basicSt store.Store
+		var stErr error
+		if s.StoreFactory != nil {
+			basicSt, stErr = s.StoreFactory(":memory:")
+		} else {
+			basicSt, stErr = store.Open(":memory:")
+		}
+		if stErr != nil {
+			return nil, fwmcp.SessionMeta{}, fmt.Errorf("basic transformer: open store: %w", stErr)
 		}
 		var repoNames []string
 		for _, r := range scenario.Workspace.Repos {

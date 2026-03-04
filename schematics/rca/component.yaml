@@ -11,7 +11,7 @@ requires:
   sockets:
     - name: store
       type: store.Store
-      description: Persistent storage for investigations, cases, and RCA results
+      description: Persistent storage backend (built-in SQLite default)
     - name: source
       type: SourceReader
       description: Reads test failure data from an external tracker

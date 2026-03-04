@@ -58,7 +58,7 @@ func runCursor(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("case-id %d not in envelope", cursorFlags.itemID)
 	}
 
-	st, err := store.Open(cursorFlags.dbPath)
+	st, err := openStore(cursorFlags.dbPath)
 	if err != nil {
 		return fmt.Errorf("open store: %w", err)
 	}

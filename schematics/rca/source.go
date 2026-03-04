@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 )
 
 // SourceReaderFactory creates a SourceReader from connection parameters.
@@ -60,6 +61,10 @@ func (DefaultDefectWriter) Push(artifactPath, jiraTicketID, jiraLink string) (*P
 	}
 	return &PushedRecord{LaunchID: a.LaunchID, DefectType: a.DefectType}, nil
 }
+
+// StoreFactory creates a Store from a database path. The built-in default
+// uses SQLite via store.Open; products can override for alternative backends.
+type StoreFactory func(path string) (store.Store, error)
 
 // TokenChecker validates the presence and permissions of a token file.
 type TokenChecker func(path string) error

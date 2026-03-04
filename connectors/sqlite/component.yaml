@@ -7,6 +7,4 @@ provides:
   hooks: []
 requires:
   origami: ">=0.3.0"
-satisfies:
-  - socket: store
-    factory: NewStore
+satisfies: []

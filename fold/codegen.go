@@ -100,7 +100,7 @@ func buildTemplateContext(m *Manifest, reg ModuleRegistry) (*templateContext, er
 // generated main.go.
 var socketOptionMap = map[string]string{
 	"source":     "WithSourceReader",
-	"store":      "WithStoreFactory",
+	"store":      "WithStore",
 	"writer":     "WithDefectWriter",
 	"discoverer": "WithRunDiscoverer",
 }
