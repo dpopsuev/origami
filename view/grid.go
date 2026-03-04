@@ -1,6 +1,10 @@
 package view
 
-import framework "github.com/dpopsuev/origami"
+import (
+	"sort"
+
+	framework "github.com/dpopsuev/origami"
+)
 
 // GridLayout computes cell-based positions using Kahn's algorithm
 // (topological sort). Nodes are assigned to columns by topological rank
@@ -134,6 +138,14 @@ func assignGridCells(rank map[string]int, nodeZone map[string]string, start stri
 		sortByZone(cols[col], nodeZone)
 	}
 
+	// Deterministic: sort each column's nodes for stable row assignment.
+	// sortByZone groups by zone; within each zone group and the no-zone
+	// tail, nodes appear in map iteration order which is random. Re-sort
+	// alphabetically within each zone group to make layout reproducible.
+	for col := range cols {
+		stabilizeSameZoneOrder(cols[col], nodeZone)
+	}
+
 	grid := make(map[string]GridCell, len(rank))
 	for col, nodes := range cols {
 		for row, node := range nodes {
@@ -145,6 +157,27 @@ func assignGridCells(rank map[string]int, nodeZone map[string]string, start stri
 		}
 	}
 	return grid
+}
+
+// stabilizeSameZoneOrder sorts nodes alphabetically within each zone group
+// (and the no-zone tail) so that row assignment is deterministic regardless
+// of map iteration order.
+func stabilizeSameZoneOrder(nodes []string, nodeZone map[string]string) {
+	if len(nodes) <= 1 {
+		return
+	}
+	i := 0
+	for i < len(nodes) {
+		z := nodeZone[nodes[i]]
+		j := i + 1
+		for j < len(nodes) && nodeZone[nodes[j]] == z {
+			j++
+		}
+		if j-i > 1 {
+			sort.Strings(nodes[i:j])
+		}
+		i = j
+	}
 }
 
 // sortByZone groups nodes by zone so nodes in the same zone are adjacent.
