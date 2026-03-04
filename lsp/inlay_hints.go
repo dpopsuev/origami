@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	framework "github.com/dpopsuev/origami"
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/uri"
 )
@@ -143,8 +144,11 @@ func edgeConnectionHints(doc *document, lines []string) []InlayHint {
 	if doc.Def == nil {
 		return nil
 	}
+
+	inferred := inferEdgeCopy(doc.Def)
+
 	var hints []InlayHint
-	for _, edge := range doc.Def.Edges {
+	for i, edge := range doc.Def.Edges {
 		line := findEdgeIDLine(lines, edge.ID)
 		if line < 0 {
 			continue
@@ -154,9 +158,13 @@ func edgeConnectionHints(doc *document, lines []string) []InlayHint {
 		var tags []string
 		if edge.Shortcut {
 			tags = append(tags, "shortcut")
+		} else if inferred[i].Shortcut {
+			tags = append(tags, "shortcut (inferred)")
 		}
 		if edge.Loop {
 			tags = append(tags, "loop")
+		} else if inferred[i].Loop {
+			tags = append(tags, "loop (inferred)")
 		}
 		if doc.Def.Done != "" && edge.To == doc.Def.Done {
 			tags = append(tags, "terminal")
@@ -183,6 +191,14 @@ func edgeConnectionHints(doc *document, lines []string) []InlayHint {
 		})
 	}
 	return hints
+}
+
+func inferEdgeCopy(def *framework.CircuitDef) []framework.EdgeDef {
+	cp := *def
+	cp.Edges = make([]framework.EdgeDef, len(def.Edges))
+	copy(cp.Edges, def.Edges)
+	framework.InferTopology(&cp)
+	return cp.Edges
 }
 
 type edgeNeighbor struct {

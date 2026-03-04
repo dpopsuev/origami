@@ -124,6 +124,7 @@ edges:
     name: cmrr-return
     from: cmrr
     to: hearing
+    loop: true
     condition: "shared premises flagged"
 
 start: indict

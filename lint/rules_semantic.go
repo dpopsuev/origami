@@ -261,6 +261,90 @@ func (r *FanInWithoutMerge) Check(ctx *LintContext) []Finding {
 	return out
 }
 
+// --- G8: unacknowledged-shortcut ---
+
+type UnacknowledgedShortcut struct{}
+
+func (r *UnacknowledgedShortcut) ID() string          { return "G8/unacknowledged-shortcut" }
+func (r *UnacknowledgedShortcut) Description() string { return "edge is topologically a shortcut but not declared as such" }
+func (r *UnacknowledgedShortcut) Severity() Severity   { return SeverityWarning }
+func (r *UnacknowledgedShortcut) Tags() []string       { return []string{"semantic"} }
+
+func (r *UnacknowledgedShortcut) Check(ctx *LintContext) []Finding {
+	inferred := inferEdgeTopology(ctx.Def)
+	var out []Finding
+	for i, orig := range ctx.Def.Edges {
+		inf := inferred[i]
+		if inf.Shortcut && !orig.Shortcut {
+			out = append(out, Finding{
+				RuleID:     r.ID(),
+				Severity:   r.Severity(),
+				Message:    fmt.Sprintf("edge %q (%s -> %s) is a topological shortcut but lacks shortcut: true", orig.ID, orig.From, orig.To),
+				File:       ctx.File,
+				Line:       ctx.EdgeLine(orig.ID),
+				Suggestion: "add 'shortcut: true' to acknowledge this forward skip",
+			})
+		}
+		if !inf.Shortcut && orig.Shortcut {
+			out = append(out, Finding{
+				RuleID:   r.ID(),
+				Severity: SeverityError,
+				Message:  fmt.Sprintf("edge %q (%s -> %s) declares shortcut: true but is not a topological shortcut", orig.ID, orig.From, orig.To),
+				File:     ctx.File,
+				Line:     ctx.EdgeLine(orig.ID),
+			})
+		}
+	}
+	return out
+}
+
+// --- G9: unacknowledged-loop ---
+
+type UnacknowledgedLoop struct{}
+
+func (r *UnacknowledgedLoop) ID() string          { return "G9/unacknowledged-loop" }
+func (r *UnacknowledgedLoop) Description() string { return "edge is topologically a loop but not declared as such" }
+func (r *UnacknowledgedLoop) Severity() Severity   { return SeverityWarning }
+func (r *UnacknowledgedLoop) Tags() []string       { return []string{"semantic"} }
+
+func (r *UnacknowledgedLoop) Check(ctx *LintContext) []Finding {
+	inferred := inferEdgeTopology(ctx.Def)
+	var out []Finding
+	for i, orig := range ctx.Def.Edges {
+		inf := inferred[i]
+		if inf.Loop && !orig.Loop {
+			out = append(out, Finding{
+				RuleID:     r.ID(),
+				Severity:   r.Severity(),
+				Message:    fmt.Sprintf("edge %q (%s -> %s) is a topological loop but lacks loop: true", orig.ID, orig.From, orig.To),
+				File:       ctx.File,
+				Line:       ctx.EdgeLine(orig.ID),
+				Suggestion: "add 'loop: true' to acknowledge this backward edge",
+			})
+		}
+		if !inf.Loop && orig.Loop {
+			out = append(out, Finding{
+				RuleID:   r.ID(),
+				Severity: SeverityError,
+				Message:  fmt.Sprintf("edge %q (%s -> %s) declares loop: true but is not a topological loop", orig.ID, orig.From, orig.To),
+				File:     ctx.File,
+				Line:     ctx.EdgeLine(orig.ID),
+			})
+		}
+	}
+	return out
+}
+
+// inferEdgeTopology runs InferTopology on a copy of the circuit def
+// and returns the inferred edge flags without mutating the original.
+func inferEdgeTopology(def *framework.CircuitDef) []framework.EdgeDef {
+	cp := *def
+	cp.Edges = make([]framework.EdgeDef, len(def.Edges))
+	copy(cp.Edges, def.Edges)
+	framework.InferTopology(&cp)
+	return cp.Edges
+}
+
 // --- Graph helpers ---
 
 func buildAdjacency(def *framework.CircuitDef) map[string][]string {

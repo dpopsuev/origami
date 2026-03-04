@@ -112,6 +112,216 @@ const (
 	MergeCustom = "custom"
 )
 
+// rawCircuitDef is the intermediate representation that supports both
+// verbose (top-level edges) and compact (node-scoped edges) forms.
+// normalize() converts it to the canonical CircuitDef.
+type rawCircuitDef struct {
+	Circuit     string             `yaml:"circuit"`
+	Description string             `yaml:"description,omitempty"`
+	Imports     []string           `yaml:"imports,omitempty"`
+	Vars        map[string]any     `yaml:"vars,omitempty"`
+	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
+	Zones       map[string]ZoneDef `yaml:"zones,omitempty"`
+	Nodes       []rawNodeDef       `yaml:"nodes"`
+	Edges       []EdgeDef          `yaml:"edges,omitempty"`
+	Walkers     []WalkerDef        `yaml:"walkers,omitempty"`
+	Start       string             `yaml:"start"`
+	Done        string             `yaml:"done"`
+}
+
+// rawNodeDef extends NodeDef with optional inline edges.
+type rawNodeDef struct {
+	NodeDef `yaml:",inline"`
+	Edges   rawEdgeList `yaml:"edges,omitempty"`
+}
+
+// rawEdgeDef is the compact edge form nested under a node.
+// From is implicit (parent node name) and ID is auto-generated.
+type rawEdgeDef struct {
+	Name     string `yaml:"name,omitempty"`
+	To       string `yaml:"to,omitempty"`
+	Shortcut bool   `yaml:"shortcut,omitempty"`
+	Loop     bool   `yaml:"loop,omitempty"`
+	Parallel bool   `yaml:"parallel,omitempty"`
+	When     string `yaml:"when,omitempty"`
+	Merge    string `yaml:"merge,omitempty"`
+}
+
+// rawEdgeList handles both flow-style string sequences (edges: [target])
+// and mapping sequences (edges: [{name: ..., to: ..., when: ...}]).
+type rawEdgeList []rawEdgeDef
+
+func (l *rawEdgeList) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.SequenceNode {
+		return fmt.Errorf("edges must be a sequence")
+	}
+	for _, item := range value.Content {
+		switch item.Kind {
+		case yaml.ScalarNode:
+			*l = append(*l, rawEdgeDef{To: item.Value})
+		case yaml.MappingNode:
+			var ed rawEdgeDef
+			if err := item.Decode(&ed); err != nil {
+				return err
+			}
+			*l = append(*l, ed)
+		default:
+			return fmt.Errorf("edge element must be a string or mapping")
+		}
+	}
+	return nil
+}
+
+func (raw *rawCircuitDef) normalize() (*CircuitDef, error) {
+	def := &CircuitDef{
+		Circuit:     raw.Circuit,
+		Description: raw.Description,
+		Imports:     raw.Imports,
+		Vars:        raw.Vars,
+		Extractors:  raw.Extractors,
+		Zones:       raw.Zones,
+		Walkers:     raw.Walkers,
+		Start:       raw.Start,
+		Done:        raw.Done,
+	}
+
+	def.Nodes = make([]NodeDef, 0, len(raw.Nodes))
+	for i := range raw.Nodes {
+		nd := raw.Nodes[i].NodeDef
+		if nd.Family == "" {
+			nd.Family = nd.Name
+		}
+		def.Nodes = append(def.Nodes, nd)
+	}
+
+	edgeIDs := make(map[string]int)
+	def.Edges = append(def.Edges, raw.Edges...)
+	for _, e := range raw.Edges {
+		edgeIDs[e.ID]++
+	}
+
+	for i := range raw.Nodes {
+		nodeName := raw.Nodes[i].Name
+		for _, re := range raw.Nodes[i].Edges {
+			if re.To == "" {
+				return nil, fmt.Errorf("node %q: inline edge missing 'to' field", nodeName)
+			}
+			id := generateEdgeID(nodeName, re, edgeIDs)
+			def.Edges = append(def.Edges, EdgeDef{
+				ID:       id,
+				Name:     re.Name,
+				From:     nodeName,
+				To:       re.To,
+				Shortcut: re.Shortcut,
+				Loop:     re.Loop,
+				Parallel: re.Parallel,
+				When:     re.When,
+				Merge:    re.Merge,
+			})
+		}
+	}
+
+	return def, nil
+}
+
+func generateEdgeID(from string, e rawEdgeDef, seen map[string]int) string {
+	base := from + "-" + e.To
+	if e.Name != "" {
+		base = from + "-" + strings.ReplaceAll(e.Name, " ", "-")
+	}
+	seen[base]++
+	if seen[base] > 1 {
+		return fmt.Sprintf("%s-%d", base, seen[base])
+	}
+	return base
+}
+
+// InferTopology computes shortcut and loop flags from graph topology.
+// Pass 1: DFS cycle detection marks back edges as loops.
+// Pass 2: for each non-loop forward edge, checks whether an indirect path
+// (length >= 2) exists — if so, the edge is a shortcut.
+// Edges to the done pseudo-node are excluded from shortcut inference.
+func InferTopology(def *CircuitDef) {
+	if def.Start == "" || len(def.Nodes) == 0 {
+		return
+	}
+
+	edgesByNode := make(map[string][]int)
+	for i, e := range def.Edges {
+		edgesByNode[e.From] = append(edgesByNode[e.From], i)
+	}
+
+	const (
+		white = 0
+		gray  = 1
+		black = 2
+	)
+	color := make(map[string]int)
+
+	var dfs func(node string)
+	dfs = func(node string) {
+		color[node] = gray
+		for _, idx := range edgesByNode[node] {
+			e := &def.Edges[idx]
+			if e.Loop {
+				continue
+			}
+			switch color[e.To] {
+			case white:
+				dfs(e.To)
+			case gray:
+				e.Loop = true
+			}
+		}
+		color[node] = black
+	}
+	dfs(def.Start)
+
+	dagAdj := make(map[string][]string)
+	for _, e := range def.Edges {
+		if !e.Loop {
+			dagAdj[e.From] = append(dagAdj[e.From], e.To)
+		}
+	}
+
+	for i := range def.Edges {
+		e := &def.Edges[i]
+		if e.Loop || e.Shortcut || e.To == def.Done {
+			continue
+		}
+		if hasIndirectPath(e.From, e.To, dagAdj) {
+			e.Shortcut = true
+		}
+	}
+}
+
+// hasIndirectPath returns true if `to` is reachable from `from` via a path
+// of length >= 2 (through at least one intermediate node).
+func hasIndirectPath(from, to string, adj map[string][]string) bool {
+	visited := map[string]bool{from: true}
+	var queue []string
+	for _, next := range adj[from] {
+		if next != to && !visited[next] {
+			visited[next] = true
+			queue = append(queue, next)
+		}
+	}
+	for len(queue) > 0 {
+		node := queue[0]
+		queue = queue[1:]
+		if node == to {
+			return true
+		}
+		for _, next := range adj[node] {
+			if !visited[next] {
+				visited[next] = true
+				queue = append(queue, next)
+			}
+		}
+	}
+	return false
+}
+
 // NodeRegistry maps node family names to Node factory functions.
 type NodeRegistry map[string]func(def NodeDef) Node
 
@@ -119,12 +329,13 @@ type NodeRegistry map[string]func(def NodeDef) Node
 type EdgeFactory map[string]func(def EdgeDef) Edge
 
 // LoadCircuit parses a YAML circuit definition and returns a CircuitDef.
+// Supports both verbose (top-level edges) and compact (node-scoped edges) forms.
 func LoadCircuit(data []byte) (*CircuitDef, error) {
-	var def CircuitDef
-	if err := yaml.Unmarshal(data, &def); err != nil {
+	var raw rawCircuitDef
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("parse circuit YAML: %w", err)
 	}
-	return &def, nil
+	return raw.normalize()
 }
 
 // MarshalYAML serializes a CircuitDef back to YAML (P8: round-trip fidelity).

@@ -359,6 +359,457 @@ done: _done
 	}
 }
 
+func TestLoadCircuit_CompactEdges(t *testing.T) {
+	data := []byte(`
+circuit: compact
+nodes:
+  - name: a
+    element: fire
+    edges:
+      - name: go-to-b
+        to: b
+        when: "output.ready == true"
+      - name: skip-to-c
+        to: c
+        shortcut: true
+        when: "output.skip == true"
+  - name: b
+    element: water
+    edges:
+      - name: to-c
+        to: c
+        when: "true"
+  - name: c
+    element: earth
+    edges:
+      - name: done
+        to: _done
+        when: "true"
+start: a
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	if err := def.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if len(def.Edges) != 4 {
+		t.Fatalf("len(Edges) = %d, want 4", len(def.Edges))
+	}
+
+	e0 := def.Edges[0]
+	if e0.From != "a" || e0.To != "b" || e0.Name != "go-to-b" {
+		t.Errorf("edge[0] = %+v, want from=a to=b name=go-to-b", e0)
+	}
+	if e0.ID != "a-go-to-b" {
+		t.Errorf("edge[0].ID = %q, want %q", e0.ID, "a-go-to-b")
+	}
+
+	e1 := def.Edges[1]
+	if !e1.Shortcut {
+		t.Error("edge[1] should be shortcut")
+	}
+
+	e3 := def.Edges[3]
+	if e3.From != "c" || e3.To != "_done" {
+		t.Errorf("edge[3] = %+v, want from=c to=_done", e3)
+	}
+}
+
+func TestLoadCircuit_FlowStyleEdges(t *testing.T) {
+	data := []byte(`
+circuit: linear
+nodes:
+  - name: setup
+    edges: [run]
+  - name: run
+    edges: [report]
+  - name: report
+    edges: [_done]
+start: setup
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	if err := def.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if len(def.Edges) != 3 {
+		t.Fatalf("len(Edges) = %d, want 3", len(def.Edges))
+	}
+	if def.Edges[0].From != "setup" || def.Edges[0].To != "run" {
+		t.Errorf("edge[0] = %+v, want setup -> run", def.Edges[0])
+	}
+	if def.Edges[0].ID != "setup-run" {
+		t.Errorf("edge[0].ID = %q, want %q", def.Edges[0].ID, "setup-run")
+	}
+}
+
+func TestLoadCircuit_CompactVerboseEquivalence(t *testing.T) {
+	compact := []byte(`
+circuit: equiv
+nodes:
+  - name: a
+    family: start
+    edges:
+      - name: proceed
+        to: b
+        when: "true"
+  - name: b
+    family: finish
+    edges:
+      - name: done
+        to: _done
+        when: "true"
+start: a
+done: _done
+`)
+	verbose := []byte(`
+circuit: equiv
+nodes:
+  - name: a
+    family: start
+  - name: b
+    family: finish
+edges:
+  - id: a-proceed
+    name: proceed
+    from: a
+    to: b
+    when: "true"
+  - id: b-done
+    name: done
+    from: b
+    to: _done
+    when: "true"
+start: a
+done: _done
+`)
+	cDef, err := LoadCircuit(compact)
+	if err != nil {
+		t.Fatalf("LoadCircuit compact: %v", err)
+	}
+	vDef, err := LoadCircuit(verbose)
+	if err != nil {
+		t.Fatalf("LoadCircuit verbose: %v", err)
+	}
+
+	if len(cDef.Nodes) != len(vDef.Nodes) {
+		t.Fatalf("node count: compact=%d verbose=%d", len(cDef.Nodes), len(vDef.Nodes))
+	}
+	if len(cDef.Edges) != len(vDef.Edges) {
+		t.Fatalf("edge count: compact=%d verbose=%d", len(cDef.Edges), len(vDef.Edges))
+	}
+	for i, ce := range cDef.Edges {
+		ve := vDef.Edges[i]
+		if ce.ID != ve.ID || ce.From != ve.From || ce.To != ve.To || ce.When != ve.When || ce.Name != ve.Name {
+			t.Errorf("edge[%d] mismatch:\n  compact: %+v\n  verbose: %+v", i, ce, ve)
+		}
+	}
+}
+
+func TestLoadCircuit_ImplicitFamily(t *testing.T) {
+	data := []byte(`
+circuit: fam
+nodes:
+  - name: recall
+    edges: [triage]
+  - name: triage
+    family: triage-custom
+    edges: [_done]
+start: recall
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	if def.Nodes[0].Family != "recall" {
+		t.Errorf("Nodes[0].Family = %q, want %q (implicit from name)", def.Nodes[0].Family, "recall")
+	}
+	if def.Nodes[1].Family != "triage-custom" {
+		t.Errorf("Nodes[1].Family = %q, want %q (explicit)", def.Nodes[1].Family, "triage-custom")
+	}
+}
+
+func TestLoadCircuit_AutoGenerateEdgeID(t *testing.T) {
+	data := []byte(`
+circuit: ids
+nodes:
+  - name: a
+    edges:
+      - name: first path
+        to: b
+        when: "output.x == 1"
+      - name: second path
+        to: b
+        when: "output.x == 2"
+      - to: c
+start: a
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	wantIDs := []string{"a-first-path", "a-second-path", "a-c"}
+	for i, want := range wantIDs {
+		if def.Edges[i].ID != want {
+			t.Errorf("edge[%d].ID = %q, want %q", i, def.Edges[i].ID, want)
+		}
+	}
+}
+
+func TestLoadCircuit_MixedEdges(t *testing.T) {
+	data := []byte(`
+circuit: mixed
+nodes:
+  - name: a
+    edges:
+      - name: inline
+        to: b
+        when: "true"
+  - name: b
+edges:
+  - id: EXT1
+    name: external
+    from: b
+    to: _done
+    when: "true"
+start: a
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	if len(def.Edges) != 2 {
+		t.Fatalf("len(Edges) = %d, want 2", len(def.Edges))
+	}
+	if def.Edges[0].ID != "EXT1" {
+		t.Errorf("edge[0].ID = %q, want EXT1 (top-level first)", def.Edges[0].ID)
+	}
+	if def.Edges[1].ID != "a-inline" {
+		t.Errorf("edge[1].ID = %q, want a-inline (inline second)", def.Edges[1].ID)
+	}
+}
+
+func TestLoadCircuit_CompactEdge_MissingTo(t *testing.T) {
+	data := []byte(`
+circuit: bad
+nodes:
+  - name: a
+    edges:
+      - name: oops
+        when: "true"
+start: a
+done: _done
+`)
+	_, err := LoadCircuit(data)
+	if err == nil {
+		t.Fatal("expected error for inline edge missing 'to'")
+	}
+	if !contains(err.Error(), "missing") {
+		t.Errorf("error should mention 'missing': %v", err)
+	}
+}
+
+func TestLoadCircuit_CompactEdge_LoopFlag(t *testing.T) {
+	data := []byte(`
+circuit: loopy
+nodes:
+  - name: a
+    edges:
+      - name: forward
+        to: b
+        when: "true"
+  - name: b
+    edges:
+      - name: back
+        to: a
+        loop: true
+        when: "state.loops.b < 3"
+      - name: done
+        to: _done
+        when: "true"
+start: a
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	backEdge := def.Edges[1]
+	if !backEdge.Loop {
+		t.Error("back edge should have loop=true")
+	}
+	if backEdge.Name != "back" || backEdge.From != "b" || backEdge.To != "a" {
+		t.Errorf("back edge = %+v", backEdge)
+	}
+}
+
+func TestInferTopology_LinearChain(t *testing.T) {
+	def := &CircuitDef{
+		Circuit: "linear",
+		Nodes:   []NodeDef{{Name: "a"}, {Name: "b"}, {Name: "c"}},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "b"},
+			{ID: "E2", From: "b", To: "c"},
+			{ID: "E3", From: "c", To: "_done"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+	InferTopology(def)
+	for _, e := range def.Edges {
+		if e.Shortcut {
+			t.Errorf("edge %s should not be shortcut in linear chain", e.ID)
+		}
+		if e.Loop {
+			t.Errorf("edge %s should not be loop in linear chain", e.ID)
+		}
+	}
+}
+
+func TestInferTopology_ForwardSkip(t *testing.T) {
+	def := &CircuitDef{
+		Circuit: "skip",
+		Nodes:   []NodeDef{{Name: "a"}, {Name: "b"}, {Name: "c"}},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "b"},
+			{ID: "E2", From: "b", To: "c"},
+			{ID: "E3", From: "a", To: "c"},
+			{ID: "E4", From: "c", To: "_done"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+	InferTopology(def)
+	if !def.Edges[2].Shortcut {
+		t.Error("edge E3 (a->c) should be inferred as shortcut")
+	}
+	if def.Edges[0].Shortcut {
+		t.Error("edge E1 (a->b) should not be shortcut")
+	}
+}
+
+func TestInferTopology_BackwardEdge(t *testing.T) {
+	def := &CircuitDef{
+		Circuit: "loop",
+		Nodes:   []NodeDef{{Name: "a"}, {Name: "b"}},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "b"},
+			{ID: "E2", From: "b", To: "a"},
+			{ID: "E3", From: "b", To: "_done"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+	InferTopology(def)
+	if !def.Edges[1].Loop {
+		t.Error("edge E2 (b->a) should be inferred as loop")
+	}
+	if def.Edges[0].Loop {
+		t.Error("edge E1 (a->b) should not be loop")
+	}
+}
+
+func TestInferTopology_DiamondGraph(t *testing.T) {
+	def := &CircuitDef{
+		Circuit: "diamond",
+		Nodes:   []NodeDef{{Name: "a"}, {Name: "b"}, {Name: "c"}, {Name: "d"}},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "b"},
+			{ID: "E2", From: "a", To: "c"},
+			{ID: "E3", From: "b", To: "d"},
+			{ID: "E4", From: "c", To: "d"},
+			{ID: "E5", From: "d", To: "_done"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+	InferTopology(def)
+	for _, e := range def.Edges {
+		if e.Loop {
+			t.Errorf("edge %s should not be loop in diamond", e.ID)
+		}
+	}
+	if def.Edges[2].Shortcut || def.Edges[3].Shortcut {
+		t.Error("edges to d should not be shortcuts (both are direct)")
+	}
+}
+
+func TestInferTopology_TerminalEdge(t *testing.T) {
+	def := &CircuitDef{
+		Circuit: "terminal",
+		Nodes:   []NodeDef{{Name: "a"}, {Name: "b"}, {Name: "c"}},
+		Edges: []EdgeDef{
+			{ID: "E1", From: "a", To: "b"},
+			{ID: "E2", From: "b", To: "c"},
+			{ID: "E3", From: "a", To: "_done"},
+			{ID: "E4", From: "c", To: "_done"},
+		},
+		Start: "a",
+		Done:  "_done",
+	}
+	InferTopology(def)
+	if def.Edges[2].Shortcut {
+		t.Error("edge E3 (a->_done) should NOT be shortcut (terminal edges excluded)")
+	}
+}
+
+func TestInferTopology_RCACircuit(t *testing.T) {
+	data, err := os.ReadFile("testdata/rca-investigation.yaml")
+	if err != nil {
+		t.Fatalf("read rca-investigation.yaml: %v", err)
+	}
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+
+	shortcutsBefore := map[string]bool{}
+	loopsBefore := map[string]bool{}
+	for _, e := range def.Edges {
+		if e.Shortcut {
+			shortcutsBefore[e.ID] = true
+		}
+		if e.Loop {
+			loopsBefore[e.ID] = true
+		}
+	}
+
+	InferTopology(def)
+
+	for _, e := range def.Edges {
+		if e.Shortcut && !shortcutsBefore[e.ID] {
+			t.Logf("INFO: edge %s (%s->%s) inferred as shortcut (was not declared)", e.ID, e.From, e.To)
+		}
+		if e.Loop && !loopsBefore[e.ID] {
+			t.Logf("INFO: edge %s (%s->%s) inferred as loop (was not declared)", e.ID, e.From, e.To)
+		}
+	}
+
+	for id := range shortcutsBefore {
+		for _, e := range def.Edges {
+			if e.ID == id && !e.Shortcut {
+				t.Errorf("edge %s was declared shortcut but inference cleared it", id)
+			}
+		}
+	}
+	for id := range loopsBefore {
+		for _, e := range def.Edges {
+			if e.ID == id && !e.Loop {
+				t.Errorf("edge %s was declared loop but inference cleared it", id)
+			}
+		}
+	}
+}
+
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstr(s, substr))
 }

@@ -37,6 +37,8 @@ func semanticRules() []Rule {
 		&ZoneElementMismatch{},
 		&ExpressionCompileError{},
 		&FanInWithoutMerge{},
+		&UnacknowledgedShortcut{},
+		&UnacknowledgedLoop{},
 	}
 }
 
