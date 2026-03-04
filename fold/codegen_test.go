@@ -10,7 +10,7 @@ func TestGenerateMain(t *testing.T) {
 		Name:        "asterisk",
 		Description: "Evidence-based RCA",
 		Version:     "1.0",
-		Imports:     []string{"origami.modules.rca"},
+		Imports:     []string{"origami.schematics.rca"},
 	}
 
 	src, err := GenerateMain(m, DefaultRegistry())

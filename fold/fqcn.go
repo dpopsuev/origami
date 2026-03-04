@@ -8,13 +8,6 @@ import (
 
 var validImportRE = regexp.MustCompile(`^[a-z][a-z0-9._/-]*$`)
 
-// pathAliases maps legacy import paths to their new locations.
-var pathAliases = map[string]string{
-	"github.com/dpopsuev/origami/modules/rca":     "github.com/dpopsuev/origami/schematics/rca",
-	"github.com/dpopsuev/origami/components/rp":   "github.com/dpopsuev/origami/connectors/rp",
-	"github.com/dpopsuev/origami/components/sqlite": "github.com/dpopsuev/origami/connectors/sqlite",
-}
-
 // ModuleRegistry maps module prefixes to Go module paths.
 // Default: "origami" → "github.com/dpopsuev/origami".
 type ModuleRegistry map[string]string
@@ -27,7 +20,7 @@ func DefaultRegistry() ModuleRegistry {
 }
 
 // ResolveFQCN converts a dot-separated FQCN to a Go import path.
-// "origami.modules.rca" → "github.com/dpopsuev/origami/schematics/rca"
+// "origami.schematics.rca" → "github.com/dpopsuev/origami/schematics/rca"
 func (r ModuleRegistry) ResolveFQCN(fqcn string) (string, error) {
 	if !validImportRE.MatchString(fqcn) {
 		return "", fmt.Errorf("invalid FQCN %q: must match %s", fqcn, validImportRE.String())
@@ -45,21 +38,11 @@ func (r ModuleRegistry) ResolveFQCN(fqcn string) (string, error) {
 	}
 
 	subPath := strings.ReplaceAll(parts[1], ".", "/")
-	resolved := modPath + "/" + subPath
-	if alias, ok := pathAliases[resolved]; ok {
-		return alias, nil
-	}
-	// Check for subpackage aliases (e.g. modules/rca/cmd → schematics/rca/cmd)
-	for oldBase, newBase := range pathAliases {
-		if strings.HasPrefix(resolved, oldBase+"/") {
-			return newBase + strings.TrimPrefix(resolved, oldBase), nil
-		}
-	}
-	return resolved, nil
+	return modPath + "/" + subPath, nil
 }
 
 // ResolveProvider converts a provider FQCN into an import path and exported symbol.
-// "modules.rca.CalibrateRunner" → import "github.com/dpopsuev/origami/schematics/rca", symbol "CalibrateRunner"
+// "schematics.rca.CalibrateRunner" → import "github.com/dpopsuev/origami/schematics/rca", symbol "CalibrateRunner"
 // Provider FQCNs are implicitly prefixed with the "origami" module.
 func (r ModuleRegistry) ResolveProvider(provider string) (importPath, symbol string, err error) {
 	parts := strings.Split(provider, ".")

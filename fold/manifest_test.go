@@ -10,7 +10,7 @@ name: test-tool
 description: A test tool
 version: "1.0"
 imports:
-  - origami.modules.rca
+  - origami.schematics.rca
 `)
 	m, err := ParseManifest(data)
 	if err != nil {
@@ -25,7 +25,7 @@ imports:
 	if len(m.Imports) != 1 {
 		t.Fatalf("imports = %d, want 1", len(m.Imports))
 	}
-	if m.Imports[0] != "origami.modules.rca" {
+	if m.Imports[0] != "origami.schematics.rca" {
 		t.Errorf("imports[0] = %q", m.Imports[0])
 	}
 }
@@ -37,9 +37,9 @@ description: Evidence-based RCA for ReportPortal test failures
 version: "1.0"
 
 imports:
-  - origami.modules.rca
-  - origami.components.rp
-  - origami.components.sqlite
+  - origami.schematics.rca
+  - origami.connectors.rp
+  - origami.connectors.sqlite
 
 embed:
   - circuits/
@@ -51,17 +51,17 @@ cli:
     - {name: log-level, type: string, default: info}
     - {name: log-format, type: string, default: text}
   analyze:
-    provider: modules.rca.AnalyzeFunc
+    provider: schematics.rca.AnalyzeFunc
   calibrate:
-    provider: modules.rca.CalibrateRunner
+    provider: schematics.rca.CalibrateRunner
   consume:
     circuit: circuits/asterisk-ingest.yaml
 
 serve:
-  provider: modules.rca.ServeConfig
+  provider: schematics.rca.ServeConfig
 
 demo:
-  provider: modules.rca.DemoConfig
+  provider: schematics.rca.DemoConfig
 `)
 	m, err := ParseManifest(data)
 	if err != nil {
@@ -76,19 +76,19 @@ demo:
 	if len(m.Embed) != 3 {
 		t.Errorf("embed = %d, want 3", len(m.Embed))
 	}
-	if m.CLI.Analyze == nil || m.CLI.Analyze.Provider != "modules.rca.AnalyzeFunc" {
+	if m.CLI.Analyze == nil || m.CLI.Analyze.Provider != "schematics.rca.AnalyzeFunc" {
 		t.Error("CLI.Analyze not parsed correctly")
 	}
-	if m.CLI.Calibrate == nil || m.CLI.Calibrate.Provider != "modules.rca.CalibrateRunner" {
+	if m.CLI.Calibrate == nil || m.CLI.Calibrate.Provider != "schematics.rca.CalibrateRunner" {
 		t.Error("CLI.Calibrate not parsed correctly")
 	}
 	if m.CLI.Consume == nil || m.CLI.Consume.Circuit != "circuits/asterisk-ingest.yaml" {
 		t.Error("CLI.Consume not parsed correctly")
 	}
-	if m.Serve == nil || m.Serve.Provider != "modules.rca.ServeConfig" {
+	if m.Serve == nil || m.Serve.Provider != "schematics.rca.ServeConfig" {
 		t.Error("Serve not parsed correctly")
 	}
-	if m.Demo == nil || m.Demo.Provider != "modules.rca.DemoConfig" {
+	if m.Demo == nil || m.Demo.Provider != "schematics.rca.DemoConfig" {
 		t.Error("Demo not parsed correctly")
 	}
 }
