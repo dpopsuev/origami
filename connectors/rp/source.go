@@ -8,16 +8,16 @@ import (
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 )
 
-var _ rca.SourceAdapter = (*SourceAdapterRP)(nil)
+var _ rca.SourceReader = (*SourceReaderRP)(nil)
 
-// SourceAdapterRP implements rca.SourceAdapter for ReportPortal.
-type SourceAdapterRP struct {
+// SourceReaderRP implements rca.SourceReader for ReportPortal.
+type SourceReaderRP struct {
 	client  *Client
 	project string
 }
 
-// NewSourceAdapter creates a SourceAdapter connected to a ReportPortal instance.
-func NewSourceAdapter(baseURL, apiKeyPath, project string) (rca.SourceAdapter, error) {
+// NewSourceReader creates a SourceReader connected to a ReportPortal instance.
+func NewSourceReader(baseURL, apiKeyPath, project string) (rca.SourceReader, error) {
 	key, err := ReadAPIKey(apiKeyPath)
 	if err != nil {
 		return nil, err
@@ -26,10 +26,10 @@ func NewSourceAdapter(baseURL, apiKeyPath, project string) (rca.SourceAdapter, e
 	if err != nil {
 		return nil, err
 	}
-	return &SourceAdapterRP{client: client, project: project}, nil
+	return &SourceReaderRP{client: client, project: project}, nil
 }
 
-func (a *SourceAdapterRP) FetchEnvelope(launchID int) (*rcatype.Envelope, error) {
+func (a *SourceReaderRP) FetchEnvelope(launchID int) (*rcatype.Envelope, error) {
 	f := NewFetcher(a.client, a.project)
 	rpEnv, err := f.Fetch(launchID)
 	if err != nil {
@@ -38,11 +38,11 @@ func (a *SourceAdapterRP) FetchEnvelope(launchID int) (*rcatype.Envelope, error)
 	return envelopeToRCAType(rpEnv), nil
 }
 
-func (a *SourceAdapterRP) EnvelopeFetcher() rcatype.EnvelopeFetcher {
+func (a *SourceReaderRP) EnvelopeFetcher() rcatype.EnvelopeFetcher {
 	return &envelopeFetcherBridge{client: a.client, project: a.project}
 }
 
-func (a *SourceAdapterRP) CurrentUser() string {
+func (a *SourceReaderRP) CurrentUser() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if u, err := a.client.GetCurrentUser(ctx); err == nil && u.UserID != "" {
@@ -65,14 +65,14 @@ func (b *envelopeFetcherBridge) Fetch(launchID int) (*rcatype.Envelope, error) {
 	return envelopeToRCAType(rpEnv), nil
 }
 
-// DefectPusherRP implements rca.DefectPusher for ReportPortal.
-type DefectPusherRP struct {
+// DefectWriterRP implements rca.DefectWriter for ReportPortal.
+type DefectWriterRP struct {
 	pusher *Pusher
 }
 
-var _ rca.DefectPusher = (*DefectPusherRP)(nil)
+var _ rca.DefectWriter = (*DefectWriterRP)(nil)
 
-func NewDefectPusher(baseURL, apiKeyPath, project, submittedBy string) (rca.DefectPusher, error) {
+func NewDefectWriter(baseURL, apiKeyPath, project, submittedBy string) (rca.DefectWriter, error) {
 	key, err := ReadAPIKey(apiKeyPath)
 	if err != nil {
 		return nil, err
@@ -81,10 +81,10 @@ func NewDefectPusher(baseURL, apiKeyPath, project, submittedBy string) (rca.Defe
 	if err != nil {
 		return nil, err
 	}
-	return &DefectPusherRP{pusher: NewPusher(client, project, submittedBy)}, nil
+	return &DefectWriterRP{pusher: NewPusher(client, project, submittedBy)}, nil
 }
 
-func (p *DefectPusherRP) Push(artifactPath, jiraTicketID, jiraLink string) (*rca.PushedRecord, error) {
+func (p *DefectWriterRP) Push(artifactPath, jiraTicketID, jiraLink string) (*rca.PushedRecord, error) {
 	st := NewMemPushStore()
 	if err := p.pusher.Push(artifactPath, st, jiraTicketID, jiraLink); err != nil {
 		return nil, err

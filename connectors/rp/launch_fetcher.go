@@ -7,16 +7,16 @@ import (
 	"github.com/dpopsuev/origami/schematics/rca"
 )
 
-var _ rca.LaunchFetcher = (*RPLaunchFetcher)(nil)
+var _ rca.RunDiscoverer = (*RPRunDiscoverer)(nil)
 
-// RPLaunchFetcher implements rca.LaunchFetcher for ReportPortal.
-type RPLaunchFetcher struct {
+// RPRunDiscoverer implements rca.RunDiscoverer for ReportPortal.
+type RPRunDiscoverer struct {
 	client  *Client
 	project string
 }
 
-// NewLaunchFetcher creates a LaunchFetcher backed by a ReportPortal API client.
-func NewLaunchFetcher(baseURL, apiKeyPath, project string) (rca.LaunchFetcher, error) {
+// NewRunDiscoverer creates a RunDiscoverer backed by a ReportPortal API client.
+func NewRunDiscoverer(baseURL, apiKeyPath, project string) (rca.RunDiscoverer, error) {
 	key, err := ReadAPIKey(apiKeyPath)
 	if err != nil {
 		return nil, err
@@ -25,10 +25,10 @@ func NewLaunchFetcher(baseURL, apiKeyPath, project string) (rca.LaunchFetcher, e
 	if err != nil {
 		return nil, err
 	}
-	return &RPLaunchFetcher{client: client, project: project}, nil
+	return &RPRunDiscoverer{client: client, project: project}, nil
 }
 
-func (f *RPLaunchFetcher) FetchLaunches(project string, since time.Time) ([]rca.LaunchInfo, error) {
+func (f *RPRunDiscoverer) DiscoverRuns(project string, since time.Time) ([]rca.RunInfo, error) {
 	ctx := context.Background()
 	paged, err := f.client.Project(project).Launches().List(ctx,
 		WithPageSize(100),
@@ -38,7 +38,7 @@ func (f *RPLaunchFetcher) FetchLaunches(project string, since time.Time) ([]rca.
 		return nil, err
 	}
 
-	var launches []rca.LaunchInfo
+	var runs []rca.RunInfo
 	for _, l := range paged.Content {
 		var startTime time.Time
 		if l.StartTime != nil {
@@ -53,7 +53,7 @@ func (f *RPLaunchFetcher) FetchLaunches(project string, since time.Time) ([]rca.
 				failed = execs
 			}
 		}
-		launches = append(launches, rca.LaunchInfo{
+		runs = append(runs, rca.RunInfo{
 			ID:          l.ID,
 			UUID:        l.UUID,
 			Name:        l.Name,
@@ -63,13 +63,13 @@ func (f *RPLaunchFetcher) FetchLaunches(project string, since time.Time) ([]rca.
 			FailedCount: failed,
 		})
 	}
-	return launches, nil
+	return runs, nil
 }
 
-func (f *RPLaunchFetcher) FetchFailures(launchID int) ([]rca.FailureInfo, error) {
+func (f *RPRunDiscoverer) FetchFailures(runID int) ([]rca.FailureInfo, error) {
 	ctx := context.Background()
 	items, err := f.client.Project(f.project).Items().ListAll(ctx,
-		WithLaunchID(launchID),
+		WithLaunchID(runID),
 		WithStatus("FAILED"),
 	)
 	if err != nil {
@@ -79,7 +79,7 @@ func (f *RPLaunchFetcher) FetchFailures(launchID int) ([]rca.FailureInfo, error)
 	var failures []rca.FailureInfo
 	for _, item := range items {
 		fi := rca.FailureInfo{
-			LaunchID: launchID,
+			RunID:    runID,
 			ItemID:   item.ID,
 			ItemUUID: item.UUID,
 			TestName: item.Name,

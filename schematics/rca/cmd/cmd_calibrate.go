@@ -80,12 +80,12 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		if rpProject == "" {
 			return fmt.Errorf("RP project name is required when using RP API\n\nSet it via environment variable:\n  export ASTERISK_RP_PROJECT=your-project-name\n\nOr use the --rp-project flag:\n  asterisk calibrate --rp-base-url ... --rp-project your-project-name")
 		}
-		if cfg.sourceFactory == nil {
-			return fmt.Errorf("no source connector configured (source factory not injected)")
+		if cfg.readerFactory == nil {
+			return fmt.Errorf("no source connector configured (reader factory not injected)")
 		}
-		source, err := cfg.sourceFactory(calibrateFlags.rpBase, calibrateFlags.rpKeyPath, rpProject)
+		source, err := cfg.readerFactory(calibrateFlags.rpBase, calibrateFlags.rpKeyPath, rpProject)
 		if err != nil {
-			return fmt.Errorf("create source adapter: %w", err)
+			return fmt.Errorf("create source reader: %w", err)
 		}
 		rpFetcher = source.EnvelopeFetcher()
 		if err := rca.ResolveRPCases(rpFetcher, scenario); err != nil {

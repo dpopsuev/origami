@@ -24,8 +24,8 @@ type IngestConfig struct {
 	CandidateDir string
 }
 
-// LaunchInfo is an alias for rca.LaunchInfo.
-type LaunchInfo = rca.LaunchInfo
+// RunInfo is an alias for rca.RunInfo.
+type RunInfo = rca.RunInfo
 
 // FailureInfo is an alias for rca.FailureInfo.
 type FailureInfo = rca.FailureInfo
@@ -42,7 +42,7 @@ type SymptomMatch struct {
 // CandidateCase is a candidate case ready for human review.
 type CandidateCase struct {
 	ID           string    `json:"id"`
-	LaunchID     int       `json:"launch_id"`
+	RunID        int       `json:"run_id"`
 	ItemID       int       `json:"item_id"`
 	TestName     string    `json:"test_name"`
 	ErrorMessage string    `json:"error_message"`
@@ -62,8 +62,8 @@ type IngestSummary struct {
 	CandidatesCreated int `json:"candidates_created"`
 }
 
-// LaunchFetcher is an alias for rca.LaunchFetcher.
-type LaunchFetcher = rca.LaunchFetcher
+// RunDiscoverer is an alias for rca.RunDiscoverer.
+type RunDiscoverer = rca.RunDiscoverer
 
 type ingestArtifact struct {
 	typ  string
@@ -77,9 +77,9 @@ func (a *ingestArtifact) Raw() any            { return a.data }
 
 // --- FetchLaunchesNode ---
 
-// FetchLaunchesNode calls the RP API to list recent launches.
+// FetchLaunchesNode discovers recent CI runs via the RunDiscoverer.
 type FetchLaunchesNode struct {
-	Fetcher LaunchFetcher
+	Discoverer RunDiscoverer
 }
 
 func (n *FetchLaunchesNode) Name() string                       { return "fetch_launches" }
@@ -94,24 +94,24 @@ func (n *FetchLaunchesNode) Process(ctx context.Context, nc framework.NodeContex
 	lookback := time.Duration(cfg.LookbackDays) * 24 * time.Hour
 	since := time.Now().Add(-lookback)
 
-	launches, err := n.Fetcher.FetchLaunches(cfg.RPProject, since)
+	runs, err := n.Discoverer.DiscoverRuns(cfg.RPProject, since)
 	if err != nil {
 		return nil, fmt.Errorf("fetch_launches: %w", err)
 	}
 
-	nc.WalkerState.Context["launches"] = launches
+	nc.WalkerState.Context["launches"] = runs
 	nc.WalkerState.MergeContext(map[string]any{
-		"vars": map[string]any{"launches": launches},
+		"vars": map[string]any{"launches": runs},
 	})
 
-	return &ingestArtifact{typ: "launches", data: launches, conf: 1.0}, nil
+	return &ingestArtifact{typ: "launches", data: runs, conf: 1.0}, nil
 }
 
 // --- ParseFailuresNode ---
 
-// ParseFailuresNode extracts failed test items from launches.
+// ParseFailuresNode extracts failed test items from discovered runs.
 type ParseFailuresNode struct {
-	Fetcher LaunchFetcher
+	Discoverer RunDiscoverer
 }
 
 func (n *ParseFailuresNode) Name() string                       { return "parse_failures" }
@@ -122,14 +122,14 @@ func (n *ParseFailuresNode) Process(ctx context.Context, nc framework.NodeContex
 	if !ok {
 		return nil, fmt.Errorf("parse_failures: no launches in context")
 	}
-	launches, ok := launchesRaw.([]LaunchInfo)
+	runs, ok := launchesRaw.([]RunInfo)
 	if !ok {
 		return nil, fmt.Errorf("parse_failures: launches type %T", launchesRaw)
 	}
 
 	var failures []FailureInfo
-	for _, l := range launches {
-		items, err := n.Fetcher.FetchFailures(l.ID)
+	for _, r := range runs {
+		items, err := n.Discoverer.FetchFailures(r.ID)
 		if err != nil {
 			continue
 		}
@@ -264,7 +264,7 @@ func (n *CreateCandidatesNode) Process(_ context.Context, nc framework.NodeConte
 	for i, m := range newCases {
 		c := CandidateCase{
 			ID:           fmt.Sprintf("CAND-%d-%d", now.Unix(), i+1),
-			LaunchID:     m.LaunchID,
+			RunID:        m.RunID,
 			ItemID:       m.ItemID,
 			TestName:     m.TestName,
 			ErrorMessage: m.ErrorMessage,
@@ -304,7 +304,7 @@ func (n *NotifyReviewNode) Process(_ context.Context, nc framework.NodeContext) 
 	summary := IngestSummary{}
 
 	if v, ok := nc.WalkerState.Context["launches"]; ok {
-		if l, ok := v.([]LaunchInfo); ok {
+		if l, ok := v.([]RunInfo); ok {
 			summary.LaunchesFetched = len(l)
 		}
 	}
@@ -338,10 +338,10 @@ func (n *NotifyReviewNode) Process(_ context.Context, nc framework.NodeContext) 
 }
 
 // IngestNodeRegistry returns a NodeRegistry with all ingestion circuit nodes.
-func IngestNodeRegistry(fetcher LaunchFetcher, symptoms []rca.GroundTruthSymptom, project string, dedupIdx *DedupIndex, candidateDir string) framework.NodeRegistry {
+func IngestNodeRegistry(discoverer RunDiscoverer, symptoms []rca.GroundTruthSymptom, project string, dedupIdx *DedupIndex, candidateDir string) framework.NodeRegistry {
 	return framework.NodeRegistry{
-		"ingest.fetch":     func(_ framework.NodeDef) framework.Node { return &FetchLaunchesNode{Fetcher: fetcher} },
-		"ingest.parse":     func(_ framework.NodeDef) framework.Node { return &ParseFailuresNode{Fetcher: fetcher} },
+		"ingest.fetch":     func(_ framework.NodeDef) framework.Node { return &FetchLaunchesNode{Discoverer: discoverer} },
+		"ingest.parse":     func(_ framework.NodeDef) framework.Node { return &ParseFailuresNode{Discoverer: discoverer} },
 		"ingest.match":     func(_ framework.NodeDef) framework.Node { return &MatchSymptomsNode{Symptoms: symptoms} },
 		"ingest.dedup":     func(_ framework.NodeDef) framework.Node { return &DeduplicateNode{Project: project, Index: dedupIdx} },
 		"ingest.candidate": func(_ framework.NodeDef) framework.Node { return &CreateCandidatesNode{OutputDir: candidateDir, Project: project} },

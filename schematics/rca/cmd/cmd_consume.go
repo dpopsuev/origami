@@ -44,10 +44,10 @@ var consumeRunCmd = &cobra.Command{
 			return fmt.Errorf("load dedup index: %w", err)
 		}
 
-		var fetcher LaunchFetcher
+		var discoverer RunDiscoverer
 		if consumeDryRun {
-			fmt.Fprintln(cmd.OutOrStdout(), "[dry-run] Using stub fetcher (no RP API calls)")
-			fetcher = &stubFetcher{}
+			fmt.Fprintln(cmd.OutOrStdout(), "[dry-run] Using stub discoverer (no RP API calls)")
+			discoverer = &stubDiscoverer{}
 		} else {
 			rpBase := consumeRPBase
 			if rpBase == "" {
@@ -56,18 +56,18 @@ var consumeRunCmd = &cobra.Command{
 			if rpBase == "" {
 				return fmt.Errorf("RP base URL required: set --rp-base-url or $ASTERISK_RP_URL")
 			}
-			if cfg.fetcherFactory == nil {
-				return fmt.Errorf("no launch fetcher configured (fetcher factory not injected)")
+			if cfg.discovererFactory == nil {
+				return fmt.Errorf("no run discoverer configured (discoverer factory not injected)")
 			}
-			f, err := cfg.fetcherFactory(rpBase, consumeRPKeyPath, consumeProject)
+			d, err := cfg.discovererFactory(rpBase, consumeRPKeyPath, consumeProject)
 			if err != nil {
-				return fmt.Errorf("create launch fetcher: %w", err)
+				return fmt.Errorf("create run discoverer: %w", err)
 			}
-			fetcher = f
+			discoverer = d
 		}
 
 		nodeReg := IngestNodeRegistry(
-			fetcher, symptoms, consumeProject, dedupIdx, consumeCandidateDir,
+			discoverer, symptoms, consumeProject, dedupIdx, consumeCandidateDir,
 		)
 
 		circuitData, err := os.ReadFile("circuits/asterisk-ingest.yaml")
@@ -140,12 +140,12 @@ func (e *consumeForwardEdge) Evaluate(_ framework.Artifact, _ *framework.WalkerS
 	return &framework.Transition{NextNode: e.def.To}
 }
 
-type stubFetcher struct{}
+type stubDiscoverer struct{}
 
-func (f *stubFetcher) FetchLaunches(_ string, _ time.Time) ([]LaunchInfo, error) {
+func (f *stubDiscoverer) DiscoverRuns(_ string, _ time.Time) ([]RunInfo, error) {
 	return nil, nil
 }
-func (f *stubFetcher) FetchFailures(_ int) ([]FailureInfo, error) {
+func (f *stubDiscoverer) FetchFailures(_ int) ([]FailureInfo, error) {
 	return nil, nil
 }
 

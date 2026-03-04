@@ -37,7 +37,7 @@ func TestUnboundSocket_Finding(t *testing.T) {
 	comps := map[string]*framework.ComponentManifest{
 		"origami.schematics.rca": compWithSockets(
 			framework.SocketDef{Name: "store", Type: "store.Store"},
-			framework.SocketDef{Name: "source", Type: "SourceAdapter"},
+			framework.SocketDef{Name: "source", Type: "SourceReader"},
 		),
 	}
 	ctx := makeManifestCtx(map[string]string{"source": "origami.connectors.rp"}, comps)
@@ -54,7 +54,7 @@ func TestUnboundSocket_Finding(t *testing.T) {
 func TestUnboundSocket_NoFinding(t *testing.T) {
 	comps := map[string]*framework.ComponentManifest{
 		"origami.schematics.rca": compWithSockets(
-			framework.SocketDef{Name: "source", Type: "SourceAdapter"},
+			framework.SocketDef{Name: "source", Type: "SourceReader"},
 		),
 	}
 	ctx := makeManifestCtx(map[string]string{"source": "origami.connectors.rp"}, comps)
@@ -68,7 +68,7 @@ func TestUnboundSocket_NoFinding(t *testing.T) {
 func TestUnknownBinding_Finding(t *testing.T) {
 	comps := map[string]*framework.ComponentManifest{
 		"origami.schematics.rca": compWithSockets(
-			framework.SocketDef{Name: "source", Type: "SourceAdapter"},
+			framework.SocketDef{Name: "source", Type: "SourceReader"},
 		),
 	}
 	ctx := makeManifestCtx(map[string]string{
@@ -88,7 +88,7 @@ func TestUnknownBinding_Finding(t *testing.T) {
 func TestUnknownBinding_NoFinding(t *testing.T) {
 	comps := map[string]*framework.ComponentManifest{
 		"origami.schematics.rca": compWithSockets(
-			framework.SocketDef{Name: "source", Type: "SourceAdapter"},
+			framework.SocketDef{Name: "source", Type: "SourceReader"},
 		),
 	}
 	ctx := makeManifestCtx(map[string]string{"source": "origami.connectors.rp"}, comps)
@@ -119,7 +119,7 @@ func TestUnsatisfiedConnector_Finding(t *testing.T) {
 func TestUnsatisfiedConnector_NoFinding(t *testing.T) {
 	comps := map[string]*framework.ComponentManifest{
 		"origami.connectors.rp": compWithSatisfies(
-			framework.SatisfiesDef{Socket: "source", Factory: "NewSourceAdapter"},
+			framework.SatisfiesDef{Socket: "source", Factory: "NewSourceReader"},
 		),
 	}
 	ctx := makeManifestCtx(map[string]string{"source": "origami.connectors.rp"}, comps)

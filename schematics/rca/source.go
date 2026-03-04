@@ -9,15 +9,15 @@ import (
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 )
 
-// SourceFactory creates a SourceAdapter from connection parameters.
+// SourceReaderFactory creates a SourceReader from connection parameters.
 // Products inject a factory so the schematic never imports connector packages.
-type SourceFactory func(baseURL, apiKeyPath, project string) (SourceAdapter, error)
+type SourceReaderFactory func(baseURL, apiKeyPath, project string) (SourceReader, error)
 
-// SourceAdapter abstracts the external test failure tracker. Schematics
+// SourceReader reads test failure data from an external tracker. Schematics
 // declare this as a required socket; concrete connectors (e.g. ReportPortal)
 // satisfy it and are injected at build time via functional options.
-type SourceAdapter interface {
-	// FetchEnvelope retrieves test failure data for the given source launch ID.
+type SourceReader interface {
+	// FetchEnvelope retrieves test failure data for the given run ID.
 	FetchEnvelope(launchID int) (*rcatype.Envelope, error)
 
 	// EnvelopeFetcher returns an rcatype.EnvelopeFetcher for batch operations
@@ -28,25 +28,25 @@ type SourceAdapter interface {
 	CurrentUser() string
 }
 
-// PusherFactory creates a DefectPusher from connection parameters.
-type PusherFactory func(baseURL, apiKeyPath, project, submittedBy string) (DefectPusher, error)
+// DefectWriterFactory creates a DefectWriter from connection parameters.
+type DefectWriterFactory func(baseURL, apiKeyPath, project, submittedBy string) (DefectWriter, error)
 
-// DefectPusher pushes RCA results back to the external tracker.
-type DefectPusher interface {
+// DefectWriter writes RCA results back to an external system.
+type DefectWriter interface {
 	Push(artifactPath, jiraTicketID, jiraLink string) (*PushedRecord, error)
 }
 
-// PushedRecord captures the result of a defect push operation.
+// PushedRecord captures the result of a defect write operation.
 type PushedRecord struct {
 	LaunchID   string
 	DefectType string
 }
 
-// DefaultDefectPusher reads an RCA artifact and extracts the defect type
+// DefaultDefectWriter reads an RCA artifact and extracts the defect type
 // locally without contacting any remote API.
-type DefaultDefectPusher struct{}
+type DefaultDefectWriter struct{}
 
-func (DefaultDefectPusher) Push(artifactPath, jiraTicketID, jiraLink string) (*PushedRecord, error) {
+func (DefaultDefectWriter) Push(artifactPath, jiraTicketID, jiraLink string) (*PushedRecord, error) {
 	data, err := os.ReadFile(artifactPath)
 	if err != nil {
 		return nil, err
@@ -64,8 +64,8 @@ func (DefaultDefectPusher) Push(artifactPath, jiraTicketID, jiraLink string) (*P
 // TokenChecker validates the presence and permissions of a token file.
 type TokenChecker func(path string) error
 
-// LaunchInfo summarizes a CI launch for the ingestion circuit.
-type LaunchInfo struct {
+// RunInfo summarizes a CI run for the ingestion circuit.
+type RunInfo struct {
 	ID          int       `json:"id"`
 	UUID        string    `json:"uuid"`
 	Name        string    `json:"name"`
@@ -75,10 +75,10 @@ type LaunchInfo struct {
 	FailedCount int       `json:"failed_count"`
 }
 
-// FailureInfo represents a parsed test failure from a CI launch.
+// FailureInfo represents a parsed test failure from a CI run.
 type FailureInfo struct {
-	LaunchID     int    `json:"launch_id"`
-	LaunchName   string `json:"launch_name"`
+	RunID        int    `json:"run_id"`
+	RunName      string `json:"run_name"`
 	ItemID       int    `json:"item_id"`
 	ItemUUID     string `json:"item_uuid"`
 	TestName     string `json:"test_name"`
@@ -90,14 +90,14 @@ type FailureInfo struct {
 
 // DedupKey generates the deduplication key for a failure.
 func (f *FailureInfo) DedupKey(project string) string {
-	return fmt.Sprintf("%s:%d:%d", project, f.LaunchID, f.ItemID)
+	return fmt.Sprintf("%s:%d:%d", project, f.RunID, f.ItemID)
 }
 
-// LaunchFetcher abstracts the external tracker's launch listing API.
-type LaunchFetcher interface {
-	FetchLaunches(project string, since time.Time) ([]LaunchInfo, error)
-	FetchFailures(launchID int) ([]FailureInfo, error)
+// RunDiscoverer discovers available CI runs and their failures.
+type RunDiscoverer interface {
+	DiscoverRuns(project string, since time.Time) ([]RunInfo, error)
+	FetchFailures(runID int) ([]FailureInfo, error)
 }
 
-// LaunchFetcherFactory creates a LaunchFetcher from connection parameters.
-type LaunchFetcherFactory func(baseURL, apiKeyPath, project string) (LaunchFetcher, error)
+// RunDiscovererFactory creates a RunDiscoverer from connection parameters.
+type RunDiscovererFactory func(baseURL, apiKeyPath, project string) (RunDiscoverer, error)

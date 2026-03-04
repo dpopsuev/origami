@@ -111,12 +111,12 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("RP project name is required when using RP API\n\nSet it via environment variable:\n  export ASTERISK_RP_PROJECT=your-project-name\n\nOr use the --rp-project flag:\n  asterisk analyze %s --rp-project your-project-name", launch)
 	}
 
-	var source rca.SourceAdapter
-	if rpBase != "" && cfg.sourceFactory != nil {
+	var source rca.SourceReader
+	if rpBase != "" && cfg.readerFactory != nil {
 		var err error
-		source, err = cfg.sourceFactory(rpBase, analyzeFlags.rpKeyPath, rpProject)
+		source, err = cfg.readerFactory(rpBase, analyzeFlags.rpKeyPath, rpProject)
 		if err != nil {
-			return fmt.Errorf("create source adapter: %w", err)
+			return fmt.Errorf("create source reader: %w", err)
 		}
 	}
 	env := loadEnvelopeForAnalyze(launch, analyzeFlags.dbPath, source)

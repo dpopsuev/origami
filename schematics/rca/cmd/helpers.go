@@ -115,9 +115,9 @@ func resolveRPProject(flagValue string) string {
 }
 
 // loadEnvelopeForAnalyze resolves the envelope from a file path or launch ID.
-// When a SourceAdapter is available and the envelope is not cached, it fetches
+// When a SourceReader is available and the envelope is not cached, it fetches
 // from the remote tracker and saves to the store.
-func loadEnvelopeForAnalyze(launch, dbPath string, source rca.SourceAdapter) *rcatype.Envelope {
+func loadEnvelopeForAnalyze(launch, dbPath string, source rca.SourceReader) *rcatype.Envelope {
 	if _, err := os.Stat(launch); err == nil {
 		data, err := os.ReadFile(launch)
 		if err != nil {

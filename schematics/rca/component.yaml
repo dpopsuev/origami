@@ -13,5 +13,11 @@ requires:
       type: store.Store
       description: Persistent storage for investigations, cases, and RCA results
     - name: source
-      type: SourceAdapter
-      description: Fetches test failures and pushes results back to the tracker
+      type: SourceReader
+      description: Reads test failure data from an external tracker
+    - name: writer
+      type: DefectWriter
+      description: Writes RCA results back to the external tracker
+    - name: discoverer
+      type: RunDiscoverer
+      description: Discovers available CI runs and their failures

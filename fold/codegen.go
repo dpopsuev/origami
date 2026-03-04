@@ -99,10 +99,10 @@ func buildTemplateContext(m *Manifest, reg ModuleRegistry) (*templateContext, er
 // them. This is the glue between component.yaml socket declarations and the
 // generated main.go.
 var socketOptionMap = map[string]string{
-	"source":          "WithSourceFactory",
-	"store":           "WithStoreFactory",
-	"pusher":          "WithPusherFactory",
-	"launch_fetcher":  "WithLaunchFetcherFactory",
+	"source":     "WithSourceReader",
+	"store":      "WithStoreFactory",
+	"writer":     "WithDefectWriter",
+	"discoverer": "WithRunDiscoverer",
 }
 
 func resolveBindings(bindings map[string]string, reg ModuleRegistry, seen map[string]bool, ctx *templateContext) ([]bindingEntry, error) {
@@ -151,13 +151,13 @@ func resolveBindings(bindings map[string]string, reg ModuleRegistry, seen map[st
 func lookupFactory(socket, goPath string, reg ModuleRegistry) string {
 	switch socket {
 	case "source":
-		return "NewSourceAdapter"
+		return "NewSourceReader"
 	case "store":
 		return "NewStore"
-	case "pusher":
-		return "NewDefectPusher"
-	case "launch_fetcher":
-		return "NewLaunchFetcher"
+	case "writer":
+		return "NewDefectWriter"
+	case "discoverer":
+		return "NewRunDiscoverer"
 	default:
 		return "New"
 	}

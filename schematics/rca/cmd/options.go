@@ -10,10 +10,10 @@ import (
 type Option func(*schematicDeps)
 
 type schematicDeps struct {
-	sourceFactory  rca.SourceFactory
-	pusherFactory  rca.PusherFactory
-	fetcherFactory rca.LaunchFetcherFactory
-	tokenChecker   rca.TokenChecker
+	readerFactory     rca.SourceReaderFactory
+	writerFactory     rca.DefectWriterFactory
+	discovererFactory rca.RunDiscovererFactory
+	tokenChecker      rca.TokenChecker
 }
 
 // cfg holds the injected dependencies. Products call Apply before Execute.
@@ -26,21 +26,21 @@ func Apply(opts ...Option) {
 	}
 }
 
-// WithSourceFactory injects a factory that creates a SourceAdapter from
+// WithSourceReader injects a factory that creates a SourceReader from
 // connection parameters (base URL, API key path, project).
-func WithSourceFactory(f rca.SourceFactory) Option {
-	return func(d *schematicDeps) { d.sourceFactory = f }
+func WithSourceReader(f rca.SourceReaderFactory) Option {
+	return func(d *schematicDeps) { d.readerFactory = f }
 }
 
-// WithPusherFactory injects a factory that creates a DefectPusher.
-func WithPusherFactory(f rca.PusherFactory) Option {
-	return func(d *schematicDeps) { d.pusherFactory = f }
+// WithDefectWriter injects a factory that creates a DefectWriter.
+func WithDefectWriter(f rca.DefectWriterFactory) Option {
+	return func(d *schematicDeps) { d.writerFactory = f }
 }
 
-// WithLaunchFetcherFactory injects a factory that creates a LaunchFetcher
+// WithRunDiscoverer injects a factory that creates a RunDiscoverer
 // for the ingest/consume circuit.
-func WithLaunchFetcherFactory(f rca.LaunchFetcherFactory) Option {
-	return func(d *schematicDeps) { d.fetcherFactory = f }
+func WithRunDiscoverer(f rca.RunDiscovererFactory) Option {
+	return func(d *schematicDeps) { d.discovererFactory = f }
 }
 
 // WithTokenChecker injects a function that validates token file existence

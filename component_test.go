@@ -71,7 +71,7 @@ requires:
       type: store.Store
       description: Persistent storage backend
     - name: source
-      type: SourceAdapter
+      type: SourceReader
       description: External tracker integration
 `
 	connectorYAML := `

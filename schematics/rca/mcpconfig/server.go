@@ -31,7 +31,7 @@ type Server struct {
 	*fwmcp.CircuitServer
 	ProductName   string
 	ProjectRoot   string
-	SourceFactory rca.SourceFactory
+	ReaderFactory rca.SourceReaderFactory
 
 	KamiServer *kami.Server
 	store      *view.CircuitStore
@@ -41,10 +41,10 @@ type Server struct {
 // ServerOption configures an RCA MCP server.
 type ServerOption func(*Server)
 
-// WithSourceFactory injects a factory for creating SourceAdapters from
+// WithSourceReader injects a factory for creating SourceReaders from
 // connection parameters provided in MCP start_circuit requests.
-func WithSourceFactory(f rca.SourceFactory) ServerOption {
-	return func(s *Server) { s.SourceFactory = f }
+func WithSourceReader(f rca.SourceReaderFactory) ServerOption {
+	return func(s *Server) { s.ReaderFactory = f }
 }
 
 // NewServer creates an RCA MCP server. The productName identifies the consumer
@@ -172,12 +172,12 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		if rpProject == "" {
 			return nil, fwmcp.SessionMeta{}, fmt.Errorf("rp_project is required when rp_base_url is set")
 		}
-		if s.SourceFactory == nil {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("no source connector configured (SourceFactory not set)")
+		if s.ReaderFactory == nil {
+			return nil, fwmcp.SessionMeta{}, fmt.Errorf("no source connector configured (ReaderFactory not set)")
 		}
-		source, err := s.SourceFactory(rpBaseURL, ".rp-api-key", rpProject)
+		source, err := s.ReaderFactory(rpBaseURL, ".rp-api-key", rpProject)
 		if err != nil {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("create source adapter: %w", err)
+			return nil, fwmcp.SessionMeta{}, fmt.Errorf("create source reader: %w", err)
 		}
 		rpFetcher = source.EnvelopeFetcher()
 		if err := rca.ResolveRPCases(rpFetcher, scenario); err != nil {

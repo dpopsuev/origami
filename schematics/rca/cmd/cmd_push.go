@@ -36,23 +36,23 @@ func init() {
 }
 
 func runPush(cmd *cobra.Command, _ []string) error {
-	var pusher rca.DefectPusher = rca.DefaultDefectPusher{}
+	var writer rca.DefectWriter = rca.DefaultDefectWriter{}
 	if pushFlags.rpBase != "" {
 		rpProject := resolveRPProject(pushFlags.rpProject)
 		if rpProject == "" {
 			return fmt.Errorf("RP project name is required when using RP API\n\nSet it via environment variable:\n  export ASTERISK_RP_PROJECT=your-project-name\n\nOr use the --rp-project flag:\n  asterisk push -f artifact.json --rp-base-url ... --rp-project your-project-name")
 		}
-		if cfg.pusherFactory == nil {
-			return fmt.Errorf("no defect pusher configured (pusher factory not injected)")
+		if cfg.writerFactory == nil {
+			return fmt.Errorf("no defect writer configured (writer factory not injected)")
 		}
 		submitter := resolveSubmitter()
-		p, err := cfg.pusherFactory(pushFlags.rpBase, pushFlags.rpKeyPath, rpProject, submitter)
+		w, err := cfg.writerFactory(pushFlags.rpBase, pushFlags.rpKeyPath, rpProject, submitter)
 		if err != nil {
-			return fmt.Errorf("create defect pusher: %w", err)
+			return fmt.Errorf("create defect writer: %w", err)
 		}
-		pusher = p
+		writer = w
 	}
-	rec, err := pusher.Push(pushFlags.artifactPath, "", "")
+	rec, err := writer.Push(pushFlags.artifactPath, "", "")
 	if err != nil {
 		return fmt.Errorf("push: %w", err)
 	}

@@ -9,4 +9,8 @@ requires:
   origami: ">=0.3.0"
 satisfies:
   - socket: source
-    factory: NewSourceAdapter
+    factory: NewSourceReader
+  - socket: writer
+    factory: NewDefectWriter
+  - socket: discoverer
+    factory: NewRunDiscoverer

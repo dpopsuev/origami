@@ -14,32 +14,32 @@ import (
 
 // --- Mock fetcher ---
 
-type mockFetcher struct {
-	launches []LaunchInfo
+type mockDiscoverer struct {
+	runs     []RunInfo
 	failures map[int][]FailureInfo
 }
 
-func (m *mockFetcher) FetchLaunches(_ string, _ time.Time) ([]LaunchInfo, error) {
-	return m.launches, nil
+func (m *mockDiscoverer) DiscoverRuns(_ string, _ time.Time) ([]RunInfo, error) {
+	return m.runs, nil
 }
 
-func (m *mockFetcher) FetchFailures(launchID int) ([]FailureInfo, error) {
-	return m.failures[launchID], nil
+func (m *mockDiscoverer) FetchFailures(runID int) ([]FailureInfo, error) {
+	return m.failures[runID], nil
 }
 
-func newMockFetcher() *mockFetcher {
-	return &mockFetcher{
-		launches: []LaunchInfo{
+func newMockDiscoverer() *mockDiscoverer {
+	return &mockDiscoverer{
+		runs: []RunInfo{
 			{ID: 100, Name: "run-100", Status: "FAILED", FailedCount: 2},
 			{ID: 101, Name: "run-101", Status: "FAILED", FailedCount: 1},
 		},
 		failures: map[int][]FailureInfo{
 			100: {
-				{LaunchID: 100, LaunchName: "run-100", ItemID: 1001, TestName: "TestPTP_Sync", ErrorMessage: "ptp4l sync timeout", Status: "FAILED"},
-				{LaunchID: 100, LaunchName: "run-100", ItemID: 1002, TestName: "TestPTP_Config", ErrorMessage: "config mismatch error", Status: "FAILED"},
+				{RunID: 100, RunName: "run-100", ItemID: 1001, TestName: "TestPTP_Sync", ErrorMessage: "ptp4l sync timeout", Status: "FAILED"},
+				{RunID: 100, RunName: "run-100", ItemID: 1002, TestName: "TestPTP_Config", ErrorMessage: "config mismatch error", Status: "FAILED"},
 			},
 			101: {
-				{LaunchID: 101, LaunchName: "run-101", ItemID: 2001, TestName: "TestPTP_Sync", ErrorMessage: "ptp4l sync timeout", Status: "FAILED"},
+				{RunID: 101, RunName: "run-101", ItemID: 2001, TestName: "TestPTP_Sync", ErrorMessage: "ptp4l sync timeout", Status: "FAILED"},
 			},
 		},
 	}
@@ -53,8 +53,8 @@ func testSymptoms() []rca.GroundTruthSymptom {
 }
 
 func TestFetchLaunchesNode(t *testing.T) {
-	fetcher := newMockFetcher()
-	node := &FetchLaunchesNode{Fetcher: fetcher}
+	discoverer := newMockDiscoverer()
+	node := &FetchLaunchesNode{Discoverer: discoverer}
 
 	ws := framework.NewWalkerState("test")
 	ws.Context["config"] = &IngestConfig{
@@ -67,18 +67,18 @@ func TestFetchLaunchesNode(t *testing.T) {
 		t.Fatalf("Process: %v", err)
 	}
 
-	launches := art.Raw().([]LaunchInfo)
-	if len(launches) != 2 {
-		t.Errorf("launches = %d, want 2", len(launches))
+	runs := art.Raw().([]RunInfo)
+	if len(runs) != 2 {
+		t.Errorf("runs = %d, want 2", len(runs))
 	}
 }
 
 func TestParseFailuresNode(t *testing.T) {
-	fetcher := newMockFetcher()
-	node := &ParseFailuresNode{Fetcher: fetcher}
+	discoverer := newMockDiscoverer()
+	node := &ParseFailuresNode{Discoverer: discoverer}
 
 	ws := framework.NewWalkerState("test")
-	ws.Context["launches"] = fetcher.launches
+	ws.Context["launches"] = discoverer.runs
 
 	art, err := node.Process(context.Background(), framework.NodeContext{WalkerState: ws})
 	if err != nil {
@@ -96,9 +96,9 @@ func TestMatchSymptomsNode(t *testing.T) {
 
 	ws := framework.NewWalkerState("test")
 	ws.Context["failures"] = []FailureInfo{
-		{LaunchID: 100, ItemID: 1001, TestName: "TestPTP_Sync", ErrorMessage: "ptp4l sync timeout"},
-		{LaunchID: 100, ItemID: 1002, TestName: "TestPTP_Config", ErrorMessage: "config mismatch error"},
-		{LaunchID: 100, ItemID: 1003, TestName: "TestUnknown", ErrorMessage: "something else entirely"},
+		{RunID: 100, ItemID: 1001, TestName: "TestPTP_Sync", ErrorMessage: "ptp4l sync timeout"},
+		{RunID: 100, ItemID: 1002, TestName: "TestPTP_Config", ErrorMessage: "config mismatch error"},
+		{RunID: 100, ItemID: 1003, TestName: "TestUnknown", ErrorMessage: "something else entirely"},
 	}
 
 	art, err := node.Process(context.Background(), framework.NodeContext{WalkerState: ws})
@@ -130,9 +130,9 @@ func TestDeduplicateNode(t *testing.T) {
 
 	ws := framework.NewWalkerState("test")
 	ws.Context["matches"] = []SymptomMatch{
-		{FailureInfo: FailureInfo{LaunchID: 100, ItemID: 1001, TestName: "TestPTP_Sync"}, Matched: true},
-		{FailureInfo: FailureInfo{LaunchID: 100, ItemID: 1002, TestName: "TestPTP_Config"}, Matched: true},
-		{FailureInfo: FailureInfo{LaunchID: 101, ItemID: 2001, TestName: "TestPTP_Sync"}, Matched: true},
+		{FailureInfo: FailureInfo{RunID: 100, ItemID: 1001, TestName: "TestPTP_Sync"}, Matched: true},
+		{FailureInfo: FailureInfo{RunID: 100, ItemID: 1002, TestName: "TestPTP_Config"}, Matched: true},
+		{FailureInfo: FailureInfo{RunID: 101, ItemID: 2001, TestName: "TestPTP_Sync"}, Matched: true},
 	}
 
 	art, err := node.Process(context.Background(), framework.NodeContext{WalkerState: ws})
@@ -158,7 +158,7 @@ func TestCreateCandidatesNode(t *testing.T) {
 
 	ws := framework.NewWalkerState("test")
 	ws.Context["new_cases"] = []SymptomMatch{
-		{FailureInfo: FailureInfo{LaunchID: 100, ItemID: 1002, TestName: "TestPTP_Config", ErrorMessage: "config mismatch"}, SymptomID: "S2", SymptomName: "Config Mismatch", Matched: true},
+		{FailureInfo: FailureInfo{RunID: 100, ItemID: 1002, TestName: "TestPTP_Config", ErrorMessage: "config mismatch"}, SymptomID: "S2", SymptomName: "Config Mismatch", Matched: true},
 	}
 
 	art, err := node.Process(context.Background(), framework.NodeContext{WalkerState: ws})
@@ -194,7 +194,7 @@ func TestNotifyReviewNode(t *testing.T) {
 	node := &NotifyReviewNode{}
 
 	ws := framework.NewWalkerState("test")
-	ws.Context["launches"] = []LaunchInfo{{ID: 1}, {ID: 2}}
+	ws.Context["launches"] = []RunInfo{{ID: 1}, {ID: 2}}
 	ws.Context["failures"] = []FailureInfo{{ItemID: 1}, {ItemID: 2}, {ItemID: 3}}
 	ws.Context["matches"] = []SymptomMatch{
 		{Matched: true},
@@ -231,7 +231,7 @@ func TestDedupIndex_SameLaunchTwice(t *testing.T) {
 	idx := NewDedupIndex()
 
 	matches := []SymptomMatch{
-		{FailureInfo: FailureInfo{LaunchID: 100, ItemID: 1001}, Matched: true},
+		{FailureInfo: FailureInfo{RunID: 100, ItemID: 1001}, Matched: true},
 	}
 
 	// First run

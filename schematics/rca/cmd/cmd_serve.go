@@ -36,8 +36,8 @@ func runServe(cmd *cobra.Command, _ []string) error {
 	log := logging.New("mcp")
 
 	var serverOpts []mcpserver.ServerOption
-	if cfg.sourceFactory != nil {
-		serverOpts = append(serverOpts, mcpserver.WithSourceFactory(cfg.sourceFactory))
+	if cfg.readerFactory != nil {
+		serverOpts = append(serverOpts, mcpserver.WithSourceReader(cfg.readerFactory))
 	}
 	srv := mcpserver.NewServer("asterisk", serverOpts...)
 	defer srv.Shutdown()

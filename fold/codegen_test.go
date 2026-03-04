@@ -67,10 +67,10 @@ func TestGenerateMain_WithBindings(t *testing.T) {
 	if !strings.Contains(code, ".Apply(") {
 		t.Errorf("missing Apply() call in:\n%s", code)
 	}
-	if !strings.Contains(code, "WithSourceFactory") {
-		t.Errorf("missing WithSourceFactory option in:\n%s", code)
+	if !strings.Contains(code, "WithSourceReader") {
+		t.Errorf("missing WithSourceReader option in:\n%s", code)
 	}
-	if !strings.Contains(code, "rp.NewSourceAdapter") {
-		t.Errorf("missing rp.NewSourceAdapter factory in:\n%s", code)
+	if !strings.Contains(code, "rp.NewSourceReader") {
+		t.Errorf("missing rp.NewSourceReader factory in:\n%s", code)
 	}
 }
