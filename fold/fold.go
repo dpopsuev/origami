@@ -40,6 +40,22 @@ func Run(opts Options) error {
 		return fmt.Errorf("write main.go: %w", err)
 	}
 
+	if schemaFile, ok := m.Bindings["store.schema"]; ok {
+		manifestDir := filepath.Dir(opts.ManifestPath)
+		srcSchema := filepath.Join(manifestDir, schemaFile)
+		data, err := os.ReadFile(srcSchema)
+		if err != nil {
+			return fmt.Errorf("read store schema %q: %w", srcSchema, err)
+		}
+		dstSchema := filepath.Join(tmpDir, filepath.Base(schemaFile))
+		if err := os.WriteFile(dstSchema, data, 0644); err != nil {
+			return fmt.Errorf("write store schema: %w", err)
+		}
+		if opts.Verbose {
+			fmt.Fprintf(os.Stderr, "copied store schema: %s → %s\n", srcSchema, dstSchema)
+		}
+	}
+
 	if opts.Verbose {
 		fmt.Fprintf(os.Stderr, "generated %s (%d bytes)\n", mainPath, len(src))
 		fmt.Fprintf(os.Stderr, "%s\n", string(src))

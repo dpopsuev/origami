@@ -53,8 +53,8 @@ FAIL: Expected clock state to be LOCKED within 300s timeout
 | Name | OCP-83297 PTP sync stability |
 | Status | active |
 | Occurrences | 1 |
-| First seen | 2026-03-04T16:39:26Z |
-| Last seen | 2026-03-04T16:39:26Z |
+| First seen | 2026-03-04T17:05:37Z |
+| Last seen | 2026-03-04T17:05:37Z |
 
 
 
@@ -63,7 +63,7 @@ FAIL: Expected clock state to be LOCKED within 300s timeout
 
 | Field | Value |
 |-------|-------|
-| RCA #2 | root cause from subagent-1 |
+| RCA #1 | root cause from subagent-1 |
 | Defect type | pb001 |
 | Status | open |
 | Affected versions |  |
@@ -78,8 +78,7 @@ These RCAs were discovered from other cases in the current calibration run. If t
 
 | RCA ID | Component | Defect Type | Summary |
 |--------|-----------|-------------|---------|
-| #1 | test-component | pb001 | root cause from subagent-0 |
-| #2 | test-component | pb001 | root cause from subagent-1 |
+| #1 | test-component | pb001 | root cause from subagent-1 |
 
 
 

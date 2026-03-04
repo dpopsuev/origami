@@ -74,3 +74,63 @@ func TestGenerateMain_WithBindings(t *testing.T) {
 		t.Errorf("missing rp.NewSourceReader factory in:\n%s", code)
 	}
 }
+
+func TestGenerateMain_WithStoreSchema(t *testing.T) {
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		Imports: []string{"origami.schematics.rca"},
+		Bindings: map[string]string{
+			"source":       "origami.connectors.rp",
+			"store.schema": "schema.yaml",
+		},
+	}
+
+	src, err := GenerateMain(m, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code := string(src)
+
+	if !strings.Contains(code, `_ "embed"`) {
+		t.Errorf("missing embed import in:\n%s", code)
+	}
+	if !strings.Contains(code, "//go:embed schema.yaml") {
+		t.Errorf("missing go:embed directive in:\n%s", code)
+	}
+	if !strings.Contains(code, "var storeSchema []byte") {
+		t.Errorf("missing storeSchema var in:\n%s", code)
+	}
+	if !strings.Contains(code, "WithStoreSchema(storeSchema)") {
+		t.Errorf("missing WithStoreSchema call in:\n%s", code)
+	}
+	if !strings.Contains(code, "WithSourceReader") {
+		t.Errorf("store.schema should not suppress socket bindings in:\n%s", code)
+	}
+}
+
+func TestGenerateMain_StoreSchemaOnly(t *testing.T) {
+	m := &Manifest{
+		Name:    "myapp",
+		Version: "1.0",
+		Imports: []string{"origami.schematics.rca"},
+		Bindings: map[string]string{
+			"store.schema": "db/schema.yaml",
+		},
+	}
+
+	src, err := GenerateMain(m, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code := string(src)
+
+	if !strings.Contains(code, "//go:embed schema.yaml") {
+		t.Errorf("expected base filename in embed directive, got:\n%s", code)
+	}
+	if !strings.Contains(code, ".Apply(") {
+		t.Errorf("WithStoreSchema should trigger Apply in:\n%s", code)
+	}
+}

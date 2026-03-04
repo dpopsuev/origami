@@ -14,6 +14,7 @@ type schematicDeps struct {
 	writerFactory     rca.DefectWriterFactory
 	discovererFactory rca.RunDiscovererFactory
 	storeFactory      rca.StoreFactory
+	storeSchemaData   []byte
 	tokenChecker      rca.TokenChecker
 }
 
@@ -48,6 +49,13 @@ func WithRunDiscoverer(f rca.RunDiscovererFactory) Option {
 // When not set, the built-in SQLite implementation (store.Open) is used.
 func WithStore(f rca.StoreFactory) Option {
 	return func(d *schematicDeps) { d.storeFactory = f }
+}
+
+// WithStoreSchema injects consumer-owned schema data (from origami.yaml store.schema).
+// When set and no custom StoreFactory is provided, stores are opened with this schema
+// instead of the framework's embedded reference schema.
+func WithStoreSchema(data []byte) Option {
+	return func(d *schematicDeps) { d.storeSchemaData = data }
 }
 
 // WithTokenChecker injects a function that validates token file existence

@@ -19,17 +19,23 @@ type SqlStore struct {
 	es *sqlite.EntityStore
 }
 
-// Open opens or creates a SQLite DB at path with the YAML-defined schema.
+// Open opens or creates a SQLite DB at path with the embedded reference schema.
+// Prefer OpenWithSchema when the consumer provides its own schema via fold.
 func Open(path string) (*SqlStore, error) {
 	schema, err := LoadSchema()
 	if err != nil {
 		return nil, fmt.Errorf("load schema: %w", err)
 	}
-	db, err := sqlite.Open(path, schema)
+	return openDB(path, schema)
+}
+
+// OpenWithSchema opens or creates a SQLite DB using consumer-provided schema data.
+func OpenWithSchema(path string, schemaData []byte) (*SqlStore, error) {
+	schema, err := sqlite.ParseSchema(schemaData)
 	if err != nil {
-		return nil, fmt.Errorf("open sqlite: %w", err)
+		return nil, fmt.Errorf("parse schema: %w", err)
 	}
-	return &SqlStore{db: db, es: sqlite.NewEntityStore(db)}, nil
+	return openDB(path, schema)
 }
 
 // OpenMemory opens an in-memory SQLite DB for testing.
@@ -38,6 +44,27 @@ func OpenMemory() (*SqlStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load schema: %w", err)
 	}
+	return openMemDB(schema)
+}
+
+// OpenMemoryWithSchema opens an in-memory SQLite DB using consumer-provided schema data.
+func OpenMemoryWithSchema(schemaData []byte) (*SqlStore, error) {
+	schema, err := sqlite.ParseSchema(schemaData)
+	if err != nil {
+		return nil, fmt.Errorf("parse schema: %w", err)
+	}
+	return openMemDB(schema)
+}
+
+func openDB(path string, schema *sqlite.Schema) (*SqlStore, error) {
+	db, err := sqlite.Open(path, schema)
+	if err != nil {
+		return nil, fmt.Errorf("open sqlite: %w", err)
+	}
+	return &SqlStore{db: db, es: sqlite.NewEntityStore(db)}, nil
+}
+
+func openMemDB(schema *sqlite.Schema) (*SqlStore, error) {
 	db, err := sqlite.OpenMemory(schema)
 	if err != nil {
 		return nil, fmt.Errorf("open memory sqlite: %w", err)

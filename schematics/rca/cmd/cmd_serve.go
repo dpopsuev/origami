@@ -42,6 +42,10 @@ func runServe(cmd *cobra.Command, _ []string) error {
 	srv := mcpserver.NewServer("asterisk", serverOpts...)
 	defer srv.Shutdown()
 
+	if cfg.storeFactory != nil || len(cfg.storeSchemaData) > 0 {
+		srv.StoreFactory = openStore
+	}
+
 	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
 

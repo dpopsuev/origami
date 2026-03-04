@@ -1,7 +1,7 @@
 {
   "run_id": "",
   "case_ids": null,
-  "rca_message": "root cause from subagent-0",
+  "rca_message": "root cause from subagent-1",
   "defect_type": "pb001",
   "component": "test-component",
   "convergence_score": 0.85,

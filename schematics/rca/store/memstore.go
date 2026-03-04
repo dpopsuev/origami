@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/dpopsuev/origami/connectors/sqlite"
@@ -15,13 +16,26 @@ type MemStore struct {
 	mes       *sqlite.MemEntityStore
 }
 
-// NewMemStore returns a new in-memory Store.
+// NewMemStore returns a new in-memory Store using the embedded reference schema.
+// Prefer NewMemStoreWithSchema when the consumer provides its own schema.
 func NewMemStore() *MemStore {
 	schema, _ := LoadSchema()
 	return &MemStore{
 		envelopes: make(map[string]*rcatype.Envelope),
 		mes:       sqlite.NewMemEntityStore(schema),
 	}
+}
+
+// NewMemStoreWithSchema returns an in-memory Store using consumer-provided schema data.
+func NewMemStoreWithSchema(schemaData []byte) (*MemStore, error) {
+	schema, err := sqlite.ParseSchema(schemaData)
+	if err != nil {
+		return nil, fmt.Errorf("parse schema: %w", err)
+	}
+	return &MemStore{
+		envelopes: make(map[string]*rcatype.Envelope),
+		mes:       sqlite.NewMemEntityStore(schema),
+	}, nil
 }
 
 // Close is a no-op for in-memory stores.

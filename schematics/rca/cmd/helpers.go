@@ -106,10 +106,13 @@ func resolvePromptFS(dir string) fs.FS {
 }
 
 // openStore creates a Store via the injected factory, falling back to
-// the built-in SQLite implementation when no factory was provided.
+// consumer-provided schema or the built-in SQLite implementation.
 func openStore(path string) (store.Store, error) {
 	if cfg.storeFactory != nil {
 		return cfg.storeFactory(path)
+	}
+	if len(cfg.storeSchemaData) > 0 {
+		return store.OpenWithSchema(path, cfg.storeSchemaData)
 	}
 	return store.Open(path)
 }
