@@ -234,9 +234,12 @@ func (m *Model) rebuildFromStore() {
 		return
 	}
 
-	def := &framework.CircuitDef{Circuit: snap.CircuitName}
-	for name := range snap.Nodes {
-		def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+	def := m.store.Def()
+	if def == nil {
+		def = &framework.CircuitDef{Circuit: snap.CircuitName}
+		for name := range snap.Nodes {
+			def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+		}
 	}
 
 	engine := &view.GridLayout{}

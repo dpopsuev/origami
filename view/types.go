@@ -1,6 +1,10 @@
 package view
 
-import "time"
+import (
+	"time"
+
+	framework "github.com/dpopsuev/origami"
+)
 
 // NodeVisualState represents the visual state of a node during a walk.
 type NodeVisualState string
@@ -49,6 +53,7 @@ type CaseInfo struct {
 // topology metadata, node visual states, walker positions, debug state.
 type CircuitSnapshot struct {
 	CircuitName string                     `json:"circuit_name"`
+	Def         *framework.CircuitDef      `json:"def,omitempty"`
 	Nodes       map[string]NodeState       `json:"nodes"`
 	Walkers     map[string]WalkerPosition  `json:"walkers"`
 	Cases       map[string]CaseInfo        `json:"cases,omitempty"`

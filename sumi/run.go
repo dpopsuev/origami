@@ -264,9 +264,12 @@ func bootstrapFromSnapshot(addr string, log *slog.Logger) (*framework.CircuitDef
 		return def, view.NewCircuitStore(def)
 	}
 
-	def := &framework.CircuitDef{Circuit: snap.CircuitName}
-	for name := range snap.Nodes {
-		def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+	def := snap.Def
+	if def == nil {
+		def = &framework.CircuitDef{Circuit: snap.CircuitName}
+		for name := range snap.Nodes {
+			def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+		}
 	}
 
 	store := view.NewCircuitStore(def)

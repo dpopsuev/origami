@@ -17,6 +17,7 @@ import (
 type CircuitStore struct {
 	mu          sync.RWMutex
 	snapshot    CircuitSnapshot
+	def         *framework.CircuitDef
 	subscribers map[int]chan StateDiff
 	nextID      int
 	closed      bool
@@ -57,6 +58,7 @@ func NewCircuitStore(def *framework.CircuitDef) *CircuitStore {
 			Breakpoints: make(map[string]bool),
 			Timestamp:   time.Now().UTC(),
 		},
+		def:         def,
 		subscribers: make(map[int]chan StateDiff),
 		nodeZone:    nodeZone,
 		nodeElement: nodeElement,
@@ -104,10 +106,18 @@ func (cs *CircuitStore) Reset(def *framework.CircuitDef) {
 		Breakpoints: make(map[string]bool),
 		Timestamp:   now,
 	}
+	cs.def = def
 	cs.nodeZone = nodeZone
 	cs.nodeElement = nodeElement
 
 	cs.emit(StateDiff{Type: DiffReset, Timestamp: now})
+}
+
+// Def returns the CircuitDef used to initialize this store.
+func (cs *CircuitStore) Def() *framework.CircuitDef {
+	cs.mu.RLock()
+	defer cs.mu.RUnlock()
+	return cs.def
 }
 
 // OnEvent implements framework.WalkObserver. It updates the snapshot and
@@ -216,6 +226,7 @@ func (cs *CircuitStore) Snapshot() CircuitSnapshot {
 
 	return CircuitSnapshot{
 		CircuitName: cs.snapshot.CircuitName,
+		Def:         cs.def,
 		Nodes:       nodes,
 		Walkers:     walkers,
 		Cases:       cases,

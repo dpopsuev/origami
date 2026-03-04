@@ -89,9 +89,12 @@ func rebootstrapStore(addr string, store *view.CircuitStore, log *slog.Logger) {
 		return
 	}
 
-	def := &framework.CircuitDef{Circuit: snap.CircuitName}
-	for name := range snap.Nodes {
-		def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+	def := snap.Def
+	if def == nil {
+		def = &framework.CircuitDef{Circuit: snap.CircuitName}
+		for name := range snap.Nodes {
+			def.Nodes = append(def.Nodes, framework.NodeDef{Name: name})
+		}
 	}
 
 	store.Reset(def)
