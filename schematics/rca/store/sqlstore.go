@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
-	"github.com/dpopsuev/origami/components/sqlite"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
+	"github.com/dpopsuev/origami/connectors/sqlite"
 )
 
 func nowUTC() string { return time.Now().UTC().Format(time.RFC3339) }

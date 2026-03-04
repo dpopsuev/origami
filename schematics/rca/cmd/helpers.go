@@ -12,11 +12,11 @@ import (
 
 	"github.com/dpopsuev/origami/dispatch"
 
-	"github.com/dpopsuev/origami/components/rp"
-	"github.com/dpopsuev/origami/modules/rca"
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
-	"github.com/dpopsuev/origami/modules/rca/rpconv"
-	"github.com/dpopsuev/origami/modules/rca/store"
+	"github.com/dpopsuev/origami/connectors/rp"
+	"github.com/dpopsuev/origami/schematics/rca"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/rpconv"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 )
 
 // DispatchOpts collects the parameters needed to construct a dispatcher.

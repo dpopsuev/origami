@@ -7,8 +7,8 @@ import (
 	"io/fs"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
-	"github.com/dpopsuev/origami/modules/rca/store"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 	"github.com/dpopsuev/origami/knowledge"
 )
 

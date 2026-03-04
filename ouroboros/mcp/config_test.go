@@ -1,4 +1,4 @@
-package ouroborosmcp_test
+package mcp_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	framework "github.com/dpopsuev/origami"
 	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/ouroboros"
-	"github.com/dpopsuev/origami/ouroborosmcp"
+	"github.com/dpopsuev/origami/ouroboros/mcp"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -17,18 +17,18 @@ import (
 func newTestServer(t *testing.T) *fwmcp.CircuitServer {
 	t.Helper()
 	runsDir := t.TempDir()
-	cfg := ouroborosmcp.NewOuroborosConfig(runsDir)
+	cfg := mcp.NewOuroborosConfig(runsDir)
 	srv := fwmcp.NewCircuitServer(cfg)
-	ouroborosmcp.RegisterExtraTools(srv, runsDir)
+	mcp.RegisterExtraTools(srv, runsDir)
 	t.Cleanup(srv.Shutdown)
 	return srv
 }
 
 func newTestServerWithDir(t *testing.T, runsDir string) *fwmcp.CircuitServer {
 	t.Helper()
-	cfg := ouroborosmcp.NewOuroborosConfig(runsDir)
+	cfg := mcp.NewOuroborosConfig(runsDir)
 	srv := fwmcp.NewCircuitServer(cfg)
-	ouroborosmcp.RegisterExtraTools(srv, runsDir)
+	mcp.RegisterExtraTools(srv, runsDir)
 	t.Cleanup(srv.Shutdown)
 	return srv
 }
@@ -454,7 +454,7 @@ func TestOuroboros_ForceStart(t *testing.T) {
 // --- Probe registry (unchanged) ---
 
 func TestProbeRegistry_AllFiveProbes(t *testing.T) {
-	r := ouroborosmcp.NewProbeRegistry()
+	r := mcp.NewProbeRegistry()
 	expected := []string{"refactor-v1", "debug-v1", "summarize-v1", "ambiguity-v1", "persistence-v1"}
 
 	for _, id := range expected {

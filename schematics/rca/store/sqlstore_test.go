@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 )
 
 func TestSqlStore_Integration(t *testing.T) {

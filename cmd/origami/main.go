@@ -20,9 +20,9 @@ import (
 	"github.com/dpopsuev/origami/lint"
 	originamilsp "github.com/dpopsuev/origami/lsp"
 	fwmcp "github.com/dpopsuev/origami/mcp"
-	"github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/ouroboros"
-	"github.com/dpopsuev/origami/ouroborosmcp"
+	"github.com/dpopsuev/origami/ouroboros/mcp"
 	studiobackend "github.com/dpopsuev/origami/studio/backend"
 	"github.com/dpopsuev/origami/sumi"
 	"github.com/dpopsuev/origami/transformers"
@@ -476,9 +476,9 @@ func ouroborosServe(args []string) error {
 		return err
 	}
 
-	cfg := ouroborosmcp.NewOuroborosConfig(*runsDir)
+	cfg := mcp.NewOuroborosConfig(*runsDir)
 	srv := fwmcp.NewCircuitServer(cfg)
-	ouroborosmcp.RegisterExtraTools(srv, *runsDir)
+	mcp.RegisterExtraTools(srv, *runsDir)
 	defer srv.Shutdown()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	mcpserver "github.com/dpopsuev/origami/modules/rca/mcpconfig"
+	mcpserver "github.com/dpopsuev/origami/schematics/rca/mcpconfig"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )

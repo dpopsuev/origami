@@ -12,9 +12,12 @@ func TestResolveFQCN(t *testing.T) {
 		want string
 		err  bool
 	}{
-		{"origami.modules.rca", "github.com/dpopsuev/origami/modules/rca", false},
-		{"origami.components.rp", "github.com/dpopsuev/origami/components/rp", false},
-		{"origami.components.sqlite", "github.com/dpopsuev/origami/components/sqlite", false},
+		{"origami.schematics.rca", "github.com/dpopsuev/origami/schematics/rca", false},
+		{"origami.connectors.rp", "github.com/dpopsuev/origami/connectors/rp", false},
+		{"origami.connectors.sqlite", "github.com/dpopsuev/origami/connectors/sqlite", false},
+		{"origami.modules.rca", "github.com/dpopsuev/origami/schematics/rca", false},
+		{"origami.components.rp", "github.com/dpopsuev/origami/connectors/rp", false},
+		{"origami.components.sqlite", "github.com/dpopsuev/origami/connectors/sqlite", false},
 		{"origami.calibrate", "github.com/dpopsuev/origami/calibrate", false},
 		{"unknown.module", "", true},
 		{"origami", "", true},
@@ -50,9 +53,11 @@ func TestResolveProvider(t *testing.T) {
 		wantSymbol string
 		err        bool
 	}{
-		{"modules.rca.CalibrateRunner", "github.com/dpopsuev/origami/modules/rca", "CalibrateRunner", false},
-		{"modules.rca.AnalyzeFunc", "github.com/dpopsuev/origami/modules/rca", "AnalyzeFunc", false},
-		{"components.rp.Fetcher", "github.com/dpopsuev/origami/components/rp", "Fetcher", false},
+		{"schematics.rca.CalibrateRunner", "github.com/dpopsuev/origami/schematics/rca", "CalibrateRunner", false},
+		{"connectors.rp.Fetcher", "github.com/dpopsuev/origami/connectors/rp", "Fetcher", false},
+		{"modules.rca.CalibrateRunner", "github.com/dpopsuev/origami/schematics/rca", "CalibrateRunner", false},
+		{"modules.rca.AnalyzeFunc", "github.com/dpopsuev/origami/schematics/rca", "AnalyzeFunc", false},
+		{"components.rp.Fetcher", "github.com/dpopsuev/origami/connectors/rp", "Fetcher", false},
 		{"SingleWord", "", "", true},
 	}
 

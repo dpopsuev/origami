@@ -1,4 +1,4 @@
-package ouroborosmcp
+package mcp
 
 import (
 	"fmt"

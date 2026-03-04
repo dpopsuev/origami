@@ -3,7 +3,7 @@ package scenarios_test
 import (
 	"testing"
 
-	"github.com/dpopsuev/origami/modules/rca/scenarios"
+	"github.com/dpopsuev/origami/schematics/rca/scenarios"
 
 	"github.com/google/go-cmp/cmp"
 )

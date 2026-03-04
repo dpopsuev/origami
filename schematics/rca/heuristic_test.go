@@ -7,7 +7,7 @@ import (
 
 	framework "github.com/dpopsuev/origami"
 
-	"github.com/dpopsuev/origami/modules/rca/store"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 )
 
 func approxEqual(a, b float64) bool {

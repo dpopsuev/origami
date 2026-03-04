@@ -3,7 +3,7 @@ package rca
 import (
 	"fmt"
 
-	"github.com/dpopsuev/origami/modules/rca/store"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 
 	"github.com/dpopsuev/origami/logging"
 )

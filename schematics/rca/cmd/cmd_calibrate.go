@@ -14,12 +14,12 @@ import (
 	cal "github.com/dpopsuev/origami/calibrate"
 	"github.com/dpopsuev/origami/dispatch"
 
-	"github.com/dpopsuev/origami/modules/rca"
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
-	"github.com/dpopsuev/origami/modules/rca/rpconv"
-	"github.com/dpopsuev/origami/modules/rca/scenarios"
-	"github.com/dpopsuev/origami/modules/rca/store"
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/schematics/rca"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/rpconv"
+	"github.com/dpopsuev/origami/schematics/rca/scenarios"
+	"github.com/dpopsuev/origami/schematics/rca/store"
+	"github.com/dpopsuev/origami/connectors/rp"
 )
 
 var calibrateFlags struct {

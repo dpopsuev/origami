@@ -9,7 +9,7 @@ import (
 
 	"github.com/dpopsuev/origami/kami"
 	"github.com/dpopsuev/origami/logging"
-	mcpserver "github.com/dpopsuev/origami/modules/rca/mcpconfig"
+	mcpserver "github.com/dpopsuev/origami/schematics/rca/mcpconfig"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )

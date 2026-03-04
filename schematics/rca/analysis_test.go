@@ -3,8 +3,8 @@ package rca_test
 import (
 	"testing"
 
-	"github.com/dpopsuev/origami/modules/rca/store"
-	rca "github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/schematics/rca/store"
+	rca "github.com/dpopsuev/origami/schematics/rca"
 	framework "github.com/dpopsuev/origami"
 )
 

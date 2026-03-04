@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dpopsuev/origami/components/rp"
+	"github.com/dpopsuev/origami/connectors/rp"
 )
 
 var pushFlags struct {

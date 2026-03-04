@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/dpopsuev/origami/kami"
-	mcpserver "github.com/dpopsuev/origami/modules/rca/mcpconfig"
+	mcpserver "github.com/dpopsuev/origami/schematics/rca/mcpconfig"
 )
 
 func newTestServerWithKami(t *testing.T) (*mcpserver.Server, string) {

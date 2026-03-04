@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/dpopsuev/origami/modules/rca/scenarios"
-	"github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/schematics/rca/scenarios"
+	"github.com/dpopsuev/origami/schematics/rca"
 	"context"
 	"fmt"
 	"os"

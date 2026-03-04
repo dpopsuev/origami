@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dpopsuev/origami/modules/rca"
-	"github.com/dpopsuev/origami/modules/rca/store"
+	"github.com/dpopsuev/origami/schematics/rca"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 )
 
 var saveFlags struct {

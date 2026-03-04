@@ -3,7 +3,7 @@ package rca
 import (
 	"testing"
 
-	"github.com/dpopsuev/origami/modules/rca/store"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 )
 
 // --- applyStoreEffects tests ---

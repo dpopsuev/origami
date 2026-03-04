@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 )
 
 // MemStore is an in-memory Store for tests. Implements Store.

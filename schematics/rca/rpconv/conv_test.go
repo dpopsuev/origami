@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dpopsuev/origami/components/rp"
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
-	"github.com/dpopsuev/origami/modules/rca/store"
+	"github.com/dpopsuev/origami/connectors/rp"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 )
 
 func TestEnvelopeRoundTrip(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/schematics/rca"
 
 	"gopkg.in/yaml.v3"
 )

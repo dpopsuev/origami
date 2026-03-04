@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/dpopsuev/origami/modules/rca"
+	"github.com/dpopsuev/origami/schematics/rca"
 	"context"
 	"os"
 	"testing"

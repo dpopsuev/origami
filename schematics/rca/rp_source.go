@@ -6,7 +6,7 @@ import (
 
 	"github.com/dpopsuev/origami/logging"
 
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 )
 
 // ResolveRPCases fetches real failure data from ReportPortal for cases that

@@ -23,7 +23,7 @@ func TestGenerateMain(t *testing.T) {
 	if !strings.Contains(code, "DO NOT EDIT") {
 		t.Error("missing DO NOT EDIT comment")
 	}
-	if !strings.Contains(code, `"github.com/dpopsuev/origami/modules/rca/cmd"`) {
+	if !strings.Contains(code, `"github.com/dpopsuev/origami/schematics/rca/cmd"`) {
 		t.Errorf("missing cmd import in:\n%s", code)
 	}
 	if !strings.Contains(code, ".Execute()") {

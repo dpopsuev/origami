@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dpopsuev/origami/modules/rca/store"
+	"github.com/dpopsuev/origami/schematics/rca/store"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/modules/rca/rcatype"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/format"
 	"github.com/dpopsuev/origami/knowledge"
 	"github.com/dpopsuev/origami/logging"
