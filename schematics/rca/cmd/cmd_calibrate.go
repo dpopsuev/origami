@@ -65,7 +65,7 @@ func init() {
 	f.StringVar(&calibrateFlags.rpKeyPath, "rp-api-key", ".rp-api-key", "Path to RP API key file")
 	f.StringVar(&calibrateFlags.rpProject, "rp-project", "", "RP project name (default: $ASTERISK_RP_PROJECT)")
 	f.StringVar(&calibrateFlags.routingLog, "routing-log", "", "Write backend routing log to path (JSON); empty = disabled")
-	f.StringVar(&calibrateFlags.scorecard, "scorecard", "scorecards/asterisk-rca.yaml", "Path to scorecard YAML for metric definitions")
+	f.StringVar(&calibrateFlags.scorecard, "scorecard", "internal/scorecards/asterisk-rca.yaml", "Path to scorecard YAML for metric definitions")
 }
 
 func runCalibrate(cmd *cobra.Command, _ []string) error {

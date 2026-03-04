@@ -32,16 +32,16 @@ func LoadManifest(path string) (*Manifest, error) {
 	return &m, nil
 }
 
-// DiscoverCircuits finds all *.yaml files in the circuits/ subdirectory
+// DiscoverCircuits finds all *.yaml files in the internal/circuits/ subdirectory
 // relative to the given project root.
 func DiscoverCircuits(projectRoot string) ([]string, error) {
-	return discoverYAML(filepath.Join(projectRoot, "circuits"))
+	return discoverYAML(filepath.Join(projectRoot, "internal", "circuits"))
 }
 
-// DiscoverScorecards finds all *.yaml files in the scorecards/ subdirectory
+// DiscoverScorecards finds all *.yaml files in the internal/scorecards/ subdirectory
 // relative to the given project root.
 func DiscoverScorecards(projectRoot string) ([]string, error) {
-	return discoverYAML(filepath.Join(projectRoot, "scorecards"))
+	return discoverYAML(filepath.Join(projectRoot, "internal", "scorecards"))
 }
 
 func discoverYAML(dir string) ([]string, error) {

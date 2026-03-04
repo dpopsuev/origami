@@ -263,7 +263,7 @@ for {
     name: ptp-operator-architecture
     read_policy: always         # injected into every prompt
     read_when: ""
-    local_path: datasets/docs/ptp/architecture.md
+    local_path: internal/datasets/docs/ptp/architecture.md
   - kind: repo
     name: ptp-operator
     read_policy: conditional    # follows tag-based routing rules

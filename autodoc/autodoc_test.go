@@ -144,10 +144,10 @@ func TestLoadManifest_MissingName(t *testing.T) {
 
 func TestDiscoverCircuits(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "circuits"), 0o755)
-	os.WriteFile(filepath.Join(dir, "circuits", "a.yaml"), []byte(""), 0o644)
-	os.WriteFile(filepath.Join(dir, "circuits", "b.yml"), []byte(""), 0o644)
-	os.WriteFile(filepath.Join(dir, "circuits", "readme.txt"), []byte(""), 0o644)
+	os.MkdirAll(filepath.Join(dir, "internal", "circuits"), 0o755)
+	os.WriteFile(filepath.Join(dir, "internal", "circuits", "a.yaml"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, "internal", "circuits", "b.yml"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, "internal", "circuits", "readme.txt"), []byte(""), 0o644)
 
 	found, err := DiscoverCircuits(dir)
 	if err != nil {
@@ -460,8 +460,8 @@ func TestScaffold_Idempotent(t *testing.T) {
 
 func TestScaffold_WithScorecards(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "scorecards"), 0o755)
-	scPath := filepath.Join(dir, "scorecards", "test.yaml")
+	os.MkdirAll(filepath.Join(dir, "internal", "scorecards"), 0o755)
+	scPath := filepath.Join(dir, "internal", "scorecards", "test.yaml")
 	os.WriteFile(scPath, []byte("scorecard: test\n"), 0o644)
 
 	cfg := ScaffoldConfig{
