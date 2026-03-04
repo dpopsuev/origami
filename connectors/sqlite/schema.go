@@ -49,6 +49,122 @@ type Index struct {
 	Unique  bool     `yaml:"unique,omitempty"`
 }
 
+// rawSchema is the parse-time representation that supports shorthand features.
+// It is normalized into a Schema before validation.
+type rawSchema struct {
+	Version int        `yaml:"version"`
+	Tables  []rawTable `yaml:"tables"`
+	Indexes []Index    `yaml:"indexes,omitempty"`
+}
+
+// rawTable supports auto_id and table-local indexes during parsing.
+type rawTable struct {
+	Name        string       `yaml:"name"`
+	AutoID      *bool        `yaml:"auto_id,omitempty"`
+	Columns     []Column     `yaml:"columns"`
+	ForeignKeys []ForeignKey `yaml:"foreign_keys,omitempty"`
+	Unique      [][]string   `yaml:"unique,omitempty"`
+	Indexes     [][]string   `yaml:"indexes,omitempty"`
+}
+
+var knownColumnTypes = map[string]bool{
+	"integer": true, "int": true,
+	"text": true, "varchar": true,
+	"real": true, "float": true, "double": true,
+	"blob": true, "boolean": true,
+}
+
+// UnmarshalYAML supports both verbose and shorthand column definitions.
+//
+// Verbose (existing):
+//
+//	name: email
+//	type: text
+//	not_null: true
+//
+// Shorthand:
+//
+//	email: text not_null unique -> users
+//
+// Modifiers: not_null, unique, pk, auto, default=VALUE, -> TABLE
+func (c *Column) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("column must be a mapping")
+	}
+	if hasYAMLKey(value, "type") {
+		type plain Column
+		var p plain
+		if err := value.Decode(&p); err != nil {
+			return err
+		}
+		*c = Column(p)
+		return nil
+	}
+	if len(value.Content) == 2 {
+		key := value.Content[0]
+		val := value.Content[1]
+		if key.Kind == yaml.ScalarNode && val.Kind == yaml.ScalarNode {
+			first, _, _ := strings.Cut(val.Value, " ")
+			if knownColumnTypes[strings.ToLower(first)] {
+				return c.parseShorthand(key.Value, val.Value)
+			}
+		}
+	}
+	type plain Column
+	var p plain
+	if err := value.Decode(&p); err != nil {
+		return err
+	}
+	*c = Column(p)
+	return nil
+}
+
+func (c *Column) parseShorthand(name, spec string) error {
+	c.Name = name
+	tokens := strings.Fields(spec)
+	if len(tokens) == 0 {
+		return fmt.Errorf("column %q: type is required in shorthand", name)
+	}
+	c.Type = tokens[0]
+	for i := 1; i < len(tokens); i++ {
+		tok := tokens[i]
+		switch {
+		case tok == "not_null":
+			c.NotNull = true
+		case tok == "unique":
+			c.Unique = true
+		case tok == "pk":
+			c.PrimaryKey = true
+		case tok == "auto":
+			c.Autoincrement = true
+		case strings.HasPrefix(tok, "default="):
+			c.Default = strings.TrimPrefix(tok, "default=")
+		case tok == "->":
+			if i+1 >= len(tokens) {
+				return fmt.Errorf("column %q: -> requires a table name", name)
+			}
+			i++
+			ref := tokens[i]
+			if !strings.Contains(ref, "(") {
+				ref += "(id)"
+			}
+			c.References = ref
+		default:
+			return fmt.Errorf("column %q: unknown modifier %q", name, tok)
+		}
+	}
+	return nil
+}
+
+func hasYAMLKey(node *yaml.Node, key string) bool {
+	for i := 0; i < len(node.Content)-1; i += 2 {
+		if node.Content[i].Kind == yaml.ScalarNode && node.Content[i].Value == key {
+			return true
+		}
+	}
+	return false
+}
+
 // ParseSchemaFile reads and parses a YAML schema from a file path.
 func ParseSchemaFile(path string) (*Schema, error) {
 	data, err := os.ReadFile(path)
@@ -58,16 +174,67 @@ func ParseSchemaFile(path string) (*Schema, error) {
 	return ParseSchema(data)
 }
 
-// ParseSchema parses a YAML schema from bytes.
+// ParseSchema parses a YAML schema from bytes. It supports both verbose
+// and shorthand column definitions, implicit id columns, and table-local indexes.
 func ParseSchema(data []byte) (*Schema, error) {
-	var s Schema
-	if err := yaml.Unmarshal(data, &s); err != nil {
+	var raw rawSchema
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("parse schema YAML: %w", err)
+	}
+	s, err := raw.normalize()
+	if err != nil {
+		return nil, err
 	}
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
-	return &s, nil
+	return s, nil
+}
+
+func (raw *rawSchema) normalize() (*Schema, error) {
+	s := &Schema{
+		Version: raw.Version,
+		Indexes: append([]Index{}, raw.Indexes...),
+	}
+	for _, rt := range raw.Tables {
+		if len(rt.Columns) == 0 {
+			return nil, fmt.Errorf("table %q has no columns", rt.Name)
+		}
+		t := Table{
+			Name:        rt.Name,
+			Columns:     rt.Columns,
+			ForeignKeys: rt.ForeignKeys,
+			Unique:      rt.Unique,
+		}
+		if rt.shouldAutoID() {
+			idCol := Column{
+				Name: "id", Type: "integer",
+				PrimaryKey: true, Autoincrement: true,
+			}
+			t.Columns = append([]Column{idCol}, t.Columns...)
+		}
+		for _, cols := range rt.Indexes {
+			s.Indexes = append(s.Indexes, Index{
+				Name:    fmt.Sprintf("idx_%s_%s", rt.Name, strings.Join(cols, "_")),
+				Table:   rt.Name,
+				Columns: cols,
+			})
+		}
+		s.Tables = append(s.Tables, t)
+	}
+	return s, nil
+}
+
+func (rt *rawTable) shouldAutoID() bool {
+	if rt.AutoID != nil {
+		return *rt.AutoID
+	}
+	for _, c := range rt.Columns {
+		if c.Name == "id" {
+			return false
+		}
+	}
+	return true
 }
 
 // Validate checks the schema for structural errors.
