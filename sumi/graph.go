@@ -36,14 +36,14 @@ func RenderGraphWithHitMap(def *framework.CircuitDef, layout view.CircuitLayout,
 	filteredGrid := filterDoneNode(layout.Grid, def)
 	maxRow, maxCol := gridBounds(filteredGrid)
 
-	routing := computeEdgeRouting(def, layout, def.Done)
+	routing := ComputeEdgeRouting(def, layout, def.Done)
 
 	belowBaseY := (maxRow+1)*(nodeHeight+cellGapV) + cellGapV
-	belowSpace := routing.channels * 2
+	belowSpace := routing.Channels * 2
 	if belowSpace > 0 {
-		belowSpace++ // extra row of padding above first channel
+		belowSpace++
 	}
-	loopSpace := len(routing.loops) * 2
+	loopSpace := len(routing.Loops) * 2
 	if loopSpace > 0 {
 		loopSpace++
 	}
@@ -54,10 +54,10 @@ func RenderGraphWithHitMap(def *framework.CircuitDef, layout view.CircuitLayout,
 	canvas := newCanvas(canvasW, canvasH)
 
 	drawZones(canvas, def, layout, opts)
-	drawInlineEdges(canvas, routing.inline, layout, opts)
-	drawBelowEdges(canvas, routing.below, layout, belowBaseY, opts)
+	drawInlineEdges(canvas, routing.Inline, layout, opts)
+	drawBelowEdges(canvas, routing.Below, layout, belowBaseY, opts)
 	loopBaseY := belowBaseY + belowSpace
-	drawLoopEdges(canvas, routing.loops, layout, loopBaseY, opts)
+	drawLoopEdges(canvas, routing.Loops, layout, loopBaseY, opts)
 	drawNodes(canvas, def, layout, snap, opts)
 
 	hitMap := buildHitMap(def, layout)
@@ -376,27 +376,27 @@ func stateIndicator(state view.NodeVisualState, animFrame int) string {
 
 // --- Edge routing ---
 
-// routedEdge is a deduplicated edge with routing metadata.
-type routedEdge struct {
-	from     string
-	to       string
-	shortcut bool
-	loop     bool
-	channel  int // >=0 for below-path channel; -1 for inline
+// RoutedEdge is a deduplicated edge with routing metadata.
+type RoutedEdge struct {
+	From     string
+	To       string
+	Shortcut bool
+	Loop     bool
+	Channel  int // >=0 for below-path channel; -1 for inline
 }
 
-// edgeRouting holds classified, deduplicated edges ready for rendering.
-type edgeRouting struct {
-	inline   []routedEdge // adjacent same-row or multi-row forward edges
-	below    []routedEdge // non-adjacent same-row forward edges (routed below)
-	loops    []routedEdge // backward (loop) edges
-	channels int          // number of below-path channels needed
+// EdgeRouting holds classified, deduplicated edges ready for rendering.
+type EdgeRouting struct {
+	Inline   []RoutedEdge // adjacent same-row or multi-row forward edges
+	Below    []RoutedEdge // non-adjacent same-row forward edges (routed below)
+	Loops    []RoutedEdge // backward (loop) edges
+	Channels int          // number of below-path channels needed
 }
 
-// computeEdgeRouting deduplicates edges by (from,to) and classifies them
+// ComputeEdgeRouting deduplicates edges by (from,to) and classifies them
 // into inline (adjacent), below-path (non-adjacent forward), and loop categories.
 // Below-path edges get channel assignments via interval graph coloring.
-func computeEdgeRouting(def *framework.CircuitDef, layout view.CircuitLayout, doneNode string) edgeRouting {
+func ComputeEdgeRouting(def *framework.CircuitDef, layout view.CircuitLayout, doneNode string) EdgeRouting {
 	virtualDone := isVirtualDone(def)
 
 	type edgeKey struct{ from, to string }
@@ -429,9 +429,9 @@ func computeEdgeRouting(def *framework.CircuitDef, layout view.CircuitLayout, do
 		order = append(order, key)
 	}
 
-	var result edgeRouting
+	var result EdgeRouting
 	type belowCandidate struct {
-		edge    routedEdge
+		edge    RoutedEdge
 		fromCol int
 		toCol   int
 	}
@@ -439,21 +439,21 @@ func computeEdgeRouting(def *framework.CircuitDef, layout view.CircuitLayout, do
 
 	for _, key := range order {
 		de := seen[key]
-		re := routedEdge{from: de.key.from, to: de.key.to, shortcut: de.shortcut, loop: de.loop, channel: -1}
-		fromGC, fromOK := layout.Grid[re.from]
-		toGC, toOK := layout.Grid[re.to]
+		re := RoutedEdge{From: de.key.from, To: de.key.to, Shortcut: de.shortcut, Loop: de.loop, Channel: -1}
+		fromGC, fromOK := layout.Grid[re.From]
+		toGC, toOK := layout.Grid[re.To]
 		if !fromOK || !toOK {
 			continue
 		}
 
-		if re.loop || (fromGC.Row == toGC.Row && toGC.Col < fromGC.Col) {
-			result.loops = append(result.loops, re)
+		if re.Loop || (fromGC.Row == toGC.Row && toGC.Col < fromGC.Col) {
+			result.Loops = append(result.Loops, re)
 		} else if fromGC.Row == toGC.Row && toGC.Col-fromGC.Col == 1 {
-			result.inline = append(result.inline, re)
+			result.Inline = append(result.Inline, re)
 		} else if fromGC.Row == toGC.Row && toGC.Col-fromGC.Col > 1 {
 			belowCandidates = append(belowCandidates, belowCandidate{re, fromGC.Col, toGC.Col})
 		} else {
-			result.inline = append(result.inline, re)
+			result.Inline = append(result.Inline, re)
 		}
 	}
 
@@ -483,38 +483,38 @@ func computeEdgeRouting(def *framework.CircuitDef, layout view.CircuitLayout, do
 			}
 			if !overlap {
 				channels[ch] = append(channels[ch], iv)
-				bc.edge.channel = ch
+				bc.edge.Channel = ch
 				assigned = true
 				break
 			}
 		}
 		if !assigned {
 			channels = append(channels, []interval{iv})
-			bc.edge.channel = len(channels) - 1
+			bc.edge.Channel = len(channels) - 1
 		}
 	}
 
-	result.channels = len(channels)
+	result.Channels = len(channels)
 	for _, bc := range belowCandidates {
-		result.below = append(result.below, bc.edge)
+		result.Below = append(result.Below, bc.edge)
 	}
 	return result
 }
 
 // --- Edge drawing ---
 
-func edgeStyle(re routedEdge, opts RenderOpts) lipgloss.Style {
+func edgeStyle(re RoutedEdge, opts RenderOpts) lipgloss.Style {
 	if opts.NoColor {
 		return lipgloss.NewStyle()
 	}
-	edgeKey := re.from + "->" + re.to
+	edgeKey := re.From + "->" + re.To
 	if opts.EdgeHighlights[edgeKey] > 0 {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
 	}
-	if re.shortcut {
+	if re.Shortcut {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 	}
-	if re.loop {
+	if re.Loop {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
 	}
 	return lipgloss.NewStyle().Faint(true)
@@ -522,10 +522,10 @@ func edgeStyle(re routedEdge, opts RenderOpts) lipgloss.Style {
 
 // drawInlineEdges draws adjacent same-row and multi-row forward edges
 // using horizontal/vertical connectors.
-func drawInlineEdges(c *canvas, edges []routedEdge, layout view.CircuitLayout, opts RenderOpts) {
+func drawInlineEdges(c *canvas, edges []RoutedEdge, layout view.CircuitLayout, opts RenderOpts) {
 	for _, re := range edges {
-		fromGC := layout.Grid[re.from]
-		toGC := layout.Grid[re.to]
+		fromGC := layout.Grid[re.From]
+		toGC := layout.Grid[re.To]
 		fromX, fromY := cellOrigin(fromGC)
 		toX, toY := cellOrigin(toGC)
 
@@ -570,33 +570,31 @@ func drawInlineEdges(c *canvas, edges []routedEdge, layout view.CircuitLayout, o
 // drawBelowEdges draws non-adjacent forward edges as arcs below the main path.
 // Each edge exits from the source node's bottom, runs horizontally along its
 // assigned channel, and terminates with an arrowhead below the target node.
-func drawBelowEdges(c *canvas, edges []routedEdge, layout view.CircuitLayout, baseY int, opts RenderOpts) {
+func drawBelowEdges(c *canvas, edges []RoutedEdge, layout view.CircuitLayout, baseY int, opts RenderOpts) {
 	if len(edges) == 0 {
 		return
 	}
 
-	// Assign exit/entry X offsets when multiple edges share a source or target.
 	exitIdx := make(map[string]int)
 	entryIdx := make(map[string]int)
 	exitCount := make(map[string]int)
 	entryCount := make(map[string]int)
 	for _, re := range edges {
-		exitCount[re.from]++
-		entryCount[re.to]++
+		exitCount[re.From]++
+		entryCount[re.To]++
 	}
 
 	for i, re := range edges {
-		fromGC := layout.Grid[re.from]
-		toGC := layout.Grid[re.to]
+		fromGC := layout.Grid[re.From]
+		toGC := layout.Grid[re.To]
 		fromX, fromY := cellOrigin(fromGC)
 		toX, _ := cellOrigin(toGC)
 
 		style := edgeStyle(re, opts)
 
-		// Spread exit points across node bottom when multiple edges leave same node
-		eIdx := exitIdx[re.from]
-		exitIdx[re.from]++
-		eCnt := exitCount[re.from]
+		eIdx := exitIdx[re.From]
+		exitIdx[re.From]++
+		eCnt := exitCount[re.From]
 		exitX := fromX + nodeWidth/2
 		if eCnt > 1 {
 			spacing := (nodeWidth - 4) / eCnt
@@ -606,10 +604,9 @@ func drawBelowEdges(c *canvas, edges []routedEdge, layout view.CircuitLayout, ba
 			exitX = fromX + 2 + eIdx*spacing
 		}
 
-		// Spread entry arrowheads across target bottom
-		nIdx := entryIdx[re.to]
-		entryIdx[re.to]++
-		nCnt := entryCount[re.to]
+		nIdx := entryIdx[re.To]
+		entryIdx[re.To]++
+		nCnt := entryCount[re.To]
 		entryX := toX + nodeWidth/2
 		if nCnt > 1 {
 			spacing := (nodeWidth - 4) / nCnt
@@ -619,12 +616,12 @@ func drawBelowEdges(c *canvas, edges []routedEdge, layout view.CircuitLayout, ba
 			entryX = toX + 2 + nIdx*spacing
 		}
 
-		_ = i // used for offset tracking above
+		_ = i
 		exitTopY := fromY + nodeHeight
-		channelY := baseY + re.channel*2
+		channelY := baseY + re.Channel*2
 
 		ch := '╌'
-		if !re.shortcut {
+		if !re.Shortcut {
 			ch = '─'
 		}
 
@@ -647,10 +644,10 @@ func drawBelowEdges(c *canvas, edges []routedEdge, layout view.CircuitLayout, ba
 // drawLoopEdges draws backward (loop) edges below the shortcut channels.
 // Each loop exits from the bottom-right area of the source node, runs down
 // and left, then enters the left side of the target node with ◀.
-func drawLoopEdges(c *canvas, edges []routedEdge, layout view.CircuitLayout, baseY int, opts RenderOpts) {
+func drawLoopEdges(c *canvas, edges []RoutedEdge, layout view.CircuitLayout, baseY int, opts RenderOpts) {
 	for i, re := range edges {
-		fromGC := layout.Grid[re.from]
-		toGC := layout.Grid[re.to]
+		fromGC := layout.Grid[re.From]
+		toGC := layout.Grid[re.To]
 		fromX, fromY := cellOrigin(fromGC)
 		toX, _ := cellOrigin(toGC)
 
@@ -673,6 +670,191 @@ func drawLoopEdges(c *canvas, edges []routedEdge, layout view.CircuitLayout, bas
 		}
 		c.set(targetX, loopY, '◀', style)
 	}
+}
+
+// --- Abstract renderer ---
+
+// RenderAbstract produces a simplified 2D grid visualization of a circuit.
+// Nodes are rendered as * (or [*] for composite nodes with Meta["composite"]=true).
+// Edges use ASCII connectors: - for horizontal, | for vertical, + for corners.
+// Below-path edges and loops are drawn below the node grid.
+// This output is stable across cosmetic rendering changes and is used for
+// algorithmic validation in tests.
+func RenderAbstract(def *framework.CircuitDef, layout view.CircuitLayout) string {
+	if len(layout.Grid) == 0 {
+		return "(empty)"
+	}
+
+	filteredGrid := filterDoneNode(layout.Grid, def)
+	if len(filteredGrid) == 0 {
+		return "(empty)"
+	}
+
+	compositeNodes := make(map[string]bool)
+	nodeByName := make(map[string]*framework.NodeDef, len(def.Nodes))
+	for i := range def.Nodes {
+		nd := &def.Nodes[i]
+		nodeByName[nd.Name] = nd
+		if nd.Meta != nil {
+			if v, ok := nd.Meta["composite"]; ok {
+				if b, ok := v.(bool); ok && b {
+					compositeNodes[nd.Name] = true
+				}
+			}
+		}
+	}
+
+	maxRow, maxCol := gridBounds(filteredGrid)
+	routing := ComputeEdgeRouting(def, layout, def.Done)
+
+	gridW := (maxCol+1)*2 - 1
+	if gridW < 1 {
+		gridW = 1
+	}
+	gridH := (maxRow+1)*2 - 1
+	if gridH < 1 {
+		gridH = 1
+	}
+
+	belowLines := routing.Channels
+	loopLines := len(routing.Loops)
+
+	totalH := gridH
+	if belowLines > 0 {
+		totalH += belowLines
+	}
+	if loopLines > 0 {
+		totalH += loopLines
+	}
+
+	grid := make([][]rune, totalH)
+	for i := range grid {
+		grid[i] = make([]rune, gridW)
+		for j := range grid[i] {
+			grid[i][j] = ' '
+		}
+	}
+
+	// Draw edges first, then nodes on top (nodes always win).
+	for _, re := range routing.Inline {
+		fromGC, fromOK := filteredGrid[re.From]
+		toGC, toOK := filteredGrid[re.To]
+		if !fromOK || !toOK {
+			continue
+		}
+
+		fromGX, fromGY := fromGC.Col*2, fromGC.Row*2
+		toGX, toGY := toGC.Col*2, toGC.Row*2
+
+		if fromGY == toGY {
+			for x := fromGX + 1; x < toGX; x++ {
+				if x < len(grid[fromGY]) {
+					grid[fromGY][x] = '-'
+				}
+			}
+		} else {
+			midGX := fromGX + 1
+			if midGX < len(grid[fromGY]) {
+				grid[fromGY][midGX] = '-'
+			}
+			if toGY > fromGY {
+				for y := fromGY + 1; y < toGY; y++ {
+					if midGX < len(grid[y]) {
+						grid[y][midGX] = '|'
+					}
+				}
+				if midGX < len(grid[fromGY]) {
+					grid[fromGY][midGX] = '+'
+				}
+				if midGX < len(grid[toGY]) {
+					grid[toGY][midGX] = '+'
+				}
+			} else {
+				for y := toGY + 1; y < fromGY; y++ {
+					if midGX < len(grid[y]) {
+						grid[y][midGX] = '|'
+					}
+				}
+				if midGX < len(grid[fromGY]) {
+					grid[fromGY][midGX] = '+'
+				}
+				if midGX < len(grid[toGY]) {
+					grid[toGY][midGX] = '+'
+				}
+			}
+			for x := midGX + 1; x < toGX; x++ {
+				if x < len(grid[toGY]) {
+					grid[toGY][x] = '-'
+				}
+			}
+		}
+	}
+
+	belowBaseY := gridH
+	for _, re := range routing.Below {
+		fromGC, fromOK := filteredGrid[re.From]
+		toGC, toOK := filteredGrid[re.To]
+		if !fromOK || !toOK {
+			continue
+		}
+		fromGX := fromGC.Col * 2
+		toGX := toGC.Col * 2
+		channelY := belowBaseY + re.Channel
+		for x := fromGX; x <= toGX; x++ {
+			if x < len(grid[channelY]) {
+				grid[channelY][x] = '-'
+			}
+		}
+		if fromGX < len(grid[channelY]) {
+			grid[channelY][fromGX] = '+'
+		}
+		if toGX < len(grid[channelY]) {
+			grid[channelY][toGX] = '+'
+		}
+	}
+
+	loopBaseY := belowBaseY + belowLines
+	for i, re := range routing.Loops {
+		fromGC, fromOK := filteredGrid[re.From]
+		toGC, toOK := filteredGrid[re.To]
+		if !fromOK || !toOK {
+			continue
+		}
+		fromGX := fromGC.Col * 2
+		toGX := toGC.Col * 2
+		loopY := loopBaseY + i
+		for x := toGX; x <= fromGX; x++ {
+			if x < len(grid[loopY]) {
+				grid[loopY][x] = '-'
+			}
+		}
+		if toGX < len(grid[loopY]) {
+			grid[loopY][toGX] = '<'
+		}
+		if fromGX < len(grid[loopY]) {
+			grid[loopY][fromGX] = '+'
+		}
+	}
+
+	// Draw nodes last so they overwrite edge characters.
+	// Regular nodes: *, composite nodes: @
+	for name, gc := range filteredGrid {
+		gx := gc.Col * 2
+		gy := gc.Row * 2
+		if compositeNodes[name] {
+			grid[gy][gx] = '@'
+		} else {
+			grid[gy][gx] = '*'
+		}
+	}
+
+	var sb strings.Builder
+	for _, row := range grid {
+		line := strings.TrimRight(string(row), " ")
+		sb.WriteString(line)
+		sb.WriteByte('\n')
+	}
+	return sb.String()
 }
 
 // --- Zone drawing ---
@@ -726,8 +908,10 @@ func drawZones(c *canvas, def *framework.CircuitDef, layout view.CircuitLayout, 
 		}
 	}
 
-	for _, zb := range zones {
-		drawZoneBorder(c, zb, opts)
+	for _, zoneName := range sortedZoneNames {
+		if zb, ok := zones[zoneName]; ok {
+			drawZoneBorder(c, zb, opts)
+		}
 	}
 }
 

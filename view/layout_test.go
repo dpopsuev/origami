@@ -6,6 +6,370 @@ import (
 	framework "github.com/dpopsuev/origami"
 )
 
+// --- Level 1 test helpers ---
+
+func assertRow(t *testing.T, layout CircuitLayout, node string, row int) {
+	t.Helper()
+	gc, ok := layout.Grid[node]
+	if !ok {
+		t.Fatalf("node %q not in grid", node)
+	}
+	if gc.Row != row {
+		t.Errorf("node %q row = %d, want %d", node, gc.Row, row)
+	}
+}
+
+func assertCol(t *testing.T, layout CircuitLayout, node string, col int) {
+	t.Helper()
+	gc, ok := layout.Grid[node]
+	if !ok {
+		t.Fatalf("node %q not in grid", node)
+	}
+	if gc.Col != col {
+		t.Errorf("node %q col = %d, want %d", node, gc.Col, col)
+	}
+}
+
+func assertBefore(t *testing.T, layout CircuitLayout, a, b string) {
+	t.Helper()
+	gcA, okA := layout.Grid[a]
+	gcB, okB := layout.Grid[b]
+	if !okA {
+		t.Fatalf("node %q not in grid", a)
+	}
+	if !okB {
+		t.Fatalf("node %q not in grid", b)
+	}
+	if gcA.Col >= gcB.Col {
+		t.Errorf("expected col(%s)=%d < col(%s)=%d", a, gcA.Col, b, gcB.Col)
+	}
+}
+
+func assertSameCol(t *testing.T, layout CircuitLayout, a, b string) {
+	t.Helper()
+	gcA, okA := layout.Grid[a]
+	gcB, okB := layout.Grid[b]
+	if !okA {
+		t.Fatalf("node %q not in grid", a)
+	}
+	if !okB {
+		t.Fatalf("node %q not in grid", b)
+	}
+	if gcA.Col != gcB.Col {
+		t.Errorf("expected col(%s)=%d == col(%s)=%d", a, gcA.Col, b, gcB.Col)
+	}
+}
+
+func assertDiffRow(t *testing.T, layout CircuitLayout, a, b string) {
+	t.Helper()
+	gcA, okA := layout.Grid[a]
+	gcB, okB := layout.Grid[b]
+	if !okA {
+		t.Fatalf("node %q not in grid", a)
+	}
+	if !okB {
+		t.Fatalf("node %q not in grid", b)
+	}
+	if gcA.Row == gcB.Row {
+		t.Errorf("expected row(%s) != row(%s), both = %d", a, b, gcA.Row)
+	}
+}
+
+func assertColSpan(t *testing.T, layout CircuitLayout, expected int) {
+	t.Helper()
+	if len(layout.Grid) == 0 {
+		t.Fatal("empty grid")
+	}
+	minC, maxC := 1<<30, 0
+	for _, gc := range layout.Grid {
+		if gc.Col < minC {
+			minC = gc.Col
+		}
+		if gc.Col > maxC {
+			maxC = gc.Col
+		}
+	}
+	span := maxC - minC + 1
+	if span != expected {
+		t.Errorf("col span = %d, want %d", span, expected)
+	}
+}
+
+func assertRowSpan(t *testing.T, layout CircuitLayout, expected int) {
+	t.Helper()
+	if len(layout.Grid) == 0 {
+		t.Fatal("empty grid")
+	}
+	minR, maxR := 1<<30, 0
+	for _, gc := range layout.Grid {
+		if gc.Row < minR {
+			minR = gc.Row
+		}
+		if gc.Row > maxR {
+			maxR = gc.Row
+		}
+	}
+	span := maxR - minR + 1
+	if span != expected {
+		t.Errorf("row span = %d, want %d", span, expected)
+	}
+}
+
+func assertMinRowSpan(t *testing.T, layout CircuitLayout, min int) {
+	t.Helper()
+	if len(layout.Grid) == 0 {
+		t.Fatal("empty grid")
+	}
+	minR, maxR := 1<<30, 0
+	for _, gc := range layout.Grid {
+		if gc.Row < minR {
+			minR = gc.Row
+		}
+		if gc.Row > maxR {
+			maxR = gc.Row
+		}
+	}
+	span := maxR - minR + 1
+	if span < min {
+		t.Errorf("row span = %d, want >= %d", span, min)
+	}
+}
+
+// --- Topology fixture builders ---
+
+func linearDef() *framework.CircuitDef {
+	return &framework.CircuitDef{
+		Circuit: "linear",
+		Start:   "A",
+		Done:    "_done",
+		Nodes: []framework.NodeDef{
+			{Name: "A"}, {Name: "B"}, {Name: "C"}, {Name: "D"},
+		},
+		Edges: []framework.EdgeDef{
+			{ID: "e1", From: "A", To: "B"},
+			{ID: "e2", From: "B", To: "C"},
+			{ID: "e3", From: "C", To: "D"},
+			{ID: "e4", From: "D", To: "_done"},
+		},
+	}
+}
+
+func shortcutDef() *framework.CircuitDef {
+	return &framework.CircuitDef{
+		Circuit: "shortcut",
+		Start:   "A",
+		Done:    "_done",
+		Nodes: []framework.NodeDef{
+			{Name: "A"}, {Name: "B"}, {Name: "C"}, {Name: "D"},
+		},
+		Edges: []framework.EdgeDef{
+			{ID: "e1", From: "A", To: "B"},
+			{ID: "e2", From: "B", To: "C"},
+			{ID: "e3", From: "C", To: "D"},
+			{ID: "e4", From: "D", To: "_done"},
+			{ID: "e5", From: "A", To: "D", Shortcut: true},
+		},
+	}
+}
+
+func loopDef() *framework.CircuitDef {
+	return &framework.CircuitDef{
+		Circuit: "loop",
+		Start:   "A",
+		Done:    "_done",
+		Nodes: []framework.NodeDef{
+			{Name: "A"}, {Name: "B"}, {Name: "C"},
+		},
+		Edges: []framework.EdgeDef{
+			{ID: "e1", From: "A", To: "B"},
+			{ID: "e2", From: "B", To: "C"},
+			{ID: "e3", From: "C", To: "_done"},
+			{ID: "e4", From: "C", To: "A", Loop: true},
+		},
+	}
+}
+
+func diamondDef() *framework.CircuitDef {
+	return &framework.CircuitDef{
+		Circuit: "diamond",
+		Start:   "start",
+		Done:    "_done",
+		Nodes: []framework.NodeDef{
+			{Name: "start"}, {Name: "a"}, {Name: "b"}, {Name: "join"},
+		},
+		Edges: []framework.EdgeDef{
+			{ID: "e1", From: "start", To: "a"},
+			{ID: "e2", From: "start", To: "b"},
+			{ID: "e3", From: "a", To: "join"},
+			{ID: "e4", From: "b", To: "join"},
+			{ID: "e5", From: "join", To: "_done"},
+		},
+	}
+}
+
+func staircaseDef() *framework.CircuitDef {
+	return &framework.CircuitDef{
+		Circuit: "staircase",
+		Start:   "start",
+		Done:    "_done",
+		Nodes: []framework.NodeDef{
+			{Name: "start"},
+			{Name: "a"}, {Name: "b"},
+			{Name: "c"}, {Name: "d"},
+			{Name: "end"},
+		},
+		Edges: []framework.EdgeDef{
+			{ID: "e1", From: "start", To: "a"},
+			{ID: "e2", From: "start", To: "b"},
+			{ID: "e3", From: "a", To: "c"},
+			{ID: "e4", From: "a", To: "d"},
+			{ID: "e5", From: "b", To: "end"},
+			{ID: "e6", From: "c", To: "end"},
+			{ID: "e7", From: "d", To: "end"},
+			{ID: "e8", From: "end", To: "_done"},
+		},
+	}
+}
+
+func dialecticDef() *framework.CircuitDef {
+	return &framework.CircuitDef{
+		Circuit: "dialectic",
+		Start:   "indict",
+		Done:    "_done",
+		Nodes: []framework.NodeDef{
+			{Name: "indict"}, {Name: "discover"}, {Name: "defend"},
+			{Name: "hearing"}, {Name: "cmrr"}, {Name: "verdict"},
+		},
+		Edges: []framework.EdgeDef{
+			{ID: "e1", From: "indict", To: "discover"},
+			{ID: "e2", From: "indict", To: "defend"},
+			{ID: "e3", From: "discover", To: "defend"},
+			{ID: "e4", From: "defend", To: "verdict"},
+			{ID: "e5", From: "defend", To: "hearing"},
+			{ID: "e6", From: "hearing", To: "verdict"},
+			{ID: "e7", From: "hearing", To: "cmrr"},
+			{ID: "e8", From: "cmrr", To: "hearing", Loop: true},
+			{ID: "e9", From: "verdict", To: "_done"},
+		},
+	}
+}
+
+func megaFanoutDef() *framework.CircuitDef {
+	nodes := []framework.NodeDef{{Name: "hub"}}
+	edges := []framework.EdgeDef{}
+	for i := 0; i < 8; i++ {
+		name := string(rune('t' + 0))
+		name = "t" + string(rune('1'+i))
+		nodes = append(nodes, framework.NodeDef{Name: name})
+		edges = append(edges, framework.EdgeDef{
+			ID: "fan-" + name, From: "hub", To: name,
+		})
+	}
+	nodes = append(nodes, framework.NodeDef{Name: "merge"})
+	for i := 0; i < 8; i++ {
+		name := "t" + string(rune('1'+i))
+		edges = append(edges, framework.EdgeDef{
+			ID: "join-" + name, From: name, To: "merge",
+		})
+	}
+	edges = append(edges, framework.EdgeDef{ID: "fin", From: "merge", To: "_done"})
+	return &framework.CircuitDef{
+		Circuit: "mega-fanout",
+		Start:   "hub",
+		Done:    "_done",
+		Nodes:   nodes,
+		Edges:   edges,
+	}
+}
+
+func megaFaninDef() *framework.CircuitDef {
+	nodes := []framework.NodeDef{{Name: "start"}}
+	edges := []framework.EdgeDef{}
+	for i := 0; i < 8; i++ {
+		name := "s" + string(rune('1'+i))
+		nodes = append(nodes, framework.NodeDef{Name: name})
+		edges = append(edges, framework.EdgeDef{
+			ID: "fan-" + name, From: "start", To: name,
+		})
+	}
+	nodes = append(nodes, framework.NodeDef{Name: "merge"})
+	for i := 0; i < 8; i++ {
+		name := "s" + string(rune('1'+i))
+		edges = append(edges, framework.EdgeDef{
+			ID: "join-" + name, From: name, To: "merge",
+		})
+	}
+	edges = append(edges, framework.EdgeDef{ID: "fin", From: "merge", To: "_done"})
+	return &framework.CircuitDef{
+		Circuit: "mega-fanin",
+		Start:   "start",
+		Done:    "_done",
+		Nodes:   nodes,
+		Edges:   edges,
+	}
+}
+
+func deepCascadeDef() *framework.CircuitDef {
+	return &framework.CircuitDef{
+		Circuit: "deep-cascade",
+		Start:   "root",
+		Done:    "_done",
+		Nodes: []framework.NodeDef{
+			{Name: "root"},
+			{Name: "a"}, {Name: "b"},
+			{Name: "c"}, {Name: "d"}, {Name: "e"}, {Name: "f"},
+			{Name: "g"}, {Name: "h"},
+			{Name: "merge"},
+		},
+		Edges: []framework.EdgeDef{
+			{ID: "e1", From: "root", To: "a"},
+			{ID: "e2", From: "root", To: "b"},
+			{ID: "e3", From: "a", To: "c"},
+			{ID: "e4", From: "a", To: "d"},
+			{ID: "e5", From: "b", To: "e"},
+			{ID: "e6", From: "b", To: "f"},
+			{ID: "e7", From: "c", To: "g"},
+			{ID: "e8", From: "c", To: "h"},
+			{ID: "e9", From: "d", To: "merge"},
+			{ID: "e10", From: "e", To: "merge"},
+			{ID: "e11", From: "f", To: "merge"},
+			{ID: "e12", From: "g", To: "merge"},
+			{ID: "e13", From: "h", To: "merge"},
+			{ID: "e14", From: "merge", To: "_done"},
+		},
+	}
+}
+
+func wideGridDef() *framework.CircuitDef {
+	return &framework.CircuitDef{
+		Circuit: "wide-grid",
+		Start:   "start",
+		Done:    "_done",
+		Nodes: []framework.NodeDef{
+			{Name: "start"},
+			{Name: "a1"}, {Name: "a2"}, {Name: "a3"},
+			{Name: "b1"}, {Name: "b2"}, {Name: "b3"},
+			{Name: "c1"}, {Name: "c2"}, {Name: "c3"},
+			{Name: "merge"},
+		},
+		Edges: []framework.EdgeDef{
+			{ID: "e1", From: "start", To: "a1"},
+			{ID: "e2", From: "start", To: "a2"},
+			{ID: "e3", From: "start", To: "a3"},
+			{ID: "e4", From: "a1", To: "b1"},
+			{ID: "e5", From: "a2", To: "b2"},
+			{ID: "e6", From: "a3", To: "b3"},
+			{ID: "e7", From: "b1", To: "c1"},
+			{ID: "e8", From: "b2", To: "c2"},
+			{ID: "e9", From: "b3", To: "c3"},
+			{ID: "e10", From: "c1", To: "merge"},
+			{ID: "e11", From: "c2", To: "merge"},
+			{ID: "e12", From: "c3", To: "merge"},
+			{ID: "e13", From: "merge", To: "_done"},
+		},
+	}
+}
+
 func TestGridLayout_LinearCircuit(t *testing.T) {
 	def := testCircuitDef()
 	var gl GridLayout
@@ -170,6 +534,158 @@ func TestGridLayout_Zones(t *testing.T) {
 	if zoneMap["output"] != "water" {
 		t.Errorf("output element = %q, want water", zoneMap["output"])
 	}
+}
+
+// --- Level 1: Structural layout tests ---
+
+func TestGridLayout_Linear(t *testing.T) {
+	def := linearDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "A", 0)
+	assertBefore(t, layout, "A", "B")
+	assertBefore(t, layout, "B", "C")
+	assertBefore(t, layout, "C", "D")
+	assertRowSpan(t, layout, 1)
+	assertColSpan(t, layout, 5) // A, B, C, D, _done
+}
+
+func TestGridLayout_Shortcut(t *testing.T) {
+	def := shortcutDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "A", 0)
+	assertBefore(t, layout, "A", "B")
+	assertBefore(t, layout, "B", "C")
+	assertBefore(t, layout, "C", "D")
+	assertRowSpan(t, layout, 1)
+}
+
+func TestGridLayout_Loop(t *testing.T) {
+	def := loopDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "A", 0)
+	assertBefore(t, layout, "A", "B")
+	assertBefore(t, layout, "B", "C")
+	assertRowSpan(t, layout, 1)
+}
+
+func TestGridLayout_Diamond(t *testing.T) {
+	def := diamondDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "start", 0)
+	assertSameCol(t, layout, "a", "b")
+	assertDiffRow(t, layout, "a", "b")
+	assertBefore(t, layout, "start", "a")
+	assertBefore(t, layout, "a", "join")
+	assertRowSpan(t, layout, 2)
+}
+
+func TestGridLayout_Staircase(t *testing.T) {
+	def := staircaseDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "start", 0)
+	assertSameCol(t, layout, "a", "b")
+	assertDiffRow(t, layout, "a", "b")
+	assertSameCol(t, layout, "c", "d")
+	assertDiffRow(t, layout, "c", "d")
+	assertBefore(t, layout, "start", "a")
+	assertBefore(t, layout, "a", "c")
+	assertBefore(t, layout, "c", "end")
+	assertMinRowSpan(t, layout, 2)
+}
+
+func TestGridLayout_Dialectic(t *testing.T) {
+	def := dialecticDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "indict", 0)
+	assertBefore(t, layout, "indict", "discover")
+	assertBefore(t, layout, "discover", "defend")
+	assertBefore(t, layout, "defend", "hearing")
+	assertBefore(t, layout, "hearing", "verdict")
+	assertMinRowSpan(t, layout, 1)
+}
+
+func TestGridLayout_MegaFanout(t *testing.T) {
+	def := megaFanoutDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "hub", 0)
+	for i := 0; i < 8; i++ {
+		name := "t" + string(rune('1'+i))
+		assertBefore(t, layout, "hub", name)
+		assertBefore(t, layout, name, "merge")
+	}
+	assertRowSpan(t, layout, 8)
+}
+
+func TestGridLayout_MegaFanin(t *testing.T) {
+	def := megaFaninDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "start", 0)
+	for i := 0; i < 8; i++ {
+		name := "s" + string(rune('1'+i))
+		assertBefore(t, layout, "start", name)
+		assertBefore(t, layout, name, "merge")
+	}
+	assertRowSpan(t, layout, 8)
+}
+
+func TestGridLayout_DeepCascade(t *testing.T) {
+	def := deepCascadeDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "root", 0)
+	assertSameCol(t, layout, "a", "b")
+	assertDiffRow(t, layout, "a", "b")
+	assertBefore(t, layout, "root", "a")
+	assertBefore(t, layout, "a", "c")
+	assertBefore(t, layout, "c", "g")
+	assertBefore(t, layout, "g", "merge")
+	assertMinRowSpan(t, layout, 4)
+}
+
+func TestGridLayout_WideGrid(t *testing.T) {
+	def := wideGridDef()
+	layout, err := GridLayout{}.Layout(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCol(t, layout, "start", 0)
+	assertSameCol(t, layout, "a1", "a2")
+	assertSameCol(t, layout, "a2", "a3")
+	assertSameCol(t, layout, "b1", "b2")
+	assertSameCol(t, layout, "b2", "b3")
+	assertSameCol(t, layout, "c1", "c2")
+	assertSameCol(t, layout, "c2", "c3")
+	assertBefore(t, layout, "a1", "b1")
+	assertBefore(t, layout, "b1", "c1")
+	assertBefore(t, layout, "c1", "merge")
+	assertRowSpan(t, layout, 3)
+	assertColSpan(t, layout, 6) // start, a*, b*, c*, merge, _done
 }
 
 func TestLogicalLayout_LinearCircuit(t *testing.T) {
