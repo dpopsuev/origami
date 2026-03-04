@@ -61,7 +61,7 @@ type FailureParams struct {
 
 // SiblingParams holds a sibling failure for context.
 type SiblingParams struct {
-	ID     int
+	ID     string
 	Name   string
 	Status string
 }

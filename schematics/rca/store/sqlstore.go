@@ -32,27 +32,16 @@ type SqlStore struct {
 	db *sqlite.DB
 }
 
-// Open opens or creates a SQLite DB at path with YAML-defined schema and migrations.
+// Open opens or creates a SQLite DB at path with the YAML-defined schema.
 func Open(path string) (*SqlStore, error) {
 	schema, err := LoadSchema()
 	if err != nil {
 		return nil, fmt.Errorf("load schema: %w", err)
 	}
-	migrations, err := LoadMigrations()
-	if err != nil {
-		return nil, fmt.Errorf("load migrations: %w", err)
-	}
-
 	db, err := sqlite.Open(path, schema)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
-
-	if err := db.Migrate(migrations); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("run migrations: %w", err)
-	}
-
 	return &SqlStore{db: db}, nil
 }
 
@@ -81,15 +70,15 @@ func (s *SqlStore) RawDB() *sqlite.DB {
 func (s *SqlStore) GetCase(caseID int64) (*Case, error) {
 	var c Case
 	var rcaID, symptomID, jobID, logTrunc sql.NullInt64
-	var polarionID, errMsg, logSnip, startedAt, endedAt sql.NullString
+	var srcItemID, externalRef, errMsg, logSnip, startedAt, endedAt sql.NullString
 	err := s.db.QueryRow(
-		`SELECT id, job_id, launch_id, rp_item_id, name, polarion_id, status,
+		`SELECT id, job_id, launch_id, source_item_id, name, external_ref, status,
 		        symptom_id, rca_id, error_message, log_snippet, log_truncated,
 		        started_at, ended_at, created_at, updated_at
 		 FROM cases WHERE id = ?`,
 		caseID,
-	).Scan(&c.ID, &jobID, &c.LaunchID, &c.SourceItemID,
-		&c.Name, &polarionID, &c.Status,
+	).Scan(&c.ID, &jobID, &c.LaunchID, &srcItemID,
+		&c.Name, &externalRef, &c.Status,
 		&symptomID, &rcaID, &errMsg, &logSnip, &logTrunc,
 		&startedAt, &endedAt, &c.CreatedAt, &c.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -101,7 +90,8 @@ func (s *SqlStore) GetCase(caseID int64) (*Case, error) {
 	c.JobID = jobID.Int64
 	c.RCAID = rcaID.Int64
 	c.SymptomID = symptomID.Int64
-	c.PolarionID = nullStr(polarionID)
+	c.SourceItemID = nullStr(srcItemID)
+	c.ExternalRef = nullStr(externalRef)
 	c.ErrorMessage = nullStr(errMsg)
 	c.LogSnippet = nullStr(logSnip)
 	c.StartedAt = nullStr(startedAt)
@@ -195,7 +185,7 @@ func (s *SqlStore) ListRCAs() ([]*RCA, error) {
 	return list, nil
 }
 
-func (s *SqlStore) SaveEnvelope(launchID int, env *rcatype.Envelope) error {
+func (s *SqlStore) SaveEnvelope(runID string, env *rcatype.Envelope) error {
 	if env == nil {
 		return errors.New("envelope is nil")
 	}
@@ -206,7 +196,7 @@ func (s *SqlStore) SaveEnvelope(launchID int, env *rcatype.Envelope) error {
 
 	var existingID int64
 	err = s.db.QueryRow(
-		"SELECT id FROM launches WHERE rp_launch_id = ? LIMIT 1", launchID,
+		"SELECT id FROM launches WHERE source_run_id = ? LIMIT 1", runID,
 	).Scan(&existingID)
 	if err == nil {
 		_, err = s.db.Exec(
@@ -254,8 +244,8 @@ func (s *SqlStore) SaveEnvelope(launchID int, env *rcatype.Envelope) error {
 	}
 
 	res, err := s.db.Exec(
-		"INSERT INTO circuits(suite_id, version_id, name, rp_launch_id, status) VALUES(?, ?, ?, ?, 'UNKNOWN')",
-		suiteID, versionID, fmt.Sprintf("auto-circuit-%d", launchID), launchID,
+		"INSERT INTO circuits(suite_id, version_id, name, source_run_id, status) VALUES(?, ?, ?, ?, 'UNKNOWN')",
+		suiteID, versionID, fmt.Sprintf("auto-circuit-%s", runID), runID,
 	)
 	if err != nil {
 		return fmt.Errorf("create circuit: %w", err)
@@ -263,9 +253,9 @@ func (s *SqlStore) SaveEnvelope(launchID int, env *rcatype.Envelope) error {
 	circuitID, _ := res.LastInsertId()
 
 	res, err = s.db.Exec(
-		`INSERT INTO launches(circuit_id, rp_launch_id, name, envelope_payload)
+		`INSERT INTO launches(circuit_id, source_run_id, name, envelope_payload)
 		 VALUES(?, ?, ?, ?)`,
-		circuitID, launchID, env.Name, payload,
+		circuitID, runID, env.Name, payload,
 	)
 	if err != nil {
 		return fmt.Errorf("create launch: %w", err)
@@ -273,7 +263,7 @@ func (s *SqlStore) SaveEnvelope(launchID int, env *rcatype.Envelope) error {
 	dbLaunchID, _ := res.LastInsertId()
 
 	_, err = s.db.Exec(
-		"INSERT INTO jobs(launch_id, rp_item_id, name) VALUES(?, 0, 'default-job')",
+		"INSERT INTO jobs(launch_id, source_item_id, name) VALUES(?, '', 'default-job')",
 		dbLaunchID,
 	)
 	if err != nil {
@@ -283,11 +273,11 @@ func (s *SqlStore) SaveEnvelope(launchID int, env *rcatype.Envelope) error {
 	return nil
 }
 
-func (s *SqlStore) GetEnvelope(launchID int) (*rcatype.Envelope, error) {
+func (s *SqlStore) GetEnvelope(runID string) (*rcatype.Envelope, error) {
 	var payload []byte
 	err := s.db.QueryRow(
-		"SELECT envelope_payload FROM launches WHERE rp_launch_id = ? LIMIT 1",
-		launchID,
+		"SELECT envelope_payload FROM launches WHERE source_run_id = ? LIMIT 1",
+		runID,
 	).Scan(&payload)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil

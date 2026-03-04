@@ -1,4 +1,4 @@
-version: 2
+version: 1
 
 tables:
   - name: schema_version
@@ -40,7 +40,7 @@ tables:
         type: text
         not_null: true
         unique: true
-      - name: ocp_build
+      - name: build_id
         type: text
 
   - name: circuits
@@ -60,8 +60,8 @@ tables:
       - name: name
         type: text
         not_null: true
-      - name: rp_launch_id
-        type: integer
+      - name: source_run_id
+        type: text
       - name: status
         type: text
         not_null: true
@@ -80,10 +80,9 @@ tables:
         type: integer
         not_null: true
         references: "circuits(id)"
-      - name: rp_launch_id
-        type: integer
-        not_null: true
-      - name: rp_launch_uuid
+      - name: source_run_id
+        type: text
+      - name: source_run_uuid
         type: text
       - name: name
         type: text
@@ -102,7 +101,7 @@ tables:
       - name: envelope_payload
         type: blob
     unique:
-      - [circuit_id, rp_launch_id]
+      - [circuit_id, source_run_id]
 
   - name: jobs
     columns:
@@ -114,9 +113,8 @@ tables:
         type: integer
         not_null: true
         references: "launches(id)"
-      - name: rp_item_id
-        type: integer
-        not_null: true
+      - name: source_item_id
+        type: text
       - name: name
         type: text
         not_null: true
@@ -137,7 +135,7 @@ tables:
       - name: ended_at
         type: text
     unique:
-      - [launch_id, rp_item_id]
+      - [launch_id, source_item_id]
 
   - name: cases
     columns:
@@ -153,14 +151,13 @@ tables:
         type: integer
         not_null: true
         references: "launches(id)"
-      - name: rp_item_id
-        type: integer
-        not_null: true
+      - name: source_item_id
+        type: text
       - name: name
         type: text
         not_null: true
         default: "''"
-      - name: polarion_id
+      - name: external_ref
         type: text
       - name: status
         type: text
@@ -190,7 +187,7 @@ tables:
         type: text
         not_null: true
     unique:
-      - [launch_id, rp_item_id]
+      - [launch_id, source_item_id]
 
   - name: triages
     columns:

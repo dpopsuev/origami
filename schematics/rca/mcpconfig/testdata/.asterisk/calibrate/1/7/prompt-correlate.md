@@ -34,19 +34,33 @@ Determine whether this case's root cause matches another case in the same launch
 
 | Field | Value |
 |-------|-------|
-| RCA message | root cause from subagent-2 |
+| RCA message | root cause from subagent-3 |
 | Defect type | pb001 |
 | Convergence | 0.85 |
 | Evidence | `ref-1`  |
 
 
+## Symptom context
+
+| Field | Value |
+|-------|-------|
+| Symptom | OCP-83300 PTP config cleanup |
+| Status | active |
+| Occurrences | 1 |
+| First seen | 2026-03-04T15:45:06Z |
+| Last seen | 2026-03-04T15:45:06Z |
+
+
+## Prior RCAs for this symptom
+
+| RCA #4 | root cause from subagent-0 | `pb001` | open | Versions:  |
 
 
 ## Sibling failures in this launch
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83300 PTP config cleanup |  |
+|  | OCP-83300 PTP config cleanup |  |
 
 
 

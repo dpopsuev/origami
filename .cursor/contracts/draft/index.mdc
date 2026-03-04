@@ -5,4 +5,5 @@
 
 ## Files
 - `graph-drawing.md` — Graph Drawing — 4-level testing methodology for graph rendering: structural layout/routing assertions, abstract renderer, golden snapshots.
+- `sockets-and-plugs-2.md` — Sockets & Plugs 2: Electric Boogaloo — normalize Envelope, store schema, and RCA output to be source-agnostic (no RP-specific data shapes).
 - `washi.md` — Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.

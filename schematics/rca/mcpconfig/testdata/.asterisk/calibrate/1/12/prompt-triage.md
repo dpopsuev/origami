@@ -58,7 +58,7 @@ FAIL: Cascade failure from stale CRD (related to OCP-83299)
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83304 PTP ordered setup |  |
+|  | OCP-83304 PTP ordered setup |  |
 
 
 

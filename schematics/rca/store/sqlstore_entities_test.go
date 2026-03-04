@@ -1,7 +1,6 @@
 package store
 
 import (
-	"database/sql"
 	"path/filepath"
 	"testing"
 )
@@ -33,7 +32,7 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 	}
 
 	// --- Version ---
-	verID, err := s.CreateVersion(&Version{Label: "4.21", OCPBuild: "4.21.2"})
+	verID, err := s.CreateVersion(&Version{Label: "4.21", BuildID: "4.21.2"})
 	if err != nil {
 		t.Fatalf("CreateVersion: %v", err)
 	}
@@ -49,7 +48,7 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 	// --- Circuit ---
 	pipID, err := s.CreateCircuit(&Circuit{
 		SuiteID: suiteID, VersionID: verID,
-		Name: "telco-ft-ran-ptp-4.21", SourceLaunchID: 33195, Status: "FAILED",
+		Name: "telco-ft-ran-ptp-4.21", SourceRunID: "33195", Status: "FAILED",
 	})
 	if err != nil {
 		t.Fatalf("CreateCircuit: %v", err)
@@ -65,23 +64,23 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 
 	// --- Launch ---
 	launchID, err := s.CreateLaunch(&Launch{
-		CircuitID: pipID, SourceLaunchID: 33195, Name: "test-launch", Status: "FAILED",
+		CircuitID: pipID, SourceRunID: "33195", Name: "test-launch", Status: "FAILED",
 	})
 	if err != nil {
 		t.Fatalf("CreateLaunch: %v", err)
 	}
 	launch, err := s.GetLaunch(launchID)
-	if err != nil || launch == nil || launch.SourceLaunchID != 33195 {
+	if err != nil || launch == nil || launch.SourceRunID != "33195" {
 		t.Fatalf("GetLaunch: got %+v err %v", launch, err)
 	}
-	launchByRP, err := s.GetLaunchByRPID(pipID, 33195)
+	launchByRP, err := s.GetLaunchBySourceRunID(pipID, "33195")
 	if err != nil || launchByRP == nil || launchByRP.ID != launchID {
-		t.Fatalf("GetLaunchByRPID: got %+v err %v", launchByRP, err)
+		t.Fatalf("GetLaunchBySourceRunID: got %+v err %v", launchByRP, err)
 	}
 
 	// --- Job ---
 	jobID, err := s.CreateJob(&Job{
-		LaunchID: launchID, SourceItemID: 100, Name: "[T-TSC] RAN PTP tests",
+		LaunchID: launchID, SourceItemID: "100", Name: "[T-TSC] RAN PTP tests",
 		ClockType: "T-TSC", Status: "FAILED",
 		StatsTotal: 20, StatsFailed: 5, StatsPassed: 12, StatsSkipped: 3,
 	})
@@ -99,7 +98,7 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 
 	// --- Case v2 ---
 	caseID, err := s.CreateCase(&Case{
-		JobID: jobID, LaunchID: launchID, SourceItemID: 200,
+		JobID: jobID, LaunchID: launchID, SourceItemID: "200",
 		Name: "PTP Recovery ptp process restart", Status: "open",
 		ErrorMessage: "context deadline exceeded",
 	})
@@ -261,8 +260,8 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 	}
 }
 
-// TestSqlStoreV2_FreshInstall verifies that a fresh DB gets v2 schema directly.
-func TestSqlStoreV2_FreshInstall(t *testing.T) {
+// TestSqlStore_FreshInstall verifies that a fresh DB gets the current schema.
+func TestSqlStore_FreshInstall(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "fresh.db")
 	s, err := Open(path)
@@ -271,7 +270,6 @@ func TestSqlStoreV2_FreshInstall(t *testing.T) {
 	}
 	defer s.Close()
 
-	// Verify v2 tables exist by running a v2 query.
 	_, err = s.CreateSuite(&InvestigationSuite{Name: "test"})
 	if err != nil {
 		t.Fatalf("CreateSuite on fresh db: %v", err)
@@ -281,136 +279,3 @@ func TestSqlStoreV2_FreshInstall(t *testing.T) {
 		t.Fatalf("CreateSymptom on fresh db: %v", err)
 	}
 }
-
-// TestSqlStoreV2_Migration tests v1 → v2 migration with data preservation.
-func TestSqlStoreV2_Migration(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "migrate.db")
-
-	// Step 1: Create a v1 database manually.
-	createV1DB(t, path)
-
-	// Step 2: Open with v2 code — migration should run automatically.
-	s, err := Open(path)
-	if err != nil {
-		t.Fatalf("Open (migration): %v", err)
-	}
-	defer s.Close()
-
-	// Step 3: Verify v2 tables exist and v1 data was migrated.
-
-	// Check schema version.
-	var v int
-	if err := s.db.QueryRow("SELECT version FROM schema_version LIMIT 1").Scan(&v); err != nil {
-		t.Fatalf("read schema version: %v", err)
-	}
-	if v != 2 {
-		t.Errorf("schema version: got %d want %d", v, 2)
-	}
-
-	// Check that migration suite was created.
-	suites, err := s.ListSuites()
-	if err != nil || len(suites) == 0 {
-		t.Fatalf("ListSuites after migration: got %d err %v", len(suites), err)
-	}
-
-	// Check that the v1 RCA was migrated.
-	rcas, err := s.ListRCAs()
-	if err != nil {
-		t.Fatalf("ListRCAs after migration: %v", err)
-	}
-	if len(rcas) != 1 || rcas[0].Title != "v1-rca" {
-		t.Errorf("migrated RCAs: got %+v", rcas)
-	}
-
-	// Check that the v1 envelope was migrated to a launch.
-	env, err := s.GetEnvelope(33195)
-	if err != nil {
-		t.Fatalf("GetEnvelope after migration: %v", err)
-	}
-	if env == nil || env.RunID != "33195" {
-		t.Errorf("migrated envelope: got %+v", env)
-	}
-
-	// Check that v1 cases were migrated via v2 hierarchy.
-	circuits, err := s.ListCircuitsBySuite(suites[0].ID)
-	if err != nil || len(circuits) == 0 {
-		t.Fatalf("ListCircuitsBySuite after migration: got %d err %v", len(circuits), err)
-	}
-	launches, err := s.ListLaunchesByCircuit(circuits[0].ID)
-	if err != nil || len(launches) == 0 {
-		t.Fatalf("ListLaunchesByCircuit after migration: got %d err %v", len(launches), err)
-	}
-	jobs, err := s.ListJobsByLaunch(launches[0].ID)
-	if err != nil || len(jobs) == 0 {
-		t.Fatalf("ListJobsByLaunch after migration: got %d err %v", len(jobs), err)
-	}
-	cases, err := s.ListCasesByJob(jobs[0].ID)
-	if err != nil {
-		t.Fatalf("ListCasesByJob after migration: %v", err)
-	}
-	if len(cases) != 2 {
-		t.Errorf("migrated cases: got %d want 2", len(cases))
-	}
-
-	// v2 operations should work.
-	_, err = s.CreateSymptom(&Symptom{Fingerprint: "new-fp", Name: "new symptom"})
-	if err != nil {
-		t.Fatalf("CreateSymptom after migration: %v", err)
-	}
-}
-
-// createV1DB creates a v1 database with sample data for migration testing.
-func createV1DB(t *testing.T, path string) {
-	t.Helper()
-	// We need to create a raw v1 DB. Use the sqlite driver directly.
-	// Import is already available via the sqlstore.go blank import.
-	import_db, err := openRawDB(path)
-	if err != nil {
-		t.Fatalf("open raw db: %v", err)
-	}
-	defer import_db.Close()
-
-	if _, err := import_db.Exec(schemaV1DDL); err != nil {
-		t.Fatalf("create v1 schema: %v", err)
-	}
-	if _, err := import_db.Exec("INSERT INTO schema_version(version) VALUES(1)"); err != nil {
-		t.Fatalf("insert v1 version: %v", err)
-	}
-	// Insert sample RCA.
-	if _, err := import_db.Exec(
-		"INSERT INTO rcas(title, description, defect_type) VALUES('v1-rca', 'v1 desc', 'ti001')",
-	); err != nil {
-		t.Fatalf("insert v1 rca: %v", err)
-	}
-	// Insert sample envelope.
-	envJSON := `{"run_id":"33195","name":"test","failure_list":[{"id":1,"name":"f1","status":"FAILED"},{"id":2,"name":"f2","status":"FAILED"}]}`
-	if _, err := import_db.Exec(
-		"INSERT INTO envelopes(launch_id, payload) VALUES(33195, ?)", []byte(envJSON),
-	); err != nil {
-		t.Fatalf("insert v1 envelope: %v", err)
-	}
-	// Insert sample cases.
-	if _, err := import_db.Exec("INSERT INTO cases(launch_id, item_id) VALUES(33195, 1)"); err != nil {
-		t.Fatalf("insert v1 case 1: %v", err)
-	}
-	if _, err := import_db.Exec("INSERT INTO cases(launch_id, item_id, rca_id) VALUES(33195, 2, 1)"); err != nil {
-		t.Fatalf("insert v1 case 2: %v", err)
-	}
-}
-
-// openRawDB opens a raw SQLite DB connection (no migration).
-func openRawDB(path string) (*sqlRawDB, error) {
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, err
-	}
-	return &sqlRawDB{db: db}, nil
-}
-
-type sqlRawDB struct{ db *sql.DB }
-
-func (r *sqlRawDB) Exec(q string, args ...interface{}) (sql.Result, error) {
-	return r.db.Exec(q, args...)
-}
-func (r *sqlRawDB) Close() error { return r.db.Close() }

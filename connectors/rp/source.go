@@ -2,6 +2,7 @@ package rp
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/dpopsuev/origami/schematics/rca"
@@ -29,7 +30,8 @@ func NewSourceReader(baseURL, apiKeyPath, project string) (rca.SourceReader, err
 	return &SourceReaderRP{client: client, project: project}, nil
 }
 
-func (a *SourceReaderRP) FetchEnvelope(launchID int) (*rcatype.Envelope, error) {
+func (a *SourceReaderRP) FetchEnvelope(runID string) (*rcatype.Envelope, error) {
+	launchID, _ := strconv.Atoi(runID)
 	f := NewFetcher(a.client, a.project)
 	rpEnv, err := f.Fetch(launchID)
 	if err != nil {
@@ -56,7 +58,8 @@ type envelopeFetcherBridge struct {
 	project string
 }
 
-func (b *envelopeFetcherBridge) Fetch(launchID int) (*rcatype.Envelope, error) {
+func (b *envelopeFetcherBridge) Fetch(runID string) (*rcatype.Envelope, error) {
+	launchID, _ := strconv.Atoi(runID)
 	f := NewFetcher(b.client, b.project)
 	rpEnv, err := f.Fetch(launchID)
 	if err != nil {
@@ -84,37 +87,68 @@ func NewDefectWriter(baseURL, apiKeyPath, project, submittedBy string) (rca.Defe
 	return &DefectWriterRP{pusher: NewPusher(client, project, submittedBy)}, nil
 }
 
-func (p *DefectWriterRP) Push(artifactPath, jiraTicketID, jiraLink string) (*rca.PushedRecord, error) {
+func (p *DefectWriterRP) Push(verdict rca.RCAVerdict) (*rca.PushedRecord, error) {
 	st := NewMemPushStore()
-	if err := p.pusher.Push(artifactPath, st, jiraTicketID, jiraLink); err != nil {
+	if err := p.pusher.PushVerdict(verdict, st); err != nil {
 		return nil, err
 	}
 	rec := st.LastPushed()
 	if rec == nil {
 		return nil, nil
 	}
-	return &rca.PushedRecord{LaunchID: rec.LaunchID, DefectType: rec.DefectType}, nil
+	return &rca.PushedRecord{RunID: rec.RunID, DefectType: rec.DefectType}, nil
 }
 
-// Conversion from rp types to rcatype — mirrors rpconv.EnvelopeFromRP but
-// lives here to avoid an import cycle (rpconv imports connectors/rp).
-
+// envelopeToRCAType converts RP types to rcatype, storing RP-specific values in Tags.
 func envelopeToRCAType(e *Envelope) *rcatype.Envelope {
 	if e == nil {
 		return nil
 	}
+	tags := map[string]string{}
+	if e.LaunchUUID != "" {
+		tags["rp.launch_uuid"] = e.LaunchUUID
+	}
 	env := &rcatype.Envelope{
-		RunID:      e.RunID,
-		LaunchUUID: e.LaunchUUID,
-		Name:       e.Name,
+		RunID: e.RunID,
+		Name:  e.Name,
+	}
+	if len(tags) > 0 {
+		env.Tags = tags
 	}
 	for _, f := range e.FailureList {
+		ftags := map[string]string{}
+		if f.UUID != "" {
+			ftags["rp.uuid"] = f.UUID
+		}
+		if f.Type != "" {
+			ftags["rp.type"] = f.Type
+		}
+		if f.Path != "" {
+			ftags["rp.path"] = f.Path
+		}
+		if f.CodeRef != "" {
+			ftags["rp.code_ref"] = f.CodeRef
+		}
+		if f.ParentID != 0 {
+			ftags["rp.parent_id"] = strconv.Itoa(f.ParentID)
+		}
+		if f.IssueType != "" {
+			ftags["rp.issue_type"] = f.IssueType
+		}
+		if f.AutoAnalyzed {
+			ftags["rp.auto_analyzed"] = "true"
+		}
 		item := rcatype.FailureItem{
-			ID: f.ID, UUID: f.UUID, Name: f.Name, Type: f.Type,
-			Status: f.Status, Path: f.Path, CodeRef: f.CodeRef,
-			Description: f.Description, ParentID: f.ParentID,
-			IssueType: f.IssueType, IssueComment: f.IssueComment,
-			AutoAnalyzed: f.AutoAnalyzed,
+			ID:             strconv.Itoa(f.ID),
+			Name:           f.Name,
+			Status:         f.Status,
+			Description:    f.Description,
+			ErrorMessage:   f.Description,
+			LogSnippet:     f.IssueComment,
+			ExternalIssues: nil,
+		}
+		if len(ftags) > 0 {
+			item.Tags = ftags
 		}
 		for _, ei := range f.ExternalIssues {
 			item.ExternalIssues = append(item.ExternalIssues, rcatype.ExternalIssue{

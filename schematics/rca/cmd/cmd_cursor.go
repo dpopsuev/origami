@@ -14,7 +14,7 @@ import (
 var cursorFlags struct {
 	launch        string
 	workspacePath string
-	itemID        int
+	itemID        string
 	promptDir     string
 	dbPath        string
 }
@@ -31,7 +31,7 @@ func init() {
 	f := cursorCmd.Flags()
 	f.StringVar(&cursorFlags.launch, "launch", "", "Path to envelope JSON or launch ID (required)")
 	f.StringVar(&cursorFlags.workspacePath, "workspace", "", "Path to context workspace file (YAML/JSON)")
-	f.IntVar(&cursorFlags.itemID, "case-id", 0, "Failure (test item) RP ID; default first from envelope")
+	f.StringVar(&cursorFlags.itemID, "case-id", "", "Failure (test item) source ID; default first from envelope")
 	f.StringVar(&cursorFlags.promptDir, "prompt-dir", "", "Prompt template directory (default: embedded prompts)")
 	f.StringVar(&cursorFlags.dbPath, "db", store.DefaultDBPath, "Store DB path")
 
@@ -49,13 +49,13 @@ func runCursor(cmd *cobra.Command, _ []string) error {
 
 	item := env.FailureList[0]
 	for _, f := range env.FailureList {
-		if cursorFlags.itemID == 0 || f.ID == cursorFlags.itemID {
+		if cursorFlags.itemID == "" || f.ID == cursorFlags.itemID {
 			item = f
 			break
 		}
 	}
-	if cursorFlags.itemID != 0 && item.ID != cursorFlags.itemID {
-		return fmt.Errorf("case-id %d not in envelope", cursorFlags.itemID)
+	if cursorFlags.itemID != "" && item.ID != cursorFlags.itemID {
+		return fmt.Errorf("case-id %s not in envelope", cursorFlags.itemID)
 	}
 
 	st, err := openStore(cursorFlags.dbPath)

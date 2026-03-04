@@ -183,8 +183,11 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 
 	for i := range report.CaseResults {
 		if i < len(env.FailureList) {
-			report.CaseResults[i].SourceIssueType = env.FailureList[i].IssueType
-			report.CaseResults[i].SourceAutoAnalyzed = env.FailureList[i].AutoAnalyzed
+			f := env.FailureList[i]
+			if f.Tags != nil {
+				report.CaseResults[i].SourceIssueType = f.Tags["rp.issue_type"]
+				report.CaseResults[i].SourceAutoAnalyzed = f.Tags["rp.auto_analyzed"] == "true"
+			}
 		}
 	}
 

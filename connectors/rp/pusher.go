@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
+	"github.com/dpopsuev/origami/schematics/rca"
 )
 
 // Pusher implements DefectPusher by calling the RP API to update defect
@@ -40,7 +42,8 @@ func (p *Pusher) Push(artifactPath string, store PushStore, jiraTicketID, jiraLi
 	comment := p.buildComment(a.RCAMessage, a.EvidenceRefs)
 
 	defs := make([]IssueDefinition, 0, len(a.CaseIDs))
-	for _, itemID := range a.CaseIDs {
+	for _, caseID := range a.CaseIDs {
+		itemID, _ := strconv.Atoi(caseID)
 		defs = append(defs, IssueDefinition{
 			TestItemID: itemID,
 			Issue: Issue{
@@ -55,11 +58,43 @@ func (p *Pusher) Push(artifactPath string, store PushStore, jiraTicketID, jiraLi
 	}
 
 	return store.RecordPushed(PushedRecord{
-		LaunchID:     a.LaunchID,
+		RunID:        a.RunID,
 		CaseIDs:      a.CaseIDs,
 		DefectType:   a.DefectType,
 		JiraTicketID: jiraTicketID,
 		JiraLink:     jiraLink,
+	})
+}
+
+// PushVerdict pushes an RCAVerdict to RP, converting string CaseIDs to RP int IDs.
+func (p *Pusher) PushVerdict(verdict rca.RCAVerdict, store PushStore) error {
+	ctx := context.Background()
+	items := p.client.Project(p.project).Items()
+
+	comment := p.buildComment(verdict.RCAMessage, verdict.EvidenceRefs)
+
+	defs := make([]IssueDefinition, 0, len(verdict.CaseIDs))
+	for _, caseID := range verdict.CaseIDs {
+		itemID, _ := strconv.Atoi(caseID)
+		defs = append(defs, IssueDefinition{
+			TestItemID: itemID,
+			Issue: Issue{
+				IssueType: verdict.DefectType,
+				Comment:   comment,
+			},
+		})
+	}
+
+	if err := items.UpdateDefectBulk(ctx, defs); err != nil {
+		return fmt.Errorf("update defects: %w", err)
+	}
+
+	return store.RecordPushed(PushedRecord{
+		RunID:        verdict.RunID,
+		CaseIDs:      verdict.CaseIDs,
+		DefectType:   verdict.DefectType,
+		JiraTicketID: verdict.JiraTicketID,
+		JiraLink:     verdict.JiraLink,
 	})
 }
 

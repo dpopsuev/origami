@@ -13,32 +13,32 @@ type InvestigationSuite struct {
 	ClosedAt    string // ISO 8601; empty if open
 }
 
-// Version represents a product/OCP version. Global reference table.
+// Version represents a product version. Global reference table.
 type Version struct {
-	ID       int64
-	Label    string // e.g. "4.21"
-	OCPBuild string // e.g. "4.21.2"
+	ID      int64
+	Label   string // e.g. "4.21"
+	BuildID string // e.g. "4.21.2"
 }
 
 // Circuit represents one CI circuit run for one version, bound to a suite.
 type Circuit struct {
-	ID         int64
-	SuiteID    int64
-	VersionID  int64
-	Name       string
-	SourceLaunchID int    // denormalized from Launch for quick reference
-	Status     string // FAILED, PASSED, etc.
-	StartedAt  string // ISO 8601
-	EndedAt    string // ISO 8601
+	ID          int64
+	SuiteID     int64
+	VersionID   int64
+	Name        string
+	SourceRunID string // denormalized from Launch for quick reference
+	Status      string // FAILED, PASSED, etc.
+	StartedAt   string // ISO 8601
+	EndedAt     string // ISO 8601
 }
 
-// Launch represents one RP launch. Evolves from the flat envelopes blob.
+// Launch represents one source launch/run. Evolves from the flat envelopes blob.
 // 1:1 with Circuit for now; schema allows N launches per circuit for future.
 type Launch struct {
 	ID              int64
-	CircuitID      int64
-	SourceLaunchID   int    // source launch ID (e.g. 33195)
-	SourceLaunchUUID  string
+	CircuitID       int64
+	SourceRunID     string // source run ID (e.g. "33195")
+	SourceRunUUID   string
 	Name            string
 	Status          string // FAILED, PASSED, etc.
 	StartedAt       string // ISO 8601
@@ -49,11 +49,11 @@ type Launch struct {
 	EnvelopePayload []byte // full envelope JSON for backward compat
 }
 
-// Job represents a test execution group within a launch (RP TEST-level item).
+// Job represents a test execution group within a launch (TEST-level item).
 type Job struct {
 	ID           int64
 	LaunchID     int64  // FK → launches.id
-	SourceItemID   int    // source item ID for this TEST-level item
+	SourceItemID string // source item ID for this TEST-level item
 	Name         string // e.g. "[T-TSC] RAN PTP tests"
 	ClockType    string // extracted from name/attributes, e.g. "T-TSC"
 	Status       string // FAILED, PASSED, etc.
@@ -71,14 +71,14 @@ type Job struct {
 type Case struct {
 	ID           int64
 	JobID        int64  // v2: FK → jobs.id; 0 for v1-migrated cases
-	LaunchID     int64  // FK → launches.id (v2) or RP launch ID (v1 before migration)
-	SourceItemID   int    // source test item ID (STEP-level item)
-	Name         string // full test name from RP
-	PolarionID   string // optional Polarion test case ID
+	LaunchID     int64  // FK → launches.id (v2) or source run ID (v1 before migration)
+	SourceItemID string // source test item ID (STEP-level item)
+	Name         string // full test name from source
+	ExternalRef  string // optional external test case ID (e.g. Polarion)
 	Status       string // open / triaged / investigated / reviewed / closed
 	SymptomID    int64  // FK → symptoms.id; 0 = not yet matched
 	RCAID        int64  // FK → rcas.id; 0 = not yet resolved (denormalized verdict)
-	ErrorMessage string // error message from RP item logs
+	ErrorMessage string // error message from item logs
 	LogSnippet   string // truncated log excerpt
 	LogTruncated bool   // true if log was truncated
 	StartedAt    string // ISO 8601

@@ -58,7 +58,7 @@ FAIL: PTP lock recovery failed
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83302 PTP recovery test |  |
+|  | OCP-83302 PTP recovery test |  |
 
 
 

@@ -8,8 +8,8 @@ import (
 // pushArtifact is the JSON shape written by the investigation step.
 // Local copy to avoid importing internal/investigate (cycle-breaking).
 type pushArtifact struct {
-	LaunchID         string   `json:"launch_id"`
-	CaseIDs          []int    `json:"case_ids"`
+	RunID            string   `json:"run_id"`
+	CaseIDs          []string `json:"case_ids"`
 	RCAMessage       string   `json:"rca_message"`
 	DefectType       string   `json:"defect_type"`
 	ConvergenceScore float64  `json:"convergence_score"`
@@ -42,7 +42,7 @@ func Push(artifactPath string, store PushStore, jiraTicketID, jiraLink string) e
 		return err
 	}
 	return store.RecordPushed(PushedRecord{
-		LaunchID:     a.LaunchID,
+		RunID:        a.RunID,
 		CaseIDs:      a.CaseIDs,
 		DefectType:   a.DefectType,
 		JiraTicketID: jiraTicketID,

@@ -58,7 +58,7 @@ FAIL: Expected clock state to be LOCKED within 300s timeout
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83297 PTP sync stability |  |
+|  | OCP-83297 PTP sync stability |  |
 
 
 

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/user"
@@ -52,12 +53,20 @@ func runPush(cmd *cobra.Command, _ []string) error {
 		}
 		writer = w
 	}
-	rec, err := writer.Push(pushFlags.artifactPath, "", "")
+	data, err := os.ReadFile(pushFlags.artifactPath)
+	if err != nil {
+		return fmt.Errorf("read artifact: %w", err)
+	}
+	var verdict rca.RCAVerdict
+	if err := json.Unmarshal(data, &verdict); err != nil {
+		return fmt.Errorf("parse artifact: %w", err)
+	}
+	rec, err := writer.Push(verdict)
 	if err != nil {
 		return fmt.Errorf("push: %w", err)
 	}
 	if rec != nil {
-		fmt.Fprintf(cmd.OutOrStdout(), "Pushed: launch=%s defect_type=%s\n", rec.LaunchID, vocabNameWithCode(rec.DefectType))
+		fmt.Fprintf(cmd.OutOrStdout(), "Pushed: run=%s defect_type=%s\n", rec.RunID, vocabNameWithCode(rec.DefectType))
 	}
 	return nil
 }

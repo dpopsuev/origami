@@ -57,7 +57,7 @@ FAIL: CRD cleanup failure
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83300 PTP config cleanup |  |
+|  | OCP-83300 PTP config cleanup |  |
 
 
 

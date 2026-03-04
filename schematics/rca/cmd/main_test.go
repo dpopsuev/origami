@@ -18,7 +18,7 @@ func TestAnalyzeAndPush_FileEnvelope(t *testing.T) {
 	env := &rcatype.Envelope{
 		RunID:  "99",
 		Name:   "test",
-		FailureList: []rcatype.FailureItem{{ID: 1, Name: "fail1", Status: "FAILED"}},
+		FailureList: []rcatype.FailureItem{{ID: "1", Name: "fail1", Status: "FAILED"}},
 	}
 	data, _ := json.MarshalIndent(env, "", "  ")
 	if err := os.WriteFile(envPath, data, 0644); err != nil {

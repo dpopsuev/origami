@@ -64,6 +64,8 @@ Asterisk pivot (post-Origami finish line)
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
+| `sockets-and-plugs` | next-milestone | 3 | Decouple schematics from connectors via typed sockets, plug declarations, manifest bindings. |
+| `sockets-and-plugs-2` | next-milestone | 3 | Normalize Envelope, store schema, and RCA output to be source-agnostic — no RP-specific data shapes. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
 
 ## Completed Work

@@ -2,8 +2,8 @@ package rp
 
 // PushedRecord is what the mock store records after a push.
 type PushedRecord struct {
-	LaunchID       string
-	CaseIDs        []int
+	RunID          string
+	CaseIDs        []string
 	DefectType     string
 	JiraTicketID   string
 	JiraLink       string

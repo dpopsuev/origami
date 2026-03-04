@@ -22,14 +22,14 @@ func TestSqlStore_Integration(t *testing.T) {
 		RunID: "33195",
 		Name:  "test-launch",
 		FailureList: []rcatype.FailureItem{
-			{ID: 1, Name: "fail1", Status: "FAILED"},
-			{ID: 2, Name: "fail2", Status: "FAILED"},
+			{ID: "1", Name: "fail1", Status: "FAILED"},
+			{ID: "2", Name: "fail2", Status: "FAILED"},
 		},
 	}
-	if err := s.SaveEnvelope(33195, env); err != nil {
+	if err := s.SaveEnvelope("33195", env); err != nil {
 		t.Fatalf("SaveEnvelope: %v", err)
 	}
-	got, err := s.GetEnvelope(33195)
+	got, err := s.GetEnvelope("33195")
 	if err != nil {
 		t.Fatalf("GetEnvelope: %v", err)
 	}
@@ -50,20 +50,20 @@ func TestSqlStore_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateCircuit: %v", err)
 	}
-	launchID, err := s.CreateLaunch(&Launch{CircuitID: circuitID, SourceLaunchID: 33195, Name: "test-launch"})
+	launchID, err := s.CreateLaunch(&Launch{CircuitID: circuitID, SourceRunID: "33195", Name: "test-launch"})
 	if err != nil {
 		t.Fatalf("CreateLaunch: %v", err)
 	}
-	jobID, err := s.CreateJob(&Job{LaunchID: launchID, SourceItemID: 0, Name: "default-job"})
+	jobID, err := s.CreateJob(&Job{LaunchID: launchID, SourceItemID: "0", Name: "default-job"})
 	if err != nil {
 		t.Fatalf("CreateJob: %v", err)
 	}
 
-	caseID1, err := s.CreateCase(&Case{JobID: jobID, LaunchID: launchID, SourceItemID: 1, Name: "case-1", Status: "open"})
+	caseID1, err := s.CreateCase(&Case{JobID: jobID, LaunchID: launchID, SourceItemID: "1", Name: "case-1", Status: "open"})
 	if err != nil {
 		t.Fatalf("CreateCase 1: %v", err)
 	}
-	_, err = s.CreateCase(&Case{JobID: jobID, LaunchID: launchID, SourceItemID: 2, Name: "case-2", Status: "open"})
+	_, err = s.CreateCase(&Case{JobID: jobID, LaunchID: launchID, SourceItemID: "2", Name: "case-2", Status: "open"})
 	if err != nil {
 		t.Fatalf("CreateCase 2: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestSqlStore_Integration(t *testing.T) {
 	}
 
 	c, err := s.GetCase(caseID1)
-	if err != nil || c == nil || c.SourceItemID != 1 {
+	if err != nil || c == nil || c.SourceItemID != "1" {
 		t.Errorf("GetCase: got %+v err %v", c, err)
 	}
 	if c.Status != "open" {

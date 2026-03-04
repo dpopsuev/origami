@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -195,10 +196,10 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 			}
 			circuitMap[pk] = pipeID
 
-			launch := &store.Launch{
-				CircuitID: pipeID, SourceLaunchID: 0,
-				Name: fmt.Sprintf("Launch %s %s", c.Version, c.Job), Status: "complete",
-			}
+		launch := &store.Launch{
+			CircuitID: pipeID, SourceRunID: "",
+			Name: fmt.Sprintf("Launch %s %s", c.Version, c.Job), Status: "complete",
+		}
 			launchID, err := st.CreateLaunch(launch)
 			if err != nil {
 				return nil, suiteID, fmt.Errorf("create launch: %w", err)
@@ -234,7 +235,7 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 		caseData := &store.Case{
 			JobID:        jobMap[pk],
 			LaunchID:     launchMap[pk],
-			SourceItemID: i + 1,
+			SourceItemID: strconv.Itoa(i + 1),
 			Name:         gtCase.TestName,
 			Status:       "open",
 			ErrorMessage: gtCase.ErrorMessage,

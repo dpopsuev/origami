@@ -1,5 +1,5 @@
 {
-  "launch_id": "",
+  "run_id": "",
   "case_ids": null,
   "rca_message": "PTP Events and Metrics - interface down",
   "defect_type": "pb001",

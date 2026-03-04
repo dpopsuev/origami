@@ -57,7 +57,7 @@ FAIL: Stale CRD
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83300 PTP config cleanup |  |
+|  | OCP-83300 PTP config cleanup |  |
 
 
 

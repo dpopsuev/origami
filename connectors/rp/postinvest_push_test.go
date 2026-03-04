@@ -13,8 +13,8 @@ func TestPush_RecordsDefectTypeAndJiraInStore(t *testing.T) {
 	dir := t.TempDir()
 	artifactPath := filepath.Join(dir, "artifact.json")
 	artifact := pushArtifact{
-		LaunchID:         "33195",
-		CaseIDs:          []int{1697136, 1697139},
+		RunID:            "33195",
+		CaseIDs:          []string{"1697136", "1697139"},
 		DefectType:        "ti001",
 		ConvergenceScore:  0.85,
 		EvidenceRefs:      nil,
@@ -37,8 +37,8 @@ func TestPush_RecordsDefectTypeAndJiraInStore(t *testing.T) {
 	if got.DefectType != artifact.DefectType {
 		t.Errorf("DefectType: got %q want %q", got.DefectType, artifact.DefectType)
 	}
-	if got.LaunchID != artifact.LaunchID {
-		t.Errorf("LaunchID: got %q want %q", got.LaunchID, artifact.LaunchID)
+	if got.RunID != artifact.RunID {
+		t.Errorf("RunID: got %q want %q", got.RunID, artifact.RunID)
 	}
 	if got.JiraTicketID != "PROJ-123" {
 		t.Errorf("JiraTicketID: got %q want PROJ-123", got.JiraTicketID)

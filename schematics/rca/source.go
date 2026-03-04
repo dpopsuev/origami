@@ -1,9 +1,7 @@
 package rca
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
@@ -19,7 +17,7 @@ type SourceReaderFactory func(baseURL, apiKeyPath, project string) (SourceReader
 // satisfy it and are injected at build time via functional options.
 type SourceReader interface {
 	// FetchEnvelope retrieves test failure data for the given run ID.
-	FetchEnvelope(launchID int) (*rcatype.Envelope, error)
+	FetchEnvelope(runID string) (*rcatype.Envelope, error)
 
 	// EnvelopeFetcher returns an rcatype.EnvelopeFetcher for batch operations
 	// like calibration case resolution.
@@ -32,14 +30,27 @@ type SourceReader interface {
 // DefectWriterFactory creates a DefectWriter from connection parameters.
 type DefectWriterFactory func(baseURL, apiKeyPath, project, submittedBy string) (DefectWriter, error)
 
+// RCAVerdict is the structured input for pushing RCA results to an external system.
+type RCAVerdict struct {
+	RunID            string   `json:"run_id"`
+	CaseIDs          []string `json:"case_ids"`
+	RCAMessage       string   `json:"rca_message"`
+	DefectType       string   `json:"defect_type"`
+	Component        string   `json:"component,omitempty"`
+	ConvergenceScore float64  `json:"convergence_score"`
+	EvidenceRefs     []string `json:"evidence_refs,omitempty"`
+	JiraTicketID     string   `json:"jira_ticket_id,omitempty"`
+	JiraLink         string   `json:"jira_link,omitempty"`
+}
+
 // DefectWriter writes RCA results back to an external system.
 type DefectWriter interface {
-	Push(artifactPath, jiraTicketID, jiraLink string) (*PushedRecord, error)
+	Push(verdict RCAVerdict) (*PushedRecord, error)
 }
 
 // PushedRecord captures the result of a defect write operation.
 type PushedRecord struct {
-	LaunchID   string
+	RunID      string
 	DefectType string
 }
 
@@ -47,19 +58,8 @@ type PushedRecord struct {
 // locally without contacting any remote API.
 type DefaultDefectWriter struct{}
 
-func (DefaultDefectWriter) Push(artifactPath, jiraTicketID, jiraLink string) (*PushedRecord, error) {
-	data, err := os.ReadFile(artifactPath)
-	if err != nil {
-		return nil, err
-	}
-	var a struct {
-		LaunchID   string `json:"launch_id"`
-		DefectType string `json:"defect_type"`
-	}
-	if err := json.Unmarshal(data, &a); err != nil {
-		return nil, err
-	}
-	return &PushedRecord{LaunchID: a.LaunchID, DefectType: a.DefectType}, nil
+func (DefaultDefectWriter) Push(verdict RCAVerdict) (*PushedRecord, error) {
+	return &PushedRecord{RunID: verdict.RunID, DefectType: verdict.DefectType}, nil
 }
 
 // StoreFactory creates a Store from a database path. The built-in default

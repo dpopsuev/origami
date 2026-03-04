@@ -237,11 +237,11 @@ func (s *MemStore) GetLaunch(id int64) (*Launch, error) {
 	return &cp, nil
 }
 
-func (s *MemStore) GetLaunchByRPID(circuitID int64, rpLaunchID int) (*Launch, error) {
+func (s *MemStore) GetLaunchBySourceRunID(circuitID int64, sourceRunID string) (*Launch, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, l := range s.ensureData().launches {
-		if l.CircuitID == circuitID && l.SourceLaunchID == rpLaunchID {
+		if l.CircuitID == circuitID && l.SourceRunID == sourceRunID {
 			cp := *l
 			return &cp, nil
 		}

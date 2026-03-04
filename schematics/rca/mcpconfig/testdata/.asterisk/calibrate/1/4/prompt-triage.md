@@ -58,7 +58,7 @@ FAIL: Stale PTP config CRD found from previous test suite
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83299 PTP config isolation |  |
+|  | OCP-83299 PTP config isolation |  |
 
 
 

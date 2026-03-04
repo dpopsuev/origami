@@ -123,7 +123,7 @@ func resolveRPProject(flagValue string) string {
 	return os.Getenv("ASTERISK_RP_PROJECT")
 }
 
-// loadEnvelopeForAnalyze resolves the envelope from a file path or launch ID.
+// loadEnvelopeForAnalyze resolves the envelope from a file path or run ID.
 // When a SourceReader is available and the envelope is not cached, it fetches
 // from the remote tracker and saves to the store.
 func loadEnvelopeForAnalyze(launch, dbPath string, source rca.SourceReader) *rcatype.Envelope {
@@ -139,8 +139,7 @@ func loadEnvelopeForAnalyze(launch, dbPath string, source rca.SourceReader) *rca
 		return &env
 	}
 
-	launchID, err := strconv.Atoi(launch)
-	if err != nil || launchID <= 0 {
+	if _, err := strconv.Atoi(launch); err != nil {
 		return nil
 	}
 	st, err := openStore(dbPath)
@@ -149,58 +148,55 @@ func loadEnvelopeForAnalyze(launch, dbPath string, source rca.SourceReader) *rca
 	}
 	defer st.Close()
 
-	env, _ := st.GetEnvelope(launchID)
+	env, _ := st.GetEnvelope(launch)
 	if env == nil && source != nil {
-		fetched, err := source.FetchEnvelope(launchID)
+		fetched, err := source.FetchEnvelope(launch)
 		if err != nil {
 			return nil
 		}
-		_ = st.SaveEnvelope(launchID, fetched)
+		_ = st.SaveEnvelope(launch, fetched)
 		env = fetched
 	}
 	return env
 }
 
-// loadEnvelopeForCursor resolves the envelope from a file path or launch ID for cursor mode.
-func loadEnvelopeForCursor(launch string, dbPath string) (*rcatype.Envelope, int) {
+// loadEnvelopeForCursor resolves the envelope from a file path or run ID for cursor mode.
+func loadEnvelopeForCursor(launch string, dbPath string) (*rcatype.Envelope, string) {
 	if _, err := os.Stat(launch); err == nil {
 		data, err := os.ReadFile(launch)
 		if err != nil {
-			return nil, 0
+			return nil, ""
 		}
 		var env rcatype.Envelope
 		if err := json.Unmarshal(data, &env); err != nil {
-			return nil, 0
+			return nil, ""
 		}
-		launchID, _ := strconv.Atoi(env.RunID)
-		if launchID == 0 {
-			launchID = 1
+		runID := env.RunID
+		if runID == "" {
+			runID = "1"
 		}
-		return &env, launchID
+		return &env, runID
 	}
-	launchID, err := strconv.Atoi(launch)
-	if err != nil || launchID <= 0 {
-		return nil, 0
+	if _, err := strconv.Atoi(launch); err != nil {
+		return nil, ""
 	}
 	st, err := openStore(dbPath)
 	if err != nil {
-		return nil, 0
+		return nil, ""
 	}
 	defer st.Close()
-	env, _ := st.GetEnvelope(launchID)
+	env, _ := st.GetEnvelope(launch)
 	if env == nil {
-		return nil, 0
+		return nil, ""
 	}
-	return env, launchID
+	return env, launch
 }
 
 // createAnalysisScaffolding creates v2 store entities for all failures in the envelope.
 func createAnalysisScaffolding(st store.Store, env *rcatype.Envelope) (int64, []*store.Case) {
-	rpLaunchID, _ := strconv.Atoi(env.RunID)
-
 	suiteID, _ := st.CreateSuite(&store.InvestigationSuite{
 		Name:        fmt.Sprintf("Analysis %s", env.Name),
-		Description: fmt.Sprintf("Automated analysis for launch %s", env.RunID),
+		Description: fmt.Sprintf("Automated analysis for run %s", env.RunID),
 		Status:      "active",
 	})
 
@@ -213,18 +209,18 @@ func createAnalysisScaffolding(st store.Store, env *rcatype.Envelope) (int64, []
 	}
 
 	pID, _ := st.CreateCircuit(&store.Circuit{
-		SuiteID:    suiteID,
-		VersionID:  vID,
-		Name:       env.Name,
-		SourceLaunchID: rpLaunchID,
-		Status:     "complete",
+		SuiteID:      suiteID,
+		VersionID:    vID,
+		Name:         env.Name,
+		SourceRunID:  env.RunID,
+		Status:       "complete",
 	})
 
 	lID, _ := st.CreateLaunch(&store.Launch{
-		CircuitID: pID,
-		SourceLaunchID: rpLaunchID,
-		Name:       env.Name,
-		Status:     "complete",
+		CircuitID:    pID,
+		SourceRunID:  env.RunID,
+		Name:         env.Name,
+		Status:       "complete",
 	})
 
 	jID, _ := st.CreateJob(&store.Job{
@@ -236,11 +232,11 @@ func createAnalysisScaffolding(st store.Store, env *rcatype.Envelope) (int64, []
 	var cases []*store.Case
 	for _, f := range env.FailureList {
 		caseID, _ := st.CreateCase(&store.Case{
-			JobID:    jID,
-			LaunchID: lID,
+			JobID:        jID,
+			LaunchID:     lID,
 			SourceItemID: f.ID,
-			Name:     f.Name,
-			Status:   "open",
+			Name:         f.Name,
+			Status:       "open",
 		})
 		c, _ := st.GetCase(caseID)
 		if c != nil {
@@ -252,7 +248,7 @@ func createAnalysisScaffolding(st store.Store, env *rcatype.Envelope) (int64, []
 }
 
 // ensureCaseInStore finds or creates the full v2 scaffolding for a failure item.
-func ensureCaseInStore(st store.Store, env *rcatype.Envelope, rpLaunchID int, item rcatype.FailureItem) *store.Case {
+func ensureCaseInStore(st store.Store, env *rcatype.Envelope, runID string, item rcatype.FailureItem) *store.Case {
 	suites, _ := st.ListSuites()
 	for _, suite := range suites {
 		if suite.Status != "open" {
@@ -277,7 +273,7 @@ func ensureCaseInStore(st store.Store, env *rcatype.Envelope, rpLaunchID int, it
 
 	suiteID, _ := st.CreateSuite(&store.InvestigationSuite{
 		Name:        fmt.Sprintf("Investigation %s", env.Name),
-		Description: fmt.Sprintf("Auto-created for launch %s", env.RunID),
+		Description: fmt.Sprintf("Auto-created for run %s", env.RunID),
 	})
 
 	vID, _ := st.CreateVersion(&store.Version{Label: "unknown"})
@@ -289,30 +285,30 @@ func ensureCaseInStore(st store.Store, env *rcatype.Envelope, rpLaunchID int, it
 	}
 
 	pID, _ := st.CreateCircuit(&store.Circuit{
-		SuiteID:    suiteID,
-		VersionID:  vID,
-		Name:       env.Name,
-		SourceLaunchID: rpLaunchID,
+		SuiteID:     suiteID,
+		VersionID:   vID,
+		Name:        env.Name,
+		SourceRunID: runID,
 	})
 
 	lID, _ := st.CreateLaunch(&store.Launch{
-		CircuitID: pID,
-		SourceLaunchID: rpLaunchID,
-		Name:       env.Name,
+		CircuitID:   pID,
+		SourceRunID: runID,
+		Name:        env.Name,
 	})
 
 	jID, _ := st.CreateJob(&store.Job{
-		LaunchID: lID,
+		LaunchID:     lID,
 		SourceItemID: item.ID,
-		Name:     item.Name,
+		Name:         item.Name,
 	})
 
 	caseID, _ := st.CreateCase(&store.Case{
-		JobID:    jID,
-		LaunchID: lID,
+		JobID:        jID,
+		LaunchID:     lID,
 		SourceItemID: item.ID,
-		Name:     item.Name,
-		Status:   "open",
+		Name:         item.Name,
+		Status:       "open",
 	})
 
 	caseData, _ := st.GetCase(caseID)

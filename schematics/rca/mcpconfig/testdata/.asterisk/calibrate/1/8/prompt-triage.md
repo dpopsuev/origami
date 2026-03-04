@@ -58,7 +58,7 @@ FAIL: Expected NTP sync within 60s
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-49734 NTP sync validation |  |
+|  | OCP-49734 NTP sync validation |  |
 
 
 

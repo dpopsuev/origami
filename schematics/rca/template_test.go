@@ -74,8 +74,8 @@ func TestFillTemplateString_Siblings(t *testing.T) {
 		CaseID: 1,
 		Failure: &FailureParams{TestName: "test1"},
 		Siblings: []SiblingParams{
-			{ID: 1, Name: "test1", Status: "FAILED"},
-			{ID: 2, Name: "test2", Status: "FAILED"},
+			{ID: "1", Name: "test1", Status: "FAILED"},
+			{ID: "2", Name: "test2", Status: "FAILED"},
 		},
 		Taxonomy: DefaultTaxonomy(),
 	}
@@ -305,7 +305,7 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 		"Prior.RecallResult.Reasoning": "LLM-generated explanation, not consumed by downstream templates",
 		"Prior.RecallResult.SymptomID": "numeric ID used for Go-level store lookup, not in prompts",
 
-		"Prior.InvestigateResult.LaunchID":  "duplicates top-level SourceID; not repeated in prompts",
+		"Prior.InvestigateResult.RunID":  "duplicates top-level SourceID; not repeated in prompts",
 		"Prior.InvestigateResult.CaseIDs":   "used for Go-level case grouping, not in prompts",
 		"Prior.InvestigateResult.Component": "used for Go-level scoring and dedup, not in prompts",
 

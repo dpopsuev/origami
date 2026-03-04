@@ -31,8 +31,8 @@ func TestPusher_Push_Success(t *testing.T) {
 	pusher := NewPusher(client, "ecosystem-qe", "dpopsuev")
 
 	artifact := pushArtifact{
-		LaunchID:     "12345",
-		CaseIDs:      []int{100, 101},
+		RunID:        "12345",
+		CaseIDs:      []string{"100", "101"},
 		DefectType:   "pb001",
 		RCAMessage:   "PTP clock sync failure",
 		EvidenceRefs: []string{"https://github.com/org/repo/commit/abc123", "some-log-file.txt"},
@@ -108,8 +108,8 @@ func TestPusher_Push_AttributionWithoutSubmitter(t *testing.T) {
 	pusher := NewPusher(client, "ecosystem-qe", "")
 
 	artifact := pushArtifact{
-		LaunchID:   "12345",
-		CaseIDs:    []int{100},
+		RunID:      "12345",
+		CaseIDs:    []string{"100"},
 		DefectType: "pb001",
 	}
 	data, _ := json.Marshal(artifact)
@@ -180,8 +180,8 @@ func TestPusher_Push_APIError(t *testing.T) {
 	pusher := NewPusher(client, "ecosystem-qe", "testuser")
 
 	artifact := pushArtifact{
-		LaunchID:   "12345",
-		CaseIDs:    []int{100},
+		RunID:      "12345",
+		CaseIDs:    []string{"100"},
 		DefectType: "pb001",
 	}
 	data, _ := json.Marshal(artifact)

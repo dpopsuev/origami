@@ -38,9 +38,9 @@ func goldenFixtureParams() *TemplateParams {
 			Path:         "test/e2e/ptp_recovery_test.go",
 		},
 		Siblings: []SiblingParams{
-			{ID: 1, Name: "[T-TSC] PTP Sync test", Status: "FAILED"},
-			{ID: 2, Name: "[T-TSC] PTP Clock accuracy", Status: "PASSED"},
-			{ID: 3, Name: "[T-TSC] PTP DPLL tracking", Status: "FAILED"},
+			{ID: "1", Name: "[T-TSC] PTP Sync test", Status: "FAILED"},
+			{ID: "2", Name: "[T-TSC] PTP Clock accuracy", Status: "PASSED"},
+			{ID: "3", Name: "[T-TSC] PTP DPLL tracking", Status: "FAILED"},
 		},
 		Workspace: &WorkspaceParams{
 			Repos: []RepoParams{
@@ -99,8 +99,8 @@ func goldenFixtureParams() *TemplateParams {
 				CrossRefStrategy: "Check test assertion in cnf-gotests, then verify SUT behavior in linuxptp-daemon.",
 			},
 			InvestigateResult: &InvestigateArtifact{
-				LaunchID:         "launch-42",
-				CaseIDs:          []int{7},
+				RunID:            "launch-42",
+				CaseIDs:          []string{"7"},
 				RCAMessage:       "Holdover timeout changed from 300s to 60s in commit abc1234, causing premature clock class transition to 248.",
 				DefectType:       "pb001",
 				Component:        "linuxptp-daemon",

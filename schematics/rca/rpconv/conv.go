@@ -1,36 +1,51 @@
 // Package rpconv converts between RCA domain types (rcatype) and
-// ReportPortal types (components/rp). All RP-specific logic stays at the
+// ReportPortal types (connectors/rp). All RP-specific logic stays at the
 // CLI/MCP boundary; the RCA core works exclusively with rcatype.
 package rpconv
 
 import (
+	"strconv"
+
 	"github.com/dpopsuev/origami/connectors/rp"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
 )
 
 // EnvelopeFromRP converts an rp.Envelope to an rcatype.Envelope.
+// RP-specific values are stored in Tags with "rp." prefix.
 func EnvelopeFromRP(e *rp.Envelope) *rcatype.Envelope {
 	if e == nil {
 		return nil
 	}
-	return &rcatype.Envelope{
+	tags := map[string]string{}
+	if e.LaunchUUID != "" {
+		tags["rp.launch_uuid"] = e.LaunchUUID
+	}
+	env := &rcatype.Envelope{
 		RunID:            e.RunID,
-		LaunchUUID:       e.LaunchUUID,
 		Name:             e.Name,
 		FailureList:      failureItemsFromRP(e.FailureList),
 		LaunchAttributes: attributesFromRP(e.LaunchAttributes),
 	}
+	if len(tags) > 0 {
+		env.Tags = tags
+	}
+	return env
 }
 
 // EnvelopeToRP converts an rcatype.Envelope to an rp.Envelope.
+// RP-specific values are read from Tags with "rp." prefix.
 func EnvelopeToRP(e *rcatype.Envelope) *rp.Envelope {
 	if e == nil {
 		return nil
 	}
+	launchUUID := ""
+	if e.Tags != nil {
+		launchUUID = e.Tags["rp.launch_uuid"]
+	}
 	return &rp.Envelope{
 		RunID:            e.RunID,
-		LaunchUUID:       e.LaunchUUID,
+		LaunchUUID:       launchUUID,
 		Name:             e.Name,
 		FailureList:      failureItemsToRP(e.FailureList),
 		LaunchAttributes: attributesToRP(e.LaunchAttributes),
@@ -43,21 +58,41 @@ func failureItemsFromRP(items []rp.FailureItem) []rcatype.FailureItem {
 	}
 	out := make([]rcatype.FailureItem, len(items))
 	for i, f := range items {
-		out[i] = rcatype.FailureItem{
-			ID:             f.ID,
-			UUID:           f.UUID,
+		tags := map[string]string{}
+		if f.UUID != "" {
+			tags["rp.uuid"] = f.UUID
+		}
+		if f.Type != "" {
+			tags["rp.type"] = f.Type
+		}
+		if f.Path != "" {
+			tags["rp.path"] = f.Path
+		}
+		if f.CodeRef != "" {
+			tags["rp.code_ref"] = f.CodeRef
+		}
+		if f.ParentID != 0 {
+			tags["rp.parent_id"] = strconv.Itoa(f.ParentID)
+		}
+		if f.IssueType != "" {
+			tags["rp.issue_type"] = f.IssueType
+		}
+		if f.AutoAnalyzed {
+			tags["rp.auto_analyzed"] = "true"
+		}
+		fi := rcatype.FailureItem{
+			ID:             strconv.Itoa(f.ID),
 			Name:           f.Name,
-			Type:           f.Type,
 			Status:         f.Status,
-			Path:           f.Path,
-			CodeRef:        f.CodeRef,
 			Description:    f.Description,
-			ParentID:       f.ParentID,
-			IssueType:      f.IssueType,
-			IssueComment:   f.IssueComment,
-			AutoAnalyzed:   f.AutoAnalyzed,
+			ErrorMessage:   f.Description,
+			LogSnippet:     f.IssueComment,
 			ExternalIssues: externalIssuesFromRP(f.ExternalIssues),
 		}
+		if len(tags) > 0 {
+			fi.Tags = tags
+		}
+		out[i] = fi
 	}
 	return out
 }
@@ -68,19 +103,37 @@ func failureItemsToRP(items []rcatype.FailureItem) []rp.FailureItem {
 	}
 	out := make([]rp.FailureItem, len(items))
 	for i, f := range items {
+		id, _ := strconv.Atoi(f.ID)
+		parentID := 0
+		issueType := ""
+		autoAnalyzed := false
+		uuid := ""
+		typ := ""
+		path := ""
+		codeRef := ""
+		issueComment := f.LogSnippet
+		if f.Tags != nil {
+			uuid = f.Tags["rp.uuid"]
+			typ = f.Tags["rp.type"]
+			path = f.Tags["rp.path"]
+			codeRef = f.Tags["rp.code_ref"]
+			parentID, _ = strconv.Atoi(f.Tags["rp.parent_id"])
+			issueType = f.Tags["rp.issue_type"]
+			autoAnalyzed = f.Tags["rp.auto_analyzed"] == "true"
+		}
 		out[i] = rp.FailureItem{
-			ID:             f.ID,
-			UUID:           f.UUID,
+			ID:             id,
+			UUID:           uuid,
 			Name:           f.Name,
-			Type:           f.Type,
+			Type:           typ,
 			Status:         f.Status,
-			Path:           f.Path,
-			CodeRef:        f.CodeRef,
+			Path:           path,
+			CodeRef:        codeRef,
 			Description:    f.Description,
-			ParentID:       f.ParentID,
-			IssueType:      f.IssueType,
-			IssueComment:   f.IssueComment,
-			AutoAnalyzed:   f.AutoAnalyzed,
+			ParentID:       parentID,
+			IssueType:      issueType,
+			IssueComment:   issueComment,
+			AutoAnalyzed:   autoAnalyzed,
 			ExternalIssues: externalIssuesToRP(f.ExternalIssues),
 		}
 	}
@@ -137,7 +190,8 @@ type RPFetcherAdapter struct {
 }
 
 // Fetch implements rcatype.EnvelopeFetcher.
-func (a *RPFetcherAdapter) Fetch(launchID int) (*rcatype.Envelope, error) {
+func (a *RPFetcherAdapter) Fetch(runID string) (*rcatype.Envelope, error) {
+	launchID, _ := strconv.Atoi(runID)
 	rpEnv, err := a.Inner.Fetch(launchID)
 	if err != nil {
 		return nil, err
@@ -147,19 +201,18 @@ func (a *RPFetcherAdapter) Fetch(launchID int) (*rcatype.Envelope, error) {
 
 // EnvelopeStoreAdapter bridges an RCA store (rcatype.Envelope) with
 // rp.EnvelopeStore (rp.Envelope), converting at the boundary.
-// Used by rp.FetchAndSave to persist RP-fetched envelopes into the RCA store.
 type EnvelopeStoreAdapter struct {
 	Store store.Store
 }
 
 // Save implements rp.EnvelopeStore by converting rp.Envelope to rcatype.Envelope.
 func (a *EnvelopeStoreAdapter) Save(launchID int, envelope *rp.Envelope) error {
-	return a.Store.SaveEnvelope(launchID, EnvelopeFromRP(envelope))
+	return a.Store.SaveEnvelope(strconv.Itoa(launchID), EnvelopeFromRP(envelope))
 }
 
 // Get implements rp.EnvelopeStore by converting rcatype.Envelope to rp.Envelope.
 func (a *EnvelopeStoreAdapter) Get(launchID int) (*rp.Envelope, error) {
-	env, err := a.Store.GetEnvelope(launchID)
+	env, err := a.Store.GetEnvelope(strconv.Itoa(launchID))
 	if err != nil {
 		return nil, err
 	}

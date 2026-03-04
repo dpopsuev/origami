@@ -4,12 +4,13 @@
 // components/rp) happens in modules/rca/rpconv.
 package rcatype
 
-// Envelope is the execution envelope (launch + failure list).
+// Envelope is the execution envelope (run + failure list).
+// Source-agnostic: RP-specific values live in Tags (e.g. Tags["rp.launch_uuid"]).
 type Envelope struct {
-	RunID       string `json:"run_id"`
-	LaunchUUID  string `json:"launch_uuid"`
-	Name        string `json:"name"`
-	FailureList []FailureItem `json:"failure_list"`
+	RunID       string            `json:"run_id"`
+	Name        string            `json:"name"`
+	FailureList []FailureItem     `json:"failure_list"`
+	Tags        map[string]string `json:"tags,omitempty"`
 
 	LaunchAttributes []Attribute `json:"launch_attributes,omitempty"`
 }
@@ -21,23 +22,18 @@ type Attribute struct {
 	System bool   `json:"system,omitempty"`
 }
 
-// FailureItem is one failed test step in the envelope.
+// FailureItem is one failed test in the envelope.
+// Source-agnostic: ID is an opaque string, RP-specific values live in Tags.
 type FailureItem struct {
-	ID     int    `json:"id"`
-	UUID   string `json:"uuid"`
-	Name   string `json:"name"`
-	Type   string `json:"type"`
-	Status string `json:"status"`
-	Path   string `json:"path"`
-
-	CodeRef      string `json:"code_ref,omitempty"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Status       string `json:"status"`
 	Description  string `json:"description,omitempty"`
-	ParentID     int    `json:"parent_id,omitempty"`
-	IssueType    string `json:"issue_type,omitempty"`
-	IssueComment string `json:"issue_comment,omitempty"`
-	AutoAnalyzed bool   `json:"auto_analyzed,omitempty"`
+	ErrorMessage string `json:"error_message,omitempty"`
+	LogSnippet   string `json:"log_snippet,omitempty"`
 
-	ExternalIssues []ExternalIssue `json:"external_issues,omitempty"`
+	ExternalIssues []ExternalIssue   `json:"external_issues,omitempty"`
+	Tags           map[string]string `json:"tags,omitempty"`
 }
 
 // ExternalIssue links a test failure to an external bug tracker ticket.
@@ -46,7 +42,7 @@ type ExternalIssue struct {
 	URL      string `json:"url,omitempty"`
 }
 
-// EnvelopeFetcher retrieves an envelope by launch ID.
+// EnvelopeFetcher retrieves an envelope by run ID.
 type EnvelopeFetcher interface {
-	Fetch(launchID int) (*Envelope, error)
+	Fetch(runID string) (*Envelope, error)
 }

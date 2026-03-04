@@ -38,12 +38,12 @@ type Store interface {
 	// Launch operations
 	CreateLaunch(l *Launch) (int64, error)
 	GetLaunch(id int64) (*Launch, error)
-	GetLaunchByRPID(circuitID int64, rpLaunchID int) (*Launch, error)
+	GetLaunchBySourceRunID(circuitID int64, sourceRunID string) (*Launch, error)
 	ListLaunchesByCircuit(circuitID int64) ([]*Launch, error)
-	// SaveEnvelope stores an envelope blob by RP launch ID.
-	SaveEnvelope(launchID int, env *rcatype.Envelope) error
-	// GetEnvelope returns the envelope for the RP launch ID.
-	GetEnvelope(launchID int) (*rcatype.Envelope, error)
+	// SaveEnvelope stores an envelope blob by source run ID.
+	SaveEnvelope(runID string, env *rcatype.Envelope) error
+	// GetEnvelope returns the envelope for the source run ID.
+	GetEnvelope(runID string) (*rcatype.Envelope, error)
 
 	// Job operations
 	CreateJob(j *Job) (int64, error)

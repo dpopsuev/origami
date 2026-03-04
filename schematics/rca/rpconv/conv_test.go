@@ -75,7 +75,7 @@ func TestRPFetcherAdapter(t *testing.T) {
 	stub := &rp.StubFetcher{Env: env}
 	adapter := &RPFetcherAdapter{Inner: stub}
 
-	got, err := adapter.Fetch(42)
+	got, err := adapter.Fetch("42")
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestEnvelopeStoreAdapter_WithSqlStore(t *testing.T) {
 		t.Errorf("Get: got %+v", got)
 	}
 
-	rcaEnv, err := s.GetEnvelope(99)
+	rcaEnv, err := s.GetEnvelope("99")
 	if err != nil {
 		t.Fatalf("store.GetEnvelope: %v", err)
 	}

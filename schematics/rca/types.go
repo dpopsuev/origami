@@ -147,8 +147,8 @@ type RepoSelection struct {
 
 // InvestigateArtifact is the F3 output (main investigation artifact).
 type InvestigateArtifact struct {
-	LaunchID         string    `json:"launch_id"`
-	CaseIDs          []int     `json:"case_ids"`
+	RunID            string    `json:"run_id"`
+	CaseIDs          []string  `json:"case_ids"`
 	RCAMessage       string    `json:"rca_message"`
 	DefectType       string    `json:"defect_type"`
 	Component        string    `json:"component,omitempty"`

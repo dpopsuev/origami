@@ -46,7 +46,7 @@ Determine whether this case's root cause matches another case in the same launch
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83300 PTP config cleanup |  |
+|  | OCP-83300 PTP config cleanup |  |
 
 
 

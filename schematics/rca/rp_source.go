@@ -26,7 +26,7 @@ func ResolveRPCases(fetcher rcatype.EnvelopeFetcher, scenario *Scenario) error {
 		env, ok := cache[c.SourceLaunchID]
 		if !ok {
 			var err error
-			env, err = fetcher.Fetch(c.SourceLaunchID)
+			env, err = fetcher.Fetch(fmt.Sprintf("%d", c.SourceLaunchID))
 			if err != nil {
 				return fmt.Errorf("fetch RP launch %d for case %s: %w", c.SourceLaunchID, c.ID, err)
 			}
@@ -46,11 +46,13 @@ func ResolveRPCases(fetcher rcatype.EnvelopeFetcher, scenario *Scenario) error {
 		if item.Description != "" {
 			c.ErrorMessage = item.Description
 		}
-		if c.LogSnippet == "" && item.IssueComment != "" {
-			c.LogSnippet = item.IssueComment
+		if c.LogSnippet == "" && item.LogSnippet != "" {
+			c.LogSnippet = item.LogSnippet
 		}
-		c.SourceIssueType = item.IssueType
-		c.SourceAutoAnalyzed = item.AutoAnalyzed
+		if item.Tags != nil {
+			c.SourceIssueType = item.Tags["rp.issue_type"]
+			c.SourceAutoAnalyzed = item.Tags["rp.auto_analyzed"] == "true"
+		}
 	}
 
 	return nil
@@ -58,8 +60,9 @@ func ResolveRPCases(fetcher rcatype.EnvelopeFetcher, scenario *Scenario) error {
 
 func matchFailureItem(env *rcatype.Envelope, c *GroundTruthCase) *rcatype.FailureItem {
 	if c.SourceItemID > 0 {
+		want := fmt.Sprintf("%d", c.SourceItemID)
 		for i := range env.FailureList {
-			if env.FailureList[i].ID == c.SourceItemID {
+			if env.FailureList[i].ID == want {
 				return &env.FailureList[i]
 			}
 		}

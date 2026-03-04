@@ -57,7 +57,7 @@ FAIL: Expected clock state to be LOCKED
 
 | ID | Name | Status |
 |----|------|--------|
-| 0 | OCP-83297 PTP sync stability |  |
+|  | OCP-83297 PTP sync stability |  |
 
 
 
