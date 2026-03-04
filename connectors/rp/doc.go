@@ -1,5 +1,5 @@
-// Package rp provides the ReportPortal component for Asterisk.
+// Package rp provides the ReportPortal connector for Origami.
 //
 // It bundles: RP API client, envelope types and fetching (pre-investigation),
-// defect pushing (post-investigation), and dataset ingestion circuit nodes.
+// defect pushing (post-investigation), and run discovery.
 package rp

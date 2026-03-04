@@ -28,13 +28,13 @@ func TestPusher_Push_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pusher := NewPusher(client, "ecosystem-qe", "dpopsuev")
+	pusher := NewPusher(client, "test-project", "jane.doe", "")
 
 	artifact := pushArtifact{
 		RunID:        "12345",
 		CaseIDs:      []string{"100", "101"},
 		DefectType:   "pb001",
-		RCAMessage:   "PTP clock sync failure",
+		RCAMessage:   "Clock sync failure in NTP subsystem",
 		EvidenceRefs: []string{"https://github.com/org/repo/commit/abc123", "some-log-file.txt"},
 	}
 	data, _ := json.Marshal(artifact)
@@ -64,13 +64,13 @@ func TestPusher_Push_Success(t *testing.T) {
 	def := issues[0].(map[string]any)
 	issue := def["issue"].(map[string]any)
 	comment, _ := issue["comment"].(string)
-	if !strings.Contains(comment, "PTP clock sync failure") {
+	if !strings.Contains(comment, "Clock sync failure in NTP subsystem") {
 		t.Errorf("comment should contain RCA message, got %q", comment)
 	}
 	if !strings.Contains(comment, "github.com/org/repo/commit/abc123") {
 		t.Errorf("comment should contain commit link, got %q", comment)
 	}
-	if !strings.Contains(comment, "Analysis was submitted by dpopsuev (via Asterisk)") {
+	if !strings.Contains(comment, "Analysis was submitted by jane.doe (via Origami)") {
 		t.Errorf("comment should contain attribution, got %q", comment)
 	}
 	if strings.Contains(comment, "some-log-file.txt") {
@@ -105,7 +105,7 @@ func TestPusher_Push_AttributionWithoutSubmitter(t *testing.T) {
 	defer server.Close()
 
 	client, _ := New(server.URL, "test-token", WithHTTPClient(server.Client()))
-	pusher := NewPusher(client, "ecosystem-qe", "")
+	pusher := NewPusher(client, "test-project", "", "")
 
 	artifact := pushArtifact{
 		RunID:      "12345",
@@ -126,7 +126,7 @@ func TestPusher_Push_AttributionWithoutSubmitter(t *testing.T) {
 	def := issues[0].(map[string]any)
 	issue := def["issue"].(map[string]any)
 	comment, _ := issue["comment"].(string)
-	if comment != "Analysis was submitted (via Asterisk)" {
+	if comment != "Analysis was submitted (via Origami)" {
 		t.Errorf("unexpected comment without submitter: %q", comment)
 	}
 }
@@ -138,7 +138,7 @@ func TestPusher_Push_MissingFile(t *testing.T) {
 	defer server.Close()
 
 	client, _ := New(server.URL, "test-token", WithHTTPClient(server.Client()))
-	pusher := NewPusher(client, "ecosystem-qe", "")
+	pusher := NewPusher(client, "test-project", "", "")
 	store := NewMemPushStore()
 
 	err := pusher.Push("/nonexistent/path.json", store, "", "")
@@ -154,7 +154,7 @@ func TestPusher_Push_InvalidJSON(t *testing.T) {
 	defer server.Close()
 
 	client, _ := New(server.URL, "test-token", WithHTTPClient(server.Client()))
-	pusher := NewPusher(client, "ecosystem-qe", "")
+	pusher := NewPusher(client, "test-project", "", "")
 	store := NewMemPushStore()
 
 	tmpDir := t.TempDir()
@@ -177,7 +177,7 @@ func TestPusher_Push_APIError(t *testing.T) {
 	defer server.Close()
 
 	client, _ := New(server.URL, "test-token", WithHTTPClient(server.Client()))
-	pusher := NewPusher(client, "ecosystem-qe", "testuser")
+	pusher := NewPusher(client, "test-project", "jane.doe", "")
 
 	artifact := pushArtifact{
 		RunID:      "12345",
@@ -207,10 +207,10 @@ func TestPusher_BuildComment(t *testing.T) {
 	}{
 		{
 			name:         "with submitter, RCA, and commit link",
-			submittedBy:  "dpopsuev",
-			rcaMessage:   "PTP clock sync failure",
+			submittedBy:  "jane.doe",
+			rcaMessage:   "Clock sync failure in NTP subsystem",
 			evidenceRefs: []string{"https://github.com/org/repo/commit/abc123", "log.txt"},
-			wantContain:  []string{"PTP clock sync failure", "Suspected commit(s)", "github.com/org/repo/commit/abc123", "by dpopsuev (via Asterisk)"},
+			wantContain:  []string{"Clock sync failure in NTP subsystem", "Suspected commit(s)", "github.com/org/repo/commit/abc123", "by jane.doe (via Origami)"},
 			wantAbsent:   []string{"log.txt"},
 		},
 		{
@@ -225,18 +225,18 @@ func TestPusher_BuildComment(t *testing.T) {
 			submittedBy:  "bob",
 			rcaMessage:   "some failure",
 			evidenceRefs: []string{"log.txt", "/var/log/messages"},
-			wantContain:  []string{"some failure", "by bob (via Asterisk)"},
+			wantContain:  []string{"some failure", "by bob (via Origami)"},
 			wantAbsent:   []string{"Suspected commit"},
 		},
 		{
 			name:        "no submitter, no RCA, no evidence",
 			submittedBy: "",
-			wantContain: []string{"Analysis was submitted (via Asterisk)"},
+			wantContain: []string{"Analysis was submitted (via Origami)"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Pusher{submittedBy: tt.submittedBy}
+			p := &Pusher{submittedBy: tt.submittedBy, appName: "Origami"}
 			got := p.buildComment(tt.rcaMessage, tt.evidenceRefs)
 			for _, want := range tt.wantContain {
 				if !strings.Contains(got, want) {

@@ -84,7 +84,7 @@ func NewDefectWriter(baseURL, apiKeyPath, project, submittedBy string) (rca.Defe
 	if err != nil {
 		return nil, err
 	}
-	return &DefectWriterRP{pusher: NewPusher(client, project, submittedBy)}, nil
+	return &DefectWriterRP{pusher: NewPusher(client, project, submittedBy, "")}, nil
 }
 
 func (p *DefectWriterRP) Push(verdict rca.RCAVerdict) (*rca.PushedRecord, error) {

@@ -17,11 +17,15 @@ type Pusher struct {
 	client      *Client
 	project     string
 	submittedBy string
+	appName     string
 }
 
 // NewPusher returns a Pusher that uses the given client, project, and submitter name.
-func NewPusher(client *Client, project string, submittedBy string) *Pusher {
-	return &Pusher{client: client, project: project, submittedBy: submittedBy}
+func NewPusher(client *Client, project, submittedBy, appName string) *Pusher {
+	if appName == "" {
+		appName = "Origami"
+	}
+	return &Pusher{client: client, project: project, submittedBy: submittedBy, appName: appName}
 }
 
 // Push reads the artifact, updates defect types in RP for each case with an
@@ -114,7 +118,7 @@ func (p *Pusher) buildComment(rcaMessage string, evidenceRefs []string) string {
 	if p.submittedBy != "" {
 		attribution += " by " + p.submittedBy
 	}
-	attribution += " (via Asterisk)"
+	attribution += " (via " + p.appName + ")"
 	parts = append(parts, attribution)
 
 	return strings.Join(parts, "\n\n---\n")

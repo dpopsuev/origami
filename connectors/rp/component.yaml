@@ -1,7 +1,7 @@
-component: asterisk-rp
-namespace: rp
+component: origami-reportportal
+namespace: reportportal
 version: "1.0.0"
-description: ReportPortal component — API client, envelope fetching, defect pushing, dataset ingestion
+description: ReportPortal connector — API client, envelope fetching, defect pushing, run discovery
 provides:
   transformers: []
   hooks: []
