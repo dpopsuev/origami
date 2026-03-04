@@ -8,14 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/dpopsuev/origami/dispatch"
 
-	"github.com/dpopsuev/origami/connectors/rp"
 	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
-	"github.com/dpopsuev/origami/schematics/rca/rpconv"
 	"github.com/dpopsuev/origami/schematics/rca/store"
 )
 
@@ -118,7 +115,9 @@ func resolveRPProject(flagValue string) string {
 }
 
 // loadEnvelopeForAnalyze resolves the envelope from a file path or launch ID.
-func loadEnvelopeForAnalyze(launch, dbPath, rpBase, rpKeyPath, rpProject string) *rcatype.Envelope {
+// When a SourceAdapter is available and the envelope is not cached, it fetches
+// from the remote tracker and saves to the store.
+func loadEnvelopeForAnalyze(launch, dbPath string, source rca.SourceAdapter) *rcatype.Envelope {
 	if _, err := os.Stat(launch); err == nil {
 		data, err := os.ReadFile(launch)
 		if err != nil {
@@ -142,18 +141,13 @@ func loadEnvelopeForAnalyze(launch, dbPath, rpBase, rpKeyPath, rpProject string)
 	defer st.Close()
 
 	env, _ := st.GetEnvelope(launchID)
-	if env == nil && rpBase != "" {
-		key, _ := rp.ReadAPIKey(rpKeyPath)
-		client, err := rp.New(rpBase, key, rp.WithTimeout(30*time.Second))
+	if env == nil && source != nil {
+		fetched, err := source.FetchEnvelope(launchID)
 		if err != nil {
 			return nil
 		}
-		fetcher := rp.NewFetcher(client, rpProject)
-		adapter := &rpconv.EnvelopeStoreAdapter{Store: st}
-		if err := rp.FetchAndSave(fetcher, adapter, launchID); err != nil {
-			return nil
-		}
-		env, _ = st.GetEnvelope(launchID)
+		_ = st.SaveEnvelope(launchID, fetched)
+		env = fetched
 	}
 	return env
 }

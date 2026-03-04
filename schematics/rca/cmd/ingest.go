@@ -24,34 +24,11 @@ type IngestConfig struct {
 	CandidateDir string
 }
 
-// LaunchInfo summarizes an RP launch for the circuit.
-type LaunchInfo struct {
-	ID          int       `json:"id"`
-	UUID        string    `json:"uuid"`
-	Name        string    `json:"name"`
-	Number      int       `json:"number"`
-	Status      string    `json:"status"`
-	StartTime   time.Time `json:"start_time"`
-	FailedCount int       `json:"failed_count"`
-}
+// LaunchInfo is an alias for rca.LaunchInfo.
+type LaunchInfo = rca.LaunchInfo
 
-// FailureInfo represents a parsed test failure from an RP launch.
-type FailureInfo struct {
-	LaunchID     int    `json:"launch_id"`
-	LaunchName   string `json:"launch_name"`
-	ItemID       int    `json:"item_id"`
-	ItemUUID     string `json:"item_uuid"`
-	TestName     string `json:"test_name"`
-	Status       string `json:"status"`
-	ErrorMessage string `json:"error_message"`
-	IssueType    string `json:"issue_type,omitempty"`
-	AutoAnalyzed bool   `json:"auto_analyzed,omitempty"`
-}
-
-// DedupKey generates the deduplication key for a failure.
-func (f *FailureInfo) DedupKey(project string) string {
-	return fmt.Sprintf("%s:%d:%d", project, f.LaunchID, f.ItemID)
-}
+// FailureInfo is an alias for rca.FailureInfo.
+type FailureInfo = rca.FailureInfo
 
 // SymptomMatch holds the result of matching a failure against the symptom catalog.
 type SymptomMatch struct {
@@ -85,11 +62,8 @@ type IngestSummary struct {
 	CandidatesCreated int `json:"candidates_created"`
 }
 
-// LaunchFetcher abstracts the RP API for listing launches.
-type LaunchFetcher interface {
-	FetchLaunches(project string, since time.Time) ([]LaunchInfo, error)
-	FetchFailures(launchID int) ([]FailureInfo, error)
-}
+// LaunchFetcher is an alias for rca.LaunchFetcher.
+type LaunchFetcher = rca.LaunchFetcher
 
 type ingestArtifact struct {
 	typ  string

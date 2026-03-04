@@ -53,6 +53,78 @@ requires:
 	}
 }
 
+func TestLoadComponentManifest_SocketsAndSatisfies(t *testing.T) {
+	dir := t.TempDir()
+	schematicPath := filepath.Join(dir, "schematic.yaml")
+	connectorPath := filepath.Join(dir, "connector.yaml")
+
+	schematicYAML := `
+component: my-schematic
+namespace: rca
+version: "1.0.0"
+provides:
+  transformers: [ctx-builder]
+requires:
+  origami: ">=0.3.0"
+  sockets:
+    - name: store
+      type: store.Store
+      description: Persistent storage backend
+    - name: source
+      type: SourceAdapter
+      description: External tracker integration
+`
+	connectorYAML := `
+component: my-connector
+namespace: sqlite
+version: "1.0.0"
+provides:
+  transformers: []
+requires:
+  origami: ">=0.3.0"
+satisfies:
+  - socket: store
+    factory: NewStore
+`
+	if err := os.WriteFile(schematicPath, []byte(schematicYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(connectorPath, []byte(connectorYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	sm, err := LoadComponentManifest(schematicPath)
+	if err != nil {
+		t.Fatalf("load schematic manifest: %v", err)
+	}
+	if len(sm.Requires.Sockets) != 2 {
+		t.Fatalf("sockets = %d, want 2", len(sm.Requires.Sockets))
+	}
+	if sm.Requires.Sockets[0].Name != "store" {
+		t.Errorf("socket[0].name = %q, want %q", sm.Requires.Sockets[0].Name, "store")
+	}
+	if sm.Requires.Sockets[0].Type != "store.Store" {
+		t.Errorf("socket[0].type = %q, want %q", sm.Requires.Sockets[0].Type, "store.Store")
+	}
+	if sm.Requires.Sockets[1].Name != "source" {
+		t.Errorf("socket[1].name = %q, want %q", sm.Requires.Sockets[1].Name, "source")
+	}
+
+	cm, err := LoadComponentManifest(connectorPath)
+	if err != nil {
+		t.Fatalf("load connector manifest: %v", err)
+	}
+	if len(cm.Satisfies) != 1 {
+		t.Fatalf("satisfies = %d, want 1", len(cm.Satisfies))
+	}
+	if cm.Satisfies[0].Socket != "store" {
+		t.Errorf("satisfies[0].socket = %q, want %q", cm.Satisfies[0].Socket, "store")
+	}
+	if cm.Satisfies[0].Factory != "NewStore" {
+		t.Errorf("satisfies[0].factory = %q, want %q", cm.Satisfies[0].Factory, "NewStore")
+	}
+}
+
 func TestLoadComponentManifest_MissingNamespace(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "component.yaml")

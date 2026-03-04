@@ -8,3 +8,10 @@ provides:
   hooks: [store.recall, store.triage, store.investigate, store.correlate, store.review]
 requires:
   origami: ">=0.3.0"
+  sockets:
+    - name: store
+      type: store.Store
+      description: Persistent storage for investigations, cases, and RCA results
+    - name: source
+      type: SourceAdapter
+      description: Fetches test failures and pushes results back to the tracker

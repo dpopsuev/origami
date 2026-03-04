@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -16,10 +15,8 @@ import (
 
 	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
-	"github.com/dpopsuev/origami/schematics/rca/rpconv"
 	"github.com/dpopsuev/origami/schematics/rca/scenarios"
 	"github.com/dpopsuev/origami/schematics/rca/store"
-	"github.com/dpopsuev/origami/connectors/rp"
 )
 
 var calibrateFlags struct {
@@ -77,22 +74,20 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// Resolve RP-sourced cases before adapter creation so adapters see real data.
 	var rpFetcher rcatype.EnvelopeFetcher
 	if calibrateFlags.rpBase != "" {
 		rpProject := resolveRPProject(calibrateFlags.rpProject)
 		if rpProject == "" {
 			return fmt.Errorf("RP project name is required when using RP API\n\nSet it via environment variable:\n  export ASTERISK_RP_PROJECT=your-project-name\n\nOr use the --rp-project flag:\n  asterisk calibrate --rp-base-url ... --rp-project your-project-name")
 		}
-		key, err := rp.ReadAPIKey(calibrateFlags.rpKeyPath)
-		if err != nil {
-			return fmt.Errorf("read RP API key from %s: %w", calibrateFlags.rpKeyPath, err)
+		if cfg.sourceFactory == nil {
+			return fmt.Errorf("no source connector configured (source factory not injected)")
 		}
-		client, err := rp.New(calibrateFlags.rpBase, key, rp.WithTimeout(30*time.Second))
+		source, err := cfg.sourceFactory(calibrateFlags.rpBase, calibrateFlags.rpKeyPath, rpProject)
 		if err != nil {
-			return fmt.Errorf("create RP client: %w", err)
+			return fmt.Errorf("create source adapter: %w", err)
 		}
-		rpFetcher = &rpconv.RPFetcherAdapter{Inner: rp.NewFetcher(client, rpProject)}
+		rpFetcher = source.EnvelopeFetcher()
 		if err := rca.ResolveRPCases(rpFetcher, scenario); err != nil {
 			return fmt.Errorf("resolve RP-sourced cases: %w", err)
 		}

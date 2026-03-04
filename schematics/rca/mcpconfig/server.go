@@ -11,13 +11,11 @@ import (
 
 	framework "github.com/dpopsuev/origami"
 	cal "github.com/dpopsuev/origami/calibrate"
-	"github.com/dpopsuev/origami/connectors/rp"
 	"github.com/dpopsuev/origami/dispatch"
 	"github.com/dpopsuev/origami/kami"
 	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
-	"github.com/dpopsuev/origami/schematics/rca/rpconv"
 	"github.com/dpopsuev/origami/schematics/rca/scenarios"
 	"github.com/dpopsuev/origami/schematics/rca/store"
 	"github.com/dpopsuev/origami/view"
@@ -31,19 +29,32 @@ var (
 // Server wraps the generic CircuitServer with RCA-specific domain hooks.
 type Server struct {
 	*fwmcp.CircuitServer
-	ProductName string
-	ProjectRoot string
+	ProductName   string
+	ProjectRoot   string
+	SourceFactory rca.SourceFactory
 
 	KamiServer *kami.Server
 	store      *view.CircuitStore
 	bridge     *kami.EventBridge
 }
 
+// ServerOption configures an RCA MCP server.
+type ServerOption func(*Server)
+
+// WithSourceFactory injects a factory for creating SourceAdapters from
+// connection parameters provided in MCP start_circuit requests.
+func WithSourceFactory(f rca.SourceFactory) ServerOption {
+	return func(s *Server) { s.SourceFactory = f }
+}
+
 // NewServer creates an RCA MCP server. The productName identifies the consumer
 // (e.g. "asterisk"). Pass it from the consumer's manifest or CLI config.
-func NewServer(productName string) *Server {
+func NewServer(productName string, opts ...ServerOption) *Server {
 	cwd, _ := os.Getwd()
 	s := &Server{ProductName: productName, ProjectRoot: cwd}
+	for _, opt := range opts {
+		opt(s)
+	}
 	s.CircuitServer = fwmcp.NewCircuitServer(s.buildConfig())
 	return s
 }
@@ -161,15 +172,14 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		if rpProject == "" {
 			return nil, fwmcp.SessionMeta{}, fmt.Errorf("rp_project is required when rp_base_url is set")
 		}
-		key, err := rp.ReadAPIKey(".rp-api-key")
-		if err != nil {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("read RP API key: %w", err)
+		if s.SourceFactory == nil {
+			return nil, fwmcp.SessionMeta{}, fmt.Errorf("no source connector configured (SourceFactory not set)")
 		}
-		client, err := rp.New(rpBaseURL, key, rp.WithTimeout(30*time.Second))
+		source, err := s.SourceFactory(rpBaseURL, ".rp-api-key", rpProject)
 		if err != nil {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("create RP client: %w", err)
+			return nil, fwmcp.SessionMeta{}, fmt.Errorf("create source adapter: %w", err)
 		}
-		rpFetcher = &rpconv.RPFetcherAdapter{Inner: rp.NewFetcher(client, rpProject)}
+		rpFetcher = source.EnvelopeFetcher()
 		if err := rca.ResolveRPCases(rpFetcher, scenario); err != nil {
 			return nil, fwmcp.SessionMeta{}, fmt.Errorf("resolve RP-sourced cases: %w", err)
 		}

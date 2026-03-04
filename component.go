@@ -19,6 +19,20 @@ type Component struct {
 	Hooks        HookRegistry
 }
 
+// SocketDef declares a typed dependency slot that a schematic requires.
+// Connectors satisfy sockets by declaring a matching factory in their manifest.
+type SocketDef struct {
+	Name        string `yaml:"name"`
+	Type        string `yaml:"type"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// SatisfiesDef declares that a connector provides a factory for a named socket.
+type SatisfiesDef struct {
+	Socket  string `yaml:"socket"`
+	Factory string `yaml:"factory"`
+}
+
 // ComponentManifest is the YAML schema for component.yaml files.
 type ComponentManifest struct {
 	Component   string `yaml:"component"`
@@ -31,8 +45,10 @@ type ComponentManifest struct {
 		Hooks        []string `yaml:"hooks,omitempty"`
 	} `yaml:"provides"`
 	Requires struct {
-		Origami string `yaml:"origami,omitempty"`
+		Origami string      `yaml:"origami,omitempty"`
+		Sockets []SocketDef `yaml:"sockets,omitempty"`
 	} `yaml:"requires,omitempty"`
+	Satisfies []SatisfiesDef `yaml:"satisfies,omitempty"`
 }
 
 // LoadComponentManifest reads and parses a component.yaml file.

@@ -86,7 +86,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 
 	if rpBase != "" {
-		if err := checkTokenFile(analyzeFlags.rpKeyPath); err != nil {
+		if err := checkTokenFileViaOption(analyzeFlags.rpKeyPath); err != nil {
 			return err
 		}
 	}
@@ -111,7 +111,15 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("RP project name is required when using RP API\n\nSet it via environment variable:\n  export ASTERISK_RP_PROJECT=your-project-name\n\nOr use the --rp-project flag:\n  asterisk analyze %s --rp-project your-project-name", launch)
 	}
 
-	env := loadEnvelopeForAnalyze(launch, analyzeFlags.dbPath, rpBase, analyzeFlags.rpKeyPath, rpProject)
+	var source rca.SourceAdapter
+	if rpBase != "" && cfg.sourceFactory != nil {
+		var err error
+		source, err = cfg.sourceFactory(rpBase, analyzeFlags.rpKeyPath, rpProject)
+		if err != nil {
+			return fmt.Errorf("create source adapter: %w", err)
+		}
+	}
+	env := loadEnvelopeForAnalyze(launch, analyzeFlags.dbPath, source)
 	if env == nil {
 		return fmt.Errorf("could not load envelope for launch %q", launch)
 	}

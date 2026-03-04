@@ -1,15 +1,13 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/user"
-	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/dpopsuev/origami/connectors/rp"
+	"github.com/dpopsuev/origami/schematics/rca"
 )
 
 var pushFlags struct {
@@ -38,47 +36,38 @@ func init() {
 }
 
 func runPush(cmd *cobra.Command, _ []string) error {
-	pushStore := rp.NewMemPushStore()
-	var pusher rp.DefectPusher = rp.DefaultDefectPusher{}
+	var pusher rca.DefectPusher = rca.DefaultDefectPusher{}
 	if pushFlags.rpBase != "" {
 		rpProject := resolveRPProject(pushFlags.rpProject)
 		if rpProject == "" {
 			return fmt.Errorf("RP project name is required when using RP API\n\nSet it via environment variable:\n  export ASTERISK_RP_PROJECT=your-project-name\n\nOr use the --rp-project flag:\n  asterisk push -f artifact.json --rp-base-url ... --rp-project your-project-name")
 		}
-		key, err := rp.ReadAPIKey(pushFlags.rpKeyPath)
-		if err != nil {
-			return fmt.Errorf("read API key: %w", err)
+		if cfg.pusherFactory == nil {
+			return fmt.Errorf("no defect pusher configured (pusher factory not injected)")
 		}
-		client, err := rp.New(pushFlags.rpBase, key, rp.WithTimeout(30*time.Second))
+		submitter := resolveSubmitter()
+		p, err := cfg.pusherFactory(pushFlags.rpBase, pushFlags.rpKeyPath, rpProject, submitter)
 		if err != nil {
-			return fmt.Errorf("create RP client: %w", err)
+			return fmt.Errorf("create defect pusher: %w", err)
 		}
-		submitter := resolveSubmitter(client)
-		pusher = rp.NewPusher(client, rpProject, submitter)
+		pusher = p
 	}
-	if err := pusher.Push(pushFlags.artifactPath, pushStore, "", ""); err != nil {
+	rec, err := pusher.Push(pushFlags.artifactPath, "", "")
+	if err != nil {
 		return fmt.Errorf("push: %w", err)
 	}
-	rec := pushStore.LastPushed()
 	if rec != nil {
 		fmt.Fprintf(cmd.OutOrStdout(), "Pushed: launch=%s defect_type=%s\n", rec.LaunchID, vocabNameWithCode(rec.DefectType))
 	}
 	return nil
 }
 
-func resolveSubmitter(client *rp.Client) string {
+func resolveSubmitter() string {
 	if pushFlags.submittedBy != "" {
 		return pushFlags.submittedBy
 	}
 	if v := os.Getenv("ASTERISK_USER"); v != "" {
 		return v
-	}
-	if client != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if u, err := client.GetCurrentUser(ctx); err == nil && u.UserID != "" {
-			return u.UserID
-		}
 	}
 	if u, err := user.Current(); err == nil && u.Username != "" {
 		return u.Username

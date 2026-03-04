@@ -7,3 +7,6 @@ provides:
   hooks: []
 requires:
   origami: ">=0.3.0"
+satisfies:
+  - socket: source
+    factory: NewSourceAdapter
