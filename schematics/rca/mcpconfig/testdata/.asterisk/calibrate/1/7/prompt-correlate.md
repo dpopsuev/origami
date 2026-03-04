@@ -47,13 +47,13 @@ Determine whether this case's root cause matches another case in the same launch
 | Symptom | OCP-83300 PTP config cleanup |
 | Status | active |
 | Occurrences | 1 |
-| First seen | 2026-03-04T15:45:06Z |
-| Last seen | 2026-03-04T15:45:06Z |
+| First seen | 2026-03-04T16:39:26Z |
+| Last seen | 2026-03-04T16:39:26Z |
 
 
 ## Prior RCAs for this symptom
 
-| RCA #4 | root cause from subagent-0 | `pb001` | open | Versions:  |
+| RCA #4 | root cause from subagent-1 | `pb001` | open | Versions:  |
 
 
 ## Sibling failures in this launch

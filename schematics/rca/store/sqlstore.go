@@ -7,29 +7,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/connectors/sqlite"
+	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 )
 
 func nowUTC() string { return time.Now().UTC().Format(time.RFC3339) }
 
-func nullStr(ns sql.NullString) string {
-	if ns.Valid {
-		return ns.String
-	}
-	return ""
-}
-
-func nullFloat(nf sql.NullFloat64) float64 {
-	if nf.Valid {
-		return nf.Float64
-	}
-	return 0
-}
-
 // SqlStore implements Store with SQLite via the Origami sqlite component.
 type SqlStore struct {
 	db *sqlite.DB
+	es *sqlite.EntityStore
 }
 
 // Open opens or creates a SQLite DB at path with the YAML-defined schema.
@@ -42,7 +29,7 @@ func Open(path string) (*SqlStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
-	return &SqlStore{db: db}, nil
+	return &SqlStore{db: db, es: sqlite.NewEntityStore(db)}, nil
 }
 
 // OpenMemory opens an in-memory SQLite DB for testing.
@@ -55,7 +42,7 @@ func OpenMemory() (*SqlStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open memory sqlite: %w", err)
 	}
-	return &SqlStore{db: db}, nil
+	return &SqlStore{db: db, es: sqlite.NewEntityStore(db)}, nil
 }
 
 func (s *SqlStore) Close() error {
@@ -65,124 +52,6 @@ func (s *SqlStore) Close() error {
 // RawDB returns the underlying *sqlite.DB for direct access.
 func (s *SqlStore) RawDB() *sqlite.DB {
 	return s.db
-}
-
-func (s *SqlStore) GetCase(caseID int64) (*Case, error) {
-	var c Case
-	var rcaID, symptomID, jobID, logTrunc sql.NullInt64
-	var srcItemID, externalRef, errMsg, logSnip, startedAt, endedAt sql.NullString
-	err := s.db.QueryRow(
-		`SELECT id, job_id, launch_id, source_item_id, name, external_ref, status,
-		        symptom_id, rca_id, error_message, log_snippet, log_truncated,
-		        started_at, ended_at, created_at, updated_at
-		 FROM cases WHERE id = ?`,
-		caseID,
-	).Scan(&c.ID, &jobID, &c.LaunchID, &srcItemID,
-		&c.Name, &externalRef, &c.Status,
-		&symptomID, &rcaID, &errMsg, &logSnip, &logTrunc,
-		&startedAt, &endedAt, &c.CreatedAt, &c.UpdatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("get case: %w", err)
-	}
-	c.JobID = jobID.Int64
-	c.RCAID = rcaID.Int64
-	c.SymptomID = symptomID.Int64
-	c.SourceItemID = nullStr(srcItemID)
-	c.ExternalRef = nullStr(externalRef)
-	c.ErrorMessage = nullStr(errMsg)
-	c.LogSnippet = nullStr(logSnip)
-	c.StartedAt = nullStr(startedAt)
-	c.EndedAt = nullStr(endedAt)
-	c.LogTruncated = logTrunc.Valid && logTrunc.Int64 == 1
-	return &c, nil
-}
-
-func (s *SqlStore) LinkCaseToRCA(caseID, rcaID int64) error {
-	_, err := s.db.Exec("UPDATE cases SET rca_id = ? WHERE id = ?", rcaID, caseID)
-	if err != nil {
-		return fmt.Errorf("link case to rca: %w", err)
-	}
-	return nil
-}
-
-func (s *SqlStore) GetRCA(rcaID int64) (*RCA, error) {
-	var r RCA
-	var cat, comp, affVer, evRefs, jiraID, jiraLink sql.NullString
-	var resolvedAt, verifiedAt, archivedAt sql.NullString
-	var convScore sql.NullFloat64
-	err := s.db.QueryRow(
-		`SELECT id, title, description, defect_type, category, component,
-		        affected_versions, evidence_refs, convergence_score,
-		        jira_ticket_id, jira_link, status, created_at,
-		        resolved_at, verified_at, archived_at
-		 FROM rcas WHERE id = ?`,
-		rcaID,
-	).Scan(&r.ID, &r.Title, &r.Description, &r.DefectType,
-		&cat, &comp, &affVer, &evRefs, &convScore,
-		&jiraID, &jiraLink, &r.Status, &r.CreatedAt,
-		&resolvedAt, &verifiedAt, &archivedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("get rca: %w", err)
-	}
-	r.Category = nullStr(cat)
-	r.Component = nullStr(comp)
-	r.AffectedVersions = nullStr(affVer)
-	r.EvidenceRefs = nullStr(evRefs)
-	r.ConvergenceScore = nullFloat(convScore)
-	r.JiraTicketID = nullStr(jiraID)
-	r.JiraLink = nullStr(jiraLink)
-	r.ResolvedAt = nullStr(resolvedAt)
-	r.VerifiedAt = nullStr(verifiedAt)
-	r.ArchivedAt = nullStr(archivedAt)
-	return &r, nil
-}
-
-func (s *SqlStore) ListRCAs() ([]*RCA, error) {
-	rows, err := s.db.Query(
-		`SELECT id, title, description, defect_type, category, component,
-		        affected_versions, evidence_refs, convergence_score,
-		        jira_ticket_id, jira_link, status, created_at,
-		        resolved_at, verified_at, archived_at
-		 FROM rcas ORDER BY id`,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list rcas: %w", err)
-	}
-	defer rows.Close()
-	var list []*RCA
-	for rows.Next() {
-		var r RCA
-		var cat, comp, affVer, evRefs, jiraID, jiraLink sql.NullString
-		var resolvedAt, verifiedAt, archivedAt sql.NullString
-		var convScore sql.NullFloat64
-		if err := rows.Scan(&r.ID, &r.Title, &r.Description, &r.DefectType,
-			&cat, &comp, &affVer, &evRefs, &convScore,
-			&jiraID, &jiraLink, &r.Status, &r.CreatedAt,
-			&resolvedAt, &verifiedAt, &archivedAt); err != nil {
-			return nil, fmt.Errorf("scan rca: %w", err)
-		}
-		r.Category = nullStr(cat)
-		r.Component = nullStr(comp)
-		r.AffectedVersions = nullStr(affVer)
-		r.EvidenceRefs = nullStr(evRefs)
-		r.ConvergenceScore = nullFloat(convScore)
-		r.JiraTicketID = nullStr(jiraID)
-		r.JiraLink = nullStr(jiraLink)
-		r.ResolvedAt = nullStr(resolvedAt)
-		r.VerifiedAt = nullStr(verifiedAt)
-		r.ArchivedAt = nullStr(archivedAt)
-		list = append(list, &r)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("list rcas: %w", err)
-	}
-	return list, nil
 }
 
 func (s *SqlStore) SaveEnvelope(runID string, env *rcatype.Envelope) error {

@@ -1,433 +1,332 @@
 package store
 
 import (
-	"database/sql"
-	"errors"
 	"fmt"
+
+	"github.com/dpopsuev/origami/connectors/sqlite"
 )
+
+// --- Row ↔ struct conversion helpers ---
+
+func suiteFromRow(r sqlite.Row) *InvestigationSuite {
+	return &InvestigationSuite{
+		ID: r.Int64("id"), Name: r.String("name"), Description: r.String("description"),
+		Status: r.String("status"), CreatedAt: r.String("created_at"), ClosedAt: r.String("closed_at"),
+	}
+}
+
+func versionFromRow(r sqlite.Row) *Version {
+	return &Version{ID: r.Int64("id"), Label: r.String("label"), BuildID: r.String("build_id")}
+}
+
+func circuitFromRow(r sqlite.Row) *Circuit {
+	return &Circuit{
+		ID: r.Int64("id"), SuiteID: r.Int64("suite_id"), VersionID: r.Int64("version_id"),
+		Name: r.String("name"), SourceRunID: r.String("source_run_id"), Status: r.String("status"),
+		StartedAt: r.String("started_at"), EndedAt: r.String("ended_at"),
+	}
+}
+
+func launchFromRow(r sqlite.Row) *Launch {
+	return &Launch{
+		ID: r.Int64("id"), CircuitID: r.Int64("circuit_id"),
+		SourceRunID: r.String("source_run_id"), SourceRunUUID: r.String("source_run_uuid"),
+		Name: r.String("name"), Status: r.String("status"),
+		StartedAt: r.String("started_at"), EndedAt: r.String("ended_at"),
+		EnvAttributes: r.String("env_attributes"), GitBranch: r.String("git_branch"),
+		GitCommit: r.String("git_commit"), EnvelopePayload: r.Bytes("envelope_payload"),
+	}
+}
+
+func jobFromRow(r sqlite.Row) *Job {
+	return &Job{
+		ID: r.Int64("id"), LaunchID: r.Int64("launch_id"),
+		SourceItemID: r.String("source_item_id"), Name: r.String("name"),
+		ClockType: r.String("clock_type"), Status: r.String("status"),
+		StatsTotal: r.Int("stats_total"), StatsFailed: r.Int("stats_failed"),
+		StatsPassed: r.Int("stats_passed"), StatsSkipped: r.Int("stats_skipped"),
+		StartedAt: r.String("started_at"), EndedAt: r.String("ended_at"),
+	}
+}
+
+func caseFromRow(r sqlite.Row) *Case {
+	return &Case{
+		ID: r.Int64("id"), JobID: r.Int64("job_id"), LaunchID: r.Int64("launch_id"),
+		SourceItemID: r.String("source_item_id"), Name: r.String("name"),
+		ExternalRef: r.String("external_ref"), Status: r.String("status"),
+		SymptomID: r.Int64("symptom_id"), RCAID: r.Int64("rca_id"),
+		ErrorMessage: r.String("error_message"), LogSnippet: r.String("log_snippet"),
+		LogTruncated: r.Bool("log_truncated"),
+		StartedAt: r.String("started_at"), EndedAt: r.String("ended_at"),
+		CreatedAt: r.String("created_at"), UpdatedAt: r.String("updated_at"),
+	}
+}
+
+func triageFromRow(r sqlite.Row) *Triage {
+	return &Triage{
+		ID: r.Int64("id"), CaseID: r.Int64("case_id"),
+		SymptomCategory: r.String("symptom_category"), Severity: r.String("severity"),
+		DefectTypeHypothesis: r.String("defect_type_hypothesis"),
+		SkipInvestigation: r.Bool("skip_investigation"),
+		ClockSkewSuspected: r.Bool("clock_skew_suspected"),
+		CascadeSuspected: r.Bool("cascade_suspected"),
+		CandidateRepos: r.String("candidate_repos"), DataQualityNotes: r.String("data_quality_notes"),
+		CreatedAt: r.String("created_at"),
+	}
+}
+
+func symptomFromRow(r sqlite.Row) *Symptom {
+	return &Symptom{
+		ID: r.Int64("id"), Fingerprint: r.String("fingerprint"), Name: r.String("name"),
+		Description: r.String("description"), ErrorPattern: r.String("error_pattern"),
+		TestNamePattern: r.String("test_name_pattern"), Component: r.String("component"),
+		Severity: r.String("severity"), FirstSeenAt: r.String("first_seen_at"),
+		LastSeenAt: r.String("last_seen_at"), OccurrenceCount: r.Int("occurrence_count"),
+		Status: r.String("status"),
+	}
+}
+
+func rcaFromRow(r sqlite.Row) *RCA {
+	return &RCA{
+		ID: r.Int64("id"), Title: r.String("title"), Description: r.String("description"),
+		DefectType: r.String("defect_type"), Category: r.String("category"),
+		Component: r.String("component"), AffectedVersions: r.String("affected_versions"),
+		EvidenceRefs: r.String("evidence_refs"), ConvergenceScore: r.Float64("convergence_score"),
+		JiraTicketID: r.String("jira_ticket_id"), JiraLink: r.String("jira_link"),
+		Status: r.String("status"), CreatedAt: r.String("created_at"),
+		ResolvedAt: r.String("resolved_at"), VerifiedAt: r.String("verified_at"),
+		ArchivedAt: r.String("archived_at"),
+	}
+}
+
+func symptomRCAFromRow(r sqlite.Row) *SymptomRCA {
+	return &SymptomRCA{
+		ID: r.Int64("id"), SymptomID: r.Int64("symptom_id"), RCAID: r.Int64("rca_id"),
+		Confidence: r.Float64("confidence"), Notes: r.String("notes"),
+		LinkedAt: r.String("linked_at"),
+	}
+}
+
+func rowsTo[T any](rows []sqlite.Row, fn func(sqlite.Row) *T) []*T {
+	out := make([]*T, len(rows))
+	for i, r := range rows {
+		out[i] = fn(r)
+	}
+	return out
+}
+
+// --- nil helpers for optional SQL params ---
+
+func nilIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func nilIfZero(n int) any {
+	if n == 0 {
+		return nil
+	}
+	return n
+}
+
+func nilIfZero64(n int64) any {
+	if n == 0 {
+		return nil
+	}
+	return n
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
 
 // --- Suite ---
 
 func (s *SqlStore) CreateSuite(suite *InvestigationSuite) (int64, error) {
 	if suite == nil {
-		return 0, errors.New("suite is nil")
+		return 0, fmt.Errorf("suite is nil")
 	}
-	now := nowUTC()
 	if suite.Status == "" {
 		suite.Status = "open"
 	}
 	if suite.CreatedAt == "" {
-		suite.CreatedAt = now
+		suite.CreatedAt = nowUTC()
 	}
-	res, err := s.db.Exec(
-		`INSERT INTO investigation_suites(name, description, status, created_at, closed_at)
-		 VALUES(?, ?, ?, ?, ?)`,
-		suite.Name, suite.Description, suite.Status, suite.CreatedAt, nilIfEmpty(suite.ClosedAt),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert suite: %w", err)
-	}
-	return res.LastInsertId()
+	return s.es.Create("investigation_suites", sqlite.Row{
+		"name": suite.Name, "description": nilIfEmpty(suite.Description),
+		"status": suite.Status, "created_at": suite.CreatedAt, "closed_at": nilIfEmpty(suite.ClosedAt),
+	})
 }
 
 func (s *SqlStore) GetSuite(id int64) (*InvestigationSuite, error) {
-	var v InvestigationSuite
-	var closedAt sql.NullString
-	err := s.db.QueryRow(
-		`SELECT id, name, description, status, created_at, closed_at
-		 FROM investigation_suites WHERE id = ?`, id,
-	).Scan(&v.ID, &v.Name, &v.Description, &v.Status, &v.CreatedAt, &closedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.Get("investigation_suites", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get suite: %w", err)
-	}
-	v.ClosedAt = nullStr(closedAt)
-	return &v, nil
+	return suiteFromRow(row), nil
 }
 
 func (s *SqlStore) ListSuites() ([]*InvestigationSuite, error) {
-	rows, err := s.db.Query(
-		`SELECT id, name, description, status, created_at, closed_at
-		 FROM investigation_suites ORDER BY id`,
-	)
+	rows, err := s.es.List("investigation_suites", nil, "")
 	if err != nil {
-		return nil, fmt.Errorf("list suites: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	var out []*InvestigationSuite
-	for rows.Next() {
-		var v InvestigationSuite
-		var closedAt sql.NullString
-		if err := rows.Scan(&v.ID, &v.Name, &v.Description, &v.Status, &v.CreatedAt, &closedAt); err != nil {
-			return nil, fmt.Errorf("scan suite: %w", err)
-		}
-		v.ClosedAt = nullStr(closedAt)
-		out = append(out, &v)
-	}
-	return out, rows.Err()
+	return rowsTo(rows, suiteFromRow), nil
 }
 
 func (s *SqlStore) CloseSuite(id int64) error {
-	now := nowUTC()
-	res, err := s.db.Exec(
-		`UPDATE investigation_suites SET status = 'closed', closed_at = ? WHERE id = ?`,
-		now, id,
-	)
-	if err != nil {
-		return fmt.Errorf("close suite: %w", err)
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return fmt.Errorf("suite %d not found", id)
-	}
-	return nil
+	return s.es.Update("investigation_suites", id, sqlite.Row{
+		"status": "closed", "closed_at": nowUTC(),
+	})
 }
 
 // --- Version ---
 
 func (s *SqlStore) CreateVersion(v *Version) (int64, error) {
 	if v == nil {
-		return 0, errors.New("version is nil")
+		return 0, fmt.Errorf("version is nil")
 	}
-	res, err := s.db.Exec(
-		"INSERT INTO versions(label, build_id) VALUES(?, ?)",
-		v.Label, nilIfEmpty(v.BuildID),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert version: %w", err)
-	}
-	return res.LastInsertId()
+	return s.es.Create("versions", sqlite.Row{
+		"label": v.Label, "build_id": nilIfEmpty(v.BuildID),
+	})
 }
 
 func (s *SqlStore) GetVersion(id int64) (*Version, error) {
-	var v Version
-	var buildID sql.NullString
-	err := s.db.QueryRow(
-		"SELECT id, label, build_id FROM versions WHERE id = ?", id,
-	).Scan(&v.ID, &v.Label, &buildID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.Get("versions", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get version: %w", err)
-	}
-	v.BuildID = nullStr(buildID)
-	return &v, nil
+	return versionFromRow(row), nil
 }
 
 func (s *SqlStore) GetVersionByLabel(label string) (*Version, error) {
-	var v Version
-	var buildID sql.NullString
-	err := s.db.QueryRow(
-		"SELECT id, label, build_id FROM versions WHERE label = ?", label,
-	).Scan(&v.ID, &v.Label, &buildID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.GetBy("versions", sqlite.Row{"label": label})
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get version by label: %w", err)
-	}
-	v.BuildID = nullStr(buildID)
-	return &v, nil
+	return versionFromRow(row), nil
 }
 
 func (s *SqlStore) ListVersions() ([]*Version, error) {
-	rows, err := s.db.Query("SELECT id, label, build_id FROM versions ORDER BY id")
+	rows, err := s.es.List("versions", nil, "")
 	if err != nil {
-		return nil, fmt.Errorf("list versions: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	var out []*Version
-	for rows.Next() {
-		var v Version
-		var buildID sql.NullString
-		if err := rows.Scan(&v.ID, &v.Label, &buildID); err != nil {
-			return nil, fmt.Errorf("scan version: %w", err)
-		}
-		v.BuildID = nullStr(buildID)
-		out = append(out, &v)
-	}
-	return out, rows.Err()
+	return rowsTo(rows, versionFromRow), nil
 }
 
 // --- Circuit ---
 
 func (s *SqlStore) CreateCircuit(p *Circuit) (int64, error) {
 	if p == nil {
-		return 0, errors.New("circuit is nil")
+		return 0, fmt.Errorf("circuit is nil")
 	}
-	res, err := s.db.Exec(
-		`INSERT INTO circuits(suite_id, version_id, name, source_run_id, status, started_at, ended_at)
-		 VALUES(?, ?, ?, ?, ?, ?, ?)`,
-		p.SuiteID, p.VersionID, p.Name, nilIfEmpty(p.SourceRunID), p.Status,
-		nilIfEmpty(p.StartedAt), nilIfEmpty(p.EndedAt),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert circuit: %w", err)
-	}
-	return res.LastInsertId()
+	return s.es.Create("circuits", sqlite.Row{
+		"suite_id": p.SuiteID, "version_id": p.VersionID, "name": p.Name,
+		"source_run_id": nilIfEmpty(p.SourceRunID), "status": p.Status,
+		"started_at": nilIfEmpty(p.StartedAt), "ended_at": nilIfEmpty(p.EndedAt),
+	})
 }
 
 func (s *SqlStore) GetCircuit(id int64) (*Circuit, error) {
-	var p Circuit
-	var srcRunID sql.NullString
-	var startedAt, endedAt sql.NullString
-	err := s.db.QueryRow(
-		`SELECT id, suite_id, version_id, name, source_run_id, status, started_at, ended_at
-		 FROM circuits WHERE id = ?`, id,
-	).Scan(&p.ID, &p.SuiteID, &p.VersionID, &p.Name, &srcRunID, &p.Status, &startedAt, &endedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.Get("circuits", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get circuit: %w", err)
-	}
-	p.SourceRunID = nullStr(srcRunID)
-	p.StartedAt = nullStr(startedAt)
-	p.EndedAt = nullStr(endedAt)
-	return &p, nil
+	return circuitFromRow(row), nil
 }
 
 func (s *SqlStore) ListCircuitsBySuite(suiteID int64) ([]*Circuit, error) {
-	rows, err := s.db.Query(
-		`SELECT id, suite_id, version_id, name, source_run_id, status, started_at, ended_at
-		 FROM circuits WHERE suite_id = ? ORDER BY id`, suiteID,
-	)
+	rows, err := s.es.List("circuits", sqlite.Row{"suite_id": suiteID}, "")
 	if err != nil {
-		return nil, fmt.Errorf("list circuits: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	var out []*Circuit
-	for rows.Next() {
-		var p Circuit
-		var srcRunID sql.NullString
-		var startedAt, endedAt sql.NullString
-		if err := rows.Scan(&p.ID, &p.SuiteID, &p.VersionID, &p.Name, &srcRunID, &p.Status, &startedAt, &endedAt); err != nil {
-			return nil, fmt.Errorf("scan circuit: %w", err)
-		}
-		p.SourceRunID = nullStr(srcRunID)
-		p.StartedAt = nullStr(startedAt)
-		p.EndedAt = nullStr(endedAt)
-		out = append(out, &p)
-	}
-	return out, rows.Err()
+	return rowsTo(rows, circuitFromRow), nil
 }
 
 // --- Launch ---
 
 func (s *SqlStore) CreateLaunch(l *Launch) (int64, error) {
 	if l == nil {
-		return 0, errors.New("launch is nil")
+		return 0, fmt.Errorf("launch is nil")
 	}
-	res, err := s.db.Exec(
-		`INSERT INTO launches(circuit_id, source_run_id, source_run_uuid, name, status,
-		        started_at, ended_at, env_attributes, git_branch, git_commit, envelope_payload)
-		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		l.CircuitID, nilIfEmpty(l.SourceRunID), nilIfEmpty(l.SourceRunUUID),
-		nilIfEmpty(l.Name), nilIfEmpty(l.Status),
-		nilIfEmpty(l.StartedAt), nilIfEmpty(l.EndedAt),
-		nilIfEmpty(l.EnvAttributes), nilIfEmpty(l.GitBranch), nilIfEmpty(l.GitCommit),
-		l.EnvelopePayload,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert launch: %w", err)
-	}
-	return res.LastInsertId()
+	return s.es.Create("launches", sqlite.Row{
+		"circuit_id": l.CircuitID, "source_run_id": nilIfEmpty(l.SourceRunID),
+		"source_run_uuid": nilIfEmpty(l.SourceRunUUID), "name": nilIfEmpty(l.Name),
+		"status": nilIfEmpty(l.Status), "started_at": nilIfEmpty(l.StartedAt),
+		"ended_at": nilIfEmpty(l.EndedAt), "env_attributes": nilIfEmpty(l.EnvAttributes),
+		"git_branch": nilIfEmpty(l.GitBranch), "git_commit": nilIfEmpty(l.GitCommit),
+		"envelope_payload": l.EnvelopePayload,
+	})
 }
 
 func (s *SqlStore) GetLaunch(id int64) (*Launch, error) {
-	var l Launch
-	var srcRunID, srcRunUUID, name, status, startedAt, endedAt sql.NullString
-	var envAttr, gitBranch, gitCommit sql.NullString
-	err := s.db.QueryRow(
-		`SELECT id, circuit_id, source_run_id, source_run_uuid, name, status,
-		        started_at, ended_at, env_attributes, git_branch, git_commit, envelope_payload
-		 FROM launches WHERE id = ?`, id,
-	).Scan(&l.ID, &l.CircuitID, &srcRunID, &srcRunUUID, &name, &status,
-		&startedAt, &endedAt, &envAttr, &gitBranch, &gitCommit, &l.EnvelopePayload)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.Get("launches", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get launch: %w", err)
-	}
-	l.SourceRunID = nullStr(srcRunID)
-	l.SourceRunUUID = nullStr(srcRunUUID)
-	l.Name = nullStr(name)
-	l.Status = nullStr(status)
-	l.StartedAt = nullStr(startedAt)
-	l.EndedAt = nullStr(endedAt)
-	l.EnvAttributes = nullStr(envAttr)
-	l.GitBranch = nullStr(gitBranch)
-	l.GitCommit = nullStr(gitCommit)
-	return &l, nil
+	return launchFromRow(row), nil
 }
 
 func (s *SqlStore) GetLaunchBySourceRunID(circuitID int64, sourceRunID string) (*Launch, error) {
-	var l Launch
-	var srcRunID, srcRunUUID, name, status, startedAt, endedAt sql.NullString
-	var envAttr, gitBranch, gitCommit sql.NullString
-	err := s.db.QueryRow(
-		`SELECT id, circuit_id, source_run_id, source_run_uuid, name, status,
-		        started_at, ended_at, env_attributes, git_branch, git_commit, envelope_payload
-		 FROM launches WHERE circuit_id = ? AND source_run_id = ?`, circuitID, sourceRunID,
-	).Scan(&l.ID, &l.CircuitID, &srcRunID, &srcRunUUID, &name, &status,
-		&startedAt, &endedAt, &envAttr, &gitBranch, &gitCommit, &l.EnvelopePayload)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.GetBy("launches", sqlite.Row{
+		"circuit_id": circuitID, "source_run_id": sourceRunID,
+	})
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get launch by source run id: %w", err)
-	}
-	l.SourceRunID = nullStr(srcRunID)
-	l.SourceRunUUID = nullStr(srcRunUUID)
-	l.Name = nullStr(name)
-	l.Status = nullStr(status)
-	l.StartedAt = nullStr(startedAt)
-	l.EndedAt = nullStr(endedAt)
-	l.EnvAttributes = nullStr(envAttr)
-	l.GitBranch = nullStr(gitBranch)
-	l.GitCommit = nullStr(gitCommit)
-	return &l, nil
+	return launchFromRow(row), nil
 }
 
 func (s *SqlStore) ListLaunchesByCircuit(circuitID int64) ([]*Launch, error) {
-	rows, err := s.db.Query(
-		`SELECT id, circuit_id, source_run_id, source_run_uuid, name, status,
-		        started_at, ended_at, env_attributes, git_branch, git_commit, envelope_payload
-		 FROM launches WHERE circuit_id = ? ORDER BY id`, circuitID,
-	)
+	rows, err := s.es.List("launches", sqlite.Row{"circuit_id": circuitID}, "")
 	if err != nil {
-		return nil, fmt.Errorf("list launches: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	var out []*Launch
-	for rows.Next() {
-		var l Launch
-		var srcRunID, srcRunUUID, name, status, startedAt, endedAt sql.NullString
-		var envAttr, gitBranch, gitCommit sql.NullString
-		if err := rows.Scan(&l.ID, &l.CircuitID, &srcRunID, &srcRunUUID, &name, &status,
-			&startedAt, &endedAt, &envAttr, &gitBranch, &gitCommit, &l.EnvelopePayload); err != nil {
-			return nil, fmt.Errorf("scan launch: %w", err)
-		}
-		l.SourceRunID = nullStr(srcRunID)
-		l.SourceRunUUID = nullStr(srcRunUUID)
-		l.Name = nullStr(name)
-		l.Status = nullStr(status)
-		l.StartedAt = nullStr(startedAt)
-		l.EndedAt = nullStr(endedAt)
-		l.EnvAttributes = nullStr(envAttr)
-		l.GitBranch = nullStr(gitBranch)
-		l.GitCommit = nullStr(gitCommit)
-		out = append(out, &l)
-	}
-	return out, rows.Err()
+	return rowsTo(rows, launchFromRow), nil
 }
 
 // --- Job ---
 
 func (s *SqlStore) CreateJob(j *Job) (int64, error) {
 	if j == nil {
-		return 0, errors.New("job is nil")
+		return 0, fmt.Errorf("job is nil")
 	}
-	res, err := s.db.Exec(
-		`INSERT INTO jobs(launch_id, source_item_id, name, clock_type, status,
-		        stats_total, stats_failed, stats_passed, stats_skipped, started_at, ended_at)
-		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		j.LaunchID, nilIfEmpty(j.SourceItemID), j.Name, nilIfEmpty(j.ClockType), nilIfEmpty(j.Status),
-		nilIfZero(j.StatsTotal), nilIfZero(j.StatsFailed), nilIfZero(j.StatsPassed), nilIfZero(j.StatsSkipped),
-		nilIfEmpty(j.StartedAt), nilIfEmpty(j.EndedAt),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert job: %w", err)
-	}
-	return res.LastInsertId()
+	return s.es.Create("jobs", sqlite.Row{
+		"launch_id": j.LaunchID, "source_item_id": nilIfEmpty(j.SourceItemID),
+		"name": j.Name, "clock_type": nilIfEmpty(j.ClockType), "status": nilIfEmpty(j.Status),
+		"stats_total": nilIfZero(j.StatsTotal), "stats_failed": nilIfZero(j.StatsFailed),
+		"stats_passed": nilIfZero(j.StatsPassed), "stats_skipped": nilIfZero(j.StatsSkipped),
+		"started_at": nilIfEmpty(j.StartedAt), "ended_at": nilIfEmpty(j.EndedAt),
+	})
 }
 
 func (s *SqlStore) GetJob(id int64) (*Job, error) {
-	var j Job
-	var srcItemID, clockType, status, startedAt, endedAt sql.NullString
-	var total, failed, passed, skipped sql.NullInt64
-	err := s.db.QueryRow(
-		`SELECT id, launch_id, source_item_id, name, clock_type, status,
-		        stats_total, stats_failed, stats_passed, stats_skipped, started_at, ended_at
-		 FROM jobs WHERE id = ?`, id,
-	).Scan(&j.ID, &j.LaunchID, &srcItemID, &j.Name, &clockType, &status,
-		&total, &failed, &passed, &skipped, &startedAt, &endedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.Get("jobs", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get job: %w", err)
-	}
-	j.SourceItemID = nullStr(srcItemID)
-	j.ClockType = nullStr(clockType)
-	j.Status = nullStr(status)
-	if total.Valid {
-		j.StatsTotal = int(total.Int64)
-	}
-	if failed.Valid {
-		j.StatsFailed = int(failed.Int64)
-	}
-	if passed.Valid {
-		j.StatsPassed = int(passed.Int64)
-	}
-	if skipped.Valid {
-		j.StatsSkipped = int(skipped.Int64)
-	}
-	j.StartedAt = nullStr(startedAt)
-	j.EndedAt = nullStr(endedAt)
-	return &j, nil
+	return jobFromRow(row), nil
 }
 
 func (s *SqlStore) ListJobsByLaunch(launchID int64) ([]*Job, error) {
-	rows, err := s.db.Query(
-		`SELECT id, launch_id, source_item_id, name, clock_type, status,
-		        stats_total, stats_failed, stats_passed, stats_skipped, started_at, ended_at
-		 FROM jobs WHERE launch_id = ? ORDER BY id`, launchID,
-	)
+	rows, err := s.es.List("jobs", sqlite.Row{"launch_id": launchID}, "")
 	if err != nil {
-		return nil, fmt.Errorf("list jobs: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	var out []*Job
-	for rows.Next() {
-		var j Job
-		var srcItemID, clockType, status, startedAt, endedAt sql.NullString
-		var total, failed, passed, skipped sql.NullInt64
-		if err := rows.Scan(&j.ID, &j.LaunchID, &srcItemID, &j.Name, &clockType, &status,
-			&total, &failed, &passed, &skipped, &startedAt, &endedAt); err != nil {
-			return nil, fmt.Errorf("scan job: %w", err)
-		}
-		j.SourceItemID = nullStr(srcItemID)
-		j.ClockType = nullStr(clockType)
-		j.Status = nullStr(status)
-		if total.Valid {
-			j.StatsTotal = int(total.Int64)
-		}
-		if failed.Valid {
-			j.StatsFailed = int(failed.Int64)
-		}
-		if passed.Valid {
-			j.StatsPassed = int(passed.Int64)
-		}
-		if skipped.Valid {
-			j.StatsSkipped = int(skipped.Int64)
-		}
-		j.StartedAt = nullStr(startedAt)
-		j.EndedAt = nullStr(endedAt)
-		out = append(out, &j)
-	}
-	return out, rows.Err()
+	return rowsTo(rows, jobFromRow), nil
 }
 
-// --- Case v2 ---
+// --- Case ---
 
 func (s *SqlStore) CreateCase(c *Case) (int64, error) {
 	if c == nil {
-		return 0, errors.New("case is nil")
+		return 0, fmt.Errorf("case is nil")
 	}
 	now := nowUTC()
 	if c.Status == "" {
@@ -437,144 +336,92 @@ func (s *SqlStore) CreateCase(c *Case) (int64, error) {
 		c.CreatedAt = now
 	}
 	c.UpdatedAt = now
-	logTrunc := 0
-	if c.LogTruncated {
-		logTrunc = 1
+	return s.es.Create("cases", sqlite.Row{
+		"job_id": c.JobID, "launch_id": c.LaunchID,
+		"source_item_id": nilIfEmpty(c.SourceItemID), "name": c.Name,
+		"external_ref": nilIfEmpty(c.ExternalRef), "status": c.Status,
+		"symptom_id": nilIfZero64(c.SymptomID), "rca_id": nilIfZero64(c.RCAID),
+		"error_message": nilIfEmpty(c.ErrorMessage), "log_snippet": nilIfEmpty(c.LogSnippet),
+		"log_truncated": boolToInt(c.LogTruncated),
+		"started_at": nilIfEmpty(c.StartedAt), "ended_at": nilIfEmpty(c.EndedAt),
+		"created_at": c.CreatedAt, "updated_at": c.UpdatedAt,
+	})
+}
+
+func (s *SqlStore) GetCase(id int64) (*Case, error) {
+	row, err := s.es.Get("cases", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	res, err := s.db.Exec(
-		`INSERT INTO cases(job_id, launch_id, source_item_id, name, external_ref, status,
-		        symptom_id, rca_id, error_message, log_snippet, log_truncated,
-		        started_at, ended_at, created_at, updated_at)
-		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.JobID, c.LaunchID, nilIfEmpty(c.SourceItemID), c.Name, nilIfEmpty(c.ExternalRef), c.Status,
-		nilIfZero64(c.SymptomID), nilIfZero64(c.RCAID),
-		nilIfEmpty(c.ErrorMessage), nilIfEmpty(c.LogSnippet), logTrunc,
-		nilIfEmpty(c.StartedAt), nilIfEmpty(c.EndedAt), c.CreatedAt, c.UpdatedAt,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert case v2: %w", err)
-	}
-	return res.LastInsertId()
+	return caseFromRow(row), nil
 }
 
 func (s *SqlStore) ListCasesByJob(jobID int64) ([]*Case, error) {
-	rows, err := s.db.Query(
-		`SELECT id, job_id, launch_id, source_item_id, name, external_ref, status,
-		        symptom_id, rca_id, error_message, log_snippet, log_truncated,
-		        started_at, ended_at, created_at, updated_at
-		 FROM cases WHERE job_id = ? ORDER BY id`, jobID,
-	)
+	rows, err := s.es.List("cases", sqlite.Row{"job_id": jobID}, "")
 	if err != nil {
-		return nil, fmt.Errorf("list cases by job: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	return scanCases(rows)
+	return rowsTo(rows, caseFromRow), nil
 }
 
 func (s *SqlStore) ListCasesBySymptom(symptomID int64) ([]*Case, error) {
-	rows, err := s.db.Query(
-		`SELECT id, job_id, launch_id, source_item_id, name, external_ref, status,
-		        symptom_id, rca_id, error_message, log_snippet, log_truncated,
-		        started_at, ended_at, created_at, updated_at
-		 FROM cases WHERE symptom_id = ? ORDER BY id`, symptomID,
-	)
+	rows, err := s.es.List("cases", sqlite.Row{"symptom_id": symptomID}, "")
 	if err != nil {
-		return nil, fmt.Errorf("list cases by symptom: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	return scanCases(rows)
+	return rowsTo(rows, caseFromRow), nil
 }
 
 func (s *SqlStore) UpdateCaseStatus(caseID int64, status string) error {
-	now := nowUTC()
-	res, err := s.db.Exec(
-		"UPDATE cases SET status = ?, updated_at = ? WHERE id = ?",
-		status, now, caseID,
-	)
-	if err != nil {
-		return fmt.Errorf("update case status: %w", err)
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return fmt.Errorf("case %d not found", caseID)
-	}
-	return nil
+	return s.es.Update("cases", caseID, sqlite.Row{
+		"status": status, "updated_at": nowUTC(),
+	})
+}
+
+func (s *SqlStore) LinkCaseToRCA(caseID, rcaID int64) error {
+	return s.es.Update("cases", caseID, sqlite.Row{"rca_id": rcaID})
 }
 
 func (s *SqlStore) LinkCaseToSymptom(caseID, symptomID int64) error {
-	now := nowUTC()
-	res, err := s.db.Exec(
-		"UPDATE cases SET symptom_id = ?, updated_at = ? WHERE id = ?",
-		symptomID, now, caseID,
-	)
-	if err != nil {
-		return fmt.Errorf("link case to symptom: %w", err)
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return fmt.Errorf("case %d not found", caseID)
-	}
-	return nil
+	return s.es.Update("cases", caseID, sqlite.Row{
+		"symptom_id": symptomID, "updated_at": nowUTC(),
+	})
 }
 
 // --- Triage ---
 
 func (s *SqlStore) CreateTriage(t *Triage) (int64, error) {
 	if t == nil {
-		return 0, errors.New("triage is nil")
+		return 0, fmt.Errorf("triage is nil")
 	}
-	now := nowUTC()
 	if t.CreatedAt == "" {
-		t.CreatedAt = now
+		t.CreatedAt = nowUTC()
 	}
-	skipInv, clockSkew, cascade := boolToInt(t.SkipInvestigation), boolToInt(t.ClockSkewSuspected), boolToInt(t.CascadeSuspected)
-	res, err := s.db.Exec(
-		`INSERT INTO triages(case_id, symptom_category, severity, defect_type_hypothesis,
-		        skip_investigation, clock_skew_suspected, cascade_suspected,
-		        candidate_repos, data_quality_notes, created_at)
-		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		t.CaseID, t.SymptomCategory, nilIfEmpty(t.Severity), nilIfEmpty(t.DefectTypeHypothesis),
-		skipInv, clockSkew, cascade,
-		nilIfEmpty(t.CandidateRepos), nilIfEmpty(t.DataQualityNotes), t.CreatedAt,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert triage: %w", err)
-	}
-	return res.LastInsertId()
+	return s.es.Create("triages", sqlite.Row{
+		"case_id": t.CaseID, "symptom_category": t.SymptomCategory,
+		"severity": nilIfEmpty(t.Severity), "defect_type_hypothesis": nilIfEmpty(t.DefectTypeHypothesis),
+		"skip_investigation": boolToInt(t.SkipInvestigation),
+		"clock_skew_suspected": boolToInt(t.ClockSkewSuspected),
+		"cascade_suspected": boolToInt(t.CascadeSuspected),
+		"candidate_repos": nilIfEmpty(t.CandidateRepos),
+		"data_quality_notes": nilIfEmpty(t.DataQualityNotes),
+		"created_at": t.CreatedAt,
+	})
 }
 
 func (s *SqlStore) GetTriageByCase(caseID int64) (*Triage, error) {
-	var t Triage
-	var sev, defHyp, repos, notes sql.NullString
-	var skipInv, clockSkew, cascade sql.NullInt64
-	err := s.db.QueryRow(
-		`SELECT id, case_id, symptom_category, severity, defect_type_hypothesis,
-		        skip_investigation, clock_skew_suspected, cascade_suspected,
-		        candidate_repos, data_quality_notes, created_at
-		 FROM triages WHERE case_id = ?`, caseID,
-	).Scan(&t.ID, &t.CaseID, &t.SymptomCategory, &sev, &defHyp,
-		&skipInv, &clockSkew, &cascade, &repos, &notes, &t.CreatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.GetBy("triages", sqlite.Row{"case_id": caseID})
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get triage: %w", err)
-	}
-	t.Severity = nullStr(sev)
-	t.DefectTypeHypothesis = nullStr(defHyp)
-	t.SkipInvestigation = skipInv.Valid && skipInv.Int64 == 1
-	t.ClockSkewSuspected = clockSkew.Valid && clockSkew.Int64 == 1
-	t.CascadeSuspected = cascade.Valid && cascade.Int64 == 1
-	t.CandidateRepos = nullStr(repos)
-	t.DataQualityNotes = nullStr(notes)
-	return &t, nil
+	return triageFromRow(row), nil
 }
 
 // --- Symptom ---
 
 func (s *SqlStore) CreateSymptom(sym *Symptom) (int64, error) {
 	if sym == nil {
-		return 0, errors.New("symptom is nil")
+		return 0, fmt.Errorf("symptom is nil")
 	}
 	now := nowUTC()
 	if sym.Status == "" {
@@ -589,103 +436,46 @@ func (s *SqlStore) CreateSymptom(sym *Symptom) (int64, error) {
 	if sym.LastSeenAt == "" {
 		sym.LastSeenAt = sym.FirstSeenAt
 	}
-	res, err := s.db.Exec(
-		`INSERT INTO symptoms(fingerprint, name, description, error_pattern, test_name_pattern,
-		        component, severity, first_seen_at, last_seen_at, occurrence_count, status)
-		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		sym.Fingerprint, sym.Name, nilIfEmpty(sym.Description),
-		nilIfEmpty(sym.ErrorPattern), nilIfEmpty(sym.TestNamePattern),
-		nilIfEmpty(sym.Component), nilIfEmpty(sym.Severity),
-		sym.FirstSeenAt, sym.LastSeenAt, sym.OccurrenceCount, sym.Status,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert symptom: %w", err)
-	}
-	return res.LastInsertId()
+	return s.es.Create("symptoms", sqlite.Row{
+		"fingerprint": sym.Fingerprint, "name": sym.Name,
+		"description": nilIfEmpty(sym.Description), "error_pattern": nilIfEmpty(sym.ErrorPattern),
+		"test_name_pattern": nilIfEmpty(sym.TestNamePattern), "component": nilIfEmpty(sym.Component),
+		"severity": nilIfEmpty(sym.Severity), "first_seen_at": sym.FirstSeenAt,
+		"last_seen_at": sym.LastSeenAt, "occurrence_count": sym.OccurrenceCount,
+		"status": sym.Status,
+	})
 }
 
 func (s *SqlStore) GetSymptom(id int64) (*Symptom, error) {
-	var sym Symptom
-	var desc, errPat, testPat, comp, sev sql.NullString
-	err := s.db.QueryRow(
-		`SELECT id, fingerprint, name, description, error_pattern, test_name_pattern,
-		        component, severity, first_seen_at, last_seen_at, occurrence_count, status
-		 FROM symptoms WHERE id = ?`, id,
-	).Scan(&sym.ID, &sym.Fingerprint, &sym.Name, &desc, &errPat, &testPat,
-		&comp, &sev, &sym.FirstSeenAt, &sym.LastSeenAt, &sym.OccurrenceCount, &sym.Status)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.Get("symptoms", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get symptom: %w", err)
-	}
-	sym.Description = nullStr(desc)
-	sym.ErrorPattern = nullStr(errPat)
-	sym.TestNamePattern = nullStr(testPat)
-	sym.Component = nullStr(comp)
-	sym.Severity = nullStr(sev)
-	return &sym, nil
+	return symptomFromRow(row), nil
 }
 
 func (s *SqlStore) GetSymptomByFingerprint(fingerprint string) (*Symptom, error) {
-	var sym Symptom
-	var desc, errPat, testPat, comp, sev sql.NullString
-	err := s.db.QueryRow(
-		`SELECT id, fingerprint, name, description, error_pattern, test_name_pattern,
-		        component, severity, first_seen_at, last_seen_at, occurrence_count, status
-		 FROM symptoms WHERE fingerprint = ?`, fingerprint,
-	).Scan(&sym.ID, &sym.Fingerprint, &sym.Name, &desc, &errPat, &testPat,
-		&comp, &sev, &sym.FirstSeenAt, &sym.LastSeenAt, &sym.OccurrenceCount, &sym.Status)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	row, err := s.es.GetBy("symptoms", sqlite.Row{"fingerprint": fingerprint})
+	if err != nil || row == nil {
+		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get symptom by fingerprint: %w", err)
-	}
-	sym.Description = nullStr(desc)
-	sym.ErrorPattern = nullStr(errPat)
-	sym.TestNamePattern = nullStr(testPat)
-	sym.Component = nullStr(comp)
-	sym.Severity = nullStr(sev)
-	return &sym, nil
+	return symptomFromRow(row), nil
 }
 
 func (s *SqlStore) FindSymptomCandidates(testName string) ([]*Symptom, error) {
-	// Do not match on empty test names — this would return all symptoms with
-	// empty names, causing false recall hits during calibration.
 	if testName == "" {
 		return nil, nil
 	}
-	rows, err := s.db.Query(
-		`SELECT id, fingerprint, name, description, error_pattern, test_name_pattern,
-		        component, severity, first_seen_at, last_seen_at, occurrence_count, status
-		 FROM symptoms WHERE name = ?`, testName,
-	)
+	rows, err := s.es.List("symptoms", sqlite.Row{"name": testName}, "")
 	if err != nil {
-		return nil, fmt.Errorf("find symptom candidates: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	var out []*Symptom
-	for rows.Next() {
-		var sym Symptom
-		var desc, errPat, testPat, comp, sev sql.NullString
-		if err := rows.Scan(&sym.ID, &sym.Fingerprint, &sym.Name, &desc, &errPat, &testPat,
-			&comp, &sev, &sym.FirstSeenAt, &sym.LastSeenAt, &sym.OccurrenceCount, &sym.Status); err != nil {
-			return nil, fmt.Errorf("scan symptom candidate: %w", err)
-		}
-		sym.Description = nullStr(desc)
-		sym.ErrorPattern = nullStr(errPat)
-		sym.TestNamePattern = nullStr(testPat)
-		sym.Component = nullStr(comp)
-		sym.Severity = nullStr(sev)
-		out = append(out, &sym)
-	}
-	return out, rows.Err()
+	return rowsTo(rows, symptomFromRow), nil
 }
 
 func (s *SqlStore) UpdateSymptomSeen(id int64) error {
 	now := nowUTC()
-	res, err := s.db.Exec(
+	res, err := s.es.DB().ExecSQL(
 		`UPDATE symptoms SET occurrence_count = occurrence_count + 1, last_seen_at = ?,
 		        status = CASE WHEN status = 'dormant' THEN 'active' ELSE status END
 		 WHERE id = ?`,
@@ -702,35 +492,15 @@ func (s *SqlStore) UpdateSymptomSeen(id int64) error {
 }
 
 func (s *SqlStore) ListSymptoms() ([]*Symptom, error) {
-	rows, err := s.db.Query(
-		`SELECT id, fingerprint, name, description, error_pattern, test_name_pattern,
-		        component, severity, first_seen_at, last_seen_at, occurrence_count, status
-		 FROM symptoms ORDER BY id`,
-	)
+	rows, err := s.es.List("symptoms", nil, "")
 	if err != nil {
-		return nil, fmt.Errorf("list symptoms: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	var out []*Symptom
-	for rows.Next() {
-		var sym Symptom
-		var desc, errPat, testPat, comp, sev sql.NullString
-		if err := rows.Scan(&sym.ID, &sym.Fingerprint, &sym.Name, &desc, &errPat, &testPat,
-			&comp, &sev, &sym.FirstSeenAt, &sym.LastSeenAt, &sym.OccurrenceCount, &sym.Status); err != nil {
-			return nil, fmt.Errorf("scan symptom: %w", err)
-		}
-		sym.Description = nullStr(desc)
-		sym.ErrorPattern = nullStr(errPat)
-		sym.TestNamePattern = nullStr(testPat)
-		sym.Component = nullStr(comp)
-		sym.Severity = nullStr(sev)
-		out = append(out, &sym)
-	}
-	return out, rows.Err()
+	return rowsTo(rows, symptomFromRow), nil
 }
 
 func (s *SqlStore) MarkDormantSymptoms(staleDays int) (int64, error) {
-	res, err := s.db.Exec(
+	res, err := s.es.DB().ExecSQL(
 		`UPDATE symptoms SET status = 'dormant'
 		 WHERE status = 'active'
 		   AND last_seen_at < datetime('now', '-' || ? || ' days')`,
@@ -742,243 +512,103 @@ func (s *SqlStore) MarkDormantSymptoms(staleDays int) (int64, error) {
 	return res.RowsAffected()
 }
 
-// --- RCA v2 ---
+// --- RCA ---
 
 func (s *SqlStore) SaveRCA(rca *RCA) (int64, error) {
 	if rca == nil {
-		return 0, errors.New("rca is nil")
+		return 0, fmt.Errorf("rca is nil")
 	}
-	now := nowUTC()
 	if rca.Status == "" {
 		rca.Status = "open"
 	}
 	if rca.CreatedAt == "" {
-		rca.CreatedAt = now
+		rca.CreatedAt = nowUTC()
+	}
+	row := sqlite.Row{
+		"title": rca.Title, "description": rca.Description, "defect_type": rca.DefectType,
+		"category": nilIfEmpty(rca.Category), "component": nilIfEmpty(rca.Component),
+		"affected_versions": nilIfEmpty(rca.AffectedVersions),
+		"evidence_refs": nilIfEmpty(rca.EvidenceRefs), "convergence_score": rca.ConvergenceScore,
+		"jira_ticket_id": nilIfEmpty(rca.JiraTicketID), "jira_link": nilIfEmpty(rca.JiraLink),
+		"status": rca.Status, "resolved_at": nilIfEmpty(rca.ResolvedAt),
+		"verified_at": nilIfEmpty(rca.VerifiedAt), "archived_at": nilIfEmpty(rca.ArchivedAt),
 	}
 	if rca.ID != 0 {
-		_, err := s.db.Exec(
-			`UPDATE rcas SET title=?, description=?, defect_type=?, category=?, component=?,
-			        affected_versions=?, evidence_refs=?, convergence_score=?,
-			        jira_ticket_id=?, jira_link=?, status=?,
-			        resolved_at=?, verified_at=?, archived_at=?
-			 WHERE id=?`,
-			rca.Title, rca.Description, rca.DefectType, nilIfEmpty(rca.Category), nilIfEmpty(rca.Component),
-			nilIfEmpty(rca.AffectedVersions), nilIfEmpty(rca.EvidenceRefs), rca.ConvergenceScore,
-			nilIfEmpty(rca.JiraTicketID), nilIfEmpty(rca.JiraLink), rca.Status,
-			nilIfEmpty(rca.ResolvedAt), nilIfEmpty(rca.VerifiedAt), nilIfEmpty(rca.ArchivedAt),
-			rca.ID,
-		)
-		if err != nil {
-			return 0, fmt.Errorf("update rca v2: %w", err)
-		}
-		return rca.ID, nil
+		return rca.ID, s.es.Update("rcas", rca.ID, row)
 	}
-	res, err := s.db.Exec(
-		`INSERT INTO rcas(title, description, defect_type, category, component,
-		        affected_versions, evidence_refs, convergence_score,
-		        jira_ticket_id, jira_link, status, created_at,
-		        resolved_at, verified_at, archived_at)
-		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		rca.Title, rca.Description, rca.DefectType, nilIfEmpty(rca.Category), nilIfEmpty(rca.Component),
-		nilIfEmpty(rca.AffectedVersions), nilIfEmpty(rca.EvidenceRefs), rca.ConvergenceScore,
-		nilIfEmpty(rca.JiraTicketID), nilIfEmpty(rca.JiraLink), rca.Status, rca.CreatedAt,
-		nilIfEmpty(rca.ResolvedAt), nilIfEmpty(rca.VerifiedAt), nilIfEmpty(rca.ArchivedAt),
-	)
+	row["created_at"] = rca.CreatedAt
+	return s.es.Create("rcas", row)
+}
+
+func (s *SqlStore) GetRCA(id int64) (*RCA, error) {
+	row, err := s.es.Get("rcas", id)
+	if err != nil || row == nil {
+		return nil, err
+	}
+	return rcaFromRow(row), nil
+}
+
+func (s *SqlStore) ListRCAs() ([]*RCA, error) {
+	rows, err := s.es.List("rcas", nil, "")
 	if err != nil {
-		return 0, fmt.Errorf("insert rca v2: %w", err)
+		return nil, err
 	}
-	return res.LastInsertId()
+	return rowsTo(rows, rcaFromRow), nil
 }
 
 func (s *SqlStore) ListRCAsByStatus(status string) ([]*RCA, error) {
-	rows, err := s.db.Query(
-		`SELECT id, title, description, defect_type, category, component,
-		        affected_versions, evidence_refs, convergence_score,
-		        jira_ticket_id, jira_link, status, created_at,
-		        resolved_at, verified_at, archived_at
-		 FROM rcas WHERE status = ? ORDER BY id`, status,
-	)
+	rows, err := s.es.List("rcas", sqlite.Row{"status": status}, "")
 	if err != nil {
-		return nil, fmt.Errorf("list rcas by status: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	return scanRCAs(rows)
+	return rowsTo(rows, rcaFromRow), nil
 }
 
 func (s *SqlStore) UpdateRCAStatus(id int64, status string) error {
 	now := nowUTC()
-	var setExtra string
+	set := sqlite.Row{"status": status}
 	switch status {
 	case "resolved":
-		setExtra = ", resolved_at = '" + now + "'"
+		set["resolved_at"] = now
 	case "verified":
-		setExtra = ", verified_at = '" + now + "'"
+		set["verified_at"] = now
 	case "archived":
-		setExtra = ", archived_at = '" + now + "'"
+		set["archived_at"] = now
 	case "open":
-		setExtra = ", resolved_at = NULL, verified_at = NULL"
+		set["resolved_at"] = nil
+		set["verified_at"] = nil
 	}
-	res, err := s.db.Exec(
-		fmt.Sprintf("UPDATE rcas SET status = ?%s WHERE id = ?", setExtra),
-		status, id,
-	)
-	if err != nil {
-		return fmt.Errorf("update rca status: %w", err)
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return fmt.Errorf("rca %d not found", id)
-	}
-	return nil
+	return s.es.Update("rcas", id, set)
 }
 
 // --- SymptomRCA ---
 
 func (s *SqlStore) LinkSymptomToRCA(link *SymptomRCA) (int64, error) {
 	if link == nil {
-		return 0, errors.New("link is nil")
+		return 0, fmt.Errorf("link is nil")
 	}
-	now := nowUTC()
 	if link.LinkedAt == "" {
-		link.LinkedAt = now
+		link.LinkedAt = nowUTC()
 	}
-	res, err := s.db.Exec(
-		`INSERT INTO symptom_rca(symptom_id, rca_id, confidence, notes, linked_at)
-		 VALUES(?, ?, ?, ?, ?)`,
-		link.SymptomID, link.RCAID, link.Confidence, nilIfEmpty(link.Notes), link.LinkedAt,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("insert symptom_rca: %w", err)
-	}
-	return res.LastInsertId()
+	return s.es.Create("symptom_rca", sqlite.Row{
+		"symptom_id": link.SymptomID, "rca_id": link.RCAID,
+		"confidence": link.Confidence, "notes": nilIfEmpty(link.Notes),
+		"linked_at": link.LinkedAt,
+	})
 }
 
 func (s *SqlStore) GetRCAsForSymptom(symptomID int64) ([]*SymptomRCA, error) {
-	rows, err := s.db.Query(
-		`SELECT id, symptom_id, rca_id, confidence, notes, linked_at
-		 FROM symptom_rca WHERE symptom_id = ? ORDER BY id`, symptomID,
-	)
+	rows, err := s.es.List("symptom_rca", sqlite.Row{"symptom_id": symptomID}, "")
 	if err != nil {
-		return nil, fmt.Errorf("get rcas for symptom: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	return scanSymptomRCAs(rows)
+	return rowsTo(rows, symptomRCAFromRow), nil
 }
 
 func (s *SqlStore) GetSymptomsForRCA(rcaID int64) ([]*SymptomRCA, error) {
-	rows, err := s.db.Query(
-		`SELECT id, symptom_id, rca_id, confidence, notes, linked_at
-		 FROM symptom_rca WHERE rca_id = ? ORDER BY id`, rcaID,
-	)
+	rows, err := s.es.List("symptom_rca", sqlite.Row{"rca_id": rcaID}, "")
 	if err != nil {
-		return nil, fmt.Errorf("get symptoms for rca: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
-	return scanSymptomRCAs(rows)
-}
-
-// --- Scan helpers ---
-
-// scanCases scans a rows result set into Case slices.
-func scanCases(rows *sql.Rows) ([]*Case, error) {
-	var out []*Case
-	for rows.Next() {
-		var c Case
-		var rcaID, symptomID, jobID, logTrunc sql.NullInt64
-		var srcItemID, externalRef, errMsg, logSnip, startedAt, endedAt sql.NullString
-		if err := rows.Scan(&c.ID, &jobID, &c.LaunchID, &srcItemID,
-			&c.Name, &externalRef, &c.Status,
-			&symptomID, &rcaID, &errMsg, &logSnip, &logTrunc,
-			&startedAt, &endedAt, &c.CreatedAt, &c.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("scan case: %w", err)
-		}
-		c.JobID = jobID.Int64
-		c.RCAID = rcaID.Int64
-		c.SymptomID = symptomID.Int64
-		c.SourceItemID = nullStr(srcItemID)
-		c.ExternalRef = nullStr(externalRef)
-		c.ErrorMessage = nullStr(errMsg)
-		c.LogSnippet = nullStr(logSnip)
-		c.StartedAt = nullStr(startedAt)
-		c.EndedAt = nullStr(endedAt)
-		c.LogTruncated = logTrunc.Valid && logTrunc.Int64 == 1
-		out = append(out, &c)
-	}
-	return out, rows.Err()
-}
-
-// scanRCAs scans a rows result set into RCA slices.
-func scanRCAs(rows *sql.Rows) ([]*RCA, error) {
-	var out []*RCA
-	for rows.Next() {
-		var r RCA
-		var cat, comp, affVer, evRefs, jiraID, jiraLink sql.NullString
-		var resolvedAt, verifiedAt, archivedAt sql.NullString
-		var convScore sql.NullFloat64
-		if err := rows.Scan(&r.ID, &r.Title, &r.Description, &r.DefectType,
-			&cat, &comp, &affVer, &evRefs, &convScore,
-			&jiraID, &jiraLink, &r.Status, &r.CreatedAt,
-			&resolvedAt, &verifiedAt, &archivedAt); err != nil {
-			return nil, fmt.Errorf("scan rca: %w", err)
-		}
-		r.Category = nullStr(cat)
-		r.Component = nullStr(comp)
-		r.AffectedVersions = nullStr(affVer)
-		r.EvidenceRefs = nullStr(evRefs)
-		r.ConvergenceScore = nullFloat(convScore)
-		r.JiraTicketID = nullStr(jiraID)
-		r.JiraLink = nullStr(jiraLink)
-		r.ResolvedAt = nullStr(resolvedAt)
-		r.VerifiedAt = nullStr(verifiedAt)
-		r.ArchivedAt = nullStr(archivedAt)
-		out = append(out, &r)
-	}
-	return out, rows.Err()
-}
-
-// scanSymptomRCAs scans a rows result set into SymptomRCA slices.
-func scanSymptomRCAs(rows *sql.Rows) ([]*SymptomRCA, error) {
-	var out []*SymptomRCA
-	for rows.Next() {
-		var link SymptomRCA
-		var conf sql.NullFloat64
-		var notes sql.NullString
-		if err := rows.Scan(&link.ID, &link.SymptomID, &link.RCAID, &conf, &notes, &link.LinkedAt); err != nil {
-			return nil, fmt.Errorf("scan symptom_rca: %w", err)
-		}
-		link.Confidence = nullFloat(conf)
-		link.Notes = nullStr(notes)
-		out = append(out, &link)
-	}
-	return out, rows.Err()
-}
-
-// --- nil helpers for optional SQL params ---
-
-func nilIfEmpty(s string) interface{} {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func nilIfZero(n int) interface{} {
-	if n == 0 {
-		return nil
-	}
-	return n
-}
-
-func nilIfZero64(n int64) interface{} {
-	if n == 0 {
-		return nil
-	}
-	return n
-}
-
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
+	return rowsTo(rows, symptomRCAFromRow), nil
 }

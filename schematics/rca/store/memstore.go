@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/dpopsuev/origami/connectors/sqlite"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 )
 
@@ -11,43 +12,20 @@ import (
 type MemStore struct {
 	mu        sync.Mutex
 	envelopes map[string]*rcatype.Envelope
-	data    *memStoreData // lazy-initialized entity storage
+	mes       *sqlite.MemEntityStore
 }
 
 // NewMemStore returns a new in-memory Store.
 func NewMemStore() *MemStore {
+	schema, _ := LoadSchema()
 	return &MemStore{
 		envelopes: make(map[string]*rcatype.Envelope),
+		mes:       sqlite.NewMemEntityStore(schema),
 	}
 }
 
 // Close is a no-op for in-memory stores.
 func (s *MemStore) Close() error { return nil }
-
-// LinkCaseToRCA implements Store.
-func (s *MemStore) LinkCaseToRCA(caseID, rcaID int64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data != nil {
-		if c, ok := s.data.cases[caseID]; ok {
-			c.RCAID = rcaID
-		}
-	}
-	return nil
-}
-
-// ListRCAs implements Store.
-func (s *MemStore) ListRCAs() ([]*RCA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	out := make([]*RCA, 0, len(d.rcas))
-	for _, r := range d.rcas {
-		cp := *r
-		out = append(out, &cp)
-	}
-	return out, nil
-}
 
 // SaveEnvelope implements Store.
 func (s *MemStore) SaveEnvelope(runID string, env *rcatype.Envelope) error {

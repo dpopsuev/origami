@@ -1,62 +1,11 @@
 package store
 
 import (
-	"errors"
 	"fmt"
-	"sync"
 	"time"
+
+	"github.com/dpopsuev/origami/connectors/sqlite"
 )
-
-// v2 fields for MemStore. Extends the base MemStore with v2 entity storage.
-// These will be initialized lazily on first v2 method call.
-
-// memStoreData holds v2 entity maps. Embedded into MemStore via initV2().
-type memStoreData struct {
-	once            sync.Once
-	suites          map[int64]*InvestigationSuite
-	nextSuite       int64
-	versions        map[int64]*Version
-	versionsByLabel map[string]int64
-	nextVersion     int64
-	circuits       map[int64]*Circuit
-	nextCircuit    int64
-	launches        map[int64]*Launch
-	nextLaunch      int64
-	jobs            map[int64]*Job
-	nextJob         int64
-	cases         map[int64]*Case
-	nextCase      int64
-	triages         map[int64]*Triage // keyed by case_id
-	nextTriage      int64
-	symptoms        map[int64]*Symptom
-	symptomsByFP    map[string]int64 // fingerprint -> symptom id
-	nextSymptom     int64
-	rcas          map[int64]*RCA
-	nextRCA       int64
-	symptomRCAs     map[int64]*SymptomRCA
-	nextSymptomRCA  int64
-}
-
-func (s *MemStore) ensureData() *memStoreData {
-	if s.data == nil {
-		s.data = &memStoreData{}
-	}
-	s.data.once.Do(func() {
-		s.data.suites = make(map[int64]*InvestigationSuite)
-		s.data.versions = make(map[int64]*Version)
-		s.data.versionsByLabel = make(map[string]int64)
-		s.data.circuits = make(map[int64]*Circuit)
-		s.data.launches = make(map[int64]*Launch)
-		s.data.jobs = make(map[int64]*Job)
-		s.data.cases = make(map[int64]*Case)
-		s.data.triages = make(map[int64]*Triage)
-		s.data.symptoms = make(map[int64]*Symptom)
-		s.data.symptomsByFP = make(map[string]int64)
-		s.data.rcas = make(map[int64]*RCA)
-		s.data.symptomRCAs = make(map[int64]*SymptomRCA)
-	})
-	return s.data
-}
 
 func now() string { return time.Now().UTC().Format(time.RFC3339) }
 
@@ -64,607 +13,482 @@ func now() string { return time.Now().UTC().Format(time.RFC3339) }
 
 func (s *MemStore) CreateSuite(suite *InvestigationSuite) (int64, error) {
 	if suite == nil {
-		return 0, errors.New("suite is nil")
+		return 0, fmt.Errorf("suite is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	d.nextSuite++
-	cp := *suite
-	cp.ID = d.nextSuite
-	if cp.Status == "" {
-		cp.Status = "open"
+	if suite.Status == "" {
+		suite.Status = "open"
 	}
-	if cp.CreatedAt == "" {
-		cp.CreatedAt = now()
+	if suite.CreatedAt == "" {
+		suite.CreatedAt = now()
 	}
-	d.suites[cp.ID] = &cp
-	return cp.ID, nil
+	return s.mes.Create("investigation_suites", sqlite.Row{
+		"name": suite.Name, "description": suite.Description,
+		"status": suite.Status, "created_at": suite.CreatedAt, "closed_at": suite.ClosedAt,
+	})
 }
 
 func (s *MemStore) GetSuite(id int64) (*InvestigationSuite, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().suites[id]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.Get("investigation_suites", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return suiteFromRow(row), nil
 }
 
 func (s *MemStore) ListSuites() ([]*InvestigationSuite, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make([]*InvestigationSuite, 0, len(s.ensureData().suites))
-	for _, v := range s.ensureData().suites {
-		cp := *v
-		out = append(out, &cp)
+	rows, err := s.mes.List("investigation_suites", nil, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, suiteFromRow), nil
 }
 
 func (s *MemStore) CloseSuite(id int64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().suites[id]
-	if !ok {
-		return errors.New("suite not found")
-	}
-	v.Status = "closed"
-	v.ClosedAt = now()
-	return nil
+	return s.mes.Update("investigation_suites", id, sqlite.Row{
+		"status": "closed", "closed_at": now(),
+	})
 }
 
 // --- Version ---
 
 func (s *MemStore) CreateVersion(ver *Version) (int64, error) {
 	if ver == nil {
-		return 0, errors.New("version is nil")
+		return 0, fmt.Errorf("version is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	if _, exists := d.versionsByLabel[ver.Label]; exists {
+	existing, _ := s.mes.GetBy("versions", sqlite.Row{"label": ver.Label})
+	if existing != nil {
 		return 0, fmt.Errorf("version label %q already exists", ver.Label)
 	}
-	d.nextVersion++
-	cp := *ver
-	cp.ID = d.nextVersion
-	d.versions[cp.ID] = &cp
-	d.versionsByLabel[cp.Label] = cp.ID
-	return cp.ID, nil
+	return s.mes.Create("versions", sqlite.Row{
+		"label": ver.Label, "build_id": ver.BuildID,
+	})
 }
 
 func (s *MemStore) GetVersion(id int64) (*Version, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().versions[id]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.Get("versions", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return versionFromRow(row), nil
 }
 
 func (s *MemStore) GetVersionByLabel(label string) (*Version, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	id, ok := d.versionsByLabel[label]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.GetBy("versions", sqlite.Row{"label": label})
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *d.versions[id]
-	return &cp, nil
+	return versionFromRow(row), nil
 }
 
 func (s *MemStore) ListVersions() ([]*Version, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make([]*Version, 0, len(s.ensureData().versions))
-	for _, v := range s.ensureData().versions {
-		cp := *v
-		out = append(out, &cp)
+	rows, err := s.mes.List("versions", nil, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, versionFromRow), nil
 }
 
 // --- Circuit ---
 
 func (s *MemStore) CreateCircuit(p *Circuit) (int64, error) {
 	if p == nil {
-		return 0, errors.New("circuit is nil")
+		return 0, fmt.Errorf("circuit is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	d.nextCircuit++
-	cp := *p
-	cp.ID = d.nextCircuit
-	d.circuits[cp.ID] = &cp
-	return cp.ID, nil
+	return s.mes.Create("circuits", sqlite.Row{
+		"suite_id": p.SuiteID, "version_id": p.VersionID, "name": p.Name,
+		"source_run_id": p.SourceRunID, "status": p.Status,
+		"started_at": p.StartedAt, "ended_at": p.EndedAt,
+	})
 }
 
 func (s *MemStore) GetCircuit(id int64) (*Circuit, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().circuits[id]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.Get("circuits", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return circuitFromRow(row), nil
 }
 
 func (s *MemStore) ListCircuitsBySuite(suiteID int64) ([]*Circuit, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*Circuit
-	for _, p := range s.ensureData().circuits {
-		if p.SuiteID == suiteID {
-			cp := *p
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("circuits", sqlite.Row{"suite_id": suiteID}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, circuitFromRow), nil
 }
 
 // --- Launch ---
 
 func (s *MemStore) CreateLaunch(l *Launch) (int64, error) {
 	if l == nil {
-		return 0, errors.New("launch is nil")
+		return 0, fmt.Errorf("launch is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	d.nextLaunch++
-	cp := *l
-	cp.ID = d.nextLaunch
-	d.launches[cp.ID] = &cp
-	return cp.ID, nil
+	return s.mes.Create("launches", sqlite.Row{
+		"circuit_id": l.CircuitID, "source_run_id": l.SourceRunID,
+		"source_run_uuid": l.SourceRunUUID, "name": l.Name,
+		"status": l.Status, "started_at": l.StartedAt, "ended_at": l.EndedAt,
+		"env_attributes": l.EnvAttributes, "git_branch": l.GitBranch,
+		"git_commit": l.GitCommit, "envelope_payload": l.EnvelopePayload,
+	})
 }
 
 func (s *MemStore) GetLaunch(id int64) (*Launch, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().launches[id]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.Get("launches", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return launchFromRow(row), nil
 }
 
 func (s *MemStore) GetLaunchBySourceRunID(circuitID int64, sourceRunID string) (*Launch, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, l := range s.ensureData().launches {
-		if l.CircuitID == circuitID && l.SourceRunID == sourceRunID {
-			cp := *l
-			return &cp, nil
-		}
+	row, err := s.mes.GetBy("launches", sqlite.Row{
+		"circuit_id": circuitID, "source_run_id": sourceRunID,
+	})
+	if err != nil || row == nil {
+		return nil, err
 	}
-	return nil, nil
+	return launchFromRow(row), nil
 }
 
 func (s *MemStore) ListLaunchesByCircuit(circuitID int64) ([]*Launch, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*Launch
-	for _, l := range s.ensureData().launches {
-		if l.CircuitID == circuitID {
-			cp := *l
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("launches", sqlite.Row{"circuit_id": circuitID}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, launchFromRow), nil
 }
 
 // --- Job ---
 
 func (s *MemStore) CreateJob(j *Job) (int64, error) {
 	if j == nil {
-		return 0, errors.New("job is nil")
+		return 0, fmt.Errorf("job is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	d.nextJob++
-	cp := *j
-	cp.ID = d.nextJob
-	d.jobs[cp.ID] = &cp
-	return cp.ID, nil
+	return s.mes.Create("jobs", sqlite.Row{
+		"launch_id": j.LaunchID, "source_item_id": j.SourceItemID,
+		"name": j.Name, "clock_type": j.ClockType, "status": j.Status,
+		"stats_total": j.StatsTotal, "stats_failed": j.StatsFailed,
+		"stats_passed": j.StatsPassed, "stats_skipped": j.StatsSkipped,
+		"started_at": j.StartedAt, "ended_at": j.EndedAt,
+	})
 }
 
 func (s *MemStore) GetJob(id int64) (*Job, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().jobs[id]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.Get("jobs", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return jobFromRow(row), nil
 }
 
 func (s *MemStore) ListJobsByLaunch(launchID int64) ([]*Job, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*Job
-	for _, j := range s.ensureData().jobs {
-		if j.LaunchID == launchID {
-			cp := *j
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("jobs", sqlite.Row{"launch_id": launchID}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, jobFromRow), nil
 }
 
-// --- Case v2 ---
+// --- Case ---
 
 func (s *MemStore) CreateCase(c *Case) (int64, error) {
 	if c == nil {
-		return 0, errors.New("case is nil")
+		return 0, fmt.Errorf("case is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	d.nextCase++
-	cp := *c
-	cp.ID = d.nextCase
-	if cp.Status == "" {
-		cp.Status = "open"
+	if c.Status == "" {
+		c.Status = "open"
 	}
-	if cp.CreatedAt == "" {
-		cp.CreatedAt = now()
+	if c.CreatedAt == "" {
+		c.CreatedAt = now()
 	}
-	cp.UpdatedAt = now()
-	d.cases[cp.ID] = &cp
-	return cp.ID, nil
+	c.UpdatedAt = now()
+	return s.mes.Create("cases", sqlite.Row{
+		"job_id": c.JobID, "launch_id": c.LaunchID,
+		"source_item_id": c.SourceItemID, "name": c.Name,
+		"external_ref": c.ExternalRef, "status": c.Status,
+		"symptom_id": c.SymptomID, "rca_id": c.RCAID,
+		"error_message": c.ErrorMessage, "log_snippet": c.LogSnippet,
+		"log_truncated": boolToInt(c.LogTruncated),
+		"started_at": c.StartedAt, "ended_at": c.EndedAt,
+		"created_at": c.CreatedAt, "updated_at": c.UpdatedAt,
+	})
 }
 
 func (s *MemStore) GetCase(id int64) (*Case, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().cases[id]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.Get("cases", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return caseFromRow(row), nil
 }
 
 func (s *MemStore) ListCasesByJob(jobID int64) ([]*Case, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*Case
-	for _, c := range s.ensureData().cases {
-		if c.JobID == jobID {
-			cp := *c
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("cases", sqlite.Row{"job_id": jobID}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, caseFromRow), nil
 }
 
 func (s *MemStore) ListCasesBySymptom(symptomID int64) ([]*Case, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*Case
-	for _, c := range s.ensureData().cases {
-		if c.SymptomID == symptomID {
-			cp := *c
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("cases", sqlite.Row{"symptom_id": symptomID}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, caseFromRow), nil
 }
 
 func (s *MemStore) UpdateCaseStatus(caseID int64, status string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.ensureData().cases[caseID]
-	if !ok {
-		return errors.New("case not found")
-	}
-	c.Status = status
-	c.UpdatedAt = now()
-	return nil
+	return s.mes.Update("cases", caseID, sqlite.Row{
+		"status": status, "updated_at": now(),
+	})
+}
+
+func (s *MemStore) LinkCaseToRCA(caseID, rcaID int64) error {
+	return s.mes.Update("cases", caseID, sqlite.Row{"rca_id": rcaID})
 }
 
 func (s *MemStore) LinkCaseToSymptom(caseID, symptomID int64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.ensureData().cases[caseID]
-	if !ok {
-		return errors.New("case not found")
-	}
-	c.SymptomID = symptomID
-	c.UpdatedAt = now()
-	return nil
+	return s.mes.Update("cases", caseID, sqlite.Row{
+		"symptom_id": symptomID, "updated_at": now(),
+	})
 }
 
 // --- Triage ---
 
 func (s *MemStore) CreateTriage(t *Triage) (int64, error) {
 	if t == nil {
-		return 0, errors.New("triage is nil")
+		return 0, fmt.Errorf("triage is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	d.nextTriage++
-	cp := *t
-	cp.ID = d.nextTriage
-	if cp.CreatedAt == "" {
-		cp.CreatedAt = now()
+	if t.CreatedAt == "" {
+		t.CreatedAt = now()
 	}
-	d.triages[cp.CaseID] = &cp
-	return cp.ID, nil
+	return s.mes.Create("triages", sqlite.Row{
+		"case_id": t.CaseID, "symptom_category": t.SymptomCategory,
+		"severity": t.Severity, "defect_type_hypothesis": t.DefectTypeHypothesis,
+		"skip_investigation": boolToInt(t.SkipInvestigation),
+		"clock_skew_suspected": boolToInt(t.ClockSkewSuspected),
+		"cascade_suspected": boolToInt(t.CascadeSuspected),
+		"candidate_repos": t.CandidateRepos, "data_quality_notes": t.DataQualityNotes,
+		"created_at": t.CreatedAt,
+	})
 }
 
 func (s *MemStore) GetTriageByCase(caseID int64) (*Triage, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().triages[caseID]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.GetBy("triages", sqlite.Row{"case_id": caseID})
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return triageFromRow(row), nil
 }
 
 // --- Symptom ---
 
 func (s *MemStore) CreateSymptom(sym *Symptom) (int64, error) {
 	if sym == nil {
-		return 0, errors.New("symptom is nil")
+		return 0, fmt.Errorf("symptom is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	if _, exists := d.symptomsByFP[sym.Fingerprint]; exists {
+	existing, _ := s.mes.GetBy("symptoms", sqlite.Row{"fingerprint": sym.Fingerprint})
+	if existing != nil {
 		return 0, fmt.Errorf("symptom with fingerprint %q already exists", sym.Fingerprint)
 	}
-	d.nextSymptom++
-	cp := *sym
-	cp.ID = d.nextSymptom
-	if cp.Status == "" {
-		cp.Status = "active"
+	if sym.Status == "" {
+		sym.Status = "active"
 	}
-	if cp.OccurrenceCount == 0 {
-		cp.OccurrenceCount = 1
+	if sym.OccurrenceCount == 0 {
+		sym.OccurrenceCount = 1
 	}
-	if cp.FirstSeenAt == "" {
-		cp.FirstSeenAt = now()
+	if sym.FirstSeenAt == "" {
+		sym.FirstSeenAt = now()
 	}
-	if cp.LastSeenAt == "" {
-		cp.LastSeenAt = cp.FirstSeenAt
+	if sym.LastSeenAt == "" {
+		sym.LastSeenAt = sym.FirstSeenAt
 	}
-	d.symptoms[cp.ID] = &cp
-	d.symptomsByFP[cp.Fingerprint] = cp.ID
-	return cp.ID, nil
+	return s.mes.Create("symptoms", sqlite.Row{
+		"fingerprint": sym.Fingerprint, "name": sym.Name,
+		"description": sym.Description, "error_pattern": sym.ErrorPattern,
+		"test_name_pattern": sym.TestNamePattern, "component": sym.Component,
+		"severity": sym.Severity, "first_seen_at": sym.FirstSeenAt,
+		"last_seen_at": sym.LastSeenAt, "occurrence_count": sym.OccurrenceCount,
+		"status": sym.Status,
+	})
 }
 
 func (s *MemStore) GetSymptom(id int64) (*Symptom, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().symptoms[id]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.Get("symptoms", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return symptomFromRow(row), nil
 }
 
 func (s *MemStore) GetSymptomByFingerprint(fingerprint string) (*Symptom, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
-	id, ok := d.symptomsByFP[fingerprint]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.GetBy("symptoms", sqlite.Row{"fingerprint": fingerprint})
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *d.symptoms[id]
-	return &cp, nil
+	return symptomFromRow(row), nil
 }
 
 func (s *MemStore) FindSymptomCandidates(testName string) ([]*Symptom, error) {
-	// Do not match on empty test names — this would return all symptoms with
-	// empty names, causing false recall hits during calibration.
 	if testName == "" {
 		return nil, nil
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*Symptom
-	for _, sym := range s.ensureData().symptoms {
-		if sym.Name == testName {
-			cp := *sym
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("symptoms", sqlite.Row{"name": testName}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, symptomFromRow), nil
 }
 
 func (s *MemStore) UpdateSymptomSeen(id int64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	sym, ok := s.ensureData().symptoms[id]
-	if !ok {
-		return errors.New("symptom not found")
-	}
-	sym.OccurrenceCount++
-	sym.LastSeenAt = now()
-	if sym.Status == "dormant" {
-		sym.Status = "active"
-	}
-	return nil
+	return s.mes.Mutate("symptoms", id, func(r sqlite.Row) {
+		r["occurrence_count"] = r.Int64("occurrence_count") + 1
+		r["last_seen_at"] = now()
+		if r.String("status") == "dormant" {
+			r["status"] = "active"
+		}
+	})
 }
 
 func (s *MemStore) ListSymptoms() ([]*Symptom, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make([]*Symptom, 0, len(s.ensureData().symptoms))
-	for _, v := range s.ensureData().symptoms {
-		cp := *v
-		out = append(out, &cp)
+	rows, err := s.mes.List("symptoms", nil, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, symptomFromRow), nil
 }
 
-// SnapshotSymptoms returns a copy of all current symptoms for isolation
-// during parallel triage. The caller gets a point-in-time snapshot that
-// won't be affected by concurrent writes.
+// SnapshotSymptoms returns a copy of all current symptoms.
 func (s *MemStore) SnapshotSymptoms() []*Symptom {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make([]*Symptom, 0, len(s.ensureData().symptoms))
-	for _, v := range s.ensureData().symptoms {
-		cp := *v
-		out = append(out, &cp)
-	}
-	return out
+	rows, _ := s.mes.List("symptoms", nil, "")
+	return rowsTo(rows, symptomFromRow)
 }
 
 func (s *MemStore) MarkDormantSymptoms(staleDays int) (int64, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	cutoff := time.Now().UTC().AddDate(0, 0, -staleDays).Format(time.RFC3339)
-	var count int64
-	for _, sym := range s.ensureData().symptoms {
-		if sym.Status == "active" && sym.LastSeenAt < cutoff {
-			sym.Status = "dormant"
-			count++
+	return s.mes.MutateAll("symptoms", func(r sqlite.Row) bool {
+		if r.String("status") == "active" && r.String("last_seen_at") < cutoff {
+			r["status"] = "dormant"
+			return true
 		}
-	}
-	return count, nil
+		return false
+	})
 }
 
-// --- RCA v2 ---
+// --- RCA ---
 
 func (s *MemStore) SaveRCA(rca *RCA) (int64, error) {
 	if rca == nil {
-		return 0, errors.New("rca is nil")
+		return 0, fmt.Errorf("rca is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
 	if rca.ID != 0 {
-		if _, ok := d.rcas[rca.ID]; ok {
-			cp := *rca
-			d.rcas[rca.ID] = &cp
-			return rca.ID, nil
+		existing, _ := s.mes.Get("rcas", rca.ID)
+		if existing != nil {
+			return rca.ID, s.mes.Update("rcas", rca.ID, sqlite.Row{
+				"title": rca.Title, "description": rca.Description,
+				"defect_type": rca.DefectType, "category": rca.Category,
+				"component": rca.Component, "affected_versions": rca.AffectedVersions,
+				"evidence_refs": rca.EvidenceRefs, "convergence_score": rca.ConvergenceScore,
+				"jira_ticket_id": rca.JiraTicketID, "jira_link": rca.JiraLink,
+				"status": rca.Status, "resolved_at": rca.ResolvedAt,
+				"verified_at": rca.VerifiedAt, "archived_at": rca.ArchivedAt,
+			})
 		}
 	}
-	d.nextRCA++
-	cp := *rca
-	cp.ID = d.nextRCA
-	if cp.Status == "" {
-		cp.Status = "open"
+	if rca.Status == "" {
+		rca.Status = "open"
 	}
-	if cp.CreatedAt == "" {
-		cp.CreatedAt = now()
+	if rca.CreatedAt == "" {
+		rca.CreatedAt = now()
 	}
-	d.rcas[cp.ID] = &cp
-	return cp.ID, nil
+	return s.mes.Create("rcas", sqlite.Row{
+		"title": rca.Title, "description": rca.Description,
+		"defect_type": rca.DefectType, "category": rca.Category,
+		"component": rca.Component, "affected_versions": rca.AffectedVersions,
+		"evidence_refs": rca.EvidenceRefs, "convergence_score": rca.ConvergenceScore,
+		"jira_ticket_id": rca.JiraTicketID, "jira_link": rca.JiraLink,
+		"status": rca.Status, "created_at": rca.CreatedAt,
+		"resolved_at": rca.ResolvedAt, "verified_at": rca.VerifiedAt,
+		"archived_at": rca.ArchivedAt,
+	})
 }
 
 func (s *MemStore) GetRCA(id int64) (*RCA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.ensureData().rcas[id]
-	if !ok {
-		return nil, nil
+	row, err := s.mes.Get("rcas", id)
+	if err != nil || row == nil {
+		return nil, err
 	}
-	cp := *v
-	return &cp, nil
+	return rcaFromRow(row), nil
+}
+
+func (s *MemStore) ListRCAs() ([]*RCA, error) {
+	rows, err := s.mes.List("rcas", nil, "")
+	if err != nil {
+		return nil, err
+	}
+	return rowsTo(rows, rcaFromRow), nil
 }
 
 func (s *MemStore) ListRCAsByStatus(status string) ([]*RCA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*RCA
-	for _, r := range s.ensureData().rcas {
-		if r.Status == status {
-			cp := *r
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("rcas", sqlite.Row{"status": status}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, rcaFromRow), nil
 }
 
 func (s *MemStore) UpdateRCAStatus(id int64, status string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	r, ok := s.ensureData().rcas[id]
-	if !ok {
-		return errors.New("rca not found")
-	}
-	r.Status = status
+	set := sqlite.Row{"status": status}
 	switch status {
 	case "resolved":
-		r.ResolvedAt = now()
+		set["resolved_at"] = now()
 	case "verified":
-		r.VerifiedAt = now()
+		set["verified_at"] = now()
 	case "archived":
-		r.ArchivedAt = now()
+		set["archived_at"] = now()
 	case "open":
-		r.ResolvedAt = ""
-		r.VerifiedAt = ""
+		set["resolved_at"] = ""
+		set["verified_at"] = ""
 	}
-	return nil
+	return s.mes.Update("rcas", id, set)
 }
 
 // --- SymptomRCA ---
 
 func (s *MemStore) LinkSymptomToRCA(link *SymptomRCA) (int64, error) {
 	if link == nil {
-		return 0, errors.New("link is nil")
+		return 0, fmt.Errorf("link is nil")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d := s.ensureData()
 	// Check for duplicate
-	for _, existing := range d.symptomRCAs {
-		if existing.SymptomID == link.SymptomID && existing.RCAID == link.RCAID {
-			return 0, errors.New("symptom-rca link already exists")
-		}
+	rows, _ := s.mes.List("symptom_rca", sqlite.Row{
+		"symptom_id": link.SymptomID, "rca_id": link.RCAID,
+	}, "")
+	if len(rows) > 0 {
+		return 0, fmt.Errorf("symptom-rca link already exists")
 	}
-	d.nextSymptomRCA++
-	cp := *link
-	cp.ID = d.nextSymptomRCA
-	if cp.LinkedAt == "" {
-		cp.LinkedAt = now()
+	if link.LinkedAt == "" {
+		link.LinkedAt = now()
 	}
-	d.symptomRCAs[cp.ID] = &cp
-	return cp.ID, nil
+	return s.mes.Create("symptom_rca", sqlite.Row{
+		"symptom_id": link.SymptomID, "rca_id": link.RCAID,
+		"confidence": link.Confidence, "notes": link.Notes,
+		"linked_at": link.LinkedAt,
+	})
 }
 
 func (s *MemStore) GetRCAsForSymptom(symptomID int64) ([]*SymptomRCA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*SymptomRCA
-	for _, link := range s.ensureData().symptomRCAs {
-		if link.SymptomID == symptomID {
-			cp := *link
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("symptom_rca", sqlite.Row{"symptom_id": symptomID}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, symptomRCAFromRow), nil
 }
 
 func (s *MemStore) GetSymptomsForRCA(rcaID int64) ([]*SymptomRCA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []*SymptomRCA
-	for _, link := range s.ensureData().symptomRCAs {
-		if link.RCAID == rcaID {
-			cp := *link
-			out = append(out, &cp)
-		}
+	rows, err := s.mes.List("symptom_rca", sqlite.Row{"rca_id": rcaID}, "")
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return rowsTo(rows, symptomRCAFromRow), nil
 }
