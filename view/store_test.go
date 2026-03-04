@@ -14,14 +14,14 @@ func testCircuitDef() *framework.CircuitDef {
 		Start:   "recall",
 		Done:    "report",
 		Zones: map[string]framework.ZoneDef{
-			"analysis": {Nodes: []string{"recall", "triage"}, Element: "fire"},
-			"output":   {Nodes: []string{"investigate", "report"}, Element: "water"},
+			"analysis": {Nodes: []string{"recall", "triage"}, Approach: "rapid"},
+			"output":   {Nodes: []string{"investigate", "report"}, Approach: "analytical"},
 		},
 		Nodes: []framework.NodeDef{
-			{Name: "recall", Element: "fire"},
-			{Name: "triage", Element: "fire"},
-			{Name: "investigate", Element: "water"},
-			{Name: "report", Element: "water"},
+			{Name: "recall", Approach: "rapid"},
+			{Name: "triage", Approach: "rapid"},
+			{Name: "investigate", Approach: "analytical"},
+			{Name: "report", Approach: "analytical"},
 		},
 		Edges: []framework.EdgeDef{
 			{ID: "e1", Name: "start", From: "recall", To: "triage"},

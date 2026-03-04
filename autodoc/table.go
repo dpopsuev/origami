@@ -33,7 +33,7 @@ func RenderNodeTable(def *framework.CircuitDef, opts *MermaidOptions) string {
 		if transformer == "" {
 			transformer = "-"
 		}
-		element := nd.Element
+		element := nd.Approach
 		if element == "" {
 			element = "-"
 		}

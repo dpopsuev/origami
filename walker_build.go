@@ -54,10 +54,10 @@ func buildWalker(d WalkerDef) (*ProcessWalker, error) {
 		id = persona.Identity
 	}
 
-	if d.Element != "" {
-		elem, err := ValidateElement(d.Element)
-		if err != nil {
-			return nil, err
+	if d.Approach != "" {
+		elem, ok := ResolveApproach(strings.ToLower(d.Approach))
+		if !ok {
+			return nil, fmt.Errorf("unknown approach %q", d.Approach)
 		}
 		id.Element = elem
 	}

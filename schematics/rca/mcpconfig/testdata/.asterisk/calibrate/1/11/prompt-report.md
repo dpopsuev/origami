@@ -34,7 +34,7 @@ Generate the final report artifacts: a Jira ticket draft and a regression summar
 
 | Field | Value |
 |-------|-------|
-| **RCA message** | root cause from subagent-0 |
+| **RCA message** | root cause from subagent-1 |
 | **Defect type** | `pb001` |
 | **Convergence** | 0.85 |
 

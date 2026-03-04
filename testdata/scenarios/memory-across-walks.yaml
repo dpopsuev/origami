@@ -3,10 +3,10 @@ description: "Simple 2-node circuit for verifying cross-walk MemoryStore persist
 
 nodes:
   - name: process
-    element: fire
+    approach: rapid
     transformer: echo
   - name: finish
-    element: water
+    approach: analytical
     transformer: echo
 
 edges:

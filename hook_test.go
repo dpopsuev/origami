@@ -79,8 +79,8 @@ func TestHookingWalker_FiresHooks(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "echo", After: []string{"h1", "h2"}},
-			{Name: "b", Element: "water", Transformer: "echo", After: []string{"h1"}},
+			{Name: "a", Approach: "rapid", Transformer: "echo", After: []string{"h1", "h2"}},
+			{Name: "b", Approach: "analytical", Transformer: "echo", After: []string{"h1"}},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", From: "a", To: "b", When: "true"},
@@ -120,7 +120,7 @@ func TestHookingWalker_MissingHookContinues(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "echo", After: []string{"nonexistent"}},
+			{Name: "a", Approach: "rapid", Transformer: "echo", After: []string{"nonexistent"}},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", From: "a", To: "_done", When: "true"},
@@ -152,7 +152,7 @@ func TestFileWriteHook_WritesArtifact(t *testing.T) {
 		Nodes: []NodeDef{
 			{
 				Name:        "recall",
-				Element:     "earth",
+				Approach:   "methodical",
 				Transformer: "go-template",
 				Prompt:      "test data",
 				After:       []string{"file-write"},
@@ -199,7 +199,7 @@ func TestFileWriteHook_TemplatedPath(t *testing.T) {
 		Nodes: []NodeDef{
 			{
 				Name:        "triage",
-				Element:     "fire",
+				Approach:   "rapid",
 				Transformer: "go-template",
 				Prompt:      "triage output",
 				After:       []string{"file-write"},
@@ -252,7 +252,7 @@ func TestFileWriteHook_AutoRegisteredByRunner(t *testing.T) {
 		Nodes: []NodeDef{
 			{
 				Name:        "a",
-				Element:     "fire",
+				Approach:   "rapid",
 				Transformer: "passthrough",
 				After:       []string{"file-write"},
 				Meta:        map[string]any{"output_path": outPath},
@@ -300,7 +300,7 @@ func TestBeforeHooks_FireBeforeNodeProcessing(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "echo", Before: []string{"before.inject"}, After: []string{"after.store"}},
+			{Name: "a", Approach: "rapid", Transformer: "echo", Before: []string{"before.inject"}, After: []string{"after.store"}},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", From: "a", To: "_done", When: "true"},
@@ -356,7 +356,7 @@ func TestBeforeHooks_InjectIntoWalkerContext(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "capture", Before: []string{"inject.data"}},
+			{Name: "a", Approach: "rapid", Transformer: "capture", Before: []string{"inject.data"}},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", From: "a", To: "_done", When: "true"},
@@ -397,8 +397,8 @@ func TestBeforeHooks_OnlyOnDeclaredNodes(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "echo", Before: []string{"inject.data"}},
-			{Name: "b", Element: "water", Transformer: "echo"},
+			{Name: "a", Approach: "rapid", Transformer: "echo", Before: []string{"inject.data"}},
+			{Name: "b", Approach: "analytical", Transformer: "echo"},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", From: "a", To: "b", When: "true"},
@@ -431,7 +431,7 @@ func TestBeforeHooks_MissingHookContinues(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "echo", Before: []string{"nonexistent"}},
+			{Name: "a", Approach: "rapid", Transformer: "echo", Before: []string{"nonexistent"}},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", From: "a", To: "_done", When: "true"},
@@ -492,7 +492,7 @@ func TestHookingWalker_NoHooksNoWrap(t *testing.T) {
 	trans := &echoTransformer{}
 	def := &CircuitDef{
 		Circuit: "test",
-		Nodes:    []NodeDef{{Name: "a", Element: "fire", Transformer: "echo"}},
+		Nodes:    []NodeDef{{Name: "a", Approach: "rapid", Transformer: "echo"}},
 		Edges:    []EdgeDef{{ID: "E1", From: "a", To: "_done", When: "true"}},
 		Start:    "a",
 		Done:     "_done",

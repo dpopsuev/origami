@@ -19,6 +19,11 @@ import (
 	fw "github.com/dpopsuev/origami"
 )
 
+func resolveNodeElement(d fw.NodeDef) fw.Element {
+	e, _ := fw.ResolveApproach(strings.ToLower(d.Approach))
+	return e
+}
+
 func main() {
 	printHeader()
 
@@ -200,8 +205,8 @@ func loadTriageCircuit() *fw.CircuitDef {
 	fmt.Println()
 	fmt.Printf("  Nodes:\n")
 	for _, n := range def.Nodes {
-		fmt.Printf("    %s%-14s%s element=%-10s family=%s\n",
-			elementColor(fw.Element(n.Element)), n.Name, reset, n.Element, n.Family)
+		fmt.Printf("    %s%-14s%s approach=%-12s family=%s\n",
+			elementColor(resolveNodeElement(n)), n.Name, reset, n.Approach, n.Family)
 	}
 
 	fmt.Println()
@@ -253,10 +258,10 @@ func walkTriageCircuit(def *fw.CircuitDef) {
 	fmt.Printf("  Building a graph from the circuit DSL, then walking it with a Herald.\n\n")
 
 	nodeReg := fw.NodeRegistry{
-		"classify":    func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
-		"investigate": func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
-		"decide":      func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
-		"close":       func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
+		"classify":    func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: resolveNodeElement(d)} },
+		"investigate": func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: resolveNodeElement(d)} },
+		"decide":      func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: resolveNodeElement(d)} },
+		"close":       func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: resolveNodeElement(d)} },
 	}
 
 	scenario := newDemoScenario()
@@ -542,8 +547,8 @@ func showDialectic() {
 	fmt.Println()
 	fmt.Printf("  %sAdversarial Dialectic circuit (D0-D4):%s\n", bold, reset)
 	for _, n := range dialecticDef.Nodes {
-		fmt.Printf("    %s%-14s%s element=%-10s\n",
-			elementColor(fw.Element(n.Element)), n.Name, reset, n.Element)
+		fmt.Printf("    %s%-14s%s approach=%-12s\n",
+			elementColor(resolveNodeElement(n)), n.Name, reset, n.Approach)
 	}
 
 	fmt.Println()
@@ -578,10 +583,10 @@ func teamWalkDemo(def *fw.CircuitDef) {
 	fmt.Printf("  An %sObserver%s traces every event in real time.\n\n", bold, reset)
 
 	nodeReg := fw.NodeRegistry{
-		"classify":    func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
-		"investigate": func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
-		"decide":      func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
-		"close":       func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: fw.Element(d.Element)} },
+		"classify":    func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: resolveNodeElement(d)} },
+		"investigate": func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: resolveNodeElement(d)} },
+		"decide":      func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: resolveNodeElement(d)} },
+		"close":       func(d fw.NodeDef) fw.Node { return &demoNode{name: d.Name, element: resolveNodeElement(d)} },
 	}
 
 	scenario := newDemoScenario()

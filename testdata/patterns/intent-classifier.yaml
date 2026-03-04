@@ -15,29 +15,29 @@ description: "Classify user intent with provider fallback and caching"
 zones:
   ingestion:
     nodes: [preprocess]
-    element: water
+    approach: analytical
     stickiness: 0
   classification:
     nodes: [classify, reclassify]
-    element: fire
+    approach: rapid
     stickiness: 2
   enrichment:
     nodes: [enrich]
-    element: earth
+    approach: methodical
     stickiness: 1
   output:
     nodes: [respond]
-    element: air
+    approach: holistic
     stickiness: 0
 
 nodes:
   - name: preprocess
-    element: water
+    approach: analytical
     family: transform
     prompt: "Normalize and tokenize the user input."
 
   - name: classify
-    element: fire
+    approach: rapid
     family: classify
     provider: primary-llm
     prompt: "Classify the user's intent into one of: question, command, feedback, other."
@@ -45,18 +45,18 @@ nodes:
       ttl: 5m
 
   - name: reclassify
-    element: fire
+    approach: rapid
     family: classify
     provider: primary-llm
     prompt: "Re-classify with additional context from enrichment."
 
   - name: enrich
-    element: earth
+    approach: methodical
     family: enrich
     prompt: "Add context from user history and knowledge base."
 
   - name: respond
-    element: air
+    approach: holistic
     family: respond
     prompt: "Generate a response appropriate to the classified intent."
 

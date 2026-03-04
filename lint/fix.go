@@ -82,14 +82,14 @@ func applyLineReplacements(raw []byte, fixes []Fix) []byte {
 
 // --- Fixable rule implementations ---
 
-// Fix for S2/invalid-element: replace with closest valid element via fuzzy match.
-func (r *InvalidElement) Fix(ctx *LintContext) []Fix {
+// Fix for S2/invalid-approach: replace with closest valid approach via fuzzy match.
+func (r *InvalidApproach) Fix(ctx *LintContext) []Fix {
 	var fixes []Fix
 	for _, nd := range ctx.Def.Nodes {
-		if nd.Element == "" || validElements[strings.ToLower(nd.Element)] {
+		if nd.Approach == "" || validApproaches[strings.ToLower(nd.Approach)] {
 			continue
 		}
-		suggestion := closestElement(nd.Element)
+		suggestion := closestApproach(nd.Approach)
 		if suggestion == "" {
 			continue
 		}
@@ -97,7 +97,7 @@ func (r *InvalidElement) Fix(ctx *LintContext) []Fix {
 		if line == 0 {
 			continue
 		}
-		fixLine := findFieldLine(ctx.Raw, line, "element:")
+		fixLine := findFieldLine(ctx.Raw, line, "approach:")
 		if fixLine == 0 {
 			continue
 		}
@@ -105,7 +105,7 @@ func (r *InvalidElement) Fix(ctx *LintContext) []Fix {
 			Finding: Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
-				Message:  fmt.Sprintf("node %q: fix element %q → %q", nd.Name, nd.Element, suggestion),
+				Message:  fmt.Sprintf("node %q: fix approach %q → %q", nd.Name, nd.Approach, suggestion),
 				File:     ctx.File,
 				Line:     fixLine,
 			},
@@ -216,10 +216,10 @@ func (r *MissingCircuitDescription) Fix(ctx *LintContext) []Fix {
 
 // --- Fix helpers ---
 
-func closestElement(val string) string {
+func closestApproach(val string) string {
 	best, bestDist := "", 100
 	lower := strings.ToLower(val)
-	for e := range validElements {
+	for e := range validApproaches {
 		d := levenshtein(lower, e)
 		if d < bestDist {
 			bestDist = d

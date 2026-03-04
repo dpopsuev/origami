@@ -28,8 +28,8 @@ func TestIntegration_RecorderCapturesFrameOnDiff(t *testing.T) {
 	def := &framework.CircuitDef{
 		Circuit: "rec-test",
 		Nodes: []framework.NodeDef{
-			{Name: "alpha", Element: "fire"},
-			{Name: "beta", Element: "water"},
+			{Name: "alpha", Approach: "rapid"},
+			{Name: "beta", Approach: "analytical"},
 		},
 		Edges: []framework.EdgeDef{{From: "alpha", To: "beta"}},
 		Start: "alpha",
@@ -297,8 +297,8 @@ func pipelineDef() *framework.CircuitDef {
 	return &framework.CircuitDef{
 		Circuit: "pipeline-test",
 		Nodes: []framework.NodeDef{
-			{Name: "recall", Element: "fire"},
-			{Name: "triage", Element: "water"},
+			{Name: "recall", Approach: "rapid"},
+			{Name: "triage", Approach: "analytical"},
 		},
 		Edges: []framework.EdgeDef{{From: "recall", To: "triage"}},
 		Start: "recall",

@@ -263,8 +263,8 @@ func TestRunner_Walk_NilWalker(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "nil-walker",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "echo"},
-			{Name: "b", Element: "water", Transformer: "echo"},
+			{Name: "a", Approach: "rapid", Transformer: "echo"},
+			{Name: "b", Approach: "analytical", Transformer: "echo"},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", From: "a", To: "b", Name: "a-b", When: "true"},

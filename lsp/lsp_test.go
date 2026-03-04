@@ -49,11 +49,11 @@ done: DONE`
 	}
 }
 
-func TestComputeDiagnostics_InvalidElement(t *testing.T) {
+func TestComputeDiagnostics_InvalidApproach(t *testing.T) {
 	raw := `circuit: test
 nodes:
   - name: start
-    element: fyre
+    approach: rapd
 start: start
 done: DONE`
 
@@ -65,12 +65,12 @@ done: DONE`
 	diags := computeDiagnostics(doc)
 	found := false
 	for _, d := range diags {
-		if strings.Contains(d.Message, "fyre") || strings.Contains(d.Message, "element") {
+		if strings.Contains(d.Message, "rapd") || strings.Contains(d.Message, "approach") {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("expected diagnostic about invalid element 'fyre'")
+		t.Error("expected diagnostic about invalid approach 'rapd'")
 	}
 }
 
@@ -108,40 +108,40 @@ func TestCompletion_TopLevel(t *testing.T) {
 	}
 }
 
-func TestCompletion_ElementValues(t *testing.T) {
+func TestCompletion_ApproachValues(t *testing.T) {
 	doc := &document{
 		URI:     uri.URI("file:///test.yaml"),
-		Content: "  element: ",
+		Content: "  approach: ",
 	}
 
-	items := computeCompletions(doc, protocol.Position{Line: 0, Character: 11})
+	items := computeCompletions(doc, protocol.Position{Line: 0, Character: 12})
 	if len(items) == 0 {
-		t.Fatal("expected element value completions")
+		t.Fatal("expected approach value completions")
 	}
 
 	labels := map[string]bool{}
 	for _, item := range items {
 		labels[item.Label] = true
 	}
-	for _, el := range []string{"fire", "water", "earth", "air", "diamond"} {
-		if !labels[el] {
-			t.Errorf("missing element completion: %s", el)
+	for _, a := range []string{"rapid", "analytical", "methodical", "holistic", "rigorous"} {
+		if !labels[a] {
+			t.Errorf("missing approach completion: %s", a)
 		}
 	}
 }
 
-func TestHover_Element(t *testing.T) {
+func TestHover_Approach(t *testing.T) {
 	doc := &document{
 		URI:     uri.URI("file:///test.yaml"),
-		Content: "    element: fire",
+		Content: "    approach: rapid",
 	}
 
-	hover := computeHover(doc, protocol.Position{Line: 0, Character: 13}, nil)
+	hover := computeHover(doc, protocol.Position{Line: 0, Character: 14}, nil)
 	if hover == nil {
-		t.Fatal("expected hover for element")
+		t.Fatal("expected hover for approach")
 	}
-	if !strings.Contains(hover.Contents.Value, "Fire") && !strings.Contains(hover.Contents.Value, "fire") {
-		t.Errorf("hover content doesn't mention fire: %s", hover.Contents.Value)
+	if !strings.Contains(hover.Contents.Value, "Rapid") && !strings.Contains(hover.Contents.Value, "rapid") {
+		t.Errorf("hover content doesn't mention rapid: %s", hover.Contents.Value)
 	}
 }
 
@@ -301,7 +301,7 @@ func TestHover_NodeDescription(t *testing.T) {
 nodes:
   - name: recall
     description: "Pattern-match against known failures"
-    element: fire
+    approach: rapid
   - name: triage
 edges:
   - id: E1
@@ -453,15 +453,15 @@ func TestServerHandler_Initialize(t *testing.T) {
 	}
 }
 
-func TestSemanticTokens_ElementValues(t *testing.T) {
+func TestSemanticTokens_ApproachValues(t *testing.T) {
 	content := `circuit: test
 nodes:
   - name: recall
-    element: fire
+    approach: rapid
   - name: deep
-    element: water
+    approach: analytical
   - name: classify
-    element: earth
+    approach: methodical
 edges:
   - id: E1
     from: recall
@@ -489,14 +489,14 @@ done: DONE`
 	}
 	tokenCount := len(data) / 5
 	if tokenCount < 3 {
-		t.Errorf("expected at least 3 element tokens (fire, water, earth), got %d", tokenCount)
+		t.Errorf("expected at least 3 approach tokens (rapid, analytical, methodical), got %d", tokenCount)
 	}
 
-	// Verify first token is fire (type 0)
+	// Verify first token is rapid (type 0)
 	if len(data) >= 5 {
 		tokenType := data[3]
-		if tokenType != elementTokenIndex["fire"] {
-			t.Errorf("first token type = %d, want %d (fire)", tokenType, elementTokenIndex["fire"])
+		if tokenType != approachTokenIndex["rapid"] {
+			t.Errorf("first token type = %d, want %d (rapid)", tokenType, approachTokenIndex["rapid"])
 		}
 	}
 }
@@ -509,25 +509,25 @@ func TestSemanticTokens_Empty(t *testing.T) {
 
 	data := computeSemanticTokens(doc)
 	if len(data) != 0 {
-		t.Errorf("expected no semantic tokens for circuit without elements, got %d values", len(data))
+		t.Errorf("expected no semantic tokens for circuit without approaches, got %d values", len(data))
 	}
 }
 
-func TestSemanticTokens_AllElements(t *testing.T) {
+func TestSemanticTokens_AllApproaches(t *testing.T) {
 	content := `circuit: elements
 nodes:
   - name: n1
-    element: fire
+    approach: rapid
   - name: n2
-    element: water
+    approach: analytical
   - name: n3
-    element: earth
+    approach: methodical
   - name: n4
-    element: air
+    approach: holistic
   - name: n5
-    element: diamond
+    approach: rigorous
   - name: n6
-    element: lightning
+    approach: aggressive
 start: n1
 done: DONE`
 
@@ -544,7 +544,7 @@ done: DONE`
 	data := computeSemanticTokens(doc)
 	tokenCount := len(data) / 5
 	if tokenCount != 6 {
-		t.Errorf("expected 6 element tokens (all 6 types), got %d", tokenCount)
+		t.Errorf("expected 6 approach tokens (all 6 types), got %d", tokenCount)
 	}
 
 	// Verify all 6 unique token types are present
@@ -552,9 +552,9 @@ done: DONE`
 	for i := 0; i < len(data); i += 5 {
 		seen[data[i+3]] = true
 	}
-	for el, idx := range elementTokenIndex {
+	for approach, idx := range approachTokenIndex {
 		if !seen[idx] {
-			t.Errorf("missing token type for element %q (index %d)", el, idx)
+			t.Errorf("missing token type for approach %q (index %d)", approach, idx)
 		}
 	}
 }
@@ -588,13 +588,13 @@ func TestSemanticTokensProvider(t *testing.T) {
 	}
 }
 
-func TestInlayHints_ElementTraits(t *testing.T) {
+func TestInlayHints_ApproachTraits(t *testing.T) {
 	content := `circuit: test
 nodes:
   - name: recall
-    element: fire
+    approach: rapid
   - name: deep
-    element: water
+    approach: analytical
 start: recall
 done: DONE`
 
@@ -604,12 +604,12 @@ done: DONE`
 	traitHints := filterHintsByKind(hints, 1)
 	found := 0
 	for _, h := range traitHints {
-		if strings.Contains(h.Label, "fast") || strings.Contains(h.Label, "thorough") {
+		if strings.Contains(h.Label, "fast") || strings.Contains(h.Label, "deep") {
 			found++
 		}
 	}
 	if found < 2 {
-		t.Errorf("expected at least 2 behaviour profile hints (fast, thorough), found %d", found)
+		t.Errorf("expected at least 2 behaviour profile hints (fast, deep), found %d", found)
 	}
 }
 
@@ -1002,14 +1002,14 @@ done: DONE`
 	}
 }
 
-func TestSemanticTokens_WalkerElement(t *testing.T) {
+func TestSemanticTokens_WalkerApproach(t *testing.T) {
 	content := `circuit: test
 nodes:
   - name: recall
-    element: fire
+    approach: rapid
 walkers:
   - name: scout
-    element: water
+    approach: analytical
 start: recall
 done: DONE`
 
@@ -1018,7 +1018,7 @@ done: DONE`
 	data := computeSemanticTokens(doc)
 	tokenCount := len(data) / 5
 	if tokenCount < 2 {
-		t.Errorf("expected at least 2 element tokens (node fire + walker water), got %d", tokenCount)
+		t.Errorf("expected at least 2 approach tokens (node rapid + walker analytical), got %d", tokenCount)
 	}
 
 	// Collect all token types
@@ -1026,11 +1026,11 @@ done: DONE`
 	for i := 0; i < len(data); i += 5 {
 		types[data[i+3]] = true
 	}
-	if !types[elementTokenIndex["fire"]] {
-		t.Error("missing semantic token for node element: fire")
+	if !types[approachTokenIndex["rapid"]] {
+		t.Error("missing semantic token for node approach: rapid")
 	}
-	if !types[elementTokenIndex["water"]] {
-		t.Error("missing semantic token for walker element: water")
+	if !types[approachTokenIndex["analytical"]] {
+		t.Error("missing semantic token for walker approach: analytical")
 	}
 }
 
@@ -1114,9 +1114,9 @@ func TestKamiBridge_LiveInlayHints(t *testing.T) {
 	content := `circuit: test
 nodes:
   - name: recall
-    element: fire
+    approach: rapid
   - name: triage
-    element: water
+    approach: analytical
 start: recall
 done: DONE`
 

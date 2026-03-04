@@ -7,38 +7,38 @@ description: "F0-F6 root cause analysis circuit"
 zones:
   backcourt:
     nodes: [recall, triage]
-    element: fire
+    approach: rapid
     stickiness: 0
   frontcourt:
     nodes: [resolve, investigate]
-    element: water
+    approach: analytical
     stickiness: 2
   paint:
     nodes: [correlate, review, report]
-    element: air
+    approach: holistic
     stickiness: 1
 
 nodes:
   - name: recall
-    element: fire
+    approach: rapid
     family: recall
   - name: triage
-    element: fire
+    approach: rapid
     family: triage
   - name: resolve
-    element: earth
+    approach: methodical
     family: resolve
   - name: investigate
-    element: water
+    approach: analytical
     family: investigate
   - name: correlate
-    element: air
+    approach: holistic
     family: correlate
   - name: review
-    element: diamond
+    approach: rigorous
     family: review
   - name: report
-    element: air
+    approach: holistic
     family: report
 
 edges:

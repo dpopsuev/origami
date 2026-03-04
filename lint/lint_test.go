@@ -26,12 +26,12 @@ circuit: test
 description: a test circuit
 nodes:
   - name: recall
-    element: fire
+    approach: rapid
     transformer: core.jq
     meta:
       expr: "input"
   - name: triage
-    element: earth
+    approach: methodical
     transformer: core.jq
     meta:
       expr: "input"
@@ -62,14 +62,14 @@ func TestRun_CleanCircuit_ZeroFindings(t *testing.T) {
 	}
 }
 
-func TestRun_InvalidElement(t *testing.T) {
+func TestRun_InvalidApproach(t *testing.T) {
 	yml := []byte(`
 circuit: test
 description: test
 nodes:
   - name: recall
     family: recall
-    element: fyre
+    approach: rapd
 edges:
   - id: e1
     name: e1
@@ -84,18 +84,18 @@ done: _done
 	}
 	found := false
 	for _, f := range findings {
-		if f.RuleID == "S2/invalid-element" {
+		if f.RuleID == "S2/invalid-approach" {
 			found = true
-			if !strings.Contains(f.Message, "fyre") {
-				t.Errorf("expected message to contain 'fyre', got %q", f.Message)
+			if !strings.Contains(f.Message, "rapd") {
+				t.Errorf("expected message to contain 'rapd', got %q", f.Message)
 			}
 			if f.Suggestion == "" {
-				t.Error("expected a suggestion for 'fyre'")
+				t.Error("expected a suggestion for 'rapd'")
 			}
 		}
 	}
 	if !found {
-		t.Error("expected S2/invalid-element finding")
+		t.Error("expected S2/invalid-approach finding")
 	}
 }
 
@@ -105,9 +105,9 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
   - name: b
-    element: earth
+    approach: methodical
 edges:
   - id: e1
     name: e1
@@ -145,7 +145,7 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
 edges:
   - id: e1
     from: a
@@ -174,7 +174,7 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
     cache:
       ttl: "not-a-duration"
 edges:
@@ -205,7 +205,7 @@ func TestRun_MissingDescription(t *testing.T) {
 circuit: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
 edges:
   - id: e1
     name: e1
@@ -235,9 +235,9 @@ circuit: test
 description: test
 nodes:
   - name: start_node
-    element: fire
+    approach: rapid
   - name: orphan
-    element: water
+    approach: analytical
 edges:
   - id: e1
     name: e1
@@ -270,9 +270,9 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
   - name: b
-    element: earth
+    approach: methodical
 edges:
   - id: e1
     name: e1
@@ -306,7 +306,7 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
 edges:
   - id: e1
     name: e1
@@ -336,7 +336,7 @@ func TestRun_ProfileMin_OnlyErrors(t *testing.T) {
 circuit: test
 nodes:
   - name: a
-    element: fyre
+    approach: fyre
 edges:
   - id: e1
     from: a
@@ -355,7 +355,7 @@ done: _done
 		}
 	}
 	if !HasErrors(findings) {
-		t.Error("expected at least one error finding (invalid element)")
+		t.Error("expected at least one error finding (invalid approach)")
 	}
 }
 
@@ -365,7 +365,7 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
 edges:
   - id: e1
     name: e1
@@ -373,7 +373,7 @@ edges:
     to: _done
 walkers:
   - name: agent1
-    element: fire
+    approach: rapid
     persona: "NonExistentPersona"
 start: a
 done: _done
@@ -399,11 +399,11 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
   - name: b
-    element: earth
+    approach: methodical
   - name: c
-    element: water
+    approach: analytical
 edges:
   - id: e1
     name: e1
@@ -458,7 +458,7 @@ func TestLintContext_LineNumbers(t *testing.T) {
 func TestNewLintContextFromDef(t *testing.T) {
 	def := &framework.CircuitDef{
 		Circuit: "test",
-		Nodes:    []framework.NodeDef{{Name: "a", Element: "fire"}},
+		Nodes:    []framework.NodeDef{{Name: "a", Approach: "rapid"}},
 		Edges:    []framework.EdgeDef{{ID: "e1", Name: "e1", From: "a", To: "_done"}},
 		Start:    "a",
 		Done:     "_done",
@@ -476,9 +476,9 @@ func TestNewLintContextFromDef(t *testing.T) {
 
 func TestFinding_String(t *testing.T) {
 	f := Finding{
-		RuleID:   "S2/invalid-element",
+		RuleID:   "S2/invalid-approach",
 		Severity: SeverityError,
-		Message:  `unknown element "fyre"`,
+		Message:  `unknown approach "fyre"`,
 		File:     "circuit.yaml",
 		Line:     12,
 	}
@@ -519,12 +519,12 @@ func TestHasErrors(t *testing.T) {
 	}
 }
 
-func TestApplyFixes_InvalidElement(t *testing.T) {
+func TestApplyFixes_InvalidApproach(t *testing.T) {
 	yml := []byte(`circuit: test
 description: test
 nodes:
   - name: a
-    element: fyre
+    approach: rapd
 edges:
   - id: e1
     name: e1
@@ -540,8 +540,8 @@ done: _done
 	if len(fixes) == 0 {
 		t.Fatal("expected at least one fix")
 	}
-	if !strings.Contains(string(fixed), "element: fire") {
-		t.Errorf("expected fix to replace 'fyre' with 'fire', got:\n%s", string(fixed))
+	if !strings.Contains(string(fixed), "approach: rapid") {
+		t.Errorf("expected fix to replace 'rapd' with 'rapid', got:\n%s", string(fixed))
 	}
 }
 
@@ -550,7 +550,7 @@ func TestApplyFixes_ConditionToWhen(t *testing.T) {
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
 edges:
   - id: e1
     name: e1
@@ -597,11 +597,11 @@ circuit: test
 description: test
 nodes:
   - name: recall
-    element: fire
+    approach: rapid
     transformer: core.llm
     prompt: "recall items"
   - name: triage
-    element: earth
+    approach: methodical
     transformer: core.jq
     meta:
       expr: "input"
@@ -644,10 +644,10 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
     transformer: custom.stochastic
   - name: b
-    element: earth
+    approach: methodical
     transformer: custom.deterministic
 edges:
   - id: e1
@@ -693,7 +693,7 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
     transformer: core.jq
     meta:
       expr: "input"
@@ -722,16 +722,16 @@ circuit: test
 description: test
 nodes:
   - name: recall
-    element: fire
+    approach: rapid
     transformer: core.llm
     prompt: "recall items"
   - name: triage
-    element: earth
+    approach: methodical
     transformer: core.jq
     meta:
       expr: "input"
   - name: assess
-    element: water
+    approach: analytical
     transformer: llm
     prompt: "assess"
 edges:
@@ -780,7 +780,7 @@ circuit: test
 description: test
 nodes:
   - name: a
-    element: fire
+    approach: rapid
     transformer: core.jq
     meta:
       expr: "input"
@@ -844,9 +844,9 @@ circuit: test
 description: test circuit
 nodes:
   - name: init
-    element: water
+    approach: analytical
   - name: done
-    element: water
+    approach: analytical
 edges:
   - id: e1
     name: start
@@ -885,9 +885,9 @@ circuit: test
 description: test
 nodes:
   - name: init
-    element: water
+    approach: analytical
   - name: done
-    element: water
+    approach: analytical
 edges:
   - id: e1
     name: start

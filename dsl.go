@@ -38,7 +38,7 @@ type ExtractorDef struct {
 // This is the "care, but in YAML" counterpart to DefaultWalker.
 type WalkerDef struct {
 	Name           string             `yaml:"name"`
-	Element        string             `yaml:"element,omitempty"`
+	Approach       string             `yaml:"approach,omitempty"`
 	Persona        string             `yaml:"persona,omitempty"`
 	Preamble       string             `yaml:"preamble,omitempty"`
 	OffsetPreamble string             `yaml:"offset_preamble,omitempty"`
@@ -56,7 +56,7 @@ type ContextFilterDef struct {
 // ZoneDef declares a meta-phase zone (P7: optional, progressive disclosure).
 type ZoneDef struct {
 	Nodes         []string          `yaml:"nodes"`
-	Element       string            `yaml:"element,omitempty"`
+	Approach      string            `yaml:"approach,omitempty"`
 	Stickiness    int               `yaml:"stickiness,omitempty"`
 	Domain        string            `yaml:"domain,omitempty"`
 	ContextFilter *ContextFilterDef `yaml:"context_filter,omitempty"`
@@ -68,7 +68,7 @@ type ZoneDef struct {
 type NodeDef struct {
 	Name        string          `yaml:"name"`
 	Description string          `yaml:"description,omitempty"`
-	Element     string          `yaml:"element,omitempty"`
+	Approach    string          `yaml:"approach,omitempty"`
 	Family      string          `yaml:"family,omitempty"`
 	Extractor   string          `yaml:"extractor,omitempty"`
 	Renderer    string          `yaml:"renderer,omitempty"`
@@ -486,10 +486,11 @@ func (def *CircuitDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 
 	fwZones := make([]Zone, 0, len(def.Zones))
 	for name, zd := range def.Zones {
+		elem, _ := ResolveApproach(strings.ToLower(zd.Approach))
 		fwZones = append(fwZones, Zone{
 			Name:            name,
 			NodeNames:       zd.Nodes,
-			ElementAffinity: Element(strings.ToLower(zd.Element)),
+			ElementAffinity: elem,
 			Stickiness:      zd.Stickiness,
 			Domain:          strings.ToLower(zd.Domain),
 			ContextFilter:   zd.ContextFilter,
@@ -502,7 +503,7 @@ func (def *CircuitDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 // resolveNode creates a Node from a NodeDef using the priority chain:
 // Transformer > Extractor > NodeRegistry (Family/Name).
 func (def *CircuitDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error) {
-	elem := Element(strings.ToLower(nd.Element))
+	elem, _ := ResolveApproach(strings.ToLower(nd.Approach))
 
 	if nd.Transformer != "" {
 		var t Transformer

@@ -11,8 +11,8 @@ func AllRules() []Rule {
 
 func structuralRules() []Rule {
 	return []Rule{
-		&MissingNodeElement{},
-		&InvalidElement{},
+		&MissingNodeApproach{},
+		&InvalidApproach{},
 		&InvalidMergeStrategy{},
 		&MissingEdgeName{},
 		&DuplicateEdgeCondition{},
@@ -20,7 +20,7 @@ func structuralRules() []Rule {
 		&InvalidCacheTTL{},
 		&MissingCircuitDescription{},
 		&UnnamedNode{},
-		&InvalidWalkerElement{},
+		&InvalidWalkerApproach{},
 		&InvalidWalkerPersona{},
 		&SchemaInUnstructuredZone{},
 		&MissingZoneDomain{},
@@ -34,7 +34,7 @@ func semanticRules() []Rule {
 		&UnreachableDone{},
 		&DeadEdge{},
 		&ShortcutBypassesRequired{},
-		&ZoneElementMismatch{},
+		&ZoneApproachMismatch{},
 		&ExpressionCompileError{},
 		&FanInWithoutMerge{},
 		&UnacknowledgedShortcut{},
@@ -49,7 +49,7 @@ func bestPracticeRules() []Rule {
 		&TerminalEdgeToDone{},
 		&ZoneStickinessWithoutProvider{},
 		&LargeCircuitNoZones{},
-		&ElementAffinityChain{},
+		&ApproachAffinityChain{},
 		&StochasticTransformer{},
 		&StochasticSummary{},
 	}

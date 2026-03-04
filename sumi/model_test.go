@@ -19,10 +19,10 @@ func testCircuit() *framework.CircuitDef {
 	return &framework.CircuitDef{
 		Circuit: "test",
 		Nodes: []framework.NodeDef{
-			{Name: "recall", Element: "fire"},
-			{Name: "triage", Element: "water"},
-			{Name: "investigate", Element: "earth"},
-			{Name: "report", Element: "diamond"},
+			{Name: "recall", Approach: "rapid"},
+			{Name: "triage", Approach: "analytical"},
+			{Name: "investigate", Approach: "methodical"},
+			{Name: "report", Approach: "rigorous"},
 		},
 		Edges: []framework.EdgeDef{
 			{From: "recall", To: "triage"},

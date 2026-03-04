@@ -235,7 +235,7 @@ func TestLoadCircuit_ExtractorField_RoundTrip(t *testing.T) {
 	original := &CircuitDef{
 		Circuit: "ext-roundtrip",
 		Nodes: []NodeDef{
-			{Name: "parse", Element: "earth", Extractor: "json-v1"},
+			{Name: "parse", Approach: "methodical", Extractor: "json-v1"},
 			{Name: "process", Family: "compute"},
 		},
 		Edges: []EdgeDef{
@@ -402,7 +402,7 @@ func TestBuildGraph_BuiltinJSONSchemaExtractor_NoRegistry(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "parse", Element: "earth", Extractor: "json-schema"},
+			{Name: "parse", Approach: "methodical", Extractor: "json-schema"},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", Name: "done", From: "parse", To: "_done"},

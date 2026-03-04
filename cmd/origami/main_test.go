@@ -45,10 +45,10 @@ vars:
   greeting: hello
 nodes:
   - name: start
-    element: fire
+    approach: rapid
     transformer: echo
   - name: finish
-    element: water
+    approach: analytical
     transformer: echo
 edges:
   - id: E1
@@ -134,11 +134,11 @@ vars:
   mode: fast
 nodes:
   - name: load
-    element: fire
+    approach: rapid
     transformer: file
     prompt: data.json
   - name: classify
-    element: water
+    approach: analytical
     transformer: file
     input: "${load.output}"
     prompt: data.json
@@ -242,11 +242,11 @@ func TestCLI_Skill_Scaffold(t *testing.T) {
 circuit: test-scaffold
 nodes:
   - name: scan
-    element: fire
+    approach: rapid
     transformer: llm
     prompt: "Scan for vulnerabilities"
   - name: classify
-    element: water
+    approach: analytical
     transformer: http
 edges:
   - id: E1
@@ -306,7 +306,7 @@ func TestCLI_Skill_Scaffold_DefaultOut(t *testing.T) {
 circuit: myapp
 nodes:
   - name: start
-    element: fire
+    approach: rapid
     transformer: echo
 edges:
   - id: E1

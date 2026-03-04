@@ -183,6 +183,7 @@ func buildFieldLineMap(root *yaml.Node) map[string]int {
 		switch key.Value {
 		case "nodes":
 			mapSequenceByField(val, "name", "node:", m)
+			mapInlineEdges(val, m)
 		case "edges":
 			mapSequenceByField(val, "id", "edge:", m)
 		case "walkers":
@@ -190,6 +191,66 @@ func buildFieldLineMap(root *yaml.Node) map[string]int {
 		}
 	}
 	return m
+}
+
+// mapInlineEdges indexes edges nested under nodes[].edges in compact DSL form.
+// Replicates the same ID generation as generateEdgeID: {from}-{name} or {from}-{to}.
+func mapInlineEdges(nodesSeq *yaml.Node, m map[string]int) {
+	if nodesSeq == nil || nodesSeq.Kind != yaml.SequenceNode {
+		return
+	}
+	seen := make(map[string]int)
+	for _, nodeItem := range nodesSeq.Content {
+		if nodeItem.Kind != yaml.MappingNode {
+			continue
+		}
+		var nodeName string
+		var edgesNode *yaml.Node
+		for j := 0; j+1 < len(nodeItem.Content); j += 2 {
+			switch nodeItem.Content[j].Value {
+			case "name":
+				nodeName = nodeItem.Content[j+1].Value
+			case "edges":
+				edgesNode = nodeItem.Content[j+1]
+			}
+		}
+		if nodeName == "" || edgesNode == nil || edgesNode.Kind != yaml.SequenceNode {
+			continue
+		}
+		for _, edgeItem := range edgesNode.Content {
+			var id string
+			switch edgeItem.Kind {
+			case yaml.ScalarNode:
+				id = inlineEdgeID(nodeName, "", edgeItem.Value, seen)
+			case yaml.MappingNode:
+				var eName, eTo string
+				for j := 0; j+1 < len(edgeItem.Content); j += 2 {
+					switch edgeItem.Content[j].Value {
+					case "name":
+						eName = edgeItem.Content[j+1].Value
+					case "to":
+						eTo = edgeItem.Content[j+1].Value
+					}
+				}
+				id = inlineEdgeID(nodeName, eName, eTo, seen)
+			}
+			if id != "" {
+				m["edge:"+id] = edgeItem.Line
+			}
+		}
+	}
+}
+
+func inlineEdgeID(from, name, to string, seen map[string]int) string {
+	base := from + "-" + to
+	if name != "" {
+		base = from + "-" + strings.ReplaceAll(name, " ", "-")
+	}
+	seen[base]++
+	if seen[base] > 1 {
+		return fmt.Sprintf("%s-%d", base, seen[base])
+	}
+	return base
 }
 
 // mapSequenceByField extracts line numbers from a YAML sequence of mappings.

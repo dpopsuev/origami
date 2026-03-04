@@ -23,14 +23,14 @@ edges:
     to: done
 walkers:
   - name: scout
-    element: fire
+    approach: rapid
     persona: herald
     preamble: "You are a scout."
     step_affinity:
       recall: 0.9
       triage: 0.7
   - name: analyst
-    element: water
+    approach: analytical
     persona: seeker
 start: start_node
 done: done
@@ -48,8 +48,8 @@ done: done
 	if scout.Name != "scout" {
 		t.Errorf("walker[0].Name = %q, want %q", scout.Name, "scout")
 	}
-	if scout.Element != "fire" {
-		t.Errorf("walker[0].Element = %q, want %q", scout.Element, "fire")
+	if scout.Approach != "rapid" {
+		t.Errorf("walker[0].Approach = %q, want %q", scout.Approach, "rapid")
 	}
 	if scout.Persona != "herald" {
 		t.Errorf("walker[0].Persona = %q, want %q", scout.Persona, "herald")
@@ -87,8 +87,8 @@ done: done
 
 func TestBuildWalkersFromDef(t *testing.T) {
 	defs := []WalkerDef{
-		{Name: "scout", Element: "fire", Persona: "herald", Preamble: "Custom preamble."},
-		{Name: "analyst", Element: "water", Persona: "seeker"},
+		{Name: "scout", Approach: "rapid", Persona: "herald", Preamble: "Custom preamble."},
+		{Name: "analyst", Approach: "analytical", Persona: "seeker"},
 	}
 
 	walkers, err := BuildWalkersFromDef(defs)
@@ -132,13 +132,13 @@ func TestBuildWalkersFromDefUnknownPersona(t *testing.T) {
 	}
 }
 
-func TestBuildWalkersFromDefUnknownElement(t *testing.T) {
+func TestBuildWalkersFromDefUnknownApproach(t *testing.T) {
 	defs := []WalkerDef{
-		{Name: "bad", Element: "plasma"},
+		{Name: "bad", Approach: "plasma"},
 	}
 	_, err := BuildWalkersFromDef(defs)
 	if err == nil {
-		t.Fatal("expected error for unknown element")
+		t.Fatal("expected error for unknown approach")
 	}
 }
 
@@ -162,7 +162,7 @@ func TestBuildWalkersFromDefEmptySlice(t *testing.T) {
 	}
 }
 
-func TestBuildWalkersFromDefPersonaOnlyNoElement(t *testing.T) {
+func TestBuildWalkersFromDefPersonaOnlyNoApproach(t *testing.T) {
 	defs := []WalkerDef{
 		{Name: "minimal", Persona: "sentinel"},
 	}

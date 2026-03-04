@@ -5,9 +5,25 @@
 // of this generic structure.
 package framework
 
+import "fmt"
 
-// Element represents a behavioral archetype governing how an agent
-// moves through a circuit graph.
+// Approach is the user-facing name for a behavioral archetype.
+// Circuit authors write `approach: analytical` in YAML; the framework
+// resolves it to an internal Element for scheduling and traversal.
+type Approach string
+
+const (
+	ApproachRapid      Approach = "rapid"
+	ApproachAggressive Approach = "aggressive"
+	ApproachMethodical Approach = "methodical"
+	ApproachRigorous   Approach = "rigorous"
+	ApproachAnalytical Approach = "analytical"
+	ApproachHolistic   Approach = "holistic"
+)
+
+// Element represents an internal behavioral archetype governing how an agent
+// moves through a circuit graph. Elements are the internal identity behind
+// approaches — they drive color coding, personas, and scheduling.
 type Element string
 
 const (
@@ -98,6 +114,80 @@ func DefaultTraits(e Element) ElementTraits {
 func AllElements() []Element {
 	out := make([]Element, len(coreElements))
 	copy(out, coreElements)
+	return out
+}
+
+// --- Approach ↔ Element mapping ---
+
+var approachToElement = map[Approach]Element{
+	ApproachRapid:      ElementFire,
+	ApproachAggressive: ElementLightning,
+	ApproachMethodical: ElementEarth,
+	ApproachRigorous:   ElementDiamond,
+	ApproachAnalytical: ElementWater,
+	ApproachHolistic:   ElementAir,
+}
+
+var elementToApproach = map[Element]Approach{
+	ElementFire:      ApproachRapid,
+	ElementLightning: ApproachAggressive,
+	ElementEarth:     ApproachMethodical,
+	ElementDiamond:   ApproachRigorous,
+	ElementWater:     ApproachAnalytical,
+	ElementAir:       ApproachHolistic,
+}
+
+var approachEmoji = map[Approach]string{
+	ApproachRapid:      "🔥",
+	ApproachAggressive: "⚡",
+	ApproachMethodical: "🪨",
+	ApproachRigorous:   "💎",
+	ApproachAnalytical: "💧",
+	ApproachHolistic:   "🌀",
+}
+
+var coreApproaches = []Approach{
+	ApproachRapid, ApproachAggressive, ApproachMethodical,
+	ApproachRigorous, ApproachAnalytical, ApproachHolistic,
+}
+
+// ResolveApproach maps a user-facing approach name to an internal Element.
+func ResolveApproach(name string) (Element, bool) {
+	e, ok := approachToElement[Approach(name)]
+	return e, ok
+}
+
+// ApproachForElement returns the user-facing approach name for an element.
+func ApproachForElement(e Element) Approach {
+	return elementToApproach[e]
+}
+
+// ApproachEmoji returns the emoji for an approach.
+func ApproachEmoji(a Approach) string {
+	return approachEmoji[a]
+}
+
+// ApproachTraits returns the ElementTraits for an approach.
+func ApproachTraits(a Approach) ElementTraits {
+	return defaultTraits[approachToElement[a]]
+}
+
+// ApproachTraitsSummary returns a formatted multi-line summary for LSP hover.
+func ApproachTraitsSummary(a Approach) string {
+	t := ApproachTraits(a)
+	if t.Element == "" {
+		return ""
+	}
+	return fmt.Sprintf(
+		"Speed:          %s\nThoroughness:   %d evidence, %d loops\nConfidence bar: %.2f\nSkip tolerance: %.1f",
+		t.Speed, t.EvidenceDepth, t.MaxLoops, t.ConvergenceThreshold, t.ShortcutAffinity,
+	)
+}
+
+// AllApproaches returns the six core approaches.
+func AllApproaches() []Approach {
+	out := make([]Approach, len(coreApproaches))
+	copy(out, coreApproaches)
 	return out
 }
 

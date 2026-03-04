@@ -134,10 +134,10 @@ Run calibration against a ground-truth scenario using the MCP server.
 
 ## Circuit Steps
 
-| # | Node | Element | Transformer |
+| # | Node | Approach | Transformer |
 |---|------|---------|-------------|
 {{ range $i, $n := .Nodes -}}
-| {{ inc $i }} | {{ $n.Name }} | {{ $n.Element }} | {{ $n.Transformer }} |
+| {{ inc $i }} | {{ $n.Name }} | {{ $n.Approach }} | {{ $n.Transformer }} |
 {{ end }}
 ## Execution Flow
 

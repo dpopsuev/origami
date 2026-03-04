@@ -1,11 +1,18 @@
 package curate
 
 import (
-	"github.com/dpopsuev/origami"
 	"context"
 	"fmt"
 	"os"
+	"strings"
+
+	framework "github.com/dpopsuev/origami"
 )
+
+func resolveApproachElement(approach string) framework.Element {
+	e, _ := framework.ResolveApproach(strings.ToLower(approach))
+	return e
+}
 
 // LoadCurationCircuit reads and parses the curation circuit YAML from a file path.
 func LoadCurationCircuit(yamlPath string) (*framework.CircuitDef, error) {
@@ -37,7 +44,7 @@ func (n *curationNode) Process(_ context.Context, _ framework.NodeContext) (fram
 func newCurationNode(def framework.NodeDef) framework.Node {
 	return &curationNode{
 		name:    def.Name,
-		element: framework.Element(def.Element),
+		element: resolveApproachElement(def.Approach),
 		family:  def.Family,
 	}
 }

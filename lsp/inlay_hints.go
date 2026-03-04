@@ -74,7 +74,7 @@ func computeInlayHints(doc *document) []InlayHint {
 	lines := strings.Split(doc.Content, "\n")
 	var hints []InlayHint
 
-	hints = append(hints, elementTraitHints(doc, lines)...)
+	hints = append(hints, approachTraitHints(doc, lines)...)
 	hints = append(hints, personaHints(doc, lines)...)
 	hints = append(hints, edgeConnectionHints(doc, lines)...)
 	hints = append(hints, neighborHints(doc, lines)...)
@@ -82,31 +82,29 @@ func computeInlayHints(doc *document) []InlayHint {
 	return hints
 }
 
-func elementTraitHints(doc *document, lines []string) []InlayHint {
+func approachTraitHints(doc *document, lines []string) []InlayHint {
 	var hints []InlayHint
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(trimmed, "element:") {
+		if !strings.HasPrefix(trimmed, "approach:") {
 			continue
 		}
-		val := strings.TrimSpace(strings.TrimPrefix(trimmed, "element:"))
-		info, ok := elementDocs[val]
+		val := strings.TrimSpace(strings.TrimPrefix(trimmed, "approach:"))
+		a := framework.Approach(val)
+		info, ok := approachDocs[val]
 		if !ok {
 			continue
 		}
 
-		profile := elementProfile[val]
-		summary := compactTraits(info.Traits)
-		label := profile
-		if summary != "" {
-			label += " — " + summary
-		}
+		emoji := framework.ApproachEmoji(a)
+		traits := framework.ApproachTraits(a)
+		label := fmt.Sprintf("%s spd:%s ev:%d lp:%d", emoji, traits.Speed, traits.EvidenceDepth, traits.MaxLoops)
 		hints = append(hints, InlayHint{
 			Position:    Position{Line: uint32(i), Character: uint32(len(line))},
 			Label:       label,
 			Kind:        1,
 			PaddingLeft: true,
-			Tooltip:     markdownTooltip(fmt.Sprintf("### %s (%s)\n\n%s\n\n**Traits:** %s", profile, val, info.Description, info.Traits)),
+			Tooltip:     markdownTooltip(fmt.Sprintf("### %s %s\n\n%s\n\n```\n%s\n```", emoji, val, info.Description, framework.ApproachTraitsSummary(a))),
 		})
 	}
 	return hints

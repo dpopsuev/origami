@@ -63,8 +63,8 @@ func TestBuildGraphWith_TransformerNode(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "echo"},
-			{Name: "b", Element: "water", Transformer: "echo"},
+			{Name: "a", Approach: "rapid", Transformer: "echo"},
+			{Name: "b", Approach: "analytical", Transformer: "echo"},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", Name: "a-to-b", From: "a", To: "b", When: "true"},
@@ -99,8 +99,8 @@ func TestBuildGraphWith_MixedTransformerAndWalker(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "echo"},
-			{Name: "b", Element: "water", Family: "legacy"},
+			{Name: "a", Approach: "rapid", Transformer: "echo"},
+			{Name: "b", Approach: "analytical", Family: "legacy"},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", Name: "a-to-b", From: "a", To: "b", When: "true"},
@@ -338,7 +338,7 @@ func TestBuildGraph_MetaReachesTransformerContext(t *testing.T) {
 		Nodes: []NodeDef{
 			{
 				Name:        "a",
-				Element:     "fire",
+				Approach:   "rapid",
 				Transformer: "capture",
 				Meta:        map[string]any{"key1": "val1", "key2": 42},
 			},
@@ -379,7 +379,7 @@ func TestBuiltinGoTemplate_RendersPrompt(t *testing.T) {
 		Nodes: []NodeDef{
 			{
 				Name:        "render",
-				Element:     "fire",
+				Approach:   "rapid",
 				Transformer: "go-template",
 				Prompt:      "Hello from {{.Node}}",
 			},
@@ -420,8 +420,8 @@ func TestBuiltinPassthrough_ReturnsInput(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "source", Element: "earth", Transformer: "go-template", Prompt: "data"},
-			{Name: "pass", Element: "fire", Transformer: "passthrough"},
+			{Name: "source", Approach: "methodical", Transformer: "go-template", Prompt: "data"},
+			{Name: "pass", Approach: "rapid", Transformer: "passthrough"},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", Name: "to-pass", From: "source", To: "pass", When: "true"},
@@ -460,7 +460,7 @@ func TestBuiltinGoTemplate_NoRegistry(t *testing.T) {
 	def := &CircuitDef{
 		Circuit: "test",
 		Nodes: []NodeDef{
-			{Name: "a", Element: "fire", Transformer: "go-template"},
+			{Name: "a", Approach: "rapid", Transformer: "go-template"},
 		},
 		Edges: []EdgeDef{
 			{ID: "E1", Name: "done", From: "a", To: "_done", When: "true"},
@@ -487,7 +487,7 @@ func TestBuiltinGoTemplate_WithMeta(t *testing.T) {
 		Nodes: []NodeDef{
 			{
 				Name:        "a",
-				Element:     "fire",
+				Approach:   "rapid",
 				Transformer: "meta-capture",
 				Meta:        map[string]any{"template_dir": "/prompts", "max_tokens": 1000},
 			},

@@ -8,9 +8,9 @@ import (
 	framework "github.com/dpopsuev/origami"
 )
 
-var validElements = map[string]bool{
-	"fire": true, "lightning": true, "earth": true,
-	"diamond": true, "water": true, "air": true,
+var validApproaches = map[string]bool{
+	"rapid": true, "aggressive": true, "methodical": true,
+	"rigorous": true, "analytical": true, "holistic": true,
 }
 
 var validMergeStrategies = map[string]bool{
@@ -27,13 +27,13 @@ func knownPersonas() map[string]bool {
 	return m
 }
 
-func elementSuggestion(val string) string {
+func approachSuggestion(val string) string {
 	best, bestDist := "", 100
-	for e := range validElements {
-		d := levenshtein(strings.ToLower(val), e)
+	for a := range validApproaches {
+		d := levenshtein(strings.ToLower(val), a)
 		if d < bestDist {
 			bestDist = d
-			best = e
+			best = a
 		}
 	}
 	if bestDist <= 3 {
@@ -42,22 +42,22 @@ func elementSuggestion(val string) string {
 	return ""
 }
 
-// MissingNodeElement checks that every node declares an element.
-type MissingNodeElement struct{}
+// MissingNodeApproach checks that every node declares an approach.
+type MissingNodeApproach struct{}
 
-func (r *MissingNodeElement) ID() string          { return "S1/missing-node-element" }
-func (r *MissingNodeElement) Description() string { return "every node should declare an element" }
-func (r *MissingNodeElement) Severity() Severity   { return SeverityWarning }
-func (r *MissingNodeElement) Tags() []string       { return []string{"structural"} }
+func (r *MissingNodeApproach) ID() string          { return "S1/missing-node-approach" }
+func (r *MissingNodeApproach) Description() string { return "every node should declare an approach" }
+func (r *MissingNodeApproach) Severity() Severity   { return SeverityWarning }
+func (r *MissingNodeApproach) Tags() []string       { return []string{"structural"} }
 
-func (r *MissingNodeElement) Check(ctx *LintContext) []Finding {
+func (r *MissingNodeApproach) Check(ctx *LintContext) []Finding {
 	var out []Finding
 	for _, nd := range ctx.Def.Nodes {
-		if nd.Element == "" {
+		if nd.Approach == "" {
 			out = append(out, Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
-				Message:  fmt.Sprintf("node %q has no element", nd.Name),
+				Message:  fmt.Sprintf("node %q has no approach", nd.Name),
 				File:     ctx.File,
 				Line:     ctx.NodeLine(nd.Name),
 			})
@@ -66,26 +66,26 @@ func (r *MissingNodeElement) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// InvalidElement checks that node element values are known elements.
-type InvalidElement struct{}
+// InvalidApproach checks that node approach values are known approaches.
+type InvalidApproach struct{}
 
-func (r *InvalidElement) ID() string          { return "S2/invalid-element" }
-func (r *InvalidElement) Description() string { return "element value must be a known element" }
-func (r *InvalidElement) Severity() Severity   { return SeverityError }
-func (r *InvalidElement) Tags() []string       { return []string{"structural"} }
+func (r *InvalidApproach) ID() string          { return "S2/invalid-approach" }
+func (r *InvalidApproach) Description() string { return "approach value must be a known approach" }
+func (r *InvalidApproach) Severity() Severity   { return SeverityError }
+func (r *InvalidApproach) Tags() []string       { return []string{"structural"} }
 
-func (r *InvalidElement) Check(ctx *LintContext) []Finding {
+func (r *InvalidApproach) Check(ctx *LintContext) []Finding {
 	var out []Finding
 	for _, nd := range ctx.Def.Nodes {
-		if nd.Element != "" && !validElements[strings.ToLower(nd.Element)] {
+		if nd.Approach != "" && !validApproaches[strings.ToLower(nd.Approach)] {
 			f := Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
-				Message:  fmt.Sprintf("node %q: unknown element %q (valid: fire, water, earth, air, diamond, lightning)", nd.Name, nd.Element),
+				Message:  fmt.Sprintf("node %q: unknown approach %q (valid: rapid, aggressive, methodical, rigorous, analytical, holistic)", nd.Name, nd.Approach),
 				File:     ctx.File,
 				Line:     ctx.NodeLine(nd.Name),
 			}
-			if s := elementSuggestion(nd.Element); s != "" {
+			if s := approachSuggestion(nd.Approach); s != "" {
 				f.Suggestion = s
 				f.FixAvailable = true
 			}
@@ -277,25 +277,25 @@ func (r *UnnamedNode) Check(ctx *LintContext) []Finding {
 }
 
 // InvalidWalkerElement checks that walker element values are known elements.
-type InvalidWalkerElement struct{}
+type InvalidWalkerApproach struct{}
 
-func (r *InvalidWalkerElement) ID() string          { return "S10/invalid-walker-element" }
-func (r *InvalidWalkerElement) Description() string { return "walker element must be a known element" }
-func (r *InvalidWalkerElement) Severity() Severity   { return SeverityError }
-func (r *InvalidWalkerElement) Tags() []string       { return []string{"structural"} }
+func (r *InvalidWalkerApproach) ID() string          { return "S10/invalid-walker-approach" }
+func (r *InvalidWalkerApproach) Description() string { return "walker approach must be a known approach" }
+func (r *InvalidWalkerApproach) Severity() Severity   { return SeverityError }
+func (r *InvalidWalkerApproach) Tags() []string       { return []string{"structural"} }
 
-func (r *InvalidWalkerElement) Check(ctx *LintContext) []Finding {
+func (r *InvalidWalkerApproach) Check(ctx *LintContext) []Finding {
 	var out []Finding
 	for _, w := range ctx.Def.Walkers {
-		if w.Element != "" && !validElements[strings.ToLower(w.Element)] {
+		if w.Approach != "" && !validApproaches[strings.ToLower(w.Approach)] {
 			f := Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
-				Message:  fmt.Sprintf("walker %q: unknown element %q", w.Name, w.Element),
+				Message:  fmt.Sprintf("walker %q: unknown approach %q", w.Name, w.Approach),
 				File:     ctx.File,
 				Line:     ctx.WalkerLine(w.Name),
 			}
-			if s := elementSuggestion(w.Element); s != "" {
+			if s := approachSuggestion(w.Approach); s != "" {
 				f.Suggestion = s
 				f.FixAvailable = true
 			}

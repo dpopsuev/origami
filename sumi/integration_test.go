@@ -13,13 +13,13 @@ func TestIntegration_WalkAndRender(t *testing.T) {
 	def := &framework.CircuitDef{
 		Circuit: "integration",
 		Zones: map[string]framework.ZoneDef{
-			"input":  {Nodes: []string{"recall", "triage"}, Element: "fire"},
-			"output": {Nodes: []string{"report"}, Element: "diamond"},
+			"input":  {Nodes: []string{"recall", "triage"}, Approach: "rapid"},
+			"output": {Nodes: []string{"report"}, Approach: "rigorous"},
 		},
 		Nodes: []framework.NodeDef{
-			{Name: "recall", Element: "fire"},
-			{Name: "triage", Element: "water"},
-			{Name: "report", Element: "diamond"},
+			{Name: "recall", Approach: "rapid"},
+			{Name: "triage", Approach: "analytical"},
+			{Name: "report", Approach: "rigorous"},
 		},
 		Edges: []framework.EdgeDef{
 			{From: "recall", To: "triage"},

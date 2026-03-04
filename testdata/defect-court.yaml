@@ -7,35 +7,35 @@ description: "D0-D4 adversarial review circuit"
 zones:
   prosecution:
     nodes: [indict]
-    element: fire
+    approach: rapid
     stickiness: 0
   discovery:
     nodes: [discover, defend]
-    element: water
+    approach: analytical
     stickiness: 2
   bench:
     nodes: [hearing, verdict, cmrr]
-    element: diamond
+    approach: rigorous
     stickiness: 2
 
 nodes:
   - name: indict
-    element: fire
+    approach: rapid
     family: indict
   - name: discover
-    element: earth
+    approach: methodical
     family: discover
   - name: defend
-    element: water
+    approach: analytical
     family: defend
   - name: hearing
-    element: air
+    approach: holistic
     family: hearing
   - name: verdict
-    element: diamond
+    approach: rigorous
     family: verdict
   - name: cmrr
-    element: earth
+    approach: methodical
     family: cmrr
 
 edges:

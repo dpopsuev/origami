@@ -67,8 +67,8 @@ func TestBuildGraph_WithZones(t *testing.T) {
 			{ID: "E2", From: "b", To: "_done", Name: "b-done"},
 		},
 		Zones: map[string]ZoneDef{
-			"front": {Nodes: []string{"a"}, Element: "fire", Stickiness: 1},
-			"back":  {Nodes: []string{"b"}, Element: "water"},
+			"front": {Nodes: []string{"a"}, Approach: "rapid", Stickiness: 1},
+			"back":  {Nodes: []string{"b"}, Approach: "analytical"},
 		},
 		Start: "a",
 		Done:  "_done",

@@ -4,26 +4,26 @@ description: "Parallel fan-out from coordinator to specialists, merge at synthes
 zones:
   coordination:
     nodes: [plan, synthesize]
-    element: earth
+    approach: methodical
     stickiness: 0
   research:
     nodes: [research_a, research_b]
-    element: water
+    approach: analytical
     stickiness: 2
 
 walkers:
   - name: coordinator
-    element: earth
+    approach: methodical
     persona: sentinel
     preamble: "Coordinate the investigation."
   - name: specialist-a
-    element: water
+    approach: analytical
     persona: seeker
     preamble: "Research area A."
     step_affinity:
       research_a: 0.95
   - name: specialist-b
-    element: fire
+    approach: rapid
     persona: herald
     preamble: "Research area B."
     step_affinity:
@@ -31,16 +31,16 @@ walkers:
 
 nodes:
   - name: plan
-    element: earth
+    approach: methodical
     transformer: echo
   - name: research_a
-    element: water
+    approach: analytical
     transformer: echo
   - name: research_b
-    element: fire
+    approach: rapid
     transformer: echo
   - name: synthesize
-    element: earth
+    approach: methodical
     transformer: echo
 
 edges:

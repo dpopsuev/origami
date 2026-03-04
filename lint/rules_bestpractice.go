@@ -168,20 +168,20 @@ func (r *LargeCircuitNoZones) Check(ctx *LintContext) []Finding {
 	return nil
 }
 
-// --- B6: element-affinity-chain ---
+// --- B6: approach-affinity-chain ---
 
-type ElementAffinityChain struct{}
+type ApproachAffinityChain struct{}
 
-func (r *ElementAffinityChain) ID() string          { return "B6/element-affinity-chain" }
-func (r *ElementAffinityChain) Description() string { return "three or more consecutive nodes with the same element" }
-func (r *ElementAffinityChain) Severity() Severity   { return SeverityInfo }
-func (r *ElementAffinityChain) Tags() []string       { return []string{"best-practice"} }
+func (r *ApproachAffinityChain) ID() string          { return "B6/approach-affinity-chain" }
+func (r *ApproachAffinityChain) Description() string { return "three or more consecutive nodes with the same approach" }
+func (r *ApproachAffinityChain) Severity() Severity   { return SeverityInfo }
+func (r *ApproachAffinityChain) Tags() []string       { return []string{"best-practice"} }
 
-func (r *ElementAffinityChain) Check(ctx *LintContext) []Finding {
-	nodeElems := make(map[string]string)
+func (r *ApproachAffinityChain) Check(ctx *LintContext) []Finding {
+	nodeApproaches := make(map[string]string)
 	for _, nd := range ctx.Def.Nodes {
-		if nd.Element != "" {
-			nodeElems[nd.Name] = strings.ToLower(nd.Element)
+		if nd.Approach != "" {
+			nodeApproaches[nd.Name] = strings.ToLower(nd.Approach)
 		}
 	}
 
@@ -195,17 +195,17 @@ func (r *ElementAffinityChain) Check(ctx *LintContext) []Finding {
 	var out []Finding
 	reported := make(map[string]bool)
 	for _, nd := range ctx.Def.Nodes {
-		elem := nodeElems[nd.Name]
-		if elem == "" {
+		approach := nodeApproaches[nd.Name]
+		if approach == "" {
 			continue
 		}
-		chain := findElementChain(nd.Name, elem, nodeElems, adj)
-		if len(chain) >= 3 && !reported[elem+":"+chain[0]] {
-			reported[elem+":"+chain[0]] = true
+		chain := findApproachChain(nd.Name, approach, nodeApproaches, adj)
+		if len(chain) >= 3 && !reported[approach+":"+chain[0]] {
+			reported[approach+":"+chain[0]] = true
 			out = append(out, Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
-				Message:  fmt.Sprintf("%d consecutive %s-element nodes: %s; consider varying elements for balance", len(chain), elem, strings.Join(chain, " → ")),
+				Message:  fmt.Sprintf("%d consecutive %s nodes: %s; consider varying approaches for balance", len(chain), approach, strings.Join(chain, " → ")),
 				File:     ctx.File,
 				Line:     ctx.NodeLine(chain[0]),
 			})
@@ -214,7 +214,7 @@ func (r *ElementAffinityChain) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-func findElementChain(start, elem string, nodeElems map[string]string, adj map[string][]string) []string {
+func findApproachChain(start, approach string, nodeApproaches map[string]string, adj map[string][]string) []string {
 	chain := []string{start}
 	curr := start
 	visited := map[string]bool{start: true}
@@ -222,7 +222,7 @@ func findElementChain(start, elem string, nodeElems map[string]string, adj map[s
 		nexts := adj[curr]
 		extended := false
 		for _, next := range nexts {
-			if !visited[next] && nodeElems[next] == elem {
+			if !visited[next] && nodeApproaches[next] == approach {
 				chain = append(chain, next)
 				visited[next] = true
 				curr = next

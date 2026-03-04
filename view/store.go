@@ -1,6 +1,7 @@
 package view
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -40,13 +41,15 @@ func NewCircuitStore(def *framework.CircuitDef) *CircuitStore {
 	}
 
 	for _, nd := range def.Nodes {
+		elem, _ := framework.ResolveApproach(strings.ToLower(nd.Approach))
+		elemStr := string(elem)
 		nodes[nd.Name] = NodeState{
 			Name:    nd.Name,
 			State:   NodeIdle,
 			Zone:    nodeZone[nd.Name],
-			Element: nd.Element,
+			Element: elemStr,
 		}
-		nodeElement[nd.Name] = nd.Element
+		nodeElement[nd.Name] = elemStr
 	}
 
 	return &CircuitStore{
@@ -88,13 +91,15 @@ func (cs *CircuitStore) Reset(def *framework.CircuitDef) {
 	}
 
 	for _, nd := range def.Nodes {
+		elem2, _ := framework.ResolveApproach(strings.ToLower(nd.Approach))
+		elemStr2 := string(elem2)
 		nodes[nd.Name] = NodeState{
 			Name:    nd.Name,
 			State:   NodeIdle,
 			Zone:    nodeZone[nd.Name],
-			Element: nd.Element,
+			Element: elemStr2,
 		}
-		nodeElement[nd.Name] = nd.Element
+		nodeElement[nd.Name] = elemStr2
 	}
 
 	now := time.Now().UTC()

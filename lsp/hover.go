@@ -11,19 +11,18 @@ import (
 	"go.lsp.dev/protocol"
 )
 
-type elementInfo struct {
+type approachInfo struct {
 	Description string
-	Traits      string
 	Color       string
 }
 
-var elementDocs = map[string]elementInfo{
-	"fire":      {Description: "Bold, fast, confident. First to declare a verdict.", Traits: "speed: high | max_loops: 0 | shortcut: 0.9 | failure: premature conclusions", Color: "#DC143C (Crimson)"},
-	"water":     {Description: "Methodical, thorough, evidence-first. Examines every log.", Traits: "speed: low | max_loops: 3 | shortcut: 0.1 | failure: analysis paralysis", Color: "#007BA7 (Cerulean)"},
-	"earth":     {Description: "Pragmatic, categorical, infrastructure-focused.", Traits: "speed: medium | max_loops: 1 | shortcut: 0.3 | failure: oversimplification", Color: "#0047AB (Cobalt)"},
-	"air":       {Description: "Creative, lateral thinker, cross-domain correlator.", Traits: "speed: medium | max_loops: 2 | shortcut: 0.5 | failure: tangential thinking", Color: "#FFBF00 (Amber)"},
-	"diamond":   {Description: "Skeptical, evidence-demanding. The final quality gate.", Traits: "speed: low | max_loops: 2 | shortcut: 0.0 | failure: paralyzing perfectionism", Color: "#0F52BA (Sapphire)"},
-	"lightning": {Description: "Dispatcher, orchestrator. Manages the circuit queue.", Traits: "speed: highest | max_loops: 0 | shortcut: 1.0 | failure: sacrifices quality", Color: "#DC143C (Crimson)"},
+var approachDocs = map[string]approachInfo{
+	"rapid":      {Description: "Bold, fast, confident. First to declare a verdict.", Color: "#DC143C (Crimson)"},
+	"analytical": {Description: "Methodical, thorough, evidence-first. Examines every log.", Color: "#007BA7 (Cerulean)"},
+	"methodical": {Description: "Pragmatic, categorical, infrastructure-focused.", Color: "#0047AB (Cobalt)"},
+	"holistic":   {Description: "Creative, lateral thinker, cross-domain correlator.", Color: "#FFBF00 (Amber)"},
+	"rigorous":   {Description: "Skeptical, evidence-demanding. The final quality gate.", Color: "#0F52BA (Sapphire)"},
+	"aggressive": {Description: "Dispatcher, orchestrator. Manages the circuit queue.", Color: "#DC143C (Crimson)"},
 }
 
 var personaDocs = map[string]string{
@@ -37,16 +36,6 @@ var personaDocs = map[string]string{
 	"phantom":  "Antithesis persona. The adversarial counterpart used in the Dialectic system.",
 }
 
-// elementProfile maps element names to human-readable behaviour labels
-// used in inlay hints instead of the esoteric element names.
-var elementProfile = map[string]string{
-	"fire":      "fast",
-	"water":     "thorough",
-	"earth":     "steady",
-	"air":       "creative",
-	"diamond":   "rigorous",
-	"lightning": "orchestrator",
-}
 
 var exprContextDocs = map[string]string{
 	"output": "The artifact produced by the source node. Fields depend on the node family.",
@@ -81,12 +70,15 @@ func computeHover(doc *document, pos protocol.Position, vocab framework.RichVoca
 	line := lines[pos.Line]
 	trimmed := strings.TrimSpace(line)
 
-	// Element hover
-	if strings.HasPrefix(trimmed, "element:") {
-		val := strings.TrimSpace(strings.TrimPrefix(trimmed, "element:"))
-		if info, ok := elementDocs[val]; ok {
-			md := fmt.Sprintf("### Element: %s\n\n%s\n\n**Traits:** %s\n\n**Color:** %s",
-				val, info.Description, info.Traits, info.Color)
+	// Approach hover
+	if strings.HasPrefix(trimmed, "approach:") {
+		val := strings.TrimSpace(strings.TrimPrefix(trimmed, "approach:"))
+		a := framework.Approach(val)
+		if info, ok := approachDocs[val]; ok {
+			emoji := framework.ApproachEmoji(a)
+			traits := framework.ApproachTraitsSummary(a)
+			md := fmt.Sprintf("### %s %s\n\n%s\n\n```\n%s\n```\n\n**Color:** %s",
+				emoji, val, info.Description, traits, info.Color)
 			return &protocol.Hover{
 				Contents: protocol.MarkupContent{Kind: protocol.Markdown, Value: md},
 			}
@@ -140,8 +132,9 @@ func computeHover(doc *document, pos protocol.Position, vocab framework.RichVoca
 				if n.Family != "" {
 					md += fmt.Sprintf("**Family:** %s\n\n", n.Family)
 				}
-				if n.Element != "" {
-					md += fmt.Sprintf("**Element:** %s\n\n", n.Element)
+				if n.Approach != "" {
+					emoji := framework.ApproachEmoji(framework.Approach(n.Approach))
+					md += fmt.Sprintf("**Approach:** %s %s\n\n", emoji, n.Approach)
 				}
 				if vocab != nil {
 					if d := vocab.Description(n.Name); d != "" {
@@ -162,10 +155,10 @@ func computeHover(doc *document, pos protocol.Position, vocab framework.RichVoca
 		"description": "Human-readable circuit description.",
 		"imports":     "List of external circuit files to import and merge.",
 		"vars":        "Circuit variables. Accessible in edge expressions as `config.<name>`.",
-		"zones":       "Logical node groupings. Map zone name to `{ nodes: [...], element: ..., stickiness: N }`.",
-		"nodes":       "Circuit nodes. Each node has a name, family, and optional element/extractor/transformer.",
+		"zones":       "Logical node groupings. Map zone name to `{ nodes: [...], approach: ..., stickiness: N }`.",
+		"nodes":       "Circuit nodes. Each node has a name, family, and optional approach/extractor/transformer.",
 		"edges":       "Conditional transitions between nodes. Each edge has `from`, `to`, and `when` expression.",
-		"walkers":     "Walker definitions. Each walker has a name, element, persona, and optional step affinity.",
+		"walkers":     "Walker definitions. Each walker has a name, approach, persona, and optional step affinity.",
 		"start":       "The starting node for circuit execution.",
 		"done":        "The terminal sentinel node. Reaching this node completes the walk.",
 	}

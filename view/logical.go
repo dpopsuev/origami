@@ -1,6 +1,8 @@
 package view
 
 import (
+	"strings"
+
 	framework "github.com/dpopsuev/origami"
 )
 
@@ -64,7 +66,8 @@ func (LogicalLayout) Layout(def *framework.CircuitDef) (CircuitLayout, error) {
 
 	zones := make([]ZoneLayout, 0, len(def.Zones))
 	for name, zd := range def.Zones {
-		zones = append(zones, ZoneLayout{Name: name, Element: zd.Element})
+		zElem, _ := framework.ResolveApproach(strings.ToLower(zd.Approach))
+		zones = append(zones, ZoneLayout{Name: name, Element: string(zElem)})
 	}
 
 	return CircuitLayout{Logical: logical, Edges: edges, Zones: zones}, nil

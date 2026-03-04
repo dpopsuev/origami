@@ -14,16 +14,16 @@ func testInspectorCircuit() (*framework.CircuitDef, *view.CircuitSnapshot) {
 	def := &framework.CircuitDef{
 		Circuit: "test",
 		Nodes: []framework.NodeDef{
-			{Name: "recall", Element: "fire", Transformer: "core.llm", Extractor: "rca.recall", Family: "rca", Description: "Recall phase retrieves candidate issues from RP"},
-			{Name: "triage", Element: "water", Transformer: "core.jq", Family: "rca"},
-			{Name: "report", Element: "diamond"},
+			{Name: "recall", Approach: "rapid", Transformer: "core.llm", Extractor: "rca.recall", Family: "rca", Description: "Recall phase retrieves candidate issues from RP"},
+			{Name: "triage", Approach: "analytical", Transformer: "core.jq", Family: "rca"},
+			{Name: "report", Approach: "rigorous"},
 		},
 		Edges: []framework.EdgeDef{
 			{From: "recall", To: "triage", When: "true"},
 			{From: "triage", To: "report", When: "score > 0.8"},
 		},
 		Zones: map[string]framework.ZoneDef{
-			"analysis": {Element: "fire", Nodes: []string{"recall", "triage"}},
+			"analysis": {Approach: "rapid", Nodes: []string{"recall", "triage"}},
 		},
 	}
 
@@ -65,7 +65,7 @@ func TestInspectorPanel_ShowsNodeDetails(t *testing.T) {
 
 	content := p.View(Rect{0, 0, 40, 30})
 
-	checks := []string{"recall", "fire", "completed", "core.llm", "rca.recall", "rca", "✦", "analysis"}
+	checks := []string{"recall", "rapid", "completed", "core.llm", "rca.recall", "rca", "✦", "analysis"}
 	for _, want := range checks {
 		if !strings.Contains(content, want) {
 			t.Errorf("inspector should contain %q, got:\n%s", want, content)

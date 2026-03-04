@@ -23,8 +23,8 @@ func simpleCircuit() *framework.CircuitDef {
 		Circuit:     "simple",
 		Description: "A simple test circuit",
 		Nodes: []framework.NodeDef{
-			{Name: "start-node", Element: "fire"},
-			{Name: "end-node", Element: "earth"},
+			{Name: "start-node", Approach: "rapid"},
+			{Name: "end-node", Approach: "methodical"},
 		},
 		Edges: []framework.EdgeDef{
 			{ID: "E1", Name: "proceed", From: "start-node", To: "end-node"},
@@ -40,15 +40,15 @@ func zonedCircuit() *framework.CircuitDef {
 		Circuit:     "zoned",
 		Description: "A circuit with zones",
 		Zones: map[string]framework.ZoneDef{
-			"discovery": {Nodes: []string{"scan"}, Element: "earth"},
-			"analysis":  {Nodes: []string{"classify", "assess"}, Element: "fire"},
-			"output":    {Nodes: []string{"report"}, Element: "air"},
+			"discovery": {Nodes: []string{"scan"}, Approach: "methodical"},
+			"analysis":  {Nodes: []string{"classify", "assess"}, Approach: "rapid"},
+			"output":    {Nodes: []string{"report"}, Approach: "holistic"},
 		},
 		Nodes: []framework.NodeDef{
-			{Name: "scan", Element: "earth", Family: "scan"},
-			{Name: "classify", Element: "fire", Family: "classify"},
-			{Name: "assess", Element: "diamond", Family: "assess"},
-			{Name: "report", Element: "air", Family: "report"},
+			{Name: "scan", Approach: "methodical", Family: "scan"},
+			{Name: "classify", Approach: "rapid", Family: "classify"},
+			{Name: "assess", Approach: "rigorous", Family: "assess"},
+			{Name: "report", Approach: "holistic", Family: "report"},
 		},
 		Edges: []framework.EdgeDef{
 			{ID: "V1", Name: "findings-ready", From: "scan", To: "classify"},

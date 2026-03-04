@@ -871,7 +871,7 @@ func (m Model) renderInspectorContent() string {
 
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Name:    %s\n", nd.Name))
-	sb.WriteString(fmt.Sprintf("Element: %s\n", nd.Element))
+	sb.WriteString(fmt.Sprintf("Approach: %s\n", nd.Approach))
 	sb.WriteString(fmt.Sprintf("State:   %s\n", ns.State))
 	if nd.Transformer != "" {
 		sb.WriteString(fmt.Sprintf("Xformer: %s\n", nd.Transformer))
@@ -1011,7 +1011,7 @@ func (m Model) renderInspector() string {
 	var sb strings.Builder
 	sb.WriteString("┌─── Inspector ─────────────────┐\n")
 	sb.WriteString(fmt.Sprintf("│ Name:        %-16s │\n", nd.Name))
-	sb.WriteString(fmt.Sprintf("│ Element:     %-16s │\n", nd.Element))
+	sb.WriteString(fmt.Sprintf("│ Approach:    %-16s │\n", nd.Approach))
 	sb.WriteString(fmt.Sprintf("│ State:       %-16s │\n", ns.State))
 	if nd.Transformer != "" {
 		sb.WriteString(fmt.Sprintf("│ Transformer: %-16s │\n", nd.Transformer))

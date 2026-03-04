@@ -134,35 +134,33 @@ func (r *ShortcutBypassesRequired) Check(ctx *LintContext) []Finding {
 	return out
 }
 
-// --- G5: zone-element-mismatch ---
+// --- G5: zone-approach-mismatch ---
 
-type ZoneElementMismatch struct{}
+type ZoneApproachMismatch struct{}
 
-func (r *ZoneElementMismatch) ID() string          { return "G5/zone-element-mismatch" }
-func (r *ZoneElementMismatch) Description() string { return "zone element differs from contained node element" }
-func (r *ZoneElementMismatch) Severity() Severity   { return SeverityInfo }
-func (r *ZoneElementMismatch) Tags() []string       { return []string{"semantic"} }
+func (r *ZoneApproachMismatch) ID() string          { return "G5/zone-approach-mismatch" }
+func (r *ZoneApproachMismatch) Description() string { return "zone approach differs from contained node approaches" }
+func (r *ZoneApproachMismatch) Severity() Severity   { return SeverityInfo }
+func (r *ZoneApproachMismatch) Tags() []string       { return []string{"semantic"} }
 
-func (r *ZoneElementMismatch) Check(ctx *LintContext) []Finding {
-	nodeElems := make(map[string]string)
+func (r *ZoneApproachMismatch) Check(ctx *LintContext) []Finding {
+	nodeApproaches := make(map[string]string)
 	for _, nd := range ctx.Def.Nodes {
-		if nd.Element != "" {
-			nodeElems[nd.Name] = strings.ToLower(nd.Element)
+		if nd.Approach != "" {
+			nodeApproaches[nd.Name] = strings.ToLower(nd.Approach)
 		}
 	}
 
 	var out []Finding
 	for zoneName, z := range ctx.Def.Zones {
-		if z.Element == "" || len(z.Nodes) == 0 {
+		if z.Approach == "" || len(z.Nodes) == 0 {
 			continue
 		}
-		zoneElem := strings.ToLower(z.Element)
+		zoneApproach := strings.ToLower(z.Approach)
 
-		// Only flag when NO nodes in the zone match the zone element.
-		// Mixed elements within a zone is a valid design pattern.
 		anyMatch := false
 		for _, nodeName := range z.Nodes {
-			if ne, ok := nodeElems[nodeName]; ok && ne == zoneElem {
+			if na, ok := nodeApproaches[nodeName]; ok && na == zoneApproach {
 				anyMatch = true
 				break
 			}
@@ -171,7 +169,7 @@ func (r *ZoneElementMismatch) Check(ctx *LintContext) []Finding {
 			out = append(out, Finding{
 				RuleID:   r.ID(),
 				Severity: r.Severity(),
-				Message:  fmt.Sprintf("zone %q declares element %q but none of its nodes use that element", zoneName, z.Element),
+				Message:  fmt.Sprintf("zone %q declares approach %q but none of its nodes use that approach", zoneName, z.Approach),
 				File:     ctx.File,
 			})
 		}

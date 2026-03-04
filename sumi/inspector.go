@@ -118,7 +118,7 @@ func (p *InspectorPanel) renderContent(width int) string {
 	}
 
 	writeField("Name", nd.Name)
-	writeField("Element", renderElement(nd.Element, p.noColor))
+	writeField("Approach", renderApproach(nd.Approach, p.noColor))
 	writeField("State", renderState(ns.State, p.noColor))
 
 	zone := ns.Zone
@@ -240,11 +240,12 @@ func (p *InspectorPanel) edgesFor(name string) (incoming, outgoing []framework.E
 	return
 }
 
-func renderElement(elem string, noColor bool) string {
-	if noColor || elem == "" {
-		return elem
+func renderApproach(approach string, noColor bool) string {
+	if noColor || approach == "" {
+		return approach
 	}
-	return ElementFg(elem).Render(elem)
+	elem := resolveApproachToElement(approach)
+	return ElementFg(elem).Render(approach)
 }
 
 func renderState(state view.NodeVisualState, noColor bool) string {

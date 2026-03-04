@@ -65,11 +65,11 @@ nodes:
 zones:
   front:
     nodes: [x]
-    element: fire
+    approach: rapid
     stickiness: 2
   back:
     nodes: [y]
-    element: water
+    approach: analytical
 edges:
   - id: E1
     name: x-to-y
@@ -93,8 +93,8 @@ done: _done
 	if front.Stickiness != 2 {
 		t.Errorf("front.Stickiness = %d, want 2", front.Stickiness)
 	}
-	if front.Element != "fire" {
-		t.Errorf("front.Element = %q, want %q", front.Element, "fire")
+	if front.Approach != "rapid" {
+		t.Errorf("front.Approach = %q, want %q", front.Approach, "rapid")
 	}
 }
 
@@ -223,7 +223,7 @@ func TestRoundTripFidelity(t *testing.T) {
 	original := &CircuitDef{
 		Circuit:    "roundtrip",
 		Description: "test round trip",
-		Nodes:       []NodeDef{{Name: "a", Element: "fire", Family: "start"}, {Name: "b", Family: "end"}},
+		Nodes:       []NodeDef{{Name: "a", Approach: "rapid", Family: "start"}, {Name: "b", Family: "end"}},
 		Edges:       []EdgeDef{{ID: "E1", Name: "a-b", From: "a", To: "b"}, {ID: "E2", Name: "b-done", From: "b", To: "_done"}},
 		Start:       "a",
 		Done:        "_done",

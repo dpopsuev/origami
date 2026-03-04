@@ -462,8 +462,8 @@ func (b *CLIBuilder) buildCircuit() *cobra.Command {
 				fmt.Println("  rankdir=LR;")
 				for _, n := range def.Nodes {
 					label := n.Name
-					if n.Element != "" {
-						label += fmt.Sprintf(" [%s]", n.Element)
+					if n.Approach != "" {
+						label += fmt.Sprintf(" [%s]", n.Approach)
 					}
 					fmt.Printf("  %q [label=%q];\n", n.Name, label)
 				}
@@ -482,8 +482,8 @@ func (b *CLIBuilder) buildCircuit() *cobra.Command {
 				fmt.Println("Nodes:")
 				for _, n := range def.Nodes {
 					elem := ""
-					if n.Element != "" {
-						elem = fmt.Sprintf(" [%s]", n.Element)
+					if n.Approach != "" {
+						elem = fmt.Sprintf(" [%s]", n.Approach)
 					}
 					fmt.Printf("  %-20s%s\n", n.Name, elem)
 				}

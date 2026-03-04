@@ -15,7 +15,7 @@ var topLevelKeys = []string{
 }
 
 var nodeFieldKeys = []string{
-	"name", "element", "family", "extractor", "transformer",
+	"name", "approach", "family", "extractor", "transformer",
 	"provider", "prompt", "input", "after", "schema", "cache",
 }
 
@@ -25,11 +25,11 @@ var edgeFieldKeys = []string{
 }
 
 var walkerFieldKeys = []string{
-	"name", "element", "persona", "preamble", "step_affinity",
+	"name", "approach", "persona", "preamble", "step_affinity",
 }
 
-var elementValues = []string{
-	"fire", "water", "earth", "air", "diamond", "lightning",
+var approachValues = []string{
+	"rapid", "analytical", "methodical", "holistic", "rigorous", "aggressive",
 }
 
 var personaValues = []string{
@@ -67,9 +67,9 @@ func computeCompletions(doc *document, pos protocol.Position) []protocol.Complet
 		return keyCompletions(topLevelKeys, protocol.CompletionItemKindField)
 	}
 
-	// After "element:" suggest element values
-	if strings.HasPrefix(trimmed, "element:") || strings.HasPrefix(trimmed, "element: ") {
-		return valueCompletions(elementValues, protocol.CompletionItemKindEnum)
+	// After "approach:" suggest approach values
+	if strings.HasPrefix(trimmed, "approach:") || strings.HasPrefix(trimmed, "approach: ") {
+		return valueCompletions(approachValues, protocol.CompletionItemKindEnum)
 	}
 
 	// After "persona:" suggest persona values

@@ -18,30 +18,30 @@ description: "Coordinator fans out to specialists, merges results"
 zones:
   coordination:
     nodes: [plan, synthesize]
-    element: earth
+    approach: methodical
     stickiness: 0
   research:
     nodes: [research_code]
-    element: water
+    approach: analytical
     stickiness: 2
   logs:
     nodes: [research_logs]
-    element: fire
+    approach: rapid
     stickiness: 2
 
 walkers:
   - name: coordinator
-    element: earth
+    approach: methodical
     persona: sentinel
     preamble: "You coordinate the investigation. Delegate to specialists and synthesize their findings."
   - name: code-analyst
-    element: water
+    approach: analytical
     persona: seeker
     preamble: "You analyze source code for root causes."
     step_affinity:
       research_code: 0.95
   - name: log-analyst
-    element: fire
+    approach: rapid
     persona: herald
     preamble: "You analyze logs for failure patterns."
     step_affinity:
@@ -49,16 +49,16 @@ walkers:
 
 nodes:
   - name: plan
-    element: earth
+    approach: methodical
     family: plan
   - name: research_code
-    element: water
+    approach: analytical
     family: research
   - name: research_logs
-    element: fire
+    approach: rapid
     family: research
   - name: synthesize
-    element: earth
+    approach: methodical
     family: synthesize
 
 edges:

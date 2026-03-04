@@ -1,6 +1,9 @@
 package framework
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDefaultTraits_AllSixElements(t *testing.T) {
 	tests := []struct {
@@ -82,6 +85,79 @@ func TestAllElements_ReturnsCopy(t *testing.T) {
 	a[0] = "mutated"
 	if b[0] == "mutated" {
 		t.Error("AllElements should return a copy, not a shared slice")
+	}
+}
+
+func TestResolveApproach(t *testing.T) {
+	tests := []struct {
+		approach string
+		element  Element
+		ok       bool
+	}{
+		{"rapid", ElementFire, true},
+		{"aggressive", ElementLightning, true},
+		{"methodical", ElementEarth, true},
+		{"rigorous", ElementDiamond, true},
+		{"analytical", ElementWater, true},
+		{"holistic", ElementAir, true},
+		{"unknown", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.approach, func(t *testing.T) {
+			elem, ok := ResolveApproach(tt.approach)
+			if ok != tt.ok {
+				t.Errorf("ResolveApproach(%q) ok = %v, want %v", tt.approach, ok, tt.ok)
+			}
+			if elem != tt.element {
+				t.Errorf("ResolveApproach(%q) = %v, want %v", tt.approach, elem, tt.element)
+			}
+		})
+	}
+}
+
+func TestApproachForElement(t *testing.T) {
+	for _, e := range AllElements() {
+		a := ApproachForElement(e)
+		if a == "" {
+			t.Errorf("ApproachForElement(%q) returned empty", e)
+		}
+		roundTrip, _ := ResolveApproach(string(a))
+		if roundTrip != e {
+			t.Errorf("round-trip failed: %q → %q → %q", e, a, roundTrip)
+		}
+	}
+}
+
+func TestApproachEmoji(t *testing.T) {
+	for _, a := range AllApproaches() {
+		emoji := ApproachEmoji(a)
+		if emoji == "" {
+			t.Errorf("ApproachEmoji(%q) returned empty", a)
+		}
+	}
+}
+
+func TestApproachTraitsSummary(t *testing.T) {
+	summary := ApproachTraitsSummary(ApproachAnalytical)
+	if summary == "" {
+		t.Error("ApproachTraitsSummary(analytical) returned empty")
+	}
+	if !strings.Contains(summary, "deep") {
+		t.Errorf("expected 'deep' speed in summary, got: %s", summary)
+	}
+}
+
+func TestAllApproaches(t *testing.T) {
+	approaches := AllApproaches()
+	if len(approaches) != 6 {
+		t.Fatalf("expected 6 approaches, got %d", len(approaches))
+	}
+	seen := make(map[Approach]bool)
+	for _, a := range approaches {
+		if seen[a] {
+			t.Errorf("duplicate approach: %s", a)
+		}
+		seen[a] = true
 	}
 }
 

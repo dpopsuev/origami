@@ -3,14 +3,14 @@ description: "Circuit with artifact schema on every node for validation testing"
 
 nodes:
   - name: classify
-    element: fire
+    approach: rapid
     transformer: echo
     schema:
       required: [type]
       properties:
         type: {type: string}
   - name: report
-    element: air
+    approach: holistic
     transformer: echo
     schema:
       required: [type]

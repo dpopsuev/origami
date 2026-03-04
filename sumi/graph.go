@@ -10,6 +10,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+func resolveApproachToElement(approach string) string {
+	e, _ := framework.ResolveApproach(strings.ToLower(approach))
+	return string(e)
+}
+
 const (
 	nodeWidth  = 20
 	nodeHeight = 3
@@ -247,14 +252,14 @@ func drawNodes(c *canvas, def *framework.CircuitDef, layout view.CircuitLayout, 
 func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, snap view.CircuitSnapshot, opts RenderOpts) {
 	selected := opts.SelectedNode == nd.Name
 	style := nodeStyle(ns, opts)
-	elemStyle := ElementFg(nd.Element)
+	elemStyle := ElementFg(ns.Element)
 	if opts.NoColor {
 		elemStyle = lipgloss.NewStyle()
 		style = lipgloss.NewStyle()
 	}
 
 	if ns.State == view.NodeActive && !opts.NoColor && !selected {
-		style = ElementFg(nd.Element).Bold(true)
+		style = ElementFg(ns.Element).Bold(true)
 	}
 
 	if selected && !opts.NoColor {
@@ -887,7 +892,7 @@ func drawZones(c *canvas, def *framework.CircuitDef, layout view.CircuitLayout, 
 			zb, exists := zones[zoneName]
 			if !exists {
 				zb = &zoneBounds{
-					name: zoneName, element: zd.Element,
+					name: zoneName, element: resolveApproachToElement(zd.Approach),
 					minRow: gc.Row, maxRow: gc.Row,
 					minCol: gc.Col, maxCol: gc.Col,
 				}

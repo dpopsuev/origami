@@ -20,13 +20,13 @@ var semanticTokenTypes = []string{
 	"origami-lightning",
 }
 
-var elementTokenIndex = map[string]uint32{
-	"fire":      0,
-	"water":     1,
-	"earth":     2,
-	"air":       3,
-	"diamond":   4,
-	"lightning": 5,
+var approachTokenIndex = map[string]uint32{
+	"rapid":      0, // fire
+	"analytical": 1, // water
+	"methodical": 2, // earth
+	"holistic":   3, // air
+	"rigorous":   4, // diamond
+	"aggressive": 5, // lightning
 }
 
 // SemanticTokensLegend returns the legend for initialize response.
@@ -74,9 +74,9 @@ func computeSemanticTokens(doc *document) []uint32 {
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		if strings.HasPrefix(trimmed, "element:") {
-			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "element:"))
-			if idx, ok := elementTokenIndex[val]; ok {
+		if strings.HasPrefix(trimmed, "approach:") {
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "approach:"))
+			if idx, ok := approachTokenIndex[val]; ok {
 				col := strings.Index(line, val)
 				if col >= 0 {
 					hits = append(hits, tokenHit{
@@ -92,10 +92,10 @@ func computeSemanticTokens(doc *document) []uint32 {
 
 	if doc.Def != nil {
 		for zoneName, zone := range doc.Def.Zones {
-			if zone.Element == "" {
+			if zone.Approach == "" {
 				continue
 			}
-			idx, ok := elementTokenIndex[zone.Element]
+			idx, ok := approachTokenIndex[strings.ToLower(zone.Approach)]
 			if !ok {
 				continue
 			}

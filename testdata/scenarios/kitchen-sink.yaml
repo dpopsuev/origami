@@ -7,20 +7,20 @@ vars:
 zones:
   intake:
     nodes: [classify]
-    element: fire
+    approach: rapid
     stickiness: 0
   analysis:
     nodes: [analyze, review]
-    element: water
+    approach: analytical
     stickiness: 2
   output:
     nodes: [report]
-    element: air
+    approach: holistic
     stickiness: 1
 
 nodes:
   - name: classify
-    element: fire
+    approach: rapid
     transformer: echo
     after: [track-node]
     schema:
@@ -28,15 +28,15 @@ nodes:
       properties:
         type: {type: string}
   - name: analyze
-    element: water
+    approach: analytical
     transformer: echo
     input: "${classify.output}"
     prompt: "Analyze with threshold {{.Config.threshold}}"
   - name: review
-    element: diamond
+    approach: rigorous
     transformer: echo
   - name: report
-    element: air
+    approach: holistic
     transformer: echo
 
 edges:
