@@ -12,7 +12,8 @@ description: Active goal manifest — single-read orientation for agents to know
 - [x] Gate contracts complete — `signal-domains`, `signal-integrity`, `dialectic-hardening`
 - [x] Quick-win contracts complete — `resilience`, `ouroboros-signal-analysis`
 - [x] Dead-code excision — `Marble` primitive removed (superseded by Components, zero consumers)
-- [x] RCA decoupled from RP — `rcatype/` + `rpconv/` boundary, zero `components/rp` imports in core
+- [x] RCA decoupled from RP — `rcatype/` + `rpconv/` boundary, zero `connectors/rp` imports in core
+- [x] Three-level taxonomy — Primitives / Connectors / Schematics directory structure, RP decontamination
 - [x] Public API surface audit — 450+ symbols, 20+ packages, Good/Bad/Ugly assessment, test coverage matrix
 - [ ] Public API surface is stable — no breaking changes pending
 - [ ] Test coverage on public interfaces is solid

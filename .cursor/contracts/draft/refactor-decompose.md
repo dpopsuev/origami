@@ -1,6 +1,6 @@
 # Contract — refactor-decompose
 
-**Status:** draft  
+**Status:** active  
 **Goal:** Origami packages are organized into a three-level taxonomy (Primitives / Connectors / Schematics) with zero RP-specific concepts in the generic RCA schematic.  
 **Serves:** API Stabilization
 

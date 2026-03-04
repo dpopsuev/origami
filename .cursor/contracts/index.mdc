@@ -32,13 +32,13 @@
 - `completed/api-stabilization/dialectic-hardening.md` — Gap-closure convergence, evidence immutability, CMRR. Complete.
 - `completed/api-stabilization/resilience.md` — Circuit breaker, rate limiting, thermal budget. Complete.
 - `completed/api-stabilization/ouroboros-signal-analysis.md` — GBWP probe, DimGBWP dimension, offset compensator. Complete.
-- `completed/api-stabilization/decouple-rca-rp.md` — RCA domain types (`rcatype/`), conversion boundary (`rpconv/`), zero `components/rp` imports in core. Complete.
+- `completed/api-stabilization/decouple-rca-rp.md` — RCA domain types (`rcatype/`), conversion boundary (`rpconv/`), zero `connectors/rp` imports in core. Complete.
 - `completed/api-stabilization/api-surface-hygiene.md` — P1 dead code/comment/naming cleanup + P2 test coverage for 5 partial packages. Complete.
 - `completed/api-stabilization/origami-lsp.md` — Language Server for circuit YAML (validation, completion, color coding, virtual text, Kami live connection). Complete.
 - `completed/api-stabilization/public-api-surface-audit.md` — Read-only audit of full exported API surface (~450+ symbols, 20+ packages) with test coverage matrix. Complete.
 - `completed/api-stabilization/viewmodel-layer.md` — Reactive ViewModel layer: `CircuitStore`, `CircuitRenderer`, `LayoutEngine`. Complete.
 - `completed/api-stabilization/sumi.md` — Sumi TUI circuit viewer/debugger (Bubble Tea, live walker animation, interactive debugging). Complete.
-- `completed/api-stabilization/naming-taxonomy.md` — Rename marbles/ to modules/, DeterministicTransformer marker, IsCircuitDeterministic(), B7 lint rule. Complete.
+- `completed/api-stabilization/naming-taxonomy.md` — Rename marbles/ to modules/ (now schematics/), DeterministicTransformer marker, IsCircuitDeterministic(), B7 lint rule. Complete.
 - `completed/api-stabilization/design-principle-deterministic.md` — Deterministic-first design principle, D/S boundary docs, ADC node pattern, B7s aggregate summary lint rule. Complete.
 - `completed/api-stabilization/origami-autodoc.md` — `origami autodoc` CLI: docs tree scaffold, Mermaid + Markdown generation, D/S boundary, context flow, stochastic enrichment. Complete.
 
