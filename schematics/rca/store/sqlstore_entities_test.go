@@ -49,7 +49,7 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 	// --- Circuit ---
 	pipID, err := s.CreateCircuit(&Circuit{
 		SuiteID: suiteID, VersionID: verID,
-		Name: "telco-ft-ran-ptp-4.21", RPLaunchID: 33195, Status: "FAILED",
+		Name: "telco-ft-ran-ptp-4.21", SourceLaunchID: 33195, Status: "FAILED",
 	})
 	if err != nil {
 		t.Fatalf("CreateCircuit: %v", err)
@@ -65,13 +65,13 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 
 	// --- Launch ---
 	launchID, err := s.CreateLaunch(&Launch{
-		CircuitID: pipID, RPLaunchID: 33195, Name: "test-launch", Status: "FAILED",
+		CircuitID: pipID, SourceLaunchID: 33195, Name: "test-launch", Status: "FAILED",
 	})
 	if err != nil {
 		t.Fatalf("CreateLaunch: %v", err)
 	}
 	launch, err := s.GetLaunch(launchID)
-	if err != nil || launch == nil || launch.RPLaunchID != 33195 {
+	if err != nil || launch == nil || launch.SourceLaunchID != 33195 {
 		t.Fatalf("GetLaunch: got %+v err %v", launch, err)
 	}
 	launchByRP, err := s.GetLaunchByRPID(pipID, 33195)
@@ -81,7 +81,7 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 
 	// --- Job ---
 	jobID, err := s.CreateJob(&Job{
-		LaunchID: launchID, RPItemID: 100, Name: "[T-TSC] RAN PTP tests",
+		LaunchID: launchID, SourceItemID: 100, Name: "[T-TSC] RAN PTP tests",
 		ClockType: "T-TSC", Status: "FAILED",
 		StatsTotal: 20, StatsFailed: 5, StatsPassed: 12, StatsSkipped: 3,
 	})
@@ -99,7 +99,7 @@ func TestSqlStoreV2_FullHierarchy(t *testing.T) {
 
 	// --- Case v2 ---
 	caseID, err := s.CreateCase(&Case{
-		JobID: jobID, LaunchID: launchID, RPItemID: 200,
+		JobID: jobID, LaunchID: launchID, SourceItemID: 200,
 		Name: "PTP Recovery ptp process restart", Status: "open",
 		ErrorMessage: "context deadline exceeded",
 	})

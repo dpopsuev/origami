@@ -26,7 +26,7 @@ type AnalysisConfig struct {
 // AnalysisReport is the output of an analysis run.
 // Unlike CalibrationReport, there is no ground truth scoring — just investigation results.
 type AnalysisReport struct {
-	LaunchName  string               `json:"launch_name"`
+	SourceName  string               `json:"source_name"`
 	Transformer string               `json:"transformer"`
 	TotalCases  int                  `json:"total_cases"`
 	CaseResults []AnalysisCaseResult `json:"case_results"`
@@ -49,8 +49,8 @@ type AnalysisCaseResult struct {
 	SelectedRepos []string `json:"selected_repos"`
 	Convergence    float64  `json:"convergence"`
 	RCAID          int64    `json:"rca_id"`
-	RPIssueType    string   `json:"rp_issue_type,omitempty"`
-	RPAutoAnalyzed bool     `json:"rp_auto_analyzed,omitempty"`
+	SourceIssueType    string   `json:"source_issue_type,omitempty"`
+	SourceAutoAnalyzed bool     `json:"source_auto_analyzed,omitempty"`
 }
 
 // RunAnalysis drives the F0–F6 circuit for a set of cases using the provided transformer.
@@ -197,8 +197,8 @@ func FormatAnalysisReport(report *AnalysisReport) string {
 	var b strings.Builder
 
 	b.WriteString("=== Asterisk Analysis Report ===\n")
-	if report.LaunchName != "" {
-		b.WriteString(fmt.Sprintf("Launch:  %s\n", report.LaunchName))
+	if report.SourceName != "" {
+		b.WriteString(fmt.Sprintf("Launch:  %s\n", report.SourceName))
 	}
 	b.WriteString(fmt.Sprintf("Transformer: %s\n", report.Transformer))
 	b.WriteString(fmt.Sprintf("Cases:   %d\n\n", report.TotalCases))
@@ -228,7 +228,7 @@ func FormatAnalysisReport(report *AnalysisReport) string {
 
 	b.WriteString("--- Per-case breakdown ---\n")
 	tbl := format.NewTable(format.ASCII)
-	tbl.Header("Case", "Test", "Defect", "RP", "Category", "Conv", "Path", "Flags")
+	tbl.Header("Case", "Test", "Defect", "Source", "Category", "Conv", "Path", "Flags")
 	tbl.Columns(
 		format.ColumnConfig{Number: 2, MaxWidth: 50},
 		format.ColumnConfig{Number: 6, Align: format.AlignRight},
@@ -254,7 +254,7 @@ func FormatAnalysisReport(report *AnalysisReport) string {
 			}
 			flags += "[cascade]"
 		}
-		rpTag := vocabRPIssueTag(cr.RPIssueType, cr.RPAutoAnalyzed)
+		rpTag := vocabSourceIssueTag(cr.SourceIssueType, cr.SourceAutoAnalyzed)
 		if rpTag == "" {
 			rpTag = "-"
 		}

@@ -20,7 +20,7 @@ func vocabStagePath(codes []string) string {
 	return vocabulary.StagePath(defaultVocab, codes)
 }
 
-func vocabRPIssueTag(issueType string, autoAnalyzed bool) string {
-	return vocabulary.RPIssueTag(defaultVocab, issueType, autoAnalyzed)
+func vocabSourceIssueTag(issueType string, autoAnalyzed bool) string {
+	return vocabulary.SourceIssueTag(defaultVocab, issueType, autoAnalyzed)
 }
 

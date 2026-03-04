@@ -38,7 +38,7 @@ type RunConfig struct {
 	TokenBudget  int          // max concurrent dispatches (token semaphore); 0 = Parallel
 	BatchSize    int          // max signals per batch for batch-file dispatch mode; 0 = Parallel
 	BasePath     string       // root directory for investigation artifacts; defaults to DefaultBasePath
-	RPFetcher    rcatype.EnvelopeFetcher // optional; when set, RP-sourced cases fetch real failure data
+	SourceFetcher rcatype.EnvelopeFetcher // optional; when set, source-linked cases fetch real failure data
 	ScoreCard    *cal.ScoreCard // declarative metric definitions; loaded from YAML at startup
 
 	GapConfidentThreshold    float64 // convergence >= this → confident (no gap brief); 0 uses default 0.80
@@ -196,7 +196,7 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 			circuitMap[pk] = pipeID
 
 			launch := &store.Launch{
-				CircuitID: pipeID, RPLaunchID: 0,
+				CircuitID: pipeID, SourceLaunchID: 0,
 				Name: fmt.Sprintf("Launch %s %s", c.Version, c.Job), Status: "complete",
 			}
 			launchID, err := st.CreateLaunch(launch)
@@ -234,7 +234,7 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 		caseData := &store.Case{
 			JobID:        jobMap[pk],
 			LaunchID:     launchMap[pk],
-			RPItemID:     i + 1,
+			SourceItemID: i + 1,
 			Name:         gtCase.TestName,
 			Status:       "open",
 			ErrorMessage: gtCase.ErrorMessage,
@@ -366,8 +366,8 @@ func collectCaseResult(
 		Version:        gtCase.Version,
 		Job:            gtCase.Job,
 		StoreCaseID:    caseData.ID,
-		RPIssueType:    gtCase.RPIssueType,
-		RPAutoAnalyzed: gtCase.RPAutoAnalyzed,
+		SourceIssueType:    gtCase.SourceIssueType,
+		SourceAutoAnalyzed: gtCase.SourceAutoAnalyzed,
 	}
 
 	if br.Error != nil {

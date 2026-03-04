@@ -34,26 +34,12 @@ Determine whether this case's root cause matches another case in the same launch
 
 | Field | Value |
 |-------|-------|
-| RCA message | root cause from subagent-2 |
+| RCA message | root cause from subagent-0 |
 | Defect type | pb001 |
 | Convergence | 0.85 |
 | Evidence | `ref-1`  |
 
 
-## Symptom context
-
-| Field | Value |
-|-------|-------|
-| Symptom | OCP-83297 PTP sync stability |
-| Status | active |
-| Occurrences | 1 |
-| First seen | 2026-03-04T10:41:08Z |
-| Last seen | 2026-03-04T10:41:08Z |
-
-
-## Prior RCAs for this symptom
-
-| RCA #2 | root cause from subagent-1 | `pb001` | open | Versions:  |
 
 
 ## Sibling failures in this launch

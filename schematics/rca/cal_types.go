@@ -80,13 +80,13 @@ type GroundTruthCase struct {
 	ExpectCascade     bool `json:"expect_cascade" yaml:"expect_cascade"`
 	ExpectedLoops     int  `json:"expected_loops" yaml:"expected_loops"`       // expected F3→F2→F3 loops
 
-	// RP source fields (optional). When RPLaunchID > 0, the calibration runner
+	// Source fields (optional). When SourceLaunchID > 0, the calibration runner
 	// fetches real failure data from RP at runtime instead of using the embedded
 	// ErrorMessage/LogSnippet. Ground truth expectations remain embedded.
-	RPLaunchID     int    `json:"rp_launch_id,omitempty" yaml:"rp_launch_id,omitempty"`
-	RPItemID       int    `json:"rp_item_id,omitempty" yaml:"rp_item_id,omitempty"`
-	RPIssueType    string `json:"rp_issue_type,omitempty" yaml:"rp_issue_type,omitempty"`    // populated at runtime by ResolveRPCases
-	RPAutoAnalyzed bool   `json:"rp_auto_analyzed,omitempty" yaml:"rp_auto_analyzed,omitempty"` // populated at runtime by ResolveRPCases
+	SourceLaunchID     int    `json:"source_launch_id,omitempty" yaml:"source_launch_id,omitempty"`
+	SourceItemID       int    `json:"source_item_id,omitempty" yaml:"source_item_id,omitempty"`
+	SourceIssueType    string `json:"source_issue_type,omitempty" yaml:"source_issue_type,omitempty"`    // populated at runtime by ResolveRPCases
+	SourceAutoAnalyzed bool   `json:"source_auto_analyzed,omitempty" yaml:"source_auto_analyzed,omitempty"` // populated at runtime by ResolveRPCases
 
 	// Antithesis dialectic expectations (optional)
 	ExpectedSynthesis string `json:"expected_synthesis,omitempty" yaml:"expected_synthesis,omitempty"` // expected SynthesisDecision if dialectic activates
@@ -210,9 +210,9 @@ type CaseResult struct {
 	ActualRCAID       int64    `json:"actual_rca_id" yaml:"actual_rca_id"`
 	ActualConvergence float64  `json:"actual_convergence" yaml:"actual_convergence"`
 
-	// RP-provided classification (populated for RP-sourced cases)
-	RPIssueType    string `json:"rp_issue_type,omitempty" yaml:"rp_issue_type,omitempty"`
-	RPAutoAnalyzed bool   `json:"rp_auto_analyzed,omitempty" yaml:"rp_auto_analyzed,omitempty"`
+	// Source-provided classification (populated for source-sourced cases)
+	SourceIssueType    string `json:"source_issue_type,omitempty" yaml:"source_issue_type,omitempty"`
+	SourceAutoAnalyzed bool   `json:"source_auto_analyzed,omitempty" yaml:"source_auto_analyzed,omitempty"`
 
 	// Token tracking (populated when dispatch.TokenTracker is present)
 	PromptTokensTotal   int   `json:"prompt_tokens_total,omitempty" yaml:"prompt_tokens_total,omitempty"`

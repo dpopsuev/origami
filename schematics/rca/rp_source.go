@@ -10,8 +10,8 @@ import (
 )
 
 // ResolveRPCases fetches real failure data from ReportPortal for cases that
-// have RPLaunchID set, updating their ErrorMessage and LogSnippet in place.
-// Cases without RPLaunchID are left unchanged. Envelopes are cached by launch
+// have SourceLaunchID set, updating their ErrorMessage and LogSnippet in place.
+// Cases without SourceLaunchID are left unchanged. Envelopes are cached by launch
 // ID so multiple cases sharing a launch only trigger one API call.
 func ResolveRPCases(fetcher rcatype.EnvelopeFetcher, scenario *Scenario) error {
 	logger := logging.New("rp-source")
@@ -19,26 +19,26 @@ func ResolveRPCases(fetcher rcatype.EnvelopeFetcher, scenario *Scenario) error {
 
 	for i := range scenario.Cases {
 		c := &scenario.Cases[i]
-		if c.RPLaunchID <= 0 {
+		if c.SourceLaunchID <= 0 {
 			continue
 		}
 
-		env, ok := cache[c.RPLaunchID]
+		env, ok := cache[c.SourceLaunchID]
 		if !ok {
 			var err error
-			env, err = fetcher.Fetch(c.RPLaunchID)
+			env, err = fetcher.Fetch(c.SourceLaunchID)
 			if err != nil {
-				return fmt.Errorf("fetch RP launch %d for case %s: %w", c.RPLaunchID, c.ID, err)
+				return fmt.Errorf("fetch RP launch %d for case %s: %w", c.SourceLaunchID, c.ID, err)
 			}
-			cache[c.RPLaunchID] = env
+			cache[c.SourceLaunchID] = env
 			logger.Info("fetched RP launch",
-				"launch_id", c.RPLaunchID, "name", env.Name, "failures", len(env.FailureList))
+				"launch_id", c.SourceLaunchID, "name", env.Name, "failures", len(env.FailureList))
 		}
 
 		item := matchFailureItem(env, c)
 		if item == nil {
 			return fmt.Errorf("case %s: no matching failure item in RP launch %d (test=%q, item_id=%d)",
-				c.ID, c.RPLaunchID, c.TestName, c.RPItemID)
+				c.ID, c.SourceLaunchID, c.TestName, c.SourceItemID)
 		}
 
 		logger.Info("matched RP item", "case_id", c.ID, "item_id", item.ID, "item_name", item.Name)
@@ -49,17 +49,17 @@ func ResolveRPCases(fetcher rcatype.EnvelopeFetcher, scenario *Scenario) error {
 		if c.LogSnippet == "" && item.IssueComment != "" {
 			c.LogSnippet = item.IssueComment
 		}
-		c.RPIssueType = item.IssueType
-		c.RPAutoAnalyzed = item.AutoAnalyzed
+		c.SourceIssueType = item.IssueType
+		c.SourceAutoAnalyzed = item.AutoAnalyzed
 	}
 
 	return nil
 }
 
 func matchFailureItem(env *rcatype.Envelope, c *GroundTruthCase) *rcatype.FailureItem {
-	if c.RPItemID > 0 {
+	if c.SourceItemID > 0 {
 		for i := range env.FailureList {
-			if env.FailureList[i].ID == c.RPItemID {
+			if env.FailureList[i].ID == c.SourceItemID {
 				return &env.FailureList[i]
 			}
 		}

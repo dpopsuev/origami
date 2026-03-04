@@ -130,7 +130,7 @@ func TestRunAnalysis_EmptyCases(t *testing.T) {
 
 func TestFormatAnalysisReport_Structure(t *testing.T) {
 	report := &rca.AnalysisReport{
-		LaunchName:  "test-launch",
+		SourceName:  "test-launch",
 		Transformer: "stub",
 		TotalCases: 2,
 		CaseResults: []rca.AnalysisCaseResult{

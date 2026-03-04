@@ -56,7 +56,7 @@ func projectRoot(t *testing.T) string {
 
 func newTestServer(t *testing.T) *mcpserver.Server {
 	t.Helper()
-	srv := mcpserver.NewServer()
+	srv := mcpserver.NewServer("test-rca")
 	srv.ProjectRoot = projectRoot(t)
 	t.Cleanup(srv.Shutdown)
 	return srv

@@ -137,9 +137,9 @@ func CalibrationReportData(r *CalibrationReport) map[string]any {
 		if path == "" {
 			path = "(no steps)"
 		}
-		rpTag := vocabRPIssueTag(cr.RPIssueType, cr.RPAutoAnalyzed)
-		if rpTag == "" {
-			rpTag = "-"
+		srcTag := vocabSourceIssueTag(cr.SourceIssueType, cr.SourceAutoAnalyzed)
+		if srcTag == "" {
+			srcTag = "-"
 		}
 		caseRows = append(caseRows, map[string]any{
 			"Case":   cr.CaseID,
@@ -147,7 +147,7 @@ func CalibrationReportData(r *CalibrationReport) map[string]any {
 			"Ver/Job": fmt.Sprintf("%s/%s", cr.Version, cr.Job),
 			"Defect": vocabNameWithCode(cr.ActualDefectType),
 			"DT":     format.BoolMark(cr.DefectTypeCorrect),
-			"RP":     rpTag,
+			"Source": srcTag,
 			"Comp":   format.BoolMark(cr.ComponentCorrect),
 			"Path":   path,
 			"PathOK": format.BoolMark(cr.PathCorrect),
@@ -193,14 +193,14 @@ func RenderCalibrationReport(r *CalibrationReport) (string, error) {
 // shape expected by the rca-report.yaml template.
 func AnalysisReportData(r *AnalysisReport, timestamp time.Time) map[string]any {
 	data := make(map[string]any)
-	data["launch_name"] = r.LaunchName
+	data["launch_name"] = r.SourceName
 	data["total_cases"] = len(r.CaseResults)
 	data["transformer"] = r.Transformer
 
 	headerFields := []map[string]any{}
-	if r.LaunchName != "" {
+	if r.SourceName != "" {
 		headerFields = append(headerFields, map[string]any{
-			"Field": "Launch", "Value": r.LaunchName,
+			"Field": "Launch", "Value": r.SourceName,
 		})
 	}
 	headerFields = append(headerFields,
@@ -257,16 +257,16 @@ func AnalysisReportData(r *AnalysisReport, timestamp time.Time) map[string]any {
 		cases := groups[comp]
 		var caseRows []map[string]any
 		for _, cr := range cases {
-			rpTag := vocabRPIssueTag(cr.RPIssueType, cr.RPAutoAnalyzed)
-			if rpTag == "" {
-				rpTag = "--"
-			}
-			caseRows = append(caseRows, map[string]any{
-				"Case":       cr.CaseLabel,
-				"Test":       format.Truncate(cr.TestName, 60),
-				"Verdict":    vocabNameWithCode(cr.DefectType),
-				"Confidence": fmt.Sprintf("%.0f%%", math.Round(cr.Convergence*100)),
-				"RP Status":  rpTag,
+		srcTag := vocabSourceIssueTag(cr.SourceIssueType, cr.SourceAutoAnalyzed)
+		if srcTag == "" {
+			srcTag = "--"
+		}
+		caseRows = append(caseRows, map[string]any{
+			"Case":       cr.CaseLabel,
+			"Test":       format.Truncate(cr.TestName, 60),
+			"Verdict":    vocabNameWithCode(cr.DefectType),
+			"Confidence": fmt.Sprintf("%.0f%%", math.Round(cr.Convergence*100)),
+			"Source":     srcTag,
 			})
 		}
 		evidenceSet := collectAnalysisEvidence(cases)
@@ -297,8 +297,8 @@ func AnalysisReportData(r *AnalysisReport, timestamp time.Time) map[string]any {
 			map[string]any{"Field": "Confidence", "Value": fmt.Sprintf("%.0f%%", math.Round(cr.Convergence*100))},
 			map[string]any{"Field": "Circuit", "Value": vocabStagePath(cr.Path)},
 		)
-		if cr.RPIssueType != "" {
-			fields = append(fields, map[string]any{"Field": "RP Classification", "Value": vocabRPIssueTag(cr.RPIssueType, cr.RPAutoAnalyzed)})
+		if cr.SourceIssueType != "" {
+			fields = append(fields, map[string]any{"Field": "Source Classification", "Value": vocabSourceIssueTag(cr.SourceIssueType, cr.SourceAutoAnalyzed)})
 		}
 		if len(cr.SelectedRepos) > 0 {
 			fields = append(fields, map[string]any{"Field": "Repos investigated", "Value": strings.Join(cr.SelectedRepos, ", ")})

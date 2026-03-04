@@ -28,7 +28,7 @@ func TestRenderAnalysisReport_EmptyReport(t *testing.T) {
 
 func TestRenderAnalysisReport_SingleCase(t *testing.T) {
 	report := &AnalysisReport{
-		LaunchName: "test-launch-4.20",
+		SourceName: "test-launch-4.20",
 		Transformer: "basic",
 		TotalCases: 1,
 		CaseResults: []AnalysisCaseResult{
@@ -44,8 +44,8 @@ func TestRenderAnalysisReport_SingleCase(t *testing.T) {
 				SelectedRepos:  []string{"linuxptp-daemon"},
 				Convergence:    0.80,
 				RCAID:          1,
-				RPIssueType:    "ti_abc123",
-				RPAutoAnalyzed: false,
+				SourceIssueType:    "ti_abc123",
+				SourceAutoAnalyzed: false,
 			},
 		},
 	}
@@ -75,7 +75,7 @@ func TestRenderAnalysisReport_SingleCase(t *testing.T) {
 
 func TestRenderAnalysisReport_MultipleComponentsGrouped(t *testing.T) {
 	report := &AnalysisReport{
-		LaunchName: "test-launch",
+		SourceName: "test-launch",
 		Transformer: "basic",
 		TotalCases: 3,
 		CaseResults: []AnalysisCaseResult{
@@ -106,14 +106,14 @@ func TestRenderAnalysisReport_MultipleComponentsGrouped(t *testing.T) {
 
 func TestRenderAnalysisReport_RPTags(t *testing.T) {
 	report := &AnalysisReport{
-		LaunchName: "rp-test",
+		SourceName: "rp-test",
 		Transformer: "basic",
 		TotalCases: 2,
 		CaseResults: []AnalysisCaseResult{
 			{CaseLabel: "A1", TestName: "t1", DefectType: "pb001", Component: "comp",
-				RPIssueType: "ti_human", RPAutoAnalyzed: false, Convergence: 0.80, RCAID: 1},
+				SourceIssueType: "ti_human", SourceAutoAnalyzed: false, Convergence: 0.80, RCAID: 1},
 			{CaseLabel: "A2", TestName: "t2", DefectType: "au001", Component: "comp",
-				RPIssueType: "ti_auto", RPAutoAnalyzed: true, Convergence: 0.70, RCAID: 2},
+				SourceIssueType: "ti_auto", SourceAutoAnalyzed: true, Convergence: 0.70, RCAID: 2},
 		},
 	}
 
@@ -132,7 +132,7 @@ func TestRenderAnalysisReport_RPTags(t *testing.T) {
 
 func TestRenderAnalysisReport_Flags(t *testing.T) {
 	report := &AnalysisReport{
-		LaunchName: "flags-test",
+		SourceName: "flags-test",
 		Transformer: "basic",
 		TotalCases: 3,
 		CaseResults: []AnalysisCaseResult{
@@ -160,7 +160,7 @@ func TestRenderAnalysisReport_Flags(t *testing.T) {
 
 func TestRenderAnalysisReport_ConvergenceRounding(t *testing.T) {
 	report := &AnalysisReport{
-		LaunchName: "conv-test",
+		SourceName: "conv-test",
 		Transformer: "basic",
 		TotalCases: 1,
 		CaseResults: []AnalysisCaseResult{
@@ -181,7 +181,7 @@ func TestRenderAnalysisReport_ConvergenceRounding(t *testing.T) {
 
 func TestRenderAnalysisReport_UnknownComponent(t *testing.T) {
 	report := &AnalysisReport{
-		LaunchName: "unknown-test",
+		SourceName: "unknown-test",
 		Transformer: "basic",
 		TotalCases: 1,
 		CaseResults: []AnalysisCaseResult{
@@ -201,7 +201,7 @@ func TestRenderAnalysisReport_UnknownComponent(t *testing.T) {
 
 func TestRenderAnalysisReport_EvidenceDeduplication(t *testing.T) {
 	report := &AnalysisReport{
-		LaunchName: "evidence-test",
+		SourceName: "evidence-test",
 		Transformer: "basic",
 		TotalCases: 2,
 		CaseResults: []AnalysisCaseResult{

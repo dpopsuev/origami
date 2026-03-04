@@ -3,7 +3,7 @@ package rca
 // TemplateParams holds all parameter groups injected into prompt templates.
 // Templates use {{.Group.Field}} to access values.
 type TemplateParams struct {
-	LaunchID string
+	SourceID string
 	CaseID   int64
 	StepName string
 
@@ -92,14 +92,14 @@ type RepoParams struct {
 	Branch  string
 }
 
-// AttributeParams holds a key-value launch attribute from RP.
+// AttributeParams holds a key-value launch attribute from the data source.
 type AttributeParams struct {
 	Key    string
 	Value  string
 	System bool
 }
 
-// JiraLinkParams holds an external issue link from RP test items.
+// JiraLinkParams holds an external issue link from test items.
 type JiraLinkParams struct {
 	TicketID string
 	URL      string
@@ -107,8 +107,8 @@ type JiraLinkParams struct {
 
 // URLParams holds pre-built navigable links.
 type URLParams struct {
-	RPLaunch string
-	RPItem   string
+	SourceDashboard string
+	SourceItem      string
 }
 
 // AlwaysReadSource holds the content of a knowledge source that is always

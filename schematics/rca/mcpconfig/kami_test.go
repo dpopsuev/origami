@@ -17,7 +17,7 @@ import (
 
 func newTestServerWithKami(t *testing.T) (*mcpserver.Server, string) {
 	t.Helper()
-	srv := mcpserver.NewServer()
+	srv := mcpserver.NewServer("test-rca")
 	srv.ProjectRoot = projectRoot(t)
 
 	bridge := kami.NewEventBridge(nil)

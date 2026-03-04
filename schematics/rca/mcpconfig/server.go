@@ -28,9 +28,10 @@ var (
 	DefaultSessionTTL         = 5 * time.Minute
 )
 
-// Server wraps the generic CircuitServer with Asterisk-specific domain hooks.
+// Server wraps the generic CircuitServer with RCA-specific domain hooks.
 type Server struct {
 	*fwmcp.CircuitServer
+	ProductName string
 	ProjectRoot string
 
 	KamiServer *kami.Server
@@ -38,11 +39,11 @@ type Server struct {
 	bridge     *kami.EventBridge
 }
 
-// NewServer creates an Asterisk MCP server by configuring the generic
-// CircuitServer with Asterisk domain hooks (scenarios, adapters, RP wiring).
-func NewServer() *Server {
+// NewServer creates an RCA MCP server. The productName identifies the consumer
+// (e.g. "asterisk"). Pass it from the consumer's manifest or CLI config.
+func NewServer(productName string) *Server {
 	cwd, _ := os.Getwd()
-	s := &Server{ProjectRoot: cwd}
+	s := &Server{ProductName: productName, ProjectRoot: cwd}
 	s.CircuitServer = fwmcp.NewCircuitServer(s.buildConfig())
 	return s
 }
@@ -63,10 +64,10 @@ func (s *Server) Shutdown() {
 
 func (s *Server) buildConfig() fwmcp.CircuitConfig {
 	cfg := fwmcp.CircuitConfig{
-		Name:        "asterisk",
+		Name:        s.ProductName,
 		Version:     "dev",
-		StepSchemas: asteriskStepSchemas(),
-		WorkerPreamble: "You are an Asterisk calibration worker.",
+		StepSchemas: rcaStepSchemas(),
+		WorkerPreamble: fmt.Sprintf("You are a %s calibration worker.", s.ProductName),
 		DefaultGetNextStepTimeout: int(DefaultGetNextStepTimeout / time.Millisecond),
 		DefaultSessionTTL:         int(DefaultSessionTTL / time.Millisecond),
 		CreateSession: func(ctx context.Context, params fwmcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
@@ -237,7 +238,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		Parallel:     parallel,
 		TokenBudget:  parallel,
 		BasePath:     basePath,
-		RPFetcher:    rpFetcher,
+		SourceFetcher: rpFetcher,
 		ScoreCard:    sc,
 	}
 
@@ -253,8 +254,8 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	return runFn, meta, nil
 }
 
-// asteriskStepSchemas returns the F0-F6 step schemas for Asterisk calibration.
-func asteriskStepSchemas() []fwmcp.StepSchema {
+// rcaStepSchemas returns the F0-F6 step schemas for RCA calibration.
+func rcaStepSchemas() []fwmcp.StepSchema {
 	return []fwmcp.StepSchema{
 		{
 			Name:   "F0_RECALL",

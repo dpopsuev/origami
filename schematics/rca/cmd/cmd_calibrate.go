@@ -221,7 +221,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 		Parallel:     parallelN,
 		TokenBudget:  budgetN,
 		BasePath:     basePath,
-		RPFetcher:    rpFetcher,
+		SourceFetcher: rpFetcher,
 		ScoreCard:    sc,
 	}
 

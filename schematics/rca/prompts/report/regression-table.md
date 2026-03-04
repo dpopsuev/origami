@@ -1,7 +1,7 @@
 # F6 — Report: Generate Outputs
 
 **Case:** #{{.CaseID}}  
-{{if .LaunchID}}**Launch:** {{.LaunchID}}{{end}}  
+{{if .SourceID}}**Launch:** {{.SourceID}}{{end}}  
 **Step:** {{.StepName}}
 
 ---

@@ -213,13 +213,13 @@ func createAnalysisScaffolding(st store.Store, env *rcatype.Envelope) (int64, []
 		SuiteID:    suiteID,
 		VersionID:  vID,
 		Name:       env.Name,
-		RPLaunchID: rpLaunchID,
+		SourceLaunchID: rpLaunchID,
 		Status:     "complete",
 	})
 
 	lID, _ := st.CreateLaunch(&store.Launch{
 		CircuitID: pID,
-		RPLaunchID: rpLaunchID,
+		SourceLaunchID: rpLaunchID,
 		Name:       env.Name,
 		Status:     "complete",
 	})
@@ -235,7 +235,7 @@ func createAnalysisScaffolding(st store.Store, env *rcatype.Envelope) (int64, []
 		caseID, _ := st.CreateCase(&store.Case{
 			JobID:    jID,
 			LaunchID: lID,
-			RPItemID: f.ID,
+			SourceItemID: f.ID,
 			Name:     f.Name,
 			Status:   "open",
 		})
@@ -263,7 +263,7 @@ func ensureCaseInStore(st store.Store, env *rcatype.Envelope, rpLaunchID int, it
 				for _, j := range jobs {
 					cases, _ := st.ListCasesByJob(j.ID)
 					for _, c := range cases {
-						if c.RPItemID == item.ID {
+						if c.SourceItemID == item.ID {
 							return c
 						}
 					}
@@ -289,25 +289,25 @@ func ensureCaseInStore(st store.Store, env *rcatype.Envelope, rpLaunchID int, it
 		SuiteID:    suiteID,
 		VersionID:  vID,
 		Name:       env.Name,
-		RPLaunchID: rpLaunchID,
+		SourceLaunchID: rpLaunchID,
 	})
 
 	lID, _ := st.CreateLaunch(&store.Launch{
 		CircuitID: pID,
-		RPLaunchID: rpLaunchID,
+		SourceLaunchID: rpLaunchID,
 		Name:       env.Name,
 	})
 
 	jID, _ := st.CreateJob(&store.Job{
 		LaunchID: lID,
-		RPItemID: item.ID,
+		SourceItemID: item.ID,
 		Name:     item.Name,
 	})
 
 	caseID, _ := st.CreateCase(&store.Case{
 		JobID:    jID,
 		LaunchID: lID,
-		RPItemID: item.ID,
+		SourceItemID: item.ID,
 		Name:     item.Name,
 		Status:   "open",
 	})

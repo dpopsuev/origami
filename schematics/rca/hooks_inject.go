@@ -136,7 +136,7 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 
 	if v, ok := walkerCtx[KeyParamsEnvelope].(*EnvelopeParams); ok {
 		params.Envelope = v
-		params.LaunchID = v.RunID
+		params.SourceID = v.RunID
 	}
 
 	if v, ok := walkerCtx[KeyParamsFailure].(*FailureParams); ok {

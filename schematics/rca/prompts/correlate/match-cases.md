@@ -1,7 +1,7 @@
 # F4 — Correlate: Match Cases
 
 **Case:** #{{.CaseID}}  
-{{if .LaunchID}}**Launch:** {{.LaunchID}}{{end}}  
+{{if .SourceID}}**Launch:** {{.SourceID}}{{end}}  
 **Step:** {{.StepName}}
 
 ---

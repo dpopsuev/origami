@@ -88,7 +88,7 @@ func (s *SqlStore) GetCase(caseID int64) (*Case, error) {
 		        started_at, ended_at, created_at, updated_at
 		 FROM cases WHERE id = ?`,
 		caseID,
-	).Scan(&c.ID, &jobID, &c.LaunchID, &c.RPItemID,
+	).Scan(&c.ID, &jobID, &c.LaunchID, &c.SourceItemID,
 		&c.Name, &polarionID, &c.Status,
 		&symptomID, &rcaID, &errMsg, &logSnip, &logTrunc,
 		&startedAt, &endedAt, &c.CreatedAt, &c.UpdatedAt)

@@ -13,7 +13,7 @@ var updateGolden = flag.Bool("update-golden", false, "overwrite golden files wit
 // Used by golden render tests and coverage tests.
 func goldenFixtureParams() *TemplateParams {
 	return &TemplateParams{
-		LaunchID: "launch-42",
+		SourceID: "launch-42",
 		CaseID:   7,
 		StepName: "", // set per-test
 		Envelope: &EnvelopeParams{
@@ -61,8 +61,8 @@ func goldenFixtureParams() *TemplateParams {
 			ReposStatus: Resolved,
 		},
 		URLs: &URLParams{
-			RPLaunch: "https://rp.example.com/launches/42",
-			RPItem:   "https://rp.example.com/items/7",
+			SourceDashboard: "https://rp.example.com/launches/42",
+			SourceItem:      "https://rp.example.com/items/7",
 		},
 		AlwaysReadSources: []AlwaysReadSource{
 			{Name: "PTP Domain Knowledge", Purpose: "PTP protocol reference", Content: "PTP uses Best Master Clock Algorithm (BMCA) to select the grandmaster."},

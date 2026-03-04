@@ -930,7 +930,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 32292
+      source_launch_id: 32292
     - id: C06
       version: "4.14"
       job: '[GM]'
@@ -979,7 +979,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 33179
+      source_launch_id: 33179
     - id: C08
       version: "4.15"
       job: '[GM]'
@@ -1028,7 +1028,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 32538
+      source_launch_id: 32538
     - id: C09
       version: "4.21"
       job: '[T-TSC]'
@@ -1109,7 +1109,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 33000
+      source_launch_id: 33000
     - id: C13
       version: "4.20"
       job: '[T-TSC]'
@@ -1158,7 +1158,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31362
+      source_launch_id: 31362
     - id: C14
       version: "4.21"
       job: '[T-TSC]'
@@ -1207,7 +1207,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31362
+      source_launch_id: 31362
     - id: C15
       version: "4.21"
       job: '[T-TSC]'
@@ -1256,7 +1256,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31362
+      source_launch_id: 31362
     - id: C17
       version: "4.18"
       job: '[BC/OC]'
@@ -1451,7 +1451,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 32295
+      source_launch_id: 32295
     - id: C24
       version: "4.16"
       job: '[BC/OC]'
@@ -1548,7 +1548,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31356
+      source_launch_id: 31356
     - id: C27
       version: "4.14"
       job: '[GM]'
@@ -1628,7 +1628,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 32292
+      source_launch_id: 32292
     - id: C29
       version: "4.17"
       job: '[GM]'
@@ -1677,7 +1677,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 33179
+      source_launch_id: 33179
 candidates:
     - id: C01
       version: "4.20"
@@ -1727,7 +1727,7 @@ candidates:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31356
+      source_launch_id: 31356
     - id: C02
       version: "4.21"
       job: '[ntpfailover]'
@@ -1759,7 +1759,7 @@ candidates:
       expect_skip: true
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 32799
+      source_launch_id: 32799
     - id: C03
       version: "4.19"
       job: '[BC/OC]'
@@ -1808,7 +1808,7 @@ candidates:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31278
+      source_launch_id: 31278
     - id: C07
       version: "4.16"
       job: '[GM]'
@@ -1857,7 +1857,7 @@ candidates:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 33166
+      source_launch_id: 33166
     - id: C11
       version: "4.21"
       job: '[ntpfailover]'
@@ -1906,7 +1906,7 @@ candidates:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 33000
+      source_launch_id: 33000
     - id: C12
       version: "4.21"
       job: '[ntpfailover]'
@@ -2003,7 +2003,7 @@ candidates:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 32538
+      source_launch_id: 32538
     - id: C18
       version: "4.21"
       job: '[OC-2Port]'
@@ -2083,7 +2083,7 @@ candidates:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31362
+      source_launch_id: 31362
     - id: C20
       version: "4.20"
       job: '[T-TSC]'
@@ -2132,7 +2132,7 @@ candidates:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31356
+      source_launch_id: 31356
     - id: C25
       version: "4.16"
       job: '[BC/OC]'
@@ -2229,7 +2229,7 @@ candidates:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-      rp_launch_id: 31356
+      source_launch_id: 31356
 workspace:
     repos:
         - name: cnf-gotests

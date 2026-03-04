@@ -293,8 +293,8 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 	// These exist for Go-level consumption (linking, routing, scoring, etc.).
 	excluded := map[string]string{
 		"URLs":           "navigable links used in Go output, not in LLM prompts",
-		"URLs.RPLaunch":  "navigable links used in Go output, not in LLM prompts",
-		"URLs.RPItem":    "navigable links used in Go output, not in LLM prompts",
+		"URLs.SourceDashboard": "navigable links used in Go output, not in LLM prompts",
+		"URLs.SourceItem":      "navigable links used in Go output, not in LLM prompts",
 		"Env":            "env vars injected into context map, not referenced in templates",
 		"Failure.Path":   "file path used for Go-level routing, not in prompts",
 		"Envelope.Status": "launch status used for Go-level filtering, not in prompts",
@@ -305,7 +305,7 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 		"Prior.RecallResult.Reasoning": "LLM-generated explanation, not consumed by downstream templates",
 		"Prior.RecallResult.SymptomID": "numeric ID used for Go-level store lookup, not in prompts",
 
-		"Prior.InvestigateResult.LaunchID":  "duplicates top-level LaunchID; not repeated in prompts",
+		"Prior.InvestigateResult.LaunchID":  "duplicates top-level SourceID; not repeated in prompts",
 		"Prior.InvestigateResult.CaseIDs":   "used for Go-level case grouping, not in prompts",
 		"Prior.InvestigateResult.Component": "used for Go-level scoring and dedup, not in prompts",
 

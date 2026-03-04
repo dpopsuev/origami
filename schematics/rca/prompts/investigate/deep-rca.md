@@ -1,7 +1,7 @@
 # F3 — Investigate: Deep Root Cause Analysis
 
 **Case:** #{{.CaseID}}  
-{{if .LaunchID}}**Launch:** {{.LaunchID}}{{end}}  
+{{if .SourceID}}**Launch:** {{.SourceID}}{{end}}  
 **Step:** {{.StepName}}
 
 ---
@@ -127,7 +127,7 @@ Save as `artifact.json`:
 
 ```json
 {
-  "launch_id": "{{.LaunchID}}",
+  "launch_id": "{{.SourceID}}",
   "case_ids": [{{.CaseID}}],
   "rca_message": "Specific root cause description: component X fails because Y changed in commit Z, causing W.",
   "defect_type": "pb001",

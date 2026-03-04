@@ -161,7 +161,7 @@ func (s *SqlStore) CreateCircuit(p *Circuit) (int64, error) {
 	res, err := s.db.Exec(
 		`INSERT INTO circuits(suite_id, version_id, name, rp_launch_id, status, started_at, ended_at)
 		 VALUES(?, ?, ?, ?, ?, ?, ?)`,
-		p.SuiteID, p.VersionID, p.Name, nilIfZero(p.RPLaunchID), p.Status,
+		p.SuiteID, p.VersionID, p.Name, nilIfZero(p.SourceLaunchID), p.Status,
 		nilIfEmpty(p.StartedAt), nilIfEmpty(p.EndedAt),
 	)
 	if err != nil {
@@ -185,7 +185,7 @@ func (s *SqlStore) GetCircuit(id int64) (*Circuit, error) {
 		return nil, fmt.Errorf("get circuit: %w", err)
 	}
 	if rpLaunch.Valid {
-		p.RPLaunchID = int(rpLaunch.Int64)
+		p.SourceLaunchID = int(rpLaunch.Int64)
 	}
 	p.StartedAt = nullStr(startedAt)
 	p.EndedAt = nullStr(endedAt)
@@ -210,7 +210,7 @@ func (s *SqlStore) ListCircuitsBySuite(suiteID int64) ([]*Circuit, error) {
 			return nil, fmt.Errorf("scan circuit: %w", err)
 		}
 		if rpLaunch.Valid {
-			p.RPLaunchID = int(rpLaunch.Int64)
+			p.SourceLaunchID = int(rpLaunch.Int64)
 		}
 		p.StartedAt = nullStr(startedAt)
 		p.EndedAt = nullStr(endedAt)
@@ -229,7 +229,7 @@ func (s *SqlStore) CreateLaunch(l *Launch) (int64, error) {
 		`INSERT INTO launches(circuit_id, rp_launch_id, rp_launch_uuid, name, status,
 		        started_at, ended_at, env_attributes, git_branch, git_commit, envelope_payload)
 		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		l.CircuitID, l.RPLaunchID, nilIfEmpty(l.RPLaunchUUID),
+		l.CircuitID, l.SourceLaunchID, nilIfEmpty(l.SourceLaunchUUID),
 		nilIfEmpty(l.Name), nilIfEmpty(l.Status),
 		nilIfEmpty(l.StartedAt), nilIfEmpty(l.EndedAt),
 		nilIfEmpty(l.EnvAttributes), nilIfEmpty(l.GitBranch), nilIfEmpty(l.GitCommit),
@@ -249,7 +249,7 @@ func (s *SqlStore) GetLaunch(id int64) (*Launch, error) {
 		`SELECT id, circuit_id, rp_launch_id, rp_launch_uuid, name, status,
 		        started_at, ended_at, env_attributes, git_branch, git_commit, envelope_payload
 		 FROM launches WHERE id = ?`, id,
-	).Scan(&l.ID, &l.CircuitID, &l.RPLaunchID, &uuid, &name, &status,
+	).Scan(&l.ID, &l.CircuitID, &l.SourceLaunchID, &uuid, &name, &status,
 		&startedAt, &endedAt, &envAttr, &gitBranch, &gitCommit, &l.EnvelopePayload)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -257,7 +257,7 @@ func (s *SqlStore) GetLaunch(id int64) (*Launch, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get launch: %w", err)
 	}
-	l.RPLaunchUUID = nullStr(uuid)
+	l.SourceLaunchUUID = nullStr(uuid)
 	l.Name = nullStr(name)
 	l.Status = nullStr(status)
 	l.StartedAt = nullStr(startedAt)
@@ -276,7 +276,7 @@ func (s *SqlStore) GetLaunchByRPID(circuitID int64, rpLaunchID int) (*Launch, er
 		`SELECT id, circuit_id, rp_launch_id, rp_launch_uuid, name, status,
 		        started_at, ended_at, env_attributes, git_branch, git_commit, envelope_payload
 		 FROM launches WHERE circuit_id = ? AND rp_launch_id = ?`, circuitID, rpLaunchID,
-	).Scan(&l.ID, &l.CircuitID, &l.RPLaunchID, &uuid, &name, &status,
+	).Scan(&l.ID, &l.CircuitID, &l.SourceLaunchID, &uuid, &name, &status,
 		&startedAt, &endedAt, &envAttr, &gitBranch, &gitCommit, &l.EnvelopePayload)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -284,7 +284,7 @@ func (s *SqlStore) GetLaunchByRPID(circuitID int64, rpLaunchID int) (*Launch, er
 	if err != nil {
 		return nil, fmt.Errorf("get launch by rp id: %w", err)
 	}
-	l.RPLaunchUUID = nullStr(uuid)
+	l.SourceLaunchUUID = nullStr(uuid)
 	l.Name = nullStr(name)
 	l.Status = nullStr(status)
 	l.StartedAt = nullStr(startedAt)
@@ -310,11 +310,11 @@ func (s *SqlStore) ListLaunchesByCircuit(circuitID int64) ([]*Launch, error) {
 		var l Launch
 		var uuid, name, status, startedAt, endedAt sql.NullString
 		var envAttr, gitBranch, gitCommit sql.NullString
-		if err := rows.Scan(&l.ID, &l.CircuitID, &l.RPLaunchID, &uuid, &name, &status,
+		if err := rows.Scan(&l.ID, &l.CircuitID, &l.SourceLaunchID, &uuid, &name, &status,
 			&startedAt, &endedAt, &envAttr, &gitBranch, &gitCommit, &l.EnvelopePayload); err != nil {
 			return nil, fmt.Errorf("scan launch: %w", err)
 		}
-		l.RPLaunchUUID = nullStr(uuid)
+		l.SourceLaunchUUID = nullStr(uuid)
 		l.Name = nullStr(name)
 		l.Status = nullStr(status)
 		l.StartedAt = nullStr(startedAt)
@@ -337,7 +337,7 @@ func (s *SqlStore) CreateJob(j *Job) (int64, error) {
 		`INSERT INTO jobs(launch_id, rp_item_id, name, clock_type, status,
 		        stats_total, stats_failed, stats_passed, stats_skipped, started_at, ended_at)
 		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		j.LaunchID, j.RPItemID, j.Name, nilIfEmpty(j.ClockType), nilIfEmpty(j.Status),
+		j.LaunchID, j.SourceItemID, j.Name, nilIfEmpty(j.ClockType), nilIfEmpty(j.Status),
 		nilIfZero(j.StatsTotal), nilIfZero(j.StatsFailed), nilIfZero(j.StatsPassed), nilIfZero(j.StatsSkipped),
 		nilIfEmpty(j.StartedAt), nilIfEmpty(j.EndedAt),
 	)
@@ -355,7 +355,7 @@ func (s *SqlStore) GetJob(id int64) (*Job, error) {
 		`SELECT id, launch_id, rp_item_id, name, clock_type, status,
 		        stats_total, stats_failed, stats_passed, stats_skipped, started_at, ended_at
 		 FROM jobs WHERE id = ?`, id,
-	).Scan(&j.ID, &j.LaunchID, &j.RPItemID, &j.Name, &clockType, &status,
+	).Scan(&j.ID, &j.LaunchID, &j.SourceItemID, &j.Name, &clockType, &status,
 		&total, &failed, &passed, &skipped, &startedAt, &endedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -397,7 +397,7 @@ func (s *SqlStore) ListJobsByLaunch(launchID int64) ([]*Job, error) {
 		var j Job
 		var clockType, status, startedAt, endedAt sql.NullString
 		var total, failed, passed, skipped sql.NullInt64
-		if err := rows.Scan(&j.ID, &j.LaunchID, &j.RPItemID, &j.Name, &clockType, &status,
+		if err := rows.Scan(&j.ID, &j.LaunchID, &j.SourceItemID, &j.Name, &clockType, &status,
 			&total, &failed, &passed, &skipped, &startedAt, &endedAt); err != nil {
 			return nil, fmt.Errorf("scan job: %w", err)
 		}
@@ -445,7 +445,7 @@ func (s *SqlStore) CreateCase(c *Case) (int64, error) {
 		        symptom_id, rca_id, error_message, log_snippet, log_truncated,
 		        started_at, ended_at, created_at, updated_at)
 		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.JobID, c.LaunchID, c.RPItemID, c.Name, nilIfEmpty(c.PolarionID), c.Status,
+		c.JobID, c.LaunchID, c.SourceItemID, c.Name, nilIfEmpty(c.PolarionID), c.Status,
 		nilIfZero64(c.SymptomID), nilIfZero64(c.RCAID),
 		nilIfEmpty(c.ErrorMessage), nilIfEmpty(c.LogSnippet), logTrunc,
 		nilIfEmpty(c.StartedAt), nilIfEmpty(c.EndedAt), c.CreatedAt, c.UpdatedAt,
@@ -885,7 +885,7 @@ func scanCases(rows *sql.Rows) ([]*Case, error) {
 		var c Case
 		var rcaID, symptomID, jobID, logTrunc sql.NullInt64
 		var polarionID, errMsg, logSnip, startedAt, endedAt sql.NullString
-		if err := rows.Scan(&c.ID, &jobID, &c.LaunchID, &c.RPItemID,
+		if err := rows.Scan(&c.ID, &jobID, &c.LaunchID, &c.SourceItemID,
 			&c.Name, &polarionID, &c.Status,
 			&symptomID, &rcaID, &errMsg, &logSnip, &logTrunc,
 			&startedAt, &endedAt, &c.CreatedAt, &c.UpdatedAt); err != nil {

@@ -42,10 +42,10 @@ func New() *framework.RichMapVocabulary {
 
 // --- Domain helpers (composite logic beyond simple lookup) ---
 
-// RPIssueTag formats an RP-provided issue type with a trust indicator.
+// SourceIssueTag formats a source-provided issue type with a trust indicator.
 // autoAnalyzed=true -> "[auto]" (ML-assigned, low trust); false -> "[human]".
 // Returns "" when issueType is empty.
-func RPIssueTag(v framework.Vocabulary, issueType string, autoAnalyzed bool) string {
+func SourceIssueTag(v framework.Vocabulary, issueType string, autoAnalyzed bool) string {
 	if issueType == "" {
 		return ""
 	}

@@ -36,7 +36,7 @@ func TestMemStoreV2_FullHierarchy(t *testing.T) {
 	}
 
 	// Launch
-	launchID, err := s.CreateLaunch(&Launch{CircuitID: pipID, RPLaunchID: 33195, Name: "test"})
+	launchID, err := s.CreateLaunch(&Launch{CircuitID: pipID, SourceLaunchID: 33195, Name: "test"})
 	if err != nil {
 		t.Fatalf("CreateLaunch: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestMemStoreV2_FullHierarchy(t *testing.T) {
 	}
 
 	// Job
-	jobID, err := s.CreateJob(&Job{LaunchID: launchID, RPItemID: 100, Name: "job1"})
+	jobID, err := s.CreateJob(&Job{LaunchID: launchID, SourceItemID: 100, Name: "job1"})
 	if err != nil {
 		t.Fatalf("CreateJob: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestMemStoreV2_FullHierarchy(t *testing.T) {
 
 	// Case v2
 	caseID, err := s.CreateCase(&Case{
-		JobID: jobID, LaunchID: launchID, RPItemID: 200,
+		JobID: jobID, LaunchID: launchID, SourceItemID: 200,
 		Name: "test-case", ErrorMessage: "timeout",
 	})
 	if err != nil {

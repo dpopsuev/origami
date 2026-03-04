@@ -26,7 +26,7 @@ type Circuit struct {
 	SuiteID    int64
 	VersionID  int64
 	Name       string
-	RPLaunchID int    // denormalized from Launch for quick reference
+	SourceLaunchID int    // denormalized from Launch for quick reference
 	Status     string // FAILED, PASSED, etc.
 	StartedAt  string // ISO 8601
 	EndedAt    string // ISO 8601
@@ -37,8 +37,8 @@ type Circuit struct {
 type Launch struct {
 	ID              int64
 	CircuitID      int64
-	RPLaunchID      int    // RP launch ID (e.g. 33195)
-	RPLaunchUUID    string
+	SourceLaunchID   int    // source launch ID (e.g. 33195)
+	SourceLaunchUUID  string
 	Name            string
 	Status          string // FAILED, PASSED, etc.
 	StartedAt       string // ISO 8601
@@ -53,7 +53,7 @@ type Launch struct {
 type Job struct {
 	ID           int64
 	LaunchID     int64  // FK → launches.id
-	RPItemID     int    // RP item ID for this TEST-level item
+	SourceItemID   int    // source item ID for this TEST-level item
 	Name         string // e.g. "[T-TSC] RAN PTP tests"
 	ClockType    string // extracted from name/attributes, e.g. "T-TSC"
 	Status       string // FAILED, PASSED, etc.
@@ -72,7 +72,7 @@ type Case struct {
 	ID           int64
 	JobID        int64  // v2: FK → jobs.id; 0 for v1-migrated cases
 	LaunchID     int64  // FK → launches.id (v2) or RP launch ID (v1 before migration)
-	RPItemID     int    // RP test item ID (STEP-level item)
+	SourceItemID   int    // source test item ID (STEP-level item)
 	Name         string // full test name from RP
 	PolarionID   string // optional Polarion test case ID
 	Status       string // open / triaged / investigated / reviewed / closed

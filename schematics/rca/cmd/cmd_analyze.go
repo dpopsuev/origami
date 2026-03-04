@@ -171,12 +171,12 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("analyze: %w", err)
 	}
-	report.LaunchName = env.Name
+	report.SourceName = env.Name
 
 	for i := range report.CaseResults {
 		if i < len(env.FailureList) {
-			report.CaseResults[i].RPIssueType = env.FailureList[i].IssueType
-			report.CaseResults[i].RPAutoAnalyzed = env.FailureList[i].AutoAnalyzed
+			report.CaseResults[i].SourceIssueType = env.FailureList[i].IssueType
+			report.CaseResults[i].SourceAutoAnalyzed = env.FailureList[i].AutoAnalyzed
 		}
 	}
 
