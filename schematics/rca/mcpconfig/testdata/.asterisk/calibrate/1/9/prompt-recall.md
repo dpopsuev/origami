@@ -53,8 +53,8 @@ FAIL: Expected clock state to be LOCKED
 | Name | OCP-83297 PTP sync stability |
 | Status | active |
 | Occurrences | 1 |
-| First seen | 2026-03-04T17:05:37Z |
-| Last seen | 2026-03-04T17:05:37Z |
+| First seen | 2026-03-04T17:21:53Z |
+| Last seen | 2026-03-04T17:21:53Z |
 
 
 
@@ -63,7 +63,7 @@ FAIL: Expected clock state to be LOCKED
 
 | Field | Value |
 |-------|-------|
-| RCA #1 | root cause from subagent-1 |
+| RCA #2 | root cause from subagent-1 |
 | Defect type | pb001 |
 | Status | open |
 | Affected versions |  |
@@ -71,20 +71,6 @@ FAIL: Expected clock state to be LOCKED
 
 
 
-
-## All known RCAs in this run
-
-These RCAs were discovered from other cases in the current calibration run. If the current failure's error pattern matches any of these, set `match: true` with the matching RCA ID and high confidence.
-
-| RCA ID | Component | Defect Type | Summary |
-|--------|-----------|-------------|---------|
-| #1 | test-component | pb001 | root cause from subagent-1 |
-| #2 | test-component | pb001 | root cause from subagent-1 |
-| #3 | test-component | pb001 | root cause from subagent-0 |
-| #4 | test-component | pb001 | root cause from subagent-1 |
-| #5 | test-component | pb001 | root cause from subagent-0 |
-| #6 | test-component | pb001 | root cause from subagent-0 |
-| #7 | test-component | pb001 | root cause from subagent-1 |
 
 
 
