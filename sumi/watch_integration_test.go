@@ -17,7 +17,7 @@ import (
 
 func rcaDef() *framework.CircuitDef {
 	return &framework.CircuitDef{
-		Circuit: "asterisk-rca",
+		Circuit: "rca",
 		Nodes: []framework.NodeDef{
 			{Name: "recall"},
 			{Name: "triage"},
@@ -309,8 +309,8 @@ func TestWatch_SnapshotBootstrap(t *testing.T) {
 		t.Fatalf("decode: %v", err)
 	}
 
-	if snap.CircuitName != "asterisk-rca" {
-		t.Errorf("circuit name = %q, want asterisk-rca", snap.CircuitName)
+	if snap.CircuitName != "rca" {
+		t.Errorf("circuit name = %q, want rca", snap.CircuitName)
 	}
 	if len(snap.Nodes) != 7 {
 		t.Fatalf("expected 7 nodes, got %d", len(snap.Nodes))
@@ -1143,7 +1143,7 @@ func TestE2E_RebootstrapReplaysSnapshotState(t *testing.T) {
 		select {
 		case <-clientCh:
 			snap := clientStore.Snapshot()
-			if snap.CircuitName == "asterisk-rca" && len(snap.Nodes) >= 7 {
+			if snap.CircuitName == "rca" && len(snap.Nodes) >= 7 {
 				goto bootstrapped
 			}
 		case <-deadline:

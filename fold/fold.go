@@ -23,6 +23,14 @@ func Run(opts Options) error {
 		return err
 	}
 
+	manifestDir := filepath.Dir(opts.ManifestPath)
+	for name, path := range m.Circuits {
+		full := filepath.Join(manifestDir, path)
+		if _, err := os.Stat(full); err != nil {
+			return fmt.Errorf("circuit %q: file %q not found: %w", name, path, err)
+		}
+	}
+
 	reg := DefaultRegistry()
 	src, err := GenerateMain(m, reg)
 	if err != nil {
@@ -40,8 +48,8 @@ func Run(opts Options) error {
 		return fmt.Errorf("write main.go: %w", err)
 	}
 
-	if schemaFile, ok := m.Bindings["store.schema"]; ok {
-		manifestDir := filepath.Dir(opts.ManifestPath)
+	schemaFile := findSchemaBinding(m.Bindings)
+	if schemaFile != "" {
 		srcSchema := filepath.Join(manifestDir, schemaFile)
 		data, err := os.ReadFile(srcSchema)
 		if err != nil {
@@ -112,6 +120,18 @@ func Run(opts Options) error {
 
 	fmt.Fprintf(os.Stderr, "built %s\n", output)
 	return nil
+}
+
+// findSchemaBinding looks for a store.schema binding in the manifest,
+// handling both namespaced ("rca.store.schema") and flat ("store.schema") keys.
+func findSchemaBinding(bindings map[string]string) string {
+	for k, v := range bindings {
+		stripped := stripNamespace(k)
+		if stripped == "store.schema" {
+			return v
+		}
+	}
+	return ""
 }
 
 func findGoMod(m *Manifest, reg ModuleRegistry) (string, error) {

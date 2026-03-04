@@ -160,14 +160,15 @@ func TestPromptGolden(t *testing.T) {
 	steps := []struct {
 		step   CircuitStep
 		family string
+		prompt string
 	}{
-		{StepF0Recall, "recall"},
-		{StepF1Triage, "triage"},
-		{StepF2Resolve, "resolve"},
-		{StepF3Invest, "investigate"},
-		{StepF4Correlate, "correlate"},
-		{StepF5Review, "review"},
-		{StepF6Report, "report"},
+		{StepF0Recall, "recall", "prompts/recall/judge-similarity.md"},
+		{StepF1Triage, "triage", "prompts/triage/classify-symptoms.md"},
+		{StepF2Resolve, "resolve", "prompts/resolve/select-repo.md"},
+		{StepF3Invest, "investigate", "prompts/investigate/deep-rca.md"},
+		{StepF4Correlate, "correlate", "prompts/correlate/match-cases.md"},
+		{StepF5Review, "review", "prompts/review/present-findings.md"},
+		{StepF6Report, "report", "prompts/report/regression-table.md"},
 	}
 
 	for _, tt := range steps {
@@ -175,10 +176,7 @@ func TestPromptGolden(t *testing.T) {
 			params := goldenFixtureParams()
 			params.StepName = string(tt.step)
 
-			templatePath := TemplatePathForStep(tt.step)
-			if templatePath == "" {
-				t.Fatalf("no template path for step %s", tt.step)
-			}
+			templatePath := tt.prompt
 
 			got, err := FillTemplateFS(DefaultPromptFS, templatePath, params)
 			if err != nil {

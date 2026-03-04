@@ -14,7 +14,7 @@ import (
 
 func rcaDef() *framework.CircuitDef {
 	return &framework.CircuitDef{
-		Circuit: "asterisk-rca",
+		Circuit: "rca",
 		Nodes: []framework.NodeDef{
 			{Name: "recall"},
 			{Name: "triage"},
@@ -48,8 +48,8 @@ func TestSSE_InitialSnapshot_ContainsCircuitNodes(t *testing.T) {
 	if len(snap.Nodes) != 7 {
 		t.Fatalf("store snapshot has %d nodes, want 7", len(snap.Nodes))
 	}
-	if snap.CircuitName != "asterisk-rca" {
-		t.Errorf("circuit name = %q, want %q", snap.CircuitName, "asterisk-rca")
+	if snap.CircuitName != "rca" {
+		t.Errorf("circuit name = %q, want %q", snap.CircuitName, "rca")
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://%s/api/snapshot", httpAddr))
@@ -67,8 +67,8 @@ func TestSSE_InitialSnapshot_ContainsCircuitNodes(t *testing.T) {
 		t.Fatalf("decode snapshot: %v", err)
 	}
 
-	if apiSnap.CircuitName != "asterisk-rca" {
-		t.Errorf("API circuit name = %q, want %q", apiSnap.CircuitName, "asterisk-rca")
+	if apiSnap.CircuitName != "rca" {
+		t.Errorf("API circuit name = %q, want %q", apiSnap.CircuitName, "rca")
 	}
 	if len(apiSnap.Nodes) != 7 {
 		t.Errorf("API snapshot has %d nodes, want 7", len(apiSnap.Nodes))
@@ -284,8 +284,8 @@ func TestSnapshot_AfterSetStore_ReturnsNewCircuit(t *testing.T) {
 
 	var snap view.CircuitSnapshot
 	json.NewDecoder(resp.Body).Decode(&snap)
-	if snap.CircuitName != "asterisk-rca" {
-		t.Errorf("circuit name = %q, want %q", snap.CircuitName, "asterisk-rca")
+	if snap.CircuitName != "rca" {
+		t.Errorf("circuit name = %q, want %q", snap.CircuitName, "rca")
 	}
 	if len(snap.Nodes) != 7 {
 		t.Errorf("nodes = %d, want 7", len(snap.Nodes))

@@ -120,28 +120,6 @@ Test: {{.Failure.TestName}}`
 	}
 }
 
-func TestTemplatePathForStep(t *testing.T) {
-	tests := []struct {
-		step CircuitStep
-		want string
-	}{
-		{StepF0Recall, "prompts/recall/judge-similarity.md"},
-		{StepF1Triage, "prompts/triage/classify-symptoms.md"},
-		{StepF2Resolve, "prompts/resolve/select-repo.md"},
-		{StepF3Invest, "prompts/investigate/deep-rca.md"},
-		{StepF4Correlate, "prompts/correlate/match-cases.md"},
-		{StepF5Review, "prompts/review/present-findings.md"},
-		{StepF6Report, "prompts/report/regression-table.md"},
-		{StepInit, ""},
-		{StepDone, ""},
-	}
-	for _, tt := range tests {
-		got := TemplatePathForStep(tt.step)
-		if got != tt.want {
-			t.Errorf("TemplatePathForStep(%s): got %q want %q", tt.step, got, tt.want)
-		}
-	}
-}
 
 func TestFillTemplateString_PriorArtifacts(t *testing.T) {
 	params := &TemplateParams{

@@ -56,9 +56,10 @@ These RCAs were discovered from other cases in the current calibration run. If t
 | RCA ID | Component | Defect Type | Summary |
 |--------|-----------|-------------|---------|
 | #1 | test-component | pb001 | root cause from subagent-0 |
-| #2 | test-component | pb001 | root cause from subagent-1 |
-| #3 | test-component | pb001 | root cause from subagent-0 |
+| #2 | test-component | pb001 | root cause from subagent-0 |
+| #3 | test-component | pb001 | root cause from subagent-1 |
 | #4 | test-component | pb001 | root cause from subagent-1 |
+| #5 | test-component | pb001 | root cause from subagent-0 |
 
 
 

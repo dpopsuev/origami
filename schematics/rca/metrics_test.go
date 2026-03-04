@@ -707,8 +707,8 @@ func TestComputeMetrics_IgnoresCandidates(t *testing.T) {
 func TestLoadScoreCard_AsteriskRCA(t *testing.T) {
 	sc := testScoreCard(t)
 
-	if sc.Name != "asterisk-rca" {
-		t.Errorf("scorecard name = %q, want asterisk-rca", sc.Name)
+	if sc.Name != "rca" {
+		t.Errorf("scorecard name = %q, want rca", sc.Name)
 	}
 	if len(sc.MetricDefs) != 22 {
 		t.Errorf("expected 22 metric defs (M1-M18,M14b,M20,M21,M22), got %d", len(sc.MetricDefs))

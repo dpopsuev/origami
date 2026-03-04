@@ -85,16 +85,14 @@ func buildTemplateContext(m *Manifest, reg ModuleRegistry) (*templateContext, er
 		return nil, fmt.Errorf("manifest must import at least one module with a cmd/ package")
 	}
 
-	socketBindings := m.Bindings
-	if schemaFile, ok := socketBindings["store.schema"]; ok {
-		ctx.StoreSchemaFile = path.Base(schemaFile)
-		filtered := make(map[string]string, len(socketBindings))
-		for k, v := range socketBindings {
-			if k != "store.schema" {
-				filtered[k] = v
-			}
+	socketBindings := make(map[string]string, len(m.Bindings))
+	for k, v := range m.Bindings {
+		socketName := stripNamespace(k)
+		if socketName == "store.schema" {
+			ctx.StoreSchemaFile = path.Base(v)
+			continue
 		}
-		socketBindings = filtered
+		socketBindings[socketName] = v
 	}
 
 	if len(socketBindings) > 0 {
@@ -108,17 +106,9 @@ func buildTemplateContext(m *Manifest, reg ModuleRegistry) (*templateContext, er
 	return ctx, nil
 }
 
-// socketOptionMap maps socket names to the cmd.With* function that satisfies
-// them. This is the glue between component.yaml socket declarations and the
-// generated main.go.
-var socketOptionMap = map[string]string{
-	"source":     "WithSourceReader",
-	"store":      "WithStore",
-	"writer":     "WithDefectWriter",
-	"discoverer": "WithRunDiscoverer",
-}
-
 func resolveBindings(bindings map[string]string, reg ModuleRegistry, seen map[string]bool, ctx *templateContext) ([]bindingEntry, error) {
+	schematicMeta := buildSocketOptionMap(reg, ctx)
+
 	sockets := make([]string, 0, len(bindings))
 	for s := range bindings {
 		sockets = append(sockets, s)
@@ -139,17 +129,17 @@ func resolveBindings(bindings map[string]string, reg ModuleRegistry, seen map[st
 			ctx.Imports = append(ctx.Imports, importEntry{Alias: alias, Path: goPath})
 		}
 
-		optFunc, ok := socketOptionMap[socket]
+		optFunc, ok := schematicMeta[socket]
 		if !ok {
-			known := make([]string, 0, len(socketOptionMap))
-			for k := range socketOptionMap {
+			known := make([]string, 0, len(schematicMeta))
+			for k := range schematicMeta {
 				known = append(known, k)
 			}
 			sort.Strings(known)
 			return nil, fmt.Errorf("unknown socket %q in bindings (known: %s)", socket, strings.Join(known, ", "))
 		}
 
-		factory := lookupFactory(socket, goPath, reg)
+		factory := lookupConnectorFactory(socket, goPath)
 
 		entries = append(entries, bindingEntry{
 			Socket:      socket,
@@ -161,19 +151,68 @@ func resolveBindings(bindings map[string]string, reg ModuleRegistry, seen map[st
 	return entries, nil
 }
 
-func lookupFactory(socket, goPath string, reg ModuleRegistry) string {
-	switch socket {
-	case "source":
-		return "NewSourceReader"
-	case "store":
-		return "NewStore"
-	case "writer":
-		return "NewDefectWriter"
-	case "discoverer":
-		return "NewRunDiscoverer"
-	default:
+// buildSocketOptionMap reads component.yaml from each imported schematic
+// and builds a socket->option function map. Falls back to hardcoded defaults
+// if component.yaml cannot be loaded.
+func buildSocketOptionMap(reg ModuleRegistry, ctx *templateContext) map[string]string {
+	result := map[string]string{}
+
+	cmdImport := ctx.CmdImport
+	if cmdImport == "" {
+		return result
+	}
+	schematicPath := strings.TrimSuffix(cmdImport, "/cmd")
+
+	meta, err := loadComponentMetaForModule(schematicPath)
+	if err != nil {
+		return result
+	}
+
+	for _, sock := range meta.Requires.Sockets {
+		if sock.Option != "" {
+			result[sock.Name] = sock.Option
+		}
+	}
+	return result
+}
+
+// lookupConnectorFactory reads component.yaml from the connector module
+// and returns the factory function for the given socket. Falls back to "New".
+func lookupConnectorFactory(socket, goPath string) string {
+	meta, err := loadComponentMetaForModule(goPath)
+	if err != nil {
 		return "New"
 	}
+
+	for _, sat := range meta.Satisfies {
+		if sat.Socket == socket {
+			return sat.Factory
+		}
+	}
+	return "New"
+}
+
+// stripNamespace removes the namespace prefix from a binding key.
+// "rca.source" -> "source", "store.schema" -> "store.schema" (no namespace),
+// "rca.store.schema" -> "store.schema".
+//
+// Heuristic: a key is namespaced when the first dot-segment is NOT a
+// known compound-socket prefix (like "store"). Compound sockets use
+// dots internally (e.g. "store.schema") and must not be split.
+var compoundSocketPrefixes = map[string]bool{
+	"store": true,
+}
+
+func stripNamespace(key string) string {
+	dot := strings.IndexByte(key, '.')
+	if dot < 0 {
+		return key
+	}
+	firstSeg := key[:dot]
+	if compoundSocketPrefixes[firstSeg] {
+		return key
+	}
+	return key[dot+1:]
 }
 
 func safeAlias(importPath string) string {

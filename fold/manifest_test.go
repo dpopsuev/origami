@@ -55,7 +55,7 @@ cli:
   calibrate:
     provider: schematics.rca.CalibrateRunner
   consume:
-    circuit: circuits/asterisk-ingest.yaml
+    circuit: circuits/ingest.yaml
 
 serve:
   provider: schematics.rca.ServeConfig
@@ -82,7 +82,7 @@ demo:
 	if m.CLI.Calibrate == nil || m.CLI.Calibrate.Provider != "schematics.rca.CalibrateRunner" {
 		t.Error("CLI.Calibrate not parsed correctly")
 	}
-	if m.CLI.Consume == nil || m.CLI.Consume.Circuit != "circuits/asterisk-ingest.yaml" {
+	if m.CLI.Consume == nil || m.CLI.Consume.Circuit != "circuits/ingest.yaml" {
 		t.Error("CLI.Consume not parsed correctly")
 	}
 	if m.Serve == nil || m.Serve.Provider != "schematics.rca.ServeConfig" {

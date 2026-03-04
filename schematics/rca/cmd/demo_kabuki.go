@@ -144,7 +144,7 @@ func (PoliceStationKabuki) CodeShowcases() []kami.CodeShowcase {
 				{
 					Language:   "yaml",
 					Annotation: "7 nodes, 17 edges with expression-driven routing",
-					Code: `circuit: asterisk-rca
+					Code: `circuit: rca
 description: "Root-cause analysis circuit (F0 Recall through F6 Report)"
 vars:
   recall_hit: 0.80

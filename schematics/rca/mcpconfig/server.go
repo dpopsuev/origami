@@ -238,8 +238,15 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		return nil, fwmcp.SessionMeta{}, fmt.Errorf("create calibrate dir: %w", err)
 	}
 
-	scorecardPath := filepath.Join(root, "internal/scorecards/asterisk-rca.yaml")
-	sc, err := cal.LoadScoreCard(scorecardPath)
+	circuitDef, err := rca.AsteriskCircuitDef(rca.DefaultThresholds())
+	if err != nil {
+		return nil, fwmcp.SessionMeta{}, fmt.Errorf("load circuit def for scorecard: %w", err)
+	}
+	scorecardPath := circuitDef.Scorecard
+	if scorecardPath == "" {
+		scorecardPath = "internal/scorecards/rca.yaml"
+	}
+	sc, err := cal.LoadScoreCard(filepath.Join(root, scorecardPath))
 	if err != nil {
 		return nil, fwmcp.SessionMeta{}, fmt.Errorf("load scorecard: %w", err)
 	}

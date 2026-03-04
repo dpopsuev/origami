@@ -41,9 +41,9 @@ func (t *hitlTransformerNode) Transform(_ context.Context, tc *framework.Transfo
 	params := ParamsFromContext(tc.WalkerState.Context)
 	params.StepName = string(t.step)
 
-	templatePath := TemplatePathForStep(t.step)
+	templatePath := tc.Prompt
 	if templatePath == "" {
-		return nil, fmt.Errorf("hitl %s: no template for step", t.step)
+		return nil, fmt.Errorf("hitl %s: node %q has no prompt: field", t.step, tc.NodeName)
 	}
 
 	prompt, err := FillTemplateFS(promptFS, templatePath, params)

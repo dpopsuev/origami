@@ -1,4 +1,4 @@
-component: asterisk-rca
+component: origami-rca
 namespace: rca
 version: "1.0.0"
 description: RCA circuit plumbing for CI root-cause analysis
@@ -11,13 +11,17 @@ requires:
   sockets:
     - name: store
       type: store.Store
+      option: WithStore
       description: Persistent storage backend (built-in SQLite default)
     - name: source
       type: SourceReader
+      option: WithSourceReader
       description: Reads test failure data from an external tracker
     - name: writer
       type: DefectWriter
+      option: WithDefectWriter
       description: Writes RCA results back to the external tracker
     - name: discoverer
       type: RunDiscoverer
+      option: WithRunDiscoverer
       description: Discovers available CI runs and their failures

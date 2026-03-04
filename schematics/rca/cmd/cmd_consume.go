@@ -70,7 +70,7 @@ var consumeRunCmd = &cobra.Command{
 			discoverer, symptoms, consumeProject, dedupIdx, consumeCandidateDir,
 		)
 
-		circuitData, err := os.ReadFile("internal/circuits/asterisk-ingest.yaml")
+		circuitData, err := os.ReadFile("internal/circuits/ingest.yaml")
 		if err != nil {
 			return fmt.Errorf("read circuit: %w", err)
 		}

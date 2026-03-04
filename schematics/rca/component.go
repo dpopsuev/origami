@@ -25,7 +25,7 @@ type ComponentConfig struct {
 func Component(cfg ComponentConfig) *framework.Component {
 	return &framework.Component{
 		Namespace:    "rca",
-		Name:         "asterisk-rca",
+		Name:         "origami-rca",
 		Version:      "1.0.0",
 		Description:  "RCA circuit plumbing for CI root-cause analysis",
 		Transformers: buildTransformers(cfg),

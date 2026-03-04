@@ -55,29 +55,6 @@ func FillTemplateString(name, tmplStr string, params *TemplateParams) (string, e
 	return buf.String(), nil
 }
 
-// TemplatePathForStep returns the prompt template path relative to the prompt
-// FS root for a circuit step. The returned path is suitable for use with
-// FillTemplateFS and DefaultPromptFS (e.g. "prompts/recall/judge-similarity.md").
-func TemplatePathForStep(step CircuitStep) string {
-	switch step {
-	case StepF0Recall:
-		return "prompts/recall/judge-similarity.md"
-	case StepF1Triage:
-		return "prompts/triage/classify-symptoms.md"
-	case StepF2Resolve:
-		return "prompts/resolve/select-repo.md"
-	case StepF3Invest:
-		return "prompts/investigate/deep-rca.md"
-	case StepF4Correlate:
-		return "prompts/correlate/match-cases.md"
-	case StepF5Review:
-		return "prompts/review/present-findings.md"
-	case StepF6Report:
-		return "prompts/report/regression-table.md"
-	default:
-		return ""
-	}
-}
 
 // FieldError reports a template field reference that cannot be resolved
 // against the expected parameter type.

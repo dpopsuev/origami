@@ -18,8 +18,9 @@ type Manifest struct {
 	Version     string            `yaml:"version"`
 	Imports     []string          `yaml:"imports"`
 	Bindings    map[string]string `yaml:"bindings,omitempty"`
-	Embed       []string          `yaml:"embed"`
-	CLI         CLIConfig         `yaml:"cli"`
+	Circuits    map[string]string  `yaml:"circuits,omitempty"`
+	Embed       []string          `yaml:"embed,omitempty"`
+	CLI         CLIConfig         `yaml:"cli,omitempty"`
 	Serve       *ProviderRef      `yaml:"serve,omitempty"`
 	Demo        *ProviderRef      `yaml:"demo,omitempty"`
 }

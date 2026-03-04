@@ -11,8 +11,8 @@ func TestComponent_NamespaceAndProvides(t *testing.T) {
 	if a.Namespace != "rca" {
 		t.Errorf("Namespace = %q, want rca", a.Namespace)
 	}
-	if a.Name != "asterisk-rca" {
-		t.Errorf("Name = %q, want asterisk-rca", a.Name)
+	if a.Name != "origami-rca" {
+		t.Errorf("Name = %q, want origami-rca", a.Name)
 	}
 }
 

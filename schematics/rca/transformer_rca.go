@@ -73,9 +73,9 @@ func (t *rcaTransformer) Transform(ctx context.Context, tc *framework.Transforme
 	params := ParamsFromContext(tc.WalkerState.Context)
 	params.StepName = string(step)
 
-	templatePath := TemplatePathForStep(step)
+	templatePath := tc.Prompt
 	if templatePath == "" {
-		return nil, fmt.Errorf("rca transformer: no template for step %s", step)
+		return nil, fmt.Errorf("rca transformer: node %q has no prompt: field", tc.NodeName)
 	}
 
 	prompt, err := FillTemplateFS(t.promptFS, templatePath, params)

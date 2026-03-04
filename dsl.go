@@ -21,6 +21,7 @@ type CircuitDef struct {
 	Walkers     []WalkerDef        `yaml:"walkers,omitempty"`
 	Start       string             `yaml:"start"`
 	Done        string             `yaml:"done"`
+	Scorecard   string             `yaml:"scorecard,omitempty"`
 }
 
 // ExtractorDef declares a reusable extractor at the circuit level.

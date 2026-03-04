@@ -86,7 +86,7 @@ func RunCalibration(ctx context.Context, cfg RunConfig) (*CalibrationReport, err
 		cfg.BasePath = DefaultBasePath
 	}
 	if cfg.ScoreCard == nil {
-		return nil, fmt.Errorf("RunConfig.ScoreCard is required (load from internal/scorecards/asterisk-rca.yaml)")
+		return nil, fmt.Errorf("RunConfig.ScoreCard is required (set it directly or declare scorecard: in your circuit YAML)")
 	}
 
 	report := &CalibrationReport{
