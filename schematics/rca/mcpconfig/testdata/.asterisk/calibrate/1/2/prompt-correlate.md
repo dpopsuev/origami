@@ -34,7 +34,7 @@ Determine whether this case's root cause matches another case in the same launch
 
 | Field | Value |
 |-------|-------|
-| RCA message | root cause from subagent-3 |
+| RCA message | root cause from subagent-0 |
 | Defect type | pb001 |
 | Convergence | 0.85 |
 | Evidence | `ref-1`  |
