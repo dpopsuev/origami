@@ -104,9 +104,148 @@ func TestGenerateMain_WithSecondarySchematic_Subprocess(t *testing.T) {
 		t.Errorf("missing subprocess Stop in:\n%s", code)
 	}
 
-	// Should pass the subprocess server to the primary
-	if !strings.Contains(code, "WithKnowledgeReader(knowledgeSchematicSrv)") {
-		t.Errorf("missing WithKnowledgeReader subprocess injection in:\n%s", code)
+	// Should wrap backend in MCPReader adapter
+	if !strings.Contains(code, "knowledge.NewMCPReader(") {
+		t.Errorf("missing NewMCPReader adapter wrapping in:\n%s", code)
+	}
+
+	// Should pass the adapted value to the primary
+	if !strings.Contains(code, "WithKnowledgeReader(knowledgeSchematic)") {
+		t.Errorf("missing WithKnowledgeReader injection in:\n%s", code)
+	}
+}
+
+func TestGenerateMain_WithSecondarySchematic_Container(t *testing.T) {
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		Imports: []string{
+			"origami.schematics.rca",
+			"origami.schematics.knowledge",
+		},
+		Bindings: map[string]string{
+			"rca.source": "origami.connectors.rp",
+		},
+		Deploy: map[string]*DeployConfig{
+			"knowledge": {Mode: "container", Image: "ghcr.io/origami/knowledge:latest"},
+		},
+	}
+
+	src, err := GenerateMain(m, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := string(src)
+
+	if !strings.Contains(code, `"github.com/dpopsuev/origami/subprocess"`) {
+		t.Errorf("missing subprocess import in:\n%s", code)
+	}
+	if !strings.Contains(code, `subprocess.ContainerBackend{Image: "ghcr.io/origami/knowledge:latest"}`) {
+		t.Errorf("missing ContainerBackend construction in:\n%s", code)
+	}
+	if !strings.Contains(code, ".Start(context.Background())") {
+		t.Errorf("missing Start in:\n%s", code)
+	}
+	if !strings.Contains(code, ".Stop(context.Background())") {
+		t.Errorf("missing Stop in:\n%s", code)
+	}
+	if !strings.Contains(code, "knowledge.NewMCPReader(") {
+		t.Errorf("missing NewMCPReader adapter wrapping in:\n%s", code)
+	}
+	if !strings.Contains(code, "WithKnowledgeReader(knowledgeSchematic)") {
+		t.Errorf("missing WithKnowledgeReader injection in:\n%s", code)
+	}
+}
+
+func TestGenerateMain_WithSecondarySchematic_Remote(t *testing.T) {
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		Imports: []string{
+			"origami.schematics.rca",
+			"origami.schematics.knowledge",
+		},
+		Bindings: map[string]string{
+			"rca.source": "origami.connectors.rp",
+		},
+		Deploy: map[string]*DeployConfig{
+			"knowledge": {Mode: "remote", Endpoint: "http://localhost:9100/mcp"},
+		},
+	}
+
+	src, err := GenerateMain(m, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := string(src)
+
+	if !strings.Contains(code, `"github.com/dpopsuev/origami/subprocess"`) {
+		t.Errorf("missing subprocess import in:\n%s", code)
+	}
+	if !strings.Contains(code, `subprocess.RemoteBackend{Endpoint: "http://localhost:9100/mcp"}`) {
+		t.Errorf("missing RemoteBackend construction in:\n%s", code)
+	}
+	if !strings.Contains(code, ".Start(context.Background())") {
+		t.Errorf("missing Start in:\n%s", code)
+	}
+	if !strings.Contains(code, ".Stop(context.Background())") {
+		t.Errorf("missing Stop in:\n%s", code)
+	}
+	if !strings.Contains(code, "knowledge.NewMCPReader(") {
+		t.Errorf("missing NewMCPReader adapter wrapping in:\n%s", code)
+	}
+	if !strings.Contains(code, "WithKnowledgeReader(knowledgeSchematic)") {
+		t.Errorf("missing WithKnowledgeReader injection in:\n%s", code)
+	}
+}
+
+func TestGenerateMain_ContainerMissingImage(t *testing.T) {
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		Imports: []string{
+			"origami.schematics.rca",
+			"origami.schematics.knowledge",
+		},
+		Bindings: map[string]string{
+			"rca.source": "origami.connectors.rp",
+		},
+		Deploy: map[string]*DeployConfig{
+			"knowledge": {Mode: "container"},
+		},
+	}
+
+	_, err := GenerateMain(m, DefaultRegistry())
+	if err == nil {
+		t.Fatal("expected error for container mode without image")
+	}
+	if !strings.Contains(err.Error(), "image") {
+		t.Errorf("error should mention 'image', got: %v", err)
+	}
+}
+
+func TestGenerateMain_RemoteMissingEndpoint(t *testing.T) {
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		Imports: []string{
+			"origami.schematics.rca",
+			"origami.schematics.knowledge",
+		},
+		Bindings: map[string]string{
+			"rca.source": "origami.connectors.rp",
+		},
+		Deploy: map[string]*DeployConfig{
+			"knowledge": {Mode: "remote"},
+		},
+	}
+
+	_, err := GenerateMain(m, DefaultRegistry())
+	if err == nil {
+		t.Fatal("expected error for remote mode without endpoint")
+	}
+	if !strings.Contains(err.Error(), "endpoint") {
+		t.Errorf("error should mention 'endpoint', got: %v", err)
 	}
 }
 

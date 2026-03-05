@@ -64,7 +64,10 @@ type secondaryEntry struct {
 	Factory   string         // factory function name (e.g. "NewRouter")
 	OptionCmd string         // primary schematic's option func (e.g. "WithKnowledgeReader")
 	Bindings  []bindingEntry // bindings for the secondary schematic's sockets
-	Mode      string         // "in-process", "subprocess", or "container"
+	Mode      string         // "in-process", "subprocess", "container", or "remote"
+	Image     string         // OCI image for container mode
+	Endpoint  string         // MCP endpoint URL for remote mode
+	Adapter   string         // MCP adapter factory from component.yaml (e.g. "NewMCPReader")
 }
 
 func buildTemplateContext(m *Manifest, reg ModuleRegistry) (*templateContext, error) {
@@ -146,7 +149,7 @@ func buildTemplateContext(m *Manifest, reg ModuleRegistry) (*templateContext, er
 		}
 		ctx.Secondaries = secondaries
 		for _, s := range secondaries {
-			if s.Mode == "subprocess" || s.Mode == "container" {
+			if s.Mode == "subprocess" || s.Mode == "container" || s.Mode == "remote" {
 				ctx.HasSubprocess = true
 				break
 			}
@@ -245,11 +248,25 @@ func resolveSecondaries(
 			ctx.Imports = append(ctx.Imports, importEntry{Alias: alias, Path: goPath})
 		}
 
-		// Determine deploy mode
+		// Determine deploy mode and mode-specific fields
 		mode := "in-process"
+		var image, endpoint string
 		if m.Deploy != nil {
 			if dc := m.Deploy[name]; dc != nil && dc.Mode != "" {
 				mode = dc.Mode
+				image = dc.Image
+				endpoint = dc.Endpoint
+			}
+		}
+
+		switch mode {
+		case "container":
+			if image == "" {
+				return nil, fmt.Errorf("deploy %q: container mode requires image field", name)
+			}
+		case "remote":
+			if endpoint == "" {
+				return nil, fmt.Errorf("deploy %q: remote mode requires endpoint field", name)
 			}
 		}
 
@@ -305,6 +322,9 @@ func resolveSecondaries(
 			OptionCmd: info.OptionFunc,
 			Bindings:  secBindings,
 			Mode:      mode,
+			Image:     image,
+			Endpoint:  endpoint,
+			Adapter:   meta.Adapter,
 		})
 	}
 	return entries, nil
@@ -459,11 +479,26 @@ func main() {
 {{- end }}
 	)
 {{- else if eq .Mode "subprocess" }}
-	{{ .VarName }}Srv := &subprocess.Server{BinaryPath: "{{ .VarName }}"}
-	if err := {{ .VarName }}Srv.Start(context.Background()); err != nil {
+	{{ .VarName }}Backend := &subprocess.Server{BinaryPath: "{{ .VarName }}"}
+	if err := {{ .VarName }}Backend.Start(context.Background()); err != nil {
 		log.Fatalf("start {{ .VarName }}: %v", err)
 	}
-	defer {{ .VarName }}Srv.Stop(context.Background())
+	defer {{ .VarName }}Backend.Stop(context.Background())
+	{{ .VarName }} := {{ .Alias }}.{{ .Adapter }}({{ .VarName }}Backend)
+{{- else if eq .Mode "container" }}
+	{{ .VarName }}Backend := &subprocess.ContainerBackend{Image: "{{ .Image }}"}
+	if err := {{ .VarName }}Backend.Start(context.Background()); err != nil {
+		log.Fatalf("start {{ .VarName }}: %v", err)
+	}
+	defer {{ .VarName }}Backend.Stop(context.Background())
+	{{ .VarName }} := {{ .Alias }}.{{ .Adapter }}({{ .VarName }}Backend)
+{{- else if eq .Mode "remote" }}
+	{{ .VarName }}Backend := &subprocess.RemoteBackend{Endpoint: "{{ .Endpoint }}"}
+	if err := {{ .VarName }}Backend.Start(context.Background()); err != nil {
+		log.Fatalf("connect {{ .VarName }}: %v", err)
+	}
+	defer {{ .VarName }}Backend.Stop(context.Background())
+	{{ .VarName }} := {{ .Alias }}.{{ .Adapter }}({{ .VarName }}Backend)
 {{- end }}
 {{- end }}
 {{- if or .Bindings .StoreSchemaFile .SourcePacks .Secondaries }}
@@ -472,11 +507,7 @@ func main() {
 		{{ .CmdAlias }}.WithStoreSchema(storeSchema),
 {{- end }}
 {{- range .Secondaries }}
-{{- if eq .Mode "in-process" }}
 		{{ $.CmdAlias }}.{{ .OptionCmd }}({{ .VarName }}),
-{{- else if eq .Mode "subprocess" }}
-		{{ $.CmdAlias }}.{{ .OptionCmd }}({{ .VarName }}Srv),
-{{- end }}
 {{- end }}
 {{- range .Bindings }}
 		{{ $.CmdAlias }}.{{ .OptionFunc }}({{ .ConnAlias }}.{{ .FactoryFunc }}),

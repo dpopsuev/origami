@@ -93,6 +93,58 @@ demo:
 	}
 }
 
+func TestParseManifest_DeployContainer(t *testing.T) {
+	data := []byte(`
+name: myapp
+imports:
+  - origami.schematics.rca
+deploy:
+  knowledge:
+    mode: container
+    image: "ghcr.io/origami/knowledge:latest"
+`)
+	m, err := ParseManifest(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dc := m.Deploy["knowledge"]
+	if dc == nil {
+		t.Fatal("deploy.knowledge is nil")
+	}
+	if dc.Mode != "container" {
+		t.Errorf("mode = %q, want container", dc.Mode)
+	}
+	if dc.Image != "ghcr.io/origami/knowledge:latest" {
+		t.Errorf("image = %q", dc.Image)
+	}
+}
+
+func TestParseManifest_DeployRemote(t *testing.T) {
+	data := []byte(`
+name: myapp
+imports:
+  - origami.schematics.rca
+deploy:
+  knowledge:
+    mode: remote
+    endpoint: "http://localhost:9100/mcp"
+`)
+	m, err := ParseManifest(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dc := m.Deploy["knowledge"]
+	if dc == nil {
+		t.Fatal("deploy.knowledge is nil")
+	}
+	if dc.Mode != "remote" {
+		t.Errorf("mode = %q, want remote", dc.Mode)
+	}
+	if dc.Endpoint != "http://localhost:9100/mcp" {
+		t.Errorf("endpoint = %q", dc.Endpoint)
+	}
+}
+
 func TestParseManifest_MissingName(t *testing.T) {
 	data := []byte(`description: no name`)
 	_, err := ParseManifest(data)

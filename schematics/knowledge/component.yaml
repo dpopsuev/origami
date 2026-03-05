@@ -4,6 +4,7 @@ version: "0.1.0"
 description: Unified knowledge access layer with pluggable drivers
 factory: NewRouter
 serve: schematics/knowledge/cmd/serve
+adapter: NewMCPReader
 requires:
   origami: ">=0.3.0"
   sockets:

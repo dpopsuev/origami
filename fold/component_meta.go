@@ -18,6 +18,7 @@ type ComponentMeta struct {
 	Description string            `yaml:"description"`
 	Factory     string            `yaml:"factory,omitempty"` // constructor for secondary schematics
 	Serve       string            `yaml:"serve,omitempty"`   // binary entrypoint for subprocess/container mode
+	Adapter     string            `yaml:"adapter,omitempty"` // MCP adapter factory (e.g. "NewMCPReader")
 	Requires    ComponentRequires `yaml:"requires"`
 	Satisfies   []SatisfiesEntry  `yaml:"satisfies"`
 }

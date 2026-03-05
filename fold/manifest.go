@@ -29,8 +29,9 @@ type Manifest struct {
 
 // DeployConfig controls how a secondary schematic is deployed.
 type DeployConfig struct {
-	Mode  string `yaml:"mode"`            // "in-process" (default), "subprocess", "container"
-	Image string `yaml:"image,omitempty"` // OCI image name for container mode
+	Mode     string `yaml:"mode"`               // "in-process" (default), "subprocess", "container", "remote"
+	Image    string `yaml:"image,omitempty"`     // OCI image name for container mode
+	Endpoint string `yaml:"endpoint,omitempty"` // MCP endpoint URL for remote mode
 }
 
 // CLIConfig declares global flags and per-command configuration.

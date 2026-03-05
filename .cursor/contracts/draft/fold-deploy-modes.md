@@ -1,6 +1,6 @@
 # Contract — fold-deploy-modes
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** `origami fold` generates correct, compilable `main.go` code for all four secondary schematic deployment modes: in-process, subprocess, container, and remote.  
 **Serves:** API Stabilization (gate)
 
@@ -159,12 +159,12 @@ Fix the adapter gap: non-in-process modes need to wrap the backend in the schema
 
 ## Tasks
 
-- [ ] Stream A — Schema extensions: DeployConfig.Endpoint, ComponentMeta.Adapter, secondaryEntry fields, parsing tests.
-- [ ] Stream B — Template branches: container + remote codegen, HasSubprocess update, string-presence tests.
-- [ ] Stream C — MCPReader adapter wiring: adapter construction for all non-in-process modes, fix existing subprocess, import management.
-- [ ] Validate (green) — build, test-race, lint.
-- [ ] Tune (blue) — refactor for quality. No behavior changes.
-- [ ] Validate (green) — all tests still pass after tuning.
+- [x] Stream A — Schema extensions: DeployConfig.Endpoint, ComponentMeta.Adapter, secondaryEntry fields, parsing tests.
+- [x] Stream B — Template branches: container + remote codegen, HasSubprocess update, string-presence tests.
+- [x] Stream C — MCPReader adapter wiring: adapter construction for all non-in-process modes, fix existing subprocess, import management.
+- [x] Validate (green) — build, test-race, lint.
+- [x] Tune (blue) — no refactoring needed; unified Apply section was cleaner than original.
+- [x] Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 
@@ -184,3 +184,5 @@ Fix the adapter gap: non-in-process modes need to wrap the backend in the schema
 ## Notes
 
 2026-03-03 23:45 — Contract drafted from gap analysis in Refactor & Decompose session. The subprocess template branch already exists but is functionally broken for Knowledge (passes ToolCaller where Reader expected). This contract fixes that alongside adding the two missing modes. The `Adapter` field in component.yaml is the key design decision — it makes the wrapping generic so future schematics with different Reader interfaces can declare their own adapter factory.
+
+2026-03-04 00:15 — Executed. Streams A+B+C merged in implementation (B and C from contract were combined since template and adapter wiring are tightly coupled). Key changes: DeployConfig.Endpoint, ComponentMeta.Adapter, secondaryEntry fields, resolveSecondaries validation, four-branch template with unified Apply, 4 new tests (container, remote, container-missing-image, remote-missing-endpoint), subprocess test updated for adapter wrapping. All fold tests pass. Pre-existing flaky test in mcpconfig unchanged. Asterisk `just build` green.
