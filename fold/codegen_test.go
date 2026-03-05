@@ -5,6 +5,136 @@ import (
 	"testing"
 )
 
+// --- Multi-Schematic Composition Tests ---
+
+func TestGenerateMain_WithSecondarySchematic_InProcess(t *testing.T) {
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		Imports: []string{
+			"origami.schematics.rca",
+			"origami.schematics.knowledge",
+		},
+		Bindings: map[string]string{
+			"rca.source":    "origami.connectors.rp",
+			"knowledge.git":  "origami.connectors.github",
+			"knowledge.docs": "origami.connectors.docs",
+		},
+	}
+
+	src, err := GenerateMain(m, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := string(src)
+
+	// Should have the knowledge package import
+	if !strings.Contains(code, `"github.com/dpopsuev/origami/schematics/knowledge"`) {
+		t.Errorf("missing knowledge import in:\n%s", code)
+	}
+
+	// Should construct the secondary schematic
+	if !strings.Contains(code, "knowledge.NewRouter(") {
+		t.Errorf("missing secondary construction in:\n%s", code)
+	}
+
+	// Should wire git and docs drivers to the secondary
+	if !strings.Contains(code, "knowledge.WithGitDriver(") {
+		t.Errorf("missing WithGitDriver option in:\n%s", code)
+	}
+	if !strings.Contains(code, "knowledge.WithDocsDriver(") {
+		t.Errorf("missing WithDocsDriver option in:\n%s", code)
+	}
+
+	// Should pass the secondary to the primary's Apply
+	if !strings.Contains(code, "WithKnowledgeReader(knowledgeSchematic)") {
+		t.Errorf("missing WithKnowledgeReader injection in:\n%s", code)
+	}
+
+	// Should NOT import subprocess for in-process mode
+	if strings.Contains(code, "subprocess") {
+		t.Errorf("unexpected subprocess import for in-process mode in:\n%s", code)
+	}
+}
+
+func TestGenerateMain_WithSecondarySchematic_Subprocess(t *testing.T) {
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		Imports: []string{
+			"origami.schematics.rca",
+			"origami.schematics.knowledge",
+		},
+		Bindings: map[string]string{
+			"rca.source":    "origami.connectors.rp",
+			"knowledge.git":  "origami.connectors.github",
+			"knowledge.docs": "origami.connectors.docs",
+		},
+		Deploy: map[string]*DeployConfig{
+			"knowledge": {Mode: "subprocess"},
+		},
+	}
+
+	src, err := GenerateMain(m, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := string(src)
+
+	// Should import subprocess package
+	if !strings.Contains(code, `"github.com/dpopsuev/origami/subprocess"`) {
+		t.Errorf("missing subprocess import in:\n%s", code)
+	}
+
+	// Should import context and log for subprocess startup
+	if !strings.Contains(code, `"context"`) {
+		t.Errorf("missing context import in:\n%s", code)
+	}
+
+	// Should create subprocess.Server
+	if !strings.Contains(code, "subprocess.Server{") {
+		t.Errorf("missing subprocess.Server construction in:\n%s", code)
+	}
+
+	// Should start and defer stop
+	if !strings.Contains(code, ".Start(context.Background())") {
+		t.Errorf("missing subprocess Start in:\n%s", code)
+	}
+	if !strings.Contains(code, ".Stop(context.Background())") {
+		t.Errorf("missing subprocess Stop in:\n%s", code)
+	}
+
+	// Should pass the subprocess server to the primary
+	if !strings.Contains(code, "WithKnowledgeReader(knowledgeSchematicSrv)") {
+		t.Errorf("missing WithKnowledgeReader subprocess injection in:\n%s", code)
+	}
+}
+
+func TestGenerateMain_SecondarySchematicNotInImports(t *testing.T) {
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		Imports: []string{"origami.schematics.rca"},
+		// knowledge bindings present but knowledge schematic not imported —
+		// should be treated as regular bindings (will fail socket lookup)
+		Bindings: map[string]string{
+			"rca.source": "origami.connectors.rp",
+		},
+	}
+
+	// Should succeed — knowledge schematic socket is optional when not imported
+	src, err := GenerateMain(m, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := string(src)
+
+	// Should NOT have knowledge schematic construction
+	if strings.Contains(code, "knowledge.NewRouter") {
+		t.Errorf("unexpected knowledge construction when not imported:\n%s", code)
+	}
+}
+
 func TestGenerateMain(t *testing.T) {
 	m := &Manifest{
 		Name:        "asterisk",

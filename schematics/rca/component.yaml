@@ -29,3 +29,8 @@ requires:
       type: CodeReader
       option: WithCodeReader
       description: Read-only access to source code repositories for evidence gathering
+    - name: knowledge
+      type: knowledge.Reader
+      option: WithKnowledgeReader
+      description: Unified knowledge access layer (git repos, web docs)
+      schematic: origami-knowledge

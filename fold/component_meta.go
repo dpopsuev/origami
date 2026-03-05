@@ -12,12 +12,14 @@ import (
 // Schematics declare required sockets (with the cmd.With* option function),
 // while connectors declare which sockets they satisfy (with factory functions).
 type ComponentMeta struct {
-	Component   string              `yaml:"component"`
-	Namespace   string              `yaml:"namespace"`
-	Version     string              `yaml:"version"`
-	Description string              `yaml:"description"`
-	Requires    ComponentRequires   `yaml:"requires"`
-	Satisfies   []SatisfiesEntry    `yaml:"satisfies"`
+	Component   string            `yaml:"component"`
+	Namespace   string            `yaml:"namespace"`
+	Version     string            `yaml:"version"`
+	Description string            `yaml:"description"`
+	Factory     string            `yaml:"factory,omitempty"` // constructor for secondary schematics
+	Serve       string            `yaml:"serve,omitempty"`   // binary entrypoint for subprocess/container mode
+	Requires    ComponentRequires `yaml:"requires"`
+	Satisfies   []SatisfiesEntry  `yaml:"satisfies"`
 }
 
 // ComponentRequires holds the requirements declared by a component.
@@ -32,6 +34,7 @@ type SocketEntry struct {
 	Type        string `yaml:"type"`
 	Option      string `yaml:"option"`
 	Description string `yaml:"description"`
+	Schematic   string `yaml:"schematic,omitempty"` // satisfied by constructing another schematic
 }
 
 // SatisfiesEntry represents a socket that a connector can fulfill.

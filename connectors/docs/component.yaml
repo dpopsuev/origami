@@ -1,0 +1,12 @@
+component: origami-docs
+namespace: docs
+version: "0.1.0"
+description: HTTP documentation driver — search and fetch web-based docs
+provides:
+  transformers: []
+  hooks: []
+requires:
+  origami: ">=0.3.0"
+satisfies:
+  - socket: docs
+    factory: NewDocsDriver

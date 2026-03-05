@@ -13,17 +13,24 @@ import (
 
 // Manifest is the top-level origami.yaml schema.
 type Manifest struct {
-	Name        string            `yaml:"name"`
-	Description string            `yaml:"description"`
-	Version     string            `yaml:"version"`
-	Imports     []string          `yaml:"imports"`
-	Bindings    map[string]string `yaml:"bindings,omitempty"`
-	Circuits    map[string]string `yaml:"circuits,omitempty"`
-	Sources     map[string]string `yaml:"sources,omitempty"`
-	Embed       []string          `yaml:"embed,omitempty"`
-	CLI         CLIConfig         `yaml:"cli,omitempty"`
-	Serve       *ProviderRef      `yaml:"serve,omitempty"`
-	Demo        *ProviderRef      `yaml:"demo,omitempty"`
+	Name        string                   `yaml:"name"`
+	Description string                   `yaml:"description"`
+	Version     string                   `yaml:"version"`
+	Imports     []string                 `yaml:"imports"`
+	Bindings    map[string]string        `yaml:"bindings,omitempty"`
+	Circuits    map[string]string        `yaml:"circuits,omitempty"`
+	Sources     map[string]string        `yaml:"sources,omitempty"`
+	Embed       []string                 `yaml:"embed,omitempty"`
+	CLI         CLIConfig                `yaml:"cli,omitempty"`
+	Serve       *ProviderRef             `yaml:"serve,omitempty"`
+	Demo        *ProviderRef             `yaml:"demo,omitempty"`
+	Deploy      map[string]*DeployConfig `yaml:"deploy,omitempty"`
+}
+
+// DeployConfig controls how a secondary schematic is deployed.
+type DeployConfig struct {
+	Mode  string `yaml:"mode"`            // "in-process" (default), "subprocess", "container"
+	Image string `yaml:"image,omitempty"` // OCI image name for container mode
 }
 
 // CLIConfig declares global flags and per-command configuration.

@@ -10,3 +10,5 @@ requires:
 satisfies:
   - socket: code
     factory: NewCodeReader
+  - socket: git
+    factory: NewGitDriver
