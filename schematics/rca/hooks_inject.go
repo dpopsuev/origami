@@ -6,7 +6,6 @@ import (
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/knowledge"
-	skn "github.com/dpopsuev/origami/schematics/knowledge"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
 )
@@ -33,7 +32,7 @@ type InjectHookOpts struct {
 	Envelope        *rcatype.Envelope
 	Catalog         *knowledge.KnowledgeSourceCatalog
 	CaseDir         string
-	KnowledgeReader skn.Reader
+	KnowledgeReader knowledge.Reader
 }
 
 // InjectHooks creates a HookRegistry with the inject.* before-hooks
@@ -294,7 +293,7 @@ func injectTaxonomyData(walkerCtx map[string]any) {
 
 // Code injection hooks
 
-func newInjectCodeTreeHook(reader skn.Reader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+func newInjectCodeTreeHook(reader knowledge.Reader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
 	return framework.NewHookFunc("inject.code.tree", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
@@ -326,7 +325,7 @@ func newInjectCodeTreeHook(reader skn.Reader, catalog *knowledge.KnowledgeSource
 	})
 }
 
-func newInjectCodeSearchHook(reader skn.Reader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+func newInjectCodeSearchHook(reader knowledge.Reader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
 	return framework.NewHookFunc("inject.code.search", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
@@ -365,7 +364,7 @@ func newInjectCodeSearchHook(reader skn.Reader, catalog *knowledge.KnowledgeSour
 	})
 }
 
-func newInjectCodeReadHook(reader skn.Reader) framework.Hook {
+func newInjectCodeReadHook(reader knowledge.Reader) framework.Hook {
 	return framework.NewHookFunc("inject.code.read", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
