@@ -67,13 +67,13 @@ func (d *GitDriver) Search(ctx context.Context, src skn.Source, query string, ma
 		return nil, nil
 	}
 
-	rcaResults, err := SearchCode(ctx, localPath, keywords)
+	localResults, err := SearchCode(ctx, localPath, keywords)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make([]skn.SearchResult, 0, len(rcaResults))
-	for _, r := range rcaResults {
+	results := make([]skn.SearchResult, 0, len(localResults))
+	for _, r := range localResults {
 		if len(results) >= maxResults {
 			break
 		}
@@ -101,13 +101,13 @@ func (d *GitDriver) List(ctx context.Context, src skn.Source, root string, maxDe
 		return nil, err
 	}
 
-	rcaEntries, err := ListTree(ctx, localPath, maxDepth)
+	localEntries, err := ListTree(ctx, localPath, maxDepth)
 	if err != nil {
 		return nil, err
 	}
 
-	entries := make([]skn.ContentEntry, 0, len(rcaEntries))
-	for _, e := range rcaEntries {
+	entries := make([]skn.ContentEntry, 0, len(localEntries))
+	for _, e := range localEntries {
 		if root != "" && root != "." && !strings.HasPrefix(e.Path, root) {
 			continue
 		}

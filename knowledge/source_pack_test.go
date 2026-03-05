@@ -78,7 +78,7 @@ func TestLoadPack_CycleDetection(t *testing.T) {
 func TestSourcePack_ToSources(t *testing.T) {
 	pack := &SourcePack{
 		Name:       "ptp",
-		Operator:   "PTP Operator",
+		Domain:     "PTP Operator",
 		VersionKey: "ocp_version",
 		Repos: []SourcePackRepo{
 			{Org: "openshift", Name: "ptp-operator", Purpose: "SUT", BranchPattern: "release-{ocp_version}"},
@@ -100,8 +100,8 @@ func TestSourcePack_ToSources(t *testing.T) {
 	if sources[0].Org != "openshift" {
 		t.Errorf("org = %q, want openshift", sources[0].Org)
 	}
-	if sources[0].Tags["operator"] != "PTP Operator" {
-		t.Errorf("operator tag = %q", sources[0].Tags["operator"])
+	if sources[0].Tags["domain"] != "PTP Operator" {
+		t.Errorf("domain tag = %q", sources[0].Tags["domain"])
 	}
 	if sources[1].Branch != "master" {
 		t.Errorf("branch = %q, want master", sources[1].Branch)

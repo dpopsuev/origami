@@ -6,11 +6,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/dpopsuev/origami/schematics/rca"
 )
 
 const maxTreeDepth = 4
+
+// LocalTreeEntry represents a file or directory entry in a repository listing.
+// This is the internal type; git_driver.go maps these to skn.ContentEntry.
+type LocalTreeEntry struct {
+	Path  string
+	IsDir bool
+}
 
 // ReadFile reads a single file from the local clone.
 func ReadFile(_ context.Context, localPath, filePath string) ([]byte, error) {
@@ -26,12 +31,12 @@ func ReadFile(_ context.Context, localPath, filePath string) ([]byte, error) {
 }
 
 // ListTree walks the local clone and returns directory/file entries.
-func ListTree(_ context.Context, localPath string, maxDepth int) ([]rca.TreeEntry, error) {
+func ListTree(_ context.Context, localPath string, maxDepth int) ([]LocalTreeEntry, error) {
 	if maxDepth <= 0 {
 		maxDepth = maxTreeDepth
 	}
 
-	var entries []rca.TreeEntry
+	var entries []LocalTreeEntry
 	baseLen := len(localPath)
 
 	err := filepath.WalkDir(localPath, func(path string, d os.DirEntry, err error) error {
@@ -59,7 +64,7 @@ func ListTree(_ context.Context, localPath string, maxDepth int) ([]rca.TreeEntr
 			return filepath.SkipDir
 		}
 
-		entries = append(entries, rca.TreeEntry{
+		entries = append(entries, LocalTreeEntry{
 			Path:  rel,
 			IsDir: d.IsDir(),
 		})

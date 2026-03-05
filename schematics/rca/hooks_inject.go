@@ -2,35 +2,38 @@ package rca
 
 import (
 	"context"
+	"fmt"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/knowledge"
+	skn "github.com/dpopsuev/origami/schematics/knowledge"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
-	"github.com/dpopsuev/origami/knowledge"
 )
 
 // Context keys used by inject hooks to store assembled template data.
 const (
-	KeyParamsEnvelope = "params.envelope"
-	KeyParamsFailure  = "params.failure"
-	KeyParamsSources  = "params.sources"
-	KeyParamsHistory  = "params.history"
-	KeyParamsDigest   = "params.recall_digest"
-	KeyParamsPrior    = "params.prior"
-	KeyParamsTaxonomy = "params.taxonomy"
-	KeyParamsCode     = "params.code"
+	KeyParamsEnvelope  = "params.envelope"
+	KeyParamsFailure   = "params.failure"
+	KeyParamsWorkspace = "params.workspace"
+	KeyParamsHistory   = "params.history"
+	KeyParamsDigest    = "params.recall_digest"
+	KeyParamsSources   = "params.sources"
+	KeyParamsPrior     = "params.prior"
+	KeyParamsTaxonomy  = "params.taxonomy"
+	KeyParamsCode      = "params.code"
 )
 
 const maxCodeTokenBudget = 32000
 
 // InjectHookOpts configures the inject hook registry.
 type InjectHookOpts struct {
-	Store      store.Store
-	CaseData   *store.Case
-	Envelope   *rcatype.Envelope
-	Catalog    *knowledge.KnowledgeSourceCatalog
-	CaseDir    string
-	CodeReader CodeReader
+	Store           store.Store
+	CaseData        *store.Case
+	Envelope        *rcatype.Envelope
+	Catalog         *knowledge.KnowledgeSourceCatalog
+	CaseDir         string
+	KnowledgeReader skn.Reader
 }
 
 // InjectHooks creates a HookRegistry with the inject.* before-hooks
@@ -47,22 +50,23 @@ func InjectHooks(st store.Store, caseData *store.Case, env *rcatype.Envelope, ca
 }
 
 // InjectHooksWithOpts creates inject hooks using the full options struct,
-// including optional CodeReader for code injection hooks.
+// including optional KnowledgeReader for code injection hooks.
 func InjectHooksWithOpts(opts InjectHookOpts) framework.HookRegistry {
 	reg := framework.HookRegistry{}
 
 	reg.Register(newInjectEnvelopeHook(opts.Envelope))
 	reg.Register(newInjectFailureHook(opts.CaseData))
-	reg.Register(newInjectSourcesHook(opts.Envelope, opts.Catalog))
+	reg.Register(newInjectWorkspaceHook(opts.Envelope, opts.Catalog))
 	reg.Register(newInjectHistoryHook(opts.Store, opts.CaseData))
 	reg.Register(newInjectRecallDigestHook(opts.Store))
+	reg.Register(newInjectSourcesHook(opts.Catalog))
 	reg.Register(newInjectPriorHook(opts.CaseDir))
 	reg.Register(newInjectTaxonomyHook())
 
-	if opts.CodeReader != nil && opts.Catalog != nil {
-		reg.Register(newInjectCodeTreeHook(opts.CodeReader, opts.Catalog))
-		reg.Register(newInjectCodeSearchHook(opts.CodeReader, opts.Catalog))
-		reg.Register(newInjectCodeReadHook(opts.CodeReader))
+	if opts.KnowledgeReader != nil && opts.Catalog != nil {
+		reg.Register(newInjectCodeTreeHook(opts.KnowledgeReader, opts.Catalog))
+		reg.Register(newInjectCodeSearchHook(opts.KnowledgeReader, opts.Catalog))
+		reg.Register(newInjectCodeReadHook(opts.KnowledgeReader))
 	}
 
 	return reg
@@ -90,6 +94,17 @@ func newInjectFailureHook(caseData *store.Case) framework.Hook {
 	})
 }
 
+func newInjectWorkspaceHook(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+	return framework.NewHookFunc("inject.workspace", func(ctx context.Context, _ string, _ framework.Artifact) error {
+		ws := framework.WalkerStateFromContext(ctx)
+		if ws == nil {
+			return nil
+		}
+		injectWorkspaceData(env, catalog, ws.Context)
+		return nil
+	})
+}
+
 func newInjectHistoryHook(st store.Store, caseData *store.Case) framework.Hook {
 	return framework.NewHookFunc("inject.history", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
@@ -112,13 +127,13 @@ func newInjectRecallDigestHook(st store.Store) framework.Hook {
 	})
 }
 
-func newInjectSourcesHook(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+func newInjectSourcesHook(catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
 	return framework.NewHookFunc("inject.sources", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
 			return nil
 		}
-		injectSourcesData(env, catalog, ws.Context)
+		injectSourcesData(catalog, ws.Context)
 		return nil
 	})
 }
@@ -161,7 +176,7 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 		params.Failure = v
 	}
 
-	if v, ok := walkerCtx[KeyParamsSources].(*SourceParams); ok {
+	if v, ok := walkerCtx[KeyParamsWorkspace].(*SourceParams); ok {
 		params.Sources = v
 	}
 
@@ -171,6 +186,10 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 
 	if v, ok := walkerCtx[KeyParamsDigest].([]RecallDigestEntry); ok {
 		params.RecallDigest = v
+	}
+
+	if v, ok := walkerCtx[KeyParamsSources].([]AlwaysReadSource); ok && params.Sources != nil {
+		params.Sources.AlwaysRead = v
 	}
 
 	if v, ok := walkerCtx[KeyParamsPrior].(*PriorParams); ok {
@@ -233,6 +252,10 @@ func injectFailureData(caseData *store.Case, walkerCtx map[string]any) {
 	}
 }
 
+func injectWorkspaceData(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
+	walkerCtx[KeyParamsWorkspace] = buildSourceParams(env, catalog)
+}
+
 func injectHistoryData(st store.Store, caseData *store.Case, walkerCtx map[string]any) {
 	if st == nil || caseData == nil {
 		return
@@ -251,8 +274,11 @@ func injectRecallDigestData(st store.Store, walkerCtx map[string]any) {
 	walkerCtx[KeyParamsDigest] = buildRecallDigest(st)
 }
 
-func injectSourcesData(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
-	walkerCtx[KeyParamsSources] = buildSourceParams(env, catalog)
+func injectSourcesData(catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
+	if catalog == nil {
+		return
+	}
+	walkerCtx[KeyParamsSources] = loadAlwaysReadSources(catalog)
 }
 
 func injectPriorData(caseDir string, walkerCtx map[string]any) {
@@ -268,7 +294,7 @@ func injectTaxonomyData(walkerCtx map[string]any) {
 
 // Code injection hooks
 
-func newInjectCodeTreeHook(cr CodeReader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+func newInjectCodeTreeHook(reader skn.Reader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
 	return framework.NewHookFunc("inject.code.tree", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
@@ -279,25 +305,28 @@ func newInjectCodeTreeHook(cr CodeReader, catalog *knowledge.KnowledgeSourceCata
 			if src.Kind != knowledge.SourceKindRepo {
 				continue
 			}
-			localPath, err := cr.EnsureCloned(ctx, src.Org, src.Name, src.Branch)
-			if err != nil || localPath == "" {
+			if err := reader.Ensure(ctx, src); err != nil {
 				continue
 			}
-			entries, err := cr.ListTree(ctx, localPath, 3)
+			entries, err := reader.List(ctx, src, "", 3)
 			if err != nil {
 				continue
 			}
+			var treeEntries []TreeEntry
+			for _, e := range entries {
+				treeEntries = append(treeEntries, TreeEntry{Path: e.Path, IsDir: e.IsDir})
+			}
 			code.Trees = append(code.Trees, CodeTreeParams{
-				Repo:    src.Org + "/" + src.Name,
+				Repo:    fmt.Sprintf("%s/%s", src.Org, src.Name),
 				Branch:  src.Branch,
-				Entries: entries,
+				Entries: treeEntries,
 			})
 		}
 		return nil
 	})
 }
 
-func newInjectCodeSearchHook(cr CodeReader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+func newInjectCodeSearchHook(reader skn.Reader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
 	return framework.NewHookFunc("inject.code.search", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
@@ -314,22 +343,21 @@ func newInjectCodeSearchHook(cr CodeReader, catalog *knowledge.KnowledgeSourceCa
 			if src.Kind != knowledge.SourceKindRepo {
 				continue
 			}
-			localPath, err := cr.EnsureCloned(ctx, src.Org, src.Name, src.Branch)
-			if err != nil || localPath == "" {
-				continue
+			query := keywords[0]
+			for _, kw := range keywords[1:] {
+				query += " " + kw
 			}
-			results, err := cr.SearchCode(ctx, localPath, keywords)
+			results, err := reader.Search(ctx, src, query, 20)
 			if err != nil {
 				continue
 			}
-			repoName := src.Org + "/" + src.Name
+			repoName := fmt.Sprintf("%s/%s", src.Org, src.Name)
 			for _, r := range results {
 				code.SearchResults = append(code.SearchResults, CodeSearchResult{
 					Repo:    repoName,
-					File:    r.File,
+					File:    r.Path,
 					Line:    r.Line,
 					Snippet: r.Snippet,
-					Score:   r.Score,
 				})
 			}
 		}
@@ -337,7 +365,7 @@ func newInjectCodeSearchHook(cr CodeReader, catalog *knowledge.KnowledgeSourceCa
 	})
 }
 
-func newInjectCodeReadHook(cr CodeReader) framework.Hook {
+func newInjectCodeReadHook(reader skn.Reader) framework.Hook {
 	return framework.NewHookFunc("inject.code.read", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
@@ -358,11 +386,12 @@ func newInjectCodeReadHook(cr CodeReader) framework.Hook {
 			if parts == nil {
 				continue
 			}
-			localPath, err := cr.EnsureCloned(ctx, parts[0], parts[1], "")
-			if err != nil || localPath == "" {
-				continue
+			src := knowledge.Source{
+				Org:  parts[0],
+				Name: parts[1],
+				Kind: knowledge.SourceKindRepo,
 			}
-			data, err := cr.ReadFile(ctx, localPath, sr.File)
+			data, err := reader.Read(ctx, src, sr.File)
 			if err != nil {
 				continue
 			}

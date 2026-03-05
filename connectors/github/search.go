@@ -6,14 +6,21 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/dpopsuev/origami/schematics/rca"
 )
 
 const maxSearchResults = 50
 
+// LocalSearchResult represents a single ripgrep match. This is the internal
+// type used by the connector; git_driver.go maps these to skn.SearchResult.
+type LocalSearchResult struct {
+	File    string
+	Line    int
+	Snippet string
+	Score   float64
+}
+
 // SearchCode runs ripgrep on the local clone and returns matching results.
-func SearchCode(ctx context.Context, localPath string, keywords []string) ([]rca.SearchResult, error) {
+func SearchCode(ctx context.Context, localPath string, keywords []string) ([]LocalSearchResult, error) {
 	if len(keywords) == 0 {
 		return nil, nil
 	}
@@ -48,9 +55,9 @@ type rgMessage struct {
 }
 
 type rgMatch struct {
-	Path    rgPath      `json:"path"`
-	Lines   rgText      `json:"lines"`
-	LineNum int         `json:"line_number"`
+	Path    rgPath       `json:"path"`
+	Lines   rgText       `json:"lines"`
+	LineNum int          `json:"line_number"`
 	SubM    []rgSubmatch `json:"submatches"`
 }
 
@@ -66,8 +73,8 @@ type rgSubmatch struct {
 	Match rgText `json:"match"`
 }
 
-func parseRipgrepJSON(data []byte, basePath string) ([]rca.SearchResult, error) {
-	var results []rca.SearchResult
+func parseRipgrepJSON(data []byte, basePath string) ([]LocalSearchResult, error) {
+	var results []LocalSearchResult
 
 	for _, line := range strings.Split(string(data), "\n") {
 		if line == "" {
@@ -86,7 +93,7 @@ func parseRipgrepJSON(data []byte, basePath string) ([]rca.SearchResult, error) 
 		}
 
 		relPath := strings.TrimPrefix(m.Path.Text, basePath+"/")
-		results = append(results, rca.SearchResult{
+		results = append(results, LocalSearchResult{
 			File:    relPath,
 			Line:    m.LineNum,
 			Snippet: strings.TrimSpace(m.Lines.Text),

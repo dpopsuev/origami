@@ -69,10 +69,6 @@ FAIL: Stale CRD
 
 
 
-*No launch attributes available.*
-
-
-*No linked Jira tickets.*
 
 
 

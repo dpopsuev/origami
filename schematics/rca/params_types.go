@@ -200,6 +200,12 @@ type CodeSearchResult struct {
 	Score   float64 `json:"score"`
 }
 
+// TreeEntry represents a file or directory in a repository tree.
+type TreeEntry struct {
+	Path  string `json:"path"`
+	IsDir bool   `json:"is_dir"`
+}
+
 // CodeFileParams holds the content of a single source file.
 type CodeFileParams struct {
 	Repo      string `json:"repo"`

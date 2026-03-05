@@ -1,5 +1,5 @@
 name: ptp
-operator: PTP Operator
+domain: PTP Operator
 description: PTP Operator sources for root-cause analysis
 version_key: ocp_version
 includes:

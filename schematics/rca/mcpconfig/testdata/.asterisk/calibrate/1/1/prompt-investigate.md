@@ -70,10 +70,6 @@ FAIL: Expected clock state to be LOCKED within 300s timeout
 
 
 
-*No launch attributes available.*
-
-
-*No linked Jira tickets.*
 
 
 

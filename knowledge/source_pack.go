@@ -15,7 +15,7 @@ import (
 // (e.g. OCP platform docs) without duplication.
 type SourcePack struct {
 	Name        string           `json:"name" yaml:"name"`
-	Operator    string           `json:"operator,omitempty" yaml:"operator,omitempty"`
+	Domain      string           `json:"domain,omitempty" yaml:"domain,omitempty"`
 	Description string           `json:"description,omitempty" yaml:"description,omitempty"`
 	VersionKey  string           `json:"version_key,omitempty" yaml:"version_key,omitempty"`
 	Includes    []string         `json:"includes,omitempty" yaml:"includes,omitempty"`
@@ -162,8 +162,8 @@ func (p *SourcePack) ToSources(attrs map[string]string) []Source {
 				"layer": "base",
 			},
 		}
-		if p.Operator != "" {
-			s.Tags["operator"] = p.Operator
+		if p.Domain != "" {
+			s.Tags["domain"] = p.Domain
 		}
 		sources = append(sources, s)
 	}

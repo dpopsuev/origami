@@ -36,7 +36,7 @@ func TestComponent_Hooks_WithStore(t *testing.T) {
 			t.Errorf("missing hook %q", name)
 		}
 	}
-	expectedTotal := 7 + len(storeHooks)
+	expectedTotal := 8 + len(storeHooks)
 	if len(a.Hooks) != expectedTotal {
 		t.Errorf("expected %d total hooks, got %d", expectedTotal, len(a.Hooks))
 	}
@@ -44,11 +44,11 @@ func TestComponent_Hooks_WithStore(t *testing.T) {
 
 func TestComponent_Hooks_NilStore(t *testing.T) {
 	a := Component(ComponentConfig{})
-	injectCount := 7
+	injectCount := 8
 	if len(a.Hooks) != injectCount {
 		t.Errorf("expected %d inject hooks with nil store, got %d", injectCount, len(a.Hooks))
 	}
-	for _, name := range []string{"inject.envelope", "inject.failure", "inject.sources", "inject.prior", "inject.taxonomy", "inject.history", "inject.recall-digest"} {
+	for _, name := range []string{"inject.envelope", "inject.failure", "inject.workspace", "inject.sources", "inject.prior", "inject.taxonomy", "inject.history", "inject.recall-digest"} {
 		if _, ok := a.Hooks[name]; !ok {
 			t.Errorf("missing inject hook %q", name)
 		}

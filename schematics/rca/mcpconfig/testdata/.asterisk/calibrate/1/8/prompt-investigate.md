@@ -70,10 +70,6 @@ FAIL: Expected NTP sync within 60s
 
 
 
-*No launch attributes available.*
-
-
-*No linked Jira tickets.*
 
 
 

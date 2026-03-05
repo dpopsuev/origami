@@ -70,10 +70,6 @@ FAIL: Cascade failure from stale CRD (related to OCP-83299)
 
 
 
-*No launch attributes available.*
-
-
-*No linked Jira tickets.*
 
 
 

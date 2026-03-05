@@ -70,10 +70,6 @@ FAIL: PTP lock recovery failed
 
 
 
-*No launch attributes available.*
-
-
-*No linked Jira tickets.*
 
 
 

@@ -35,7 +35,7 @@ Note: Timestamps may originate from different clock planes (executor, test node,
 ## Failure under investigation
 
 **Test name:** `OCP-83303 PTP flaky timing`  
-**Status:** open
+**Status:** triaged
 
 **Error message:**
 ```
@@ -70,10 +70,6 @@ FAIL: Timed out after 10.000s
 
 
 
-*No launch attributes available.*
-
-
-*No linked Jira tickets.*
 
 
 
