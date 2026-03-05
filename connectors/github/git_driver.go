@@ -39,7 +39,7 @@ func (d *GitDriver) Handles() knowledge.SourceKind {
 	return knowledge.SourceKindRepo
 }
 
-func (d *GitDriver) Ensure(ctx context.Context, src skn.Source) error {
+func (d *GitDriver) Ensure(ctx context.Context, src knowledge.Source) error {
 	org, repo, err := parseGitURI(src.URI)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (d *GitDriver) Ensure(ctx context.Context, src skn.Source) error {
 	return nil
 }
 
-func (d *GitDriver) Search(ctx context.Context, src skn.Source, query string, maxResults int) ([]skn.SearchResult, error) {
+func (d *GitDriver) Search(ctx context.Context, src knowledge.Source, query string, maxResults int) ([]knowledge.SearchResult, error) {
 	localPath, err := d.resolvePath(ctx, src)
 	if err != nil {
 		return nil, err
@@ -72,12 +72,12 @@ func (d *GitDriver) Search(ctx context.Context, src skn.Source, query string, ma
 		return nil, err
 	}
 
-	results := make([]skn.SearchResult, 0, len(localResults))
+	results := make([]knowledge.SearchResult, 0, len(localResults))
 	for _, r := range localResults {
 		if len(results) >= maxResults {
 			break
 		}
-		results = append(results, skn.SearchResult{
+		results = append(results, knowledge.SearchResult{
 			Source:  src.Name,
 			Path:    r.File,
 			Line:    r.Line,
@@ -87,7 +87,7 @@ func (d *GitDriver) Search(ctx context.Context, src skn.Source, query string, ma
 	return results, nil
 }
 
-func (d *GitDriver) Read(ctx context.Context, src skn.Source, path string) ([]byte, error) {
+func (d *GitDriver) Read(ctx context.Context, src knowledge.Source, path string) ([]byte, error) {
 	localPath, err := d.resolvePath(ctx, src)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (d *GitDriver) Read(ctx context.Context, src skn.Source, path string) ([]by
 	return ReadFile(ctx, localPath, path)
 }
 
-func (d *GitDriver) List(ctx context.Context, src skn.Source, root string, maxDepth int) ([]skn.ContentEntry, error) {
+func (d *GitDriver) List(ctx context.Context, src knowledge.Source, root string, maxDepth int) ([]knowledge.ContentEntry, error) {
 	localPath, err := d.resolvePath(ctx, src)
 	if err != nil {
 		return nil, err
@@ -106,12 +106,12 @@ func (d *GitDriver) List(ctx context.Context, src skn.Source, root string, maxDe
 		return nil, err
 	}
 
-	entries := make([]skn.ContentEntry, 0, len(localEntries))
+	entries := make([]knowledge.ContentEntry, 0, len(localEntries))
 	for _, e := range localEntries {
 		if root != "" && root != "." && !strings.HasPrefix(e.Path, root) {
 			continue
 		}
-		entries = append(entries, skn.ContentEntry{
+		entries = append(entries, knowledge.ContentEntry{
 			Path:  e.Path,
 			IsDir: e.IsDir,
 		})
@@ -119,7 +119,7 @@ func (d *GitDriver) List(ctx context.Context, src skn.Source, root string, maxDe
 	return entries, nil
 }
 
-func (d *GitDriver) resolvePath(ctx context.Context, src skn.Source) (string, error) {
+func (d *GitDriver) resolvePath(ctx context.Context, src knowledge.Source) (string, error) {
 	d.mu.RLock()
 	lp, ok := d.localPaths[src.URI]
 	d.mu.RUnlock()

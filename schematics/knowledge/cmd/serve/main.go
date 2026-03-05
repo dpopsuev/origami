@@ -18,6 +18,7 @@ import (
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/dpopsuev/origami/knowledge"
 	skn "github.com/dpopsuev/origami/schematics/knowledge"
 )
 
@@ -73,7 +74,7 @@ func registerTools(server *sdkmcp.Server, router *skn.AccessRouter) {
 		},
 		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
 			var args struct {
-				Source skn.Source `json:"source"`
+				Source knowledge.Source `json:"source"`
 			}
 			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
 				return errResult("invalid arguments: " + err.Error()), nil
@@ -95,9 +96,9 @@ func registerTools(server *sdkmcp.Server, router *skn.AccessRouter) {
 		},
 		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
 			var args struct {
-				Source     skn.Source `json:"source"`
-				Query      string    `json:"query"`
-				MaxResults int       `json:"max_results"`
+				Source     knowledge.Source `json:"source"`
+				Query      string          `json:"query"`
+				MaxResults int             `json:"max_results"`
 			}
 			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
 				return errResult("invalid arguments: " + err.Error()), nil
@@ -127,8 +128,8 @@ func registerTools(server *sdkmcp.Server, router *skn.AccessRouter) {
 		},
 		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
 			var args struct {
-				Source skn.Source `json:"source"`
-				Path   string    `json:"path"`
+				Source knowledge.Source `json:"source"`
+				Path   string          `json:"path"`
 			}
 			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
 				return errResult("invalid arguments: " + err.Error()), nil
@@ -151,9 +152,9 @@ func registerTools(server *sdkmcp.Server, router *skn.AccessRouter) {
 		},
 		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
 			var args struct {
-				Source   skn.Source `json:"source"`
-				Root     string    `json:"root"`
-				MaxDepth int       `json:"max_depth"`
+				Source   knowledge.Source `json:"source"`
+				Root     string          `json:"root"`
+				MaxDepth int             `json:"max_depth"`
 			}
 			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
 				return errResult("invalid arguments: " + err.Error()), nil

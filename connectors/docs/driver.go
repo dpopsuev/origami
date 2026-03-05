@@ -75,7 +75,7 @@ func (d *DocsDriver) Handles() knowledge.SourceKind {
 }
 
 // Ensure validates the documentation endpoint is reachable.
-func (d *DocsDriver) Ensure(ctx context.Context, src skn.Source) error {
+func (d *DocsDriver) Ensure(ctx context.Context, src knowledge.Source) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, src.URI, nil)
 	if err != nil {
 		return fmt.Errorf("docs ensure: %w", err)
@@ -94,7 +94,7 @@ func (d *DocsDriver) Ensure(ctx context.Context, src skn.Source) error {
 // Search queries the documentation search endpoint.
 // The source URI should be the base URL (e.g. "https://docs.redhat.com").
 // Source tags can include "product" and "version" for filtering.
-func (d *DocsDriver) Search(ctx context.Context, src skn.Source, query string, maxResults int) ([]skn.SearchResult, error) {
+func (d *DocsDriver) Search(ctx context.Context, src knowledge.Source, query string, maxResults int) ([]knowledge.SearchResult, error) {
 	searchURL, err := buildSearchURL(src, query)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (d *DocsDriver) Search(ctx context.Context, src skn.Source, query string, m
 }
 
 // Read fetches a documentation page and returns it as plain text.
-func (d *DocsDriver) Read(ctx context.Context, src skn.Source, path string) ([]byte, error) {
+func (d *DocsDriver) Read(ctx context.Context, src knowledge.Source, path string) ([]byte, error) {
 	pageURL := src.URI
 	if path != "" && path != "/" {
 		pageURL = strings.TrimRight(src.URI, "/") + "/" + strings.TrimLeft(path, "/")
@@ -138,7 +138,7 @@ func (d *DocsDriver) Read(ctx context.Context, src skn.Source, path string) ([]b
 }
 
 // List is a no-op for documentation sources — search is the discovery mechanism.
-func (d *DocsDriver) List(_ context.Context, _ skn.Source, _ string, _ int) ([]skn.ContentEntry, error) {
+func (d *DocsDriver) List(_ context.Context, _ knowledge.Source, _ string, _ int) ([]knowledge.ContentEntry, error) {
 	return nil, nil
 }
 
@@ -192,7 +192,7 @@ func (d *DocsDriver) persistToDisk(key string, data []byte) {
 	os.WriteFile(path, data, 0o644)
 }
 
-func buildSearchURL(src skn.Source, query string) (string, error) {
+func buildSearchURL(src knowledge.Source, query string) (string, error) {
 	base := strings.TrimRight(src.URI, "/")
 	u, err := url.Parse(base + "/search/")
 	if err != nil {
@@ -216,8 +216,8 @@ func buildSearchURL(src skn.Source, query string) (string, error) {
 
 // parseSearchResults extracts doc links and snippets from the HTML response.
 // This is a simple heuristic parser — it looks for common doc page patterns.
-func parseSearchResults(sourceName, html string, maxResults int) []skn.SearchResult {
-	var results []skn.SearchResult
+func parseSearchResults(sourceName, html string, maxResults int) []knowledge.SearchResult {
+	var results []knowledge.SearchResult
 
 	lines := strings.Split(html, "\n")
 	for _, line := range lines {
@@ -247,7 +247,7 @@ func parseSearchResults(sourceName, html string, maxResults int) []skn.SearchRes
 			snippet = href
 		}
 
-		results = append(results, skn.SearchResult{
+		results = append(results, knowledge.SearchResult{
 			Source:  sourceName,
 			Path:    href,
 			Snippet: snippet,

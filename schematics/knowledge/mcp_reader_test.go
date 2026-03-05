@@ -33,13 +33,13 @@ func (m *mockToolCaller) CallTool(_ context.Context, name string, args map[strin
 	case "knowledge_ensure":
 		text = "ok"
 	case "knowledge_search":
-		results := []skn.SearchResult{{Source: "test", Path: "main.go", Line: 1, Snippet: "func main()"}}
+		results := []kn.SearchResult{{Source: "test", Path: "main.go", Line: 1, Snippet: "func main()"}}
 		data, _ := json.Marshal(results)
 		text = string(data)
 	case "knowledge_read":
 		text = "file content here"
 	case "knowledge_list":
-		entries := []skn.ContentEntry{{Path: "src/", IsDir: true}, {Path: "main.go", Size: 42}}
+		entries := []kn.ContentEntry{{Path: "src/", IsDir: true}, {Path: "main.go", Size: 42}}
 		data, _ := json.Marshal(entries)
 		text = string(data)
 	}
@@ -49,7 +49,7 @@ func (m *mockToolCaller) CallTool(_ context.Context, name string, args map[strin
 	}, nil
 }
 
-var testSource = skn.Source{
+var testSource = kn.Source{
 	Name: "test-repo",
 	Kind: kn.SourceKindRepo,
 	URI:  "https://github.com/example/test",

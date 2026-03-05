@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dpopsuev/origami/knowledge"
 	"github.com/dpopsuev/origami/connectors/docs"
+	"github.com/dpopsuev/origami/knowledge"
 	skn "github.com/dpopsuev/origami/schematics/knowledge"
 )
 
@@ -26,7 +26,7 @@ func TestDocsDriver_Ensure(t *testing.T) {
 	defer srv.Close()
 
 	d := docs.NewDocsDriver(docs.WithHTTPClient(srv.Client()))
-	src := skn.Source{Name: "test-docs", Kind: knowledge.SourceKindDoc, URI: srv.URL}
+	src := knowledge.Source{Name: "test-docs", Kind: knowledge.SourceKindDoc, URI: srv.URL}
 
 	if err := d.Ensure(context.Background(), src); err != nil {
 		t.Fatalf("Ensure: %v", err)
@@ -40,7 +40,7 @@ func TestDocsDriver_Ensure_Failure(t *testing.T) {
 	defer srv.Close()
 
 	d := docs.NewDocsDriver(docs.WithHTTPClient(srv.Client()))
-	src := skn.Source{Name: "test-docs", Kind: knowledge.SourceKindDoc, URI: srv.URL}
+	src := knowledge.Source{Name: "test-docs", Kind: knowledge.SourceKindDoc, URI: srv.URL}
 
 	if err := d.Ensure(context.Background(), src); err == nil {
 		t.Fatal("expected error for 404")
@@ -71,7 +71,7 @@ func TestDocsDriver_Search(t *testing.T) {
 		docs.WithCacheDir(t.TempDir()),
 	)
 
-	src := skn.Source{
+	src := knowledge.Source{
 		Name: "rh-docs",
 		Kind: knowledge.SourceKindDoc,
 		URI:  srv.URL,
@@ -114,7 +114,7 @@ func TestDocsDriver_Search_Cached(t *testing.T) {
 		docs.WithCacheDir(t.TempDir()),
 	)
 
-	src := skn.Source{Name: "docs", Kind: knowledge.SourceKindDoc, URI: srv.URL}
+	src := knowledge.Source{Name: "docs", Kind: knowledge.SourceKindDoc, URI: srv.URL}
 
 	// First call hits server
 	_, _ = d.Search(context.Background(), src, "test", 10)
@@ -140,7 +140,7 @@ func TestDocsDriver_Read(t *testing.T) {
 		docs.WithCacheDir(t.TempDir()),
 	)
 
-	src := skn.Source{Name: "docs", Kind: knowledge.SourceKindDoc, URI: srv.URL}
+	src := knowledge.Source{Name: "docs", Kind: knowledge.SourceKindDoc, URI: srv.URL}
 
 	content, err := d.Read(context.Background(), src, "/networking/ptp")
 	if err != nil {
@@ -163,7 +163,7 @@ func TestDocsDriver_Read(t *testing.T) {
 
 func TestDocsDriver_List(t *testing.T) {
 	d := docs.NewDocsDriver()
-	src := skn.Source{Name: "docs", Kind: knowledge.SourceKindDoc, URI: "https://docs.example.com"}
+	src := knowledge.Source{Name: "docs", Kind: knowledge.SourceKindDoc, URI: "https://docs.example.com"}
 
 	entries, err := d.List(context.Background(), src, ".", 2)
 	if err != nil {

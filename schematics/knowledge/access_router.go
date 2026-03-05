@@ -57,7 +57,7 @@ func (r *AccessRouter) driver(kind kn.SourceKind) (Driver, error) {
 	return d, nil
 }
 
-func (r *AccessRouter) Ensure(ctx context.Context, src Source) error {
+func (r *AccessRouter) Ensure(ctx context.Context, src kn.Source) error {
 	d, err := r.driver(src.Kind)
 	if err != nil {
 		return err
@@ -65,7 +65,7 @@ func (r *AccessRouter) Ensure(ctx context.Context, src Source) error {
 	return d.Ensure(ctx, src)
 }
 
-func (r *AccessRouter) Search(ctx context.Context, src Source, query string, maxResults int) ([]SearchResult, error) {
+func (r *AccessRouter) Search(ctx context.Context, src kn.Source, query string, maxResults int) ([]kn.SearchResult, error) {
 	d, err := r.driver(src.Kind)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (r *AccessRouter) Search(ctx context.Context, src Source, query string, max
 	return d.Search(ctx, src, query, maxResults)
 }
 
-func (r *AccessRouter) Read(ctx context.Context, src Source, path string) ([]byte, error) {
+func (r *AccessRouter) Read(ctx context.Context, src kn.Source, path string) ([]byte, error) {
 	d, err := r.driver(src.Kind)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (r *AccessRouter) Read(ctx context.Context, src Source, path string) ([]byt
 	return d.Read(ctx, src, path)
 }
 
-func (r *AccessRouter) List(ctx context.Context, src Source, root string, maxDepth int) ([]ContentEntry, error) {
+func (r *AccessRouter) List(ctx context.Context, src kn.Source, root string, maxDepth int) ([]kn.ContentEntry, error) {
 	d, err := r.driver(src.Kind)
 	if err != nil {
 		return nil, err
@@ -90,4 +90,4 @@ func (r *AccessRouter) List(ctx context.Context, src Source, root string, maxDep
 }
 
 // Compile-time check that AccessRouter implements Reader.
-var _ Reader = (*AccessRouter)(nil)
+var _ kn.Reader = (*AccessRouter)(nil)
