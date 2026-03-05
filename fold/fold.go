@@ -14,6 +14,7 @@ type Options struct {
 	Output       string
 	GoFlags      []string
 	Verbose      bool
+	Container    bool // generate Dockerfiles for container-mode schematics
 }
 
 // Run loads the manifest, generates main.go, and compiles the binary.
@@ -119,7 +120,70 @@ func Run(opts Options) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "built %s\n", output)
+
+	if opts.Container {
+		if err := generateContainerArtifacts(m, reg, filepath.Dir(opts.ManifestPath), opts.Verbose); err != nil {
+			return fmt.Errorf("generate container artifacts: %w", err)
+		}
+	}
+
 	return nil
+}
+
+func generateContainerArtifacts(m *Manifest, reg ModuleRegistry, manifestDir string, verbose bool) error {
+	componentIndex := buildComponentIndex(m, reg)
+
+	for name, dc := range m.Deploy {
+		if dc.Mode != "container" {
+			continue
+		}
+
+		goPath, ok := componentIndex[name]
+		if !ok {
+			return fmt.Errorf("container %q: not found in manifest imports", name)
+		}
+
+		meta, err := loadComponentMetaForModule(goPath)
+		if err != nil {
+			return fmt.Errorf("container %q: %w", name, err)
+		}
+		if meta.Serve == "" {
+			return fmt.Errorf("container %q: component has no serve entrypoint", name)
+		}
+
+		df, err := GenerateDockerfile(name, meta.Serve, "")
+		if err != nil {
+			return fmt.Errorf("container %q: %w", name, err)
+		}
+
+		outPath := filepath.Join(manifestDir, fmt.Sprintf("Dockerfile.%s", name))
+		if err := os.WriteFile(outPath, df, 0644); err != nil {
+			return fmt.Errorf("write Dockerfile for %q: %w", name, err)
+		}
+
+		if verbose {
+			fmt.Fprintf(os.Stderr, "generated %s\n", outPath)
+		} else {
+			fmt.Fprintf(os.Stderr, "container: %s\n", outPath)
+		}
+	}
+	return nil
+}
+
+func buildComponentIndex(m *Manifest, reg ModuleRegistry) map[string]string {
+	index := make(map[string]string)
+	for _, imp := range m.Imports {
+		goPath, err := reg.ResolveFQCN(imp)
+		if err != nil {
+			continue
+		}
+		meta, err := loadComponentMetaForModule(goPath)
+		if err != nil {
+			continue
+		}
+		index[meta.Component] = goPath
+	}
+	return index
 }
 
 // findSchemaBinding looks for a store.schema binding in the manifest,

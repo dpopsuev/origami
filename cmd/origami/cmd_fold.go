@@ -11,6 +11,7 @@ func foldCmd(args []string) error {
 	fs := flag.NewFlagSet("fold", flag.ContinueOnError)
 	output := fs.String("output", "", "output binary path (default: bin/<name>)")
 	verbose := fs.Bool("v", false, "verbose output")
+	container := fs.Bool("container", false, "generate Dockerfiles for container-mode schematics")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -24,6 +25,7 @@ func foldCmd(args []string) error {
 		ManifestPath: manifest,
 		Output:       *output,
 		Verbose:      *verbose,
+		Container:    *container,
 	})
 }
 

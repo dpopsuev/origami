@@ -166,10 +166,12 @@ Six phases, strictly ordered. Each phase begins with tests, then implementation.
 - [x] P4.2: Write Dockerfile generation tests — content assertions, error for missing serve path, default Go version
 - [x] P4.3: Implement `subprocess.ContainerManager` — OCI lifecycle via podman/docker (start/stop/swap, port mapping)
 - [x] P4.4: Write `ContainerManager` unit tests — default runtime, custom runtime, unknown image error
-- [ ] P4.5: Implement TCP MCP transport — extend MCP client for TCP connections to containerized schematics
-- [ ] P4.6: Write integration tests — build schematic OCI image from test binary, start via podman, MCP tool call over TCP, hot-swap container image
-- [ ] P4.7: Add `fold --container` flag to generate Dockerfile alongside `main.go`
-- [ ] P4.8: Build + test gate — `go test -race ./subprocess/... ./fold/...` passes with container tests
+- [ ] P4.5: Create `schematics/knowledge/cmd/serve/main.go` — MCP server via `StreamableHTTPHandler` on `:9100/mcp`
+- [ ] P4.6: Update `ContainerManager.connectMCP` — use `StreamableClientTransport` to connect to containerized schematic over HTTP
+- [ ] P4.7: Wire `ContainerManager.CallTool` through the connected `ClientSession`
+- [ ] P4.8: Write integration tests — build test binary with `StreamableHTTPHandler`, containerize, MCP tool call over HTTP, hot-swap container image
+- [ ] P4.9: Add `fold --container` flag to generate Dockerfile alongside `main.go`
+- [ ] P4.10: Build + test gate — `go test -race ./subprocess/... ./fold/...` passes with container tests
 
 ### Phase 5 — RCA integration + Asterisk wiring
 
@@ -178,11 +180,10 @@ Six phases, strictly ordered. Each phase begins with tests, then implementation.
 - [ ] P5.3: Fix `schematics/rca/hooks_inject.go` — replace `WorkspaceParams`/`buildWorkspaceParams` with knowledge-based injection
 - [ ] P5.4: Update RCA inject hooks to use `knowledge.Reader` for code access instead of `CodeReader`
 - [ ] P5.5: Update Asterisk `origami.yaml` — add knowledge schematic import + bindings, source packs with doc entries
-- [ ] P5.6: Create `schematics/knowledge/cmd/serve/main.go` — MCP server entrypoint for subprocess/container mode
-- [ ] P5.7: Full end-to-end test — Asterisk with decoupled knowledge schematic in subprocess mode
-- [ ] P5.8: Validate (green) — all tests pass, build green across Origami + Asterisk
-- [ ] P5.9: Tune (blue) — refactor for quality, no behavior changes
-- [ ] P5.10: Validate (green) — all tests still pass after tuning
+- [ ] P5.6: Full end-to-end test — Asterisk with decoupled knowledge schematic in subprocess mode
+- [ ] P5.7: Validate (green) — all tests pass, build green across Origami + Asterisk
+- [ ] P5.8: Tune (blue) — refactor for quality, no behavior changes
+- [ ] P5.9: Validate (green) — all tests still pass after tuning
 
 ## Acceptance criteria
 
@@ -221,6 +222,8 @@ Six phases, strictly ordered. Each phase begins with tests, then implementation.
 | A09 Logging/Monitoring | MCP payloads between processes could contain sensitive data | No secrets in MCP tool arguments. Knowledge content (code, docs) stays in-process memory, not logged. |
 
 ## Notes
+
+2026-03-05 — Transport decision: Streamable HTTP over raw TCP. The MCP Go SDK (v1.3.1) provides `StreamableHTTPHandler` (server) and `StreamableClientTransport` (client) out of the box. No custom transport code needed. TCP via `IOTransport` would require building our own TCP accept loop. Streamable HTTP is MCP spec-compliant, container-native, and supports health checks via GET. Moved `cmd/serve/main.go` from Phase 5 to Phase 4 since it's needed for container integration tests.
 
 2026-03-05 — Retroactive contract. Phases 0–3 and partial Phase 4 were implemented and shipped before this contract was written. Committed as `3f33b71` (subprocess package) and `bece4c5` (fold multi-schematic + knowledge + drivers + testdata). Phase 4 containerization has Dockerfile generation and ContainerManager scaffolding but lacks TCP MCP transport and full integration tests. Phase 5 (RCA integration) not started — `hooks_inject.go` has pre-existing compilation errors from the workspace-to-sources rename that remain unstaged.
 

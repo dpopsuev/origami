@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -153,7 +154,7 @@ func (cm *ContainerManager) stopContainer(ctx context.Context, id string) error 
 func (cm *ContainerManager) connectMCP(ctx context.Context, c *Container) error {
 	addr := "localhost:" + strconv.Itoa(c.Port)
 
-	// Poll until the TCP port is open (max 10s)
+	// Poll until the HTTP endpoint is ready (max 10s).
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
@@ -168,11 +169,25 @@ func (cm *ContainerManager) connectMCP(ctx context.Context, c *Container) error 
 		}
 	}
 
-	// MCP over TCP would require a TCP transport. For now, we note that the
-	// MCP SDK doesn't have a built-in TCP transport. We'd need to implement
-	// one using the Connection interface. This is a placeholder that records
-	// the connection info for future implementation.
-	//
-	// TODO: Implement TCP MCP transport when the SDK supports it or we build one.
+	endpoint := "http://" + addr + "/mcp"
+
+	transport := &sdkmcp.StreamableClientTransport{
+		Endpoint: endpoint,
+		HTTPClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+
+	client := sdkmcp.NewClient(
+		&sdkmcp.Implementation{Name: "origami-container-client", Version: "v0.1.0"},
+		nil,
+	)
+
+	session, err := client.Connect(ctx, transport, nil)
+	if err != nil {
+		return fmt.Errorf("MCP connect to %s: %w", endpoint, err)
+	}
+
+	c.session = session
 	return nil
 }
