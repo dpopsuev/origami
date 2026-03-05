@@ -60,7 +60,8 @@ func LoadComponentMeta(path string) (*ComponentMeta, error) {
 // from the local filesystem for the given Go module path and subpath.
 func loadComponentMetaForModule(goPath string) (*ComponentMeta, error) {
 	modPath := extractModule(goPath)
-	localPath := findLocalModule(modPath)
+	resolver := &DefaultModuleResolver{}
+	localPath := resolver.FindLocalModule(modPath)
 	if localPath == "" {
 		return nil, fmt.Errorf("cannot find local module for %s", modPath)
 	}

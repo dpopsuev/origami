@@ -8,13 +8,45 @@ import (
 	"strings"
 )
 
+// ModuleResolver locates Go modules on the local filesystem.
+// The default implementation searches $HOME/Workspace and ./
+// but callers can supply custom resolvers for CI or non-standard layouts.
+type ModuleResolver interface {
+	FindLocalModule(modPath string) string
+}
+
+// DefaultModuleResolver searches for Go modules in well-known locations.
+type DefaultModuleResolver struct {
+	ExtraDirs []string
+}
+
+func (r *DefaultModuleResolver) FindLocalModule(modPath string) string {
+	home, _ := os.UserHomeDir()
+	candidates := make([]string, 0, 2+len(r.ExtraDirs))
+	if home != "" {
+		candidates = append(candidates, filepath.Join(home, "Workspace", filepath.Base(modPath)))
+	}
+	candidates = append(candidates, filepath.Join(".", filepath.Base(modPath)))
+	for _, d := range r.ExtraDirs {
+		candidates = append(candidates, filepath.Join(d, filepath.Base(modPath)))
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(filepath.Join(c, "go.mod")); err == nil {
+			abs, _ := filepath.Abs(c)
+			return abs
+		}
+	}
+	return ""
+}
+
 // Options configures the fold build.
 type Options struct {
-	ManifestPath string
-	Output       string
-	GoFlags      []string
-	Verbose      bool
-	Container    bool // generate Dockerfiles for container-mode schematics
+	ManifestPath   string
+	Output         string
+	GoFlags        []string
+	Verbose        bool
+	Container      bool // generate Dockerfiles for container-mode schematics
+	ModuleResolver ModuleResolver
 }
 
 // Run loads the manifest, generates main.go, and compiles the binary.
@@ -88,7 +120,12 @@ func Run(opts Options) error {
 		return fmt.Errorf("find go.mod: %w", err)
 	}
 
-	if err := createBuildModule(tmpDir, m, reg, goMod); err != nil {
+	resolver := opts.ModuleResolver
+	if resolver == nil {
+		resolver = &DefaultModuleResolver{}
+	}
+
+	if err := createBuildModule(tmpDir, m, reg, goMod, resolver); err != nil {
 		return fmt.Errorf("create build module: %w", err)
 	}
 
@@ -214,7 +251,7 @@ func findGoMod(m *Manifest, reg ModuleRegistry) (string, error) {
 	return goPath, nil
 }
 
-func createBuildModule(tmpDir string, m *Manifest, reg ModuleRegistry, goMod string) error {
+func createBuildModule(tmpDir string, m *Manifest, reg ModuleRegistry, goMod string, resolver ModuleResolver) error {
 	var buf strings.Builder
 	buf.WriteString(fmt.Sprintf("module %s-fold-build\n\ngo 1.24\n\nrequire (\n", m.Name))
 
@@ -234,7 +271,7 @@ func createBuildModule(tmpDir string, m *Manifest, reg ModuleRegistry, goMod str
 			return err
 		}
 		modPath := extractModule(goPath)
-		localPath := findLocalModule(modPath)
+		localPath := resolver.FindLocalModule(modPath)
 		if localPath != "" {
 			buf.WriteString(fmt.Sprintf("replace %s => %s\n", modPath, localPath))
 		}
@@ -251,17 +288,3 @@ func extractModule(goPath string) string {
 	return goPath
 }
 
-func findLocalModule(modPath string) string {
-	home, _ := os.UserHomeDir()
-	candidates := []string{
-		filepath.Join(home, "Workspace", filepath.Base(modPath)),
-		filepath.Join(".", filepath.Base(modPath)),
-	}
-	for _, c := range candidates {
-		if _, err := os.Stat(filepath.Join(c, "go.mod")); err == nil {
-			abs, _ := filepath.Abs(c)
-			return abs
-		}
-	}
-	return ""
-}

@@ -2,7 +2,7 @@
 // Streamable HTTP. It exposes knowledge.Reader operations as MCP tools
 // (ensure, search, read, list) for consumption by other schematics.
 //
-// Usage: serve [--port=9100]
+// Usage: serve [--port=9100] [--driver=git,docs]
 package main
 
 import (
@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -22,9 +23,17 @@ import (
 
 func main() {
 	port := flag.Int("port", 9100, "HTTP port for the MCP server")
+	drivers := flag.String("drivers", "", "comma-separated driver names to register (e.g. git,docs)")
 	flag.Parse()
 
 	router := skn.NewRouter()
+
+	if *drivers != "" {
+		for _, name := range strings.Split(*drivers, ",") {
+			name = strings.TrimSpace(name)
+			log.Printf("driver %q requested but no built-in implementation yet", name)
+		}
+	}
 
 	server := sdkmcp.NewServer(
 		&sdkmcp.Implementation{Name: "origami-knowledge", Version: "v0.1.0"},
@@ -100,7 +109,10 @@ func registerTools(server *sdkmcp.Server, router *skn.AccessRouter) {
 			if err != nil {
 				return errResult(err.Error()), nil
 			}
-			data, _ := json.Marshal(results)
+			data, err := json.Marshal(results)
+			if err != nil {
+				return errResult("marshal search results: " + err.Error()), nil
+			}
 			return &sdkmcp.CallToolResult{
 				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: string(data)}},
 			}, nil
@@ -150,7 +162,10 @@ func registerTools(server *sdkmcp.Server, router *skn.AccessRouter) {
 			if err != nil {
 				return errResult(err.Error()), nil
 			}
-			data, _ := json.Marshal(entries)
+			data, err := json.Marshal(entries)
+			if err != nil {
+				return errResult("marshal list entries: " + err.Error()), nil
+			}
 			return &sdkmcp.CallToolResult{
 				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: string(data)}},
 			}, nil
