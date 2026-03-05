@@ -47,6 +47,10 @@ type Source struct {
 	ReadWhen   string            `json:"read_when,omitempty" yaml:"read_when,omitempty"`
 	LocalPath  string            `json:"local_path,omitempty" yaml:"local_path,omitempty"`
 
+	Org           string   `json:"org,omitempty" yaml:"org,omitempty"`
+	BranchPattern string   `json:"branch_pattern,omitempty" yaml:"branch_pattern,omitempty"`
+	Exclude       []string `json:"exclude,omitempty" yaml:"exclude,omitempty"`
+
 	Resolution      ResolutionStatus `json:"resolution,omitempty" yaml:"resolution,omitempty"`
 	ResolvedContent string           `json:"resolved_content,omitempty" yaml:"-"`
 }

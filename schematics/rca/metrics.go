@@ -149,7 +149,7 @@ func PrepareBatchInput(results []CaseResult, scenario *Scenario) ([]map[string]a
 
 	// Batch-level context
 	var redHerringRepos []string
-	for _, repo := range scenario.Workspace.Repos {
+	for _, repo := range scenario.SourcePack.Repos {
 		if repo.IsRedHerring {
 			redHerringRepos = append(redHerringRepos, repo.Name)
 		}

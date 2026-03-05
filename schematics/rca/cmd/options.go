@@ -13,9 +13,11 @@ type schematicDeps struct {
 	readerFactory     rca.SourceReaderFactory
 	writerFactory     rca.DefectWriterFactory
 	discovererFactory rca.RunDiscovererFactory
+	codeReaderFactory rca.CodeReaderFactory
 	storeFactory      rca.StoreFactory
 	storeSchemaData   []byte
 	tokenChecker      rca.TokenChecker
+	sourcePacks       map[string]string
 }
 
 // cfg holds the injected dependencies. Products call Apply before Execute.
@@ -62,6 +64,19 @@ func WithStoreSchema(data []byte) Option {
 // and permissions. Used by commands that require API authentication.
 func WithTokenChecker(f rca.TokenChecker) Option {
 	return func(d *schematicDeps) { d.tokenChecker = f }
+}
+
+// WithCodeReader injects a factory that creates a CodeReader for
+// accessing source code repositories during investigation.
+func WithCodeReader(f rca.CodeReaderFactory) Option {
+	return func(d *schematicDeps) { d.codeReaderFactory = f }
+}
+
+// WithSourcePacks injects a name→path map of available source packs.
+// Names correspond to keys in the manifest's sources: section; paths
+// are relative to the working directory.
+func WithSourcePacks(packs map[string]string) Option {
+	return func(d *schematicDeps) { d.sourcePacks = packs }
 }
 
 func checkTokenFileViaOption(path string) error {

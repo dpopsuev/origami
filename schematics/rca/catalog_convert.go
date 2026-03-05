@@ -6,9 +6,9 @@ import (
 	"github.com/dpopsuev/origami/knowledge"
 )
 
-// ScenarioToCatalog converts a WorkspaceConfig to a knowledge.KnowledgeSourceCatalog
+// ScenarioToCatalog converts a SourcePackConfig to a knowledge.KnowledgeSourceCatalog
 // for inject hooks and template parameter assembly.
-func ScenarioToCatalog(wc WorkspaceConfig) *knowledge.KnowledgeSourceCatalog {
+func ScenarioToCatalog(wc SourcePackConfig) *knowledge.KnowledgeSourceCatalog {
 	cat := &knowledge.KnowledgeSourceCatalog{}
 	for _, r := range wc.Repos {
 		tags := map[string]string{

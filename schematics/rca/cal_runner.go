@@ -228,7 +228,7 @@ func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int
 	}
 	entries := make([]caseEntry, len(cfg.Scenario.Cases))
 	batchCases := make([]framework.BatchCase, len(cfg.Scenario.Cases))
-	catalog := ScenarioToCatalog(cfg.Scenario.Workspace)
+	catalog := ScenarioToCatalog(cfg.Scenario.SourcePack)
 
 	for i, gtCase := range cfg.Scenario.Cases {
 		pk := pipeKey{gtCase.Version, gtCase.Job}

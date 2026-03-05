@@ -17,11 +17,9 @@ type TemplateParams struct {
 
 	Siblings []SiblingParams
 
-	Workspace *WorkspaceParams
+	Sources *SourceParams
 
 	URLs *URLParams
-
-	AlwaysReadSources []AlwaysReadSource
 
 	Prior *PriorParams
 
@@ -34,6 +32,8 @@ type TemplateParams struct {
 	Taxonomy *TaxonomyParams
 
 	Timestamps *TimestampParams
+
+	Code *CodeParams
 }
 
 // EnvelopeParams holds envelope-level context.
@@ -66,7 +66,7 @@ type SiblingParams struct {
 	Status string
 }
 
-// ResolutionStatus indicates whether a workspace field was successfully resolved.
+// ResolutionStatus indicates whether a source field was successfully resolved.
 type ResolutionStatus string
 
 const (
@@ -74,14 +74,15 @@ const (
 	Unavailable ResolutionStatus = "unavailable"
 )
 
-// WorkspaceParams holds repo list, launch attributes, and Jira links.
-type WorkspaceParams struct {
+// SourceParams holds repo list, launch attributes, Jira links, and always-read sources.
+type SourceParams struct {
 	Repos            []RepoParams
 	LaunchAttributes []AttributeParams
 	JiraLinks        []JiraLinkParams
 	AttrsStatus      ResolutionStatus
 	JiraStatus       ResolutionStatus
 	ReposStatus      ResolutionStatus
+	AlwaysRead       []AlwaysReadSource
 }
 
 // RepoParams holds one repo's metadata.
@@ -173,6 +174,38 @@ type TaxonomyParams struct {
 type TimestampParams struct {
 	ClockPlaneNote   string
 	ClockSkewWarning string
+}
+
+// CodeParams holds injected code context from source repositories.
+type CodeParams struct {
+	Trees         []CodeTreeParams   `json:"trees,omitempty"`
+	SearchResults []CodeSearchResult `json:"search_results,omitempty"`
+	Files         []CodeFileParams   `json:"files,omitempty"`
+	Truncated     bool               `json:"truncated,omitempty"`
+}
+
+// CodeTreeParams holds a repository's directory tree.
+type CodeTreeParams struct {
+	Repo    string      `json:"repo"`
+	Branch  string      `json:"branch"`
+	Entries []TreeEntry `json:"entries"`
+}
+
+// CodeSearchResult holds a code search match.
+type CodeSearchResult struct {
+	Repo    string  `json:"repo"`
+	File    string  `json:"file"`
+	Line    int     `json:"line"`
+	Snippet string  `json:"snippet"`
+	Score   float64 `json:"score"`
+}
+
+// CodeFileParams holds the content of a single source file.
+type CodeFileParams struct {
+	Repo      string `json:"repo"`
+	Path      string `json:"path"`
+	Content   string `json:"content"`
+	Truncated bool   `json:"truncated,omitempty"`
 }
 
 // DefaultTaxonomy returns the standard defect type taxonomy.

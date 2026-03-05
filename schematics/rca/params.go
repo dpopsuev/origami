@@ -8,8 +8,8 @@ import (
 	"github.com/dpopsuev/origami/knowledge"
 )
 
-func buildWorkspaceParams(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) *WorkspaceParams {
-	wsp := &WorkspaceParams{}
+func buildSourceParams(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) *SourceParams {
+	wsp := &SourceParams{}
 
 	if catalog != nil && len(catalog.Sources) > 0 {
 		wsp.ReposStatus = Resolved
@@ -57,6 +57,8 @@ func buildWorkspaceParams(env *rcatype.Envelope, catalog *knowledge.KnowledgeSou
 	} else {
 		wsp.JiraStatus = Unavailable
 	}
+
+	wsp.AlwaysRead = loadAlwaysReadSources(catalog)
 
 	return wsp
 }

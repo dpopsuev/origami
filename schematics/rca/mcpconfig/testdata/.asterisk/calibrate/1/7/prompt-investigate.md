@@ -77,6 +77,8 @@ FAIL: Stale CRD
 
 
 
+
+
 ## Defect type taxonomy
 
 Defect types:

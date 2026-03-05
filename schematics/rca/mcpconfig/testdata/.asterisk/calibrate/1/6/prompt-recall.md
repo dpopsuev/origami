@@ -46,6 +46,30 @@ FAIL: Expected clock state to be LOCKED
 
 
 
+## Known symptom
+
+| Field | Value |
+|-------|-------|
+| Name | OCP-83297 PTP sync stability |
+| Status | active |
+| Occurrences | 1 |
+| First seen | 2026-03-05T08:24:16Z |
+| Last seen | 2026-03-05T08:24:16Z |
+
+
+
+
+## Prior RCAs linked to this symptom
+
+| Field | Value |
+|-------|-------|
+| RCA #2 | root cause from subagent-0 |
+| Defect type | pb001 |
+| Status | open |
+| Affected versions |  |
+
+
+
 
 
 

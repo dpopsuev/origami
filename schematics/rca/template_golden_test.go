@@ -42,7 +42,7 @@ func goldenFixtureParams() *TemplateParams {
 			{ID: "2", Name: "[T-TSC] PTP Clock accuracy", Status: "PASSED"},
 			{ID: "3", Name: "[T-TSC] PTP DPLL tracking", Status: "FAILED"},
 		},
-		Workspace: &WorkspaceParams{
+		Sources: &SourceParams{
 			Repos: []RepoParams{
 				{Name: "ptp-operator", Path: "/repos/ptp-operator", Purpose: "PTP operator reconciliation", Branch: "release-4.21"},
 				{Name: "linuxptp-daemon", Path: "/repos/linuxptp-daemon", Purpose: "PTP sync logic", Branch: "main"},
@@ -59,13 +59,13 @@ func goldenFixtureParams() *TemplateParams {
 			AttrsStatus: Resolved,
 			JiraStatus:  Resolved,
 			ReposStatus: Resolved,
+			AlwaysRead: []AlwaysReadSource{
+				{Name: "PTP Domain Knowledge", Purpose: "PTP protocol reference", Content: "PTP uses Best Master Clock Algorithm (BMCA) to select the grandmaster."},
+			},
 		},
 		URLs: &URLParams{
 			SourceDashboard: "https://rp.example.com/launches/42",
 			SourceItem:      "https://rp.example.com/items/7",
-		},
-		AlwaysReadSources: []AlwaysReadSource{
-			{Name: "PTP Domain Knowledge", Purpose: "PTP protocol reference", Content: "PTP uses Best Master Clock Algorithm (BMCA) to select the grandmaster."},
 		},
 		Prior: &PriorParams{
 			RecallResult: &RecallResult{

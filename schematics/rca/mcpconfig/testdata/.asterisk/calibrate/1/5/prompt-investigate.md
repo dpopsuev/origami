@@ -35,7 +35,7 @@ Note: Timestamps may originate from different clock planes (executor, test node,
 ## Failure under investigation
 
 **Test name:** `OCP-83300 PTP config cleanup`  
-**Status:** triaged
+**Status:** open
 
 **Error message:**
 ```
@@ -73,6 +73,8 @@ FAIL: CRD cleanup failure
 
 
 *No linked Jira tickets.*
+
+
 
 
 

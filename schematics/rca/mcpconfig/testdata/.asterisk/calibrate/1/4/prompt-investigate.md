@@ -35,7 +35,7 @@ Note: Timestamps may originate from different clock planes (executor, test node,
 ## Failure under investigation
 
 **Test name:** `OCP-83299 PTP config isolation`  
-**Status:** open
+**Status:** triaged
 
 **Error message:**
 ```
@@ -74,6 +74,8 @@ FAIL: Stale PTP config CRD found from previous test suite
 
 
 *No linked Jira tickets.*
+
+
 
 
 

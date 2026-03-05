@@ -77,6 +77,8 @@ FAIL: Expected clock state to be LOCKED
 
 
 
+
+
 ## Defect type taxonomy
 
 Defect types:

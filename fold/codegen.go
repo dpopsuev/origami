@@ -39,6 +39,7 @@ type templateContext struct {
 	HasVersion      bool
 	Bindings        []bindingEntry
 	StoreSchemaFile string
+	SourcePacks     map[string]string
 }
 
 type importEntry struct {
@@ -101,6 +102,10 @@ func buildTemplateContext(m *Manifest, reg ModuleRegistry) (*templateContext, er
 			return nil, err
 		}
 		ctx.Bindings = bindings
+	}
+
+	if len(m.Sources) > 0 {
+		ctx.SourcePacks = m.Sources
 	}
 
 	return ctx, nil
@@ -240,13 +245,20 @@ var storeSchema []byte
 {{- end }}
 
 func main() {
-{{- if or .Bindings .StoreSchemaFile }}
+{{- if or .Bindings .StoreSchemaFile .SourcePacks }}
 	{{ .CmdAlias }}.Apply(
 {{- if .StoreSchemaFile }}
 		{{ .CmdAlias }}.WithStoreSchema(storeSchema),
 {{- end }}
 {{- range .Bindings }}
 		{{ $.CmdAlias }}.{{ .OptionFunc }}({{ .ConnAlias }}.{{ .FactoryFunc }}),
+{{- end }}
+{{- if .SourcePacks }}
+		{{ .CmdAlias }}.WithSourcePacks(map[string]string{
+{{- range $name, $path := .SourcePacks }}
+			{{ printf "%q" $name }}: {{ printf "%q" $path }},
+{{- end }}
+		}),
 {{- end }}
 	)
 {{- end }}

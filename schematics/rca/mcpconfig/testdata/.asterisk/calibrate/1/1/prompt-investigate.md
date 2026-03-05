@@ -35,7 +35,7 @@ Note: Timestamps may originate from different clock planes (executor, test node,
 ## Failure under investigation
 
 **Test name:** `OCP-83297 PTP sync stability`  
-**Status:** open
+**Status:** triaged
 
 **Error message:**
 ```
@@ -74,6 +74,8 @@ FAIL: Expected clock state to be LOCKED within 300s timeout
 
 
 *No linked Jira tickets.*
+
+
 
 
 

@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/dpopsuev/origami/dispatch"
+	"github.com/dpopsuev/origami/knowledge"
 
 	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
@@ -84,15 +86,46 @@ func checkTokenFile(path string) error {
 	return nil
 }
 
-func defaultWorkspaceRepos() []string {
-	return []string{
-		"ptp-operator",
-		"linuxptp-daemon",
-		"linuxptp-daemon-v2",
-		"cloud-event-proxy",
-		"ptp-operator-must-gather",
-		"cluster-etcd-operator",
+// loadSourcePacks loads and merges the named source packs from the injected
+// sources map. Returns the merged pack and resolved catalog.
+func loadSourcePacks(names []string, attrs map[string]string) (*knowledge.SourcePack, *knowledge.KnowledgeSourceCatalog, error) {
+	if len(names) == 0 {
+		available := make([]string, 0, len(cfg.sourcePacks))
+		for k := range cfg.sourcePacks {
+			available = append(available, k)
+		}
+		return nil, nil, fmt.Errorf("--sources is required\n\nAvailable source packs: %s", strings.Join(available, ", "))
 	}
+
+	resolver := func(name string) (string, error) {
+		p, ok := cfg.sourcePacks[name]
+		if !ok {
+			return "", fmt.Errorf("unknown source pack %q", name)
+		}
+		return p, nil
+	}
+
+	var packs []*knowledge.SourcePack
+	for _, name := range names {
+		path, ok := cfg.sourcePacks[name]
+		if !ok {
+			available := make([]string, 0, len(cfg.sourcePacks))
+			for k := range cfg.sourcePacks {
+				available = append(available, k)
+			}
+			return nil, nil, fmt.Errorf("unknown source pack %q\n\nAvailable: %s", name, strings.Join(available, ", "))
+		}
+		pack, err := knowledge.LoadPack(path, resolver)
+		if err != nil {
+			return nil, nil, fmt.Errorf("load source pack %q: %w", name, err)
+		}
+		packs = append(packs, pack)
+	}
+
+	merged := knowledge.MergePacks(packs...)
+	sources := merged.ToSources(attrs)
+	catalog := &knowledge.KnowledgeSourceCatalog{Sources: sources}
+	return merged, catalog, nil
 }
 
 // resolvePromptFS returns an fs.FS for prompt templates. When dir is non-empty

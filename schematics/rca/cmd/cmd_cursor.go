@@ -3,20 +3,21 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/dpopsuev/origami/knowledge"
 	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/schematics/rca/store"
-	"github.com/dpopsuev/origami/knowledge"
 )
 
 var cursorFlags struct {
-	launch        string
-	workspacePath string
-	itemID        string
-	promptDir     string
-	dbPath        string
+	launch    string
+	sources   string
+	itemID    string
+	promptDir string
+	dbPath    string
 }
 
 var cursorCmd = &cobra.Command{
@@ -30,7 +31,7 @@ Paste the prompt into Cursor, save the artifact, then run again to advance.`,
 func init() {
 	f := cursorCmd.Flags()
 	f.StringVar(&cursorFlags.launch, "launch", "", "Path to envelope JSON or launch ID (required)")
-	f.StringVar(&cursorFlags.workspacePath, "workspace", "", "Path to context workspace file (YAML/JSON)")
+	f.StringVar(&cursorFlags.sources, "sources", "", "Comma-separated source pack names (e.g. ptp,nrop)")
 	f.StringVar(&cursorFlags.itemID, "case-id", "", "Failure (test item) source ID; default first from envelope")
 	f.StringVar(&cursorFlags.promptDir, "prompt-dir", "", "Prompt template directory (default: embedded prompts)")
 	f.StringVar(&cursorFlags.dbPath, "db", store.DefaultDBPath, "Store DB path")
@@ -67,10 +68,11 @@ func runCursor(cmd *cobra.Command, _ []string) error {
 	caseData := ensureCaseInStore(st, env, rpLaunchID, item)
 
 	var catalog *knowledge.KnowledgeSourceCatalog
-	if cursorFlags.workspacePath != "" {
-		cat, err := knowledge.LoadFromPath(cursorFlags.workspacePath)
+	if cursorFlags.sources != "" {
+		sourceNames := strings.Split(cursorFlags.sources, ",")
+		_, cat, err := loadSourcePacks(sourceNames, nil)
 		if err != nil {
-			return fmt.Errorf("load catalog: %w", err)
+			return err
 		}
 		catalog = cat
 	}

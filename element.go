@@ -190,4 +190,3 @@ func AllApproaches() []Approach {
 	copy(out, coreApproaches)
 	return out
 }
-

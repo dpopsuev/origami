@@ -123,7 +123,7 @@ func runCalibrate(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("basic transformer: open store: %w", err)
 		}
 		var repoNames []string
-		for _, r := range scenario.Workspace.Repos {
+		for _, r := range scenario.SourcePack.Repos {
 			repoNames = append(repoNames, r.Name)
 		}
 		comps = []*framework.Component{rca.HeuristicComponent(basicSt, repoNames)}

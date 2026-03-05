@@ -25,3 +25,7 @@ requires:
       type: RunDiscoverer
       option: WithRunDiscoverer
       description: Discovers available CI runs and their failures
+    - name: code
+      type: CodeReader
+      option: WithCodeReader
+      description: Read-only access to source code repositories for evidence gathering

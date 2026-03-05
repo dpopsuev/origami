@@ -298,6 +298,14 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 		"Prior.InvestigateResult.GapBrief.GapItems.Blocked":      "sub-field of excluded GapBrief",
 
 		"History.PriorRCAs.DaysSinceResolved": "available but not surfaced in current prompt templates",
+
+		"Code.Trees":                 "populated by inject.code.tree but not yet rendered in prompts",
+		"Code.Trees.Repo":            "sub-field of Code.Trees",
+		"Code.Trees.Branch":          "sub-field of Code.Trees",
+		"Code.Trees.Entries":         "sub-field of Code.Trees",
+		"Code.Trees.Entries.Path":    "sub-field of Code.Trees",
+		"Code.Trees.Entries.IsDir":   "sub-field of Code.Trees",
+		"Code.SearchResults.Score":   "used for ranking in Go, not rendered in prompts",
 	}
 
 	// Collect all field references across all embedded prompt templates.

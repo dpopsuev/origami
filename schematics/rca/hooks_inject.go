@@ -11,30 +11,59 @@ import (
 
 // Context keys used by inject hooks to store assembled template data.
 const (
-	KeyParamsEnvelope  = "params.envelope"
-	KeyParamsFailure   = "params.failure"
-	KeyParamsWorkspace = "params.workspace"
-	KeyParamsHistory   = "params.history"
-	KeyParamsDigest    = "params.recall_digest"
-	KeyParamsSources   = "params.sources"
-	KeyParamsPrior     = "params.prior"
-	KeyParamsTaxonomy  = "params.taxonomy"
+	KeyParamsEnvelope = "params.envelope"
+	KeyParamsFailure  = "params.failure"
+	KeyParamsSources  = "params.sources"
+	KeyParamsHistory  = "params.history"
+	KeyParamsDigest   = "params.recall_digest"
+	KeyParamsPrior    = "params.prior"
+	KeyParamsTaxonomy = "params.taxonomy"
+	KeyParamsCode     = "params.code"
 )
+
+const maxCodeTokenBudget = 32000
+
+// InjectHookOpts configures the inject hook registry.
+type InjectHookOpts struct {
+	Store      store.Store
+	CaseData   *store.Case
+	Envelope   *rcatype.Envelope
+	Catalog    *knowledge.KnowledgeSourceCatalog
+	CaseDir    string
+	CodeReader CodeReader
+}
 
 // InjectHooks creates a HookRegistry with the inject.* before-hooks
 // that populate walker.Context with per-concern template data.
 // Each hook uses WalkerStateFromContext to write into walker.Context.
 func InjectHooks(st store.Store, caseData *store.Case, env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, caseDir string) framework.HookRegistry {
+	return InjectHooksWithOpts(InjectHookOpts{
+		Store:    st,
+		CaseData: caseData,
+		Envelope: env,
+		Catalog:  catalog,
+		CaseDir:  caseDir,
+	})
+}
+
+// InjectHooksWithOpts creates inject hooks using the full options struct,
+// including optional CodeReader for code injection hooks.
+func InjectHooksWithOpts(opts InjectHookOpts) framework.HookRegistry {
 	reg := framework.HookRegistry{}
 
-	reg.Register(newInjectEnvelopeHook(env))
-	reg.Register(newInjectFailureHook(caseData))
-	reg.Register(newInjectWorkspaceHook(env, catalog))
-	reg.Register(newInjectHistoryHook(st, caseData))
-	reg.Register(newInjectRecallDigestHook(st))
-	reg.Register(newInjectSourcesHook(catalog))
-	reg.Register(newInjectPriorHook(caseDir))
+	reg.Register(newInjectEnvelopeHook(opts.Envelope))
+	reg.Register(newInjectFailureHook(opts.CaseData))
+	reg.Register(newInjectSourcesHook(opts.Envelope, opts.Catalog))
+	reg.Register(newInjectHistoryHook(opts.Store, opts.CaseData))
+	reg.Register(newInjectRecallDigestHook(opts.Store))
+	reg.Register(newInjectPriorHook(opts.CaseDir))
 	reg.Register(newInjectTaxonomyHook())
+
+	if opts.CodeReader != nil && opts.Catalog != nil {
+		reg.Register(newInjectCodeTreeHook(opts.CodeReader, opts.Catalog))
+		reg.Register(newInjectCodeSearchHook(opts.CodeReader, opts.Catalog))
+		reg.Register(newInjectCodeReadHook(opts.CodeReader))
+	}
 
 	return reg
 }
@@ -61,17 +90,6 @@ func newInjectFailureHook(caseData *store.Case) framework.Hook {
 	})
 }
 
-func newInjectWorkspaceHook(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
-	return framework.NewHookFunc("inject.workspace", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectWorkspaceData(env, catalog, ws.Context)
-		return nil
-	})
-}
-
 func newInjectHistoryHook(st store.Store, caseData *store.Case) framework.Hook {
 	return framework.NewHookFunc("inject.history", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
@@ -94,13 +112,13 @@ func newInjectRecallDigestHook(st store.Store) framework.Hook {
 	})
 }
 
-func newInjectSourcesHook(catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+func newInjectSourcesHook(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
 	return framework.NewHookFunc("inject.sources", func(ctx context.Context, _ string, _ framework.Artifact) error {
 		ws := framework.WalkerStateFromContext(ctx)
 		if ws == nil {
 			return nil
 		}
-		injectSourcesData(catalog, ws.Context)
+		injectSourcesData(env, catalog, ws.Context)
 		return nil
 	})
 }
@@ -143,8 +161,8 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 		params.Failure = v
 	}
 
-	if v, ok := walkerCtx[KeyParamsWorkspace].(*WorkspaceParams); ok {
-		params.Workspace = v
+	if v, ok := walkerCtx[KeyParamsSources].(*SourceParams); ok {
+		params.Sources = v
 	}
 
 	if v, ok := walkerCtx[KeyParamsHistory].(*HistoryParams); ok {
@@ -155,16 +173,16 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 		params.RecallDigest = v
 	}
 
-	if v, ok := walkerCtx[KeyParamsSources].([]AlwaysReadSource); ok {
-		params.AlwaysReadSources = v
-	}
-
 	if v, ok := walkerCtx[KeyParamsPrior].(*PriorParams); ok {
 		params.Prior = v
 	}
 
 	if v, ok := walkerCtx[KeyParamsTaxonomy].(*TaxonomyParams); ok {
 		params.Taxonomy = v
+	}
+
+	if v, ok := walkerCtx[KeyParamsCode].(*CodeParams); ok {
+		params.Code = v
 	}
 
 	if cd, ok := walkerCtx[KeyCaseData].(*store.Case); ok {
@@ -215,10 +233,6 @@ func injectFailureData(caseData *store.Case, walkerCtx map[string]any) {
 	}
 }
 
-func injectWorkspaceData(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
-	walkerCtx[KeyParamsWorkspace] = buildWorkspaceParams(env, catalog)
-}
-
 func injectHistoryData(st store.Store, caseData *store.Case, walkerCtx map[string]any) {
 	if st == nil || caseData == nil {
 		return
@@ -237,11 +251,8 @@ func injectRecallDigestData(st store.Store, walkerCtx map[string]any) {
 	walkerCtx[KeyParamsDigest] = buildRecallDigest(st)
 }
 
-func injectSourcesData(catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
-	if catalog == nil {
-		return
-	}
-	walkerCtx[KeyParamsSources] = loadAlwaysReadSources(catalog)
+func injectSourcesData(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
+	walkerCtx[KeyParamsSources] = buildSourceParams(env, catalog)
 }
 
 func injectPriorData(caseDir string, walkerCtx map[string]any) {
@@ -255,3 +266,165 @@ func injectTaxonomyData(walkerCtx map[string]any) {
 	walkerCtx[KeyParamsTaxonomy] = DefaultTaxonomy()
 }
 
+// Code injection hooks
+
+func newInjectCodeTreeHook(cr CodeReader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+	return framework.NewHookFunc("inject.code.tree", func(ctx context.Context, _ string, _ framework.Artifact) error {
+		ws := framework.WalkerStateFromContext(ctx)
+		if ws == nil {
+			return nil
+		}
+		code := ensureCodeParams(ws.Context)
+		for _, src := range catalog.Sources {
+			if src.Kind != knowledge.SourceKindRepo {
+				continue
+			}
+			localPath, err := cr.EnsureCloned(ctx, src.Org, src.Name, src.Branch)
+			if err != nil || localPath == "" {
+				continue
+			}
+			entries, err := cr.ListTree(ctx, localPath, 3)
+			if err != nil {
+				continue
+			}
+			code.Trees = append(code.Trees, CodeTreeParams{
+				Repo:    src.Org + "/" + src.Name,
+				Branch:  src.Branch,
+				Entries: entries,
+			})
+		}
+		return nil
+	})
+}
+
+func newInjectCodeSearchHook(cr CodeReader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
+	return framework.NewHookFunc("inject.code.search", func(ctx context.Context, _ string, _ framework.Artifact) error {
+		ws := framework.WalkerStateFromContext(ctx)
+		if ws == nil {
+			return nil
+		}
+		code := ensureCodeParams(ws.Context)
+
+		keywords := extractSearchKeywords(ws.Context)
+		if len(keywords) == 0 {
+			return nil
+		}
+
+		for _, src := range catalog.Sources {
+			if src.Kind != knowledge.SourceKindRepo {
+				continue
+			}
+			localPath, err := cr.EnsureCloned(ctx, src.Org, src.Name, src.Branch)
+			if err != nil || localPath == "" {
+				continue
+			}
+			results, err := cr.SearchCode(ctx, localPath, keywords)
+			if err != nil {
+				continue
+			}
+			repoName := src.Org + "/" + src.Name
+			for _, r := range results {
+				code.SearchResults = append(code.SearchResults, CodeSearchResult{
+					Repo:    repoName,
+					File:    r.File,
+					Line:    r.Line,
+					Snippet: r.Snippet,
+					Score:   r.Score,
+				})
+			}
+		}
+		return nil
+	})
+}
+
+func newInjectCodeReadHook(cr CodeReader) framework.Hook {
+	return framework.NewHookFunc("inject.code.read", func(ctx context.Context, _ string, _ framework.Artifact) error {
+		ws := framework.WalkerStateFromContext(ctx)
+		if ws == nil {
+			return nil
+		}
+		code := ensureCodeParams(ws.Context)
+
+		seen := make(map[string]bool)
+		budgetRemaining := maxCodeTokenBudget
+		for _, sr := range code.SearchResults {
+			fileKey := sr.Repo + ":" + sr.File
+			if seen[fileKey] {
+				continue
+			}
+			seen[fileKey] = true
+
+			parts := splitRepoKey(sr.Repo)
+			if parts == nil {
+				continue
+			}
+			localPath, err := cr.EnsureCloned(ctx, parts[0], parts[1], "")
+			if err != nil || localPath == "" {
+				continue
+			}
+			data, err := cr.ReadFile(ctx, localPath, sr.File)
+			if err != nil {
+				continue
+			}
+
+			content := string(data)
+			truncated := false
+			if len(content) > budgetRemaining {
+				content = content[:budgetRemaining]
+				truncated = true
+			}
+			budgetRemaining -= len(content)
+
+			code.Files = append(code.Files, CodeFileParams{
+				Repo:      sr.Repo,
+				Path:      sr.File,
+				Content:   content,
+				Truncated: truncated,
+			})
+
+			if budgetRemaining <= 0 {
+				code.Truncated = true
+				break
+			}
+		}
+		return nil
+	})
+}
+
+func ensureCodeParams(walkerCtx map[string]any) *CodeParams {
+	if v, ok := walkerCtx[KeyParamsCode].(*CodeParams); ok {
+		return v
+	}
+	code := &CodeParams{}
+	walkerCtx[KeyParamsCode] = code
+	return code
+}
+
+func extractSearchKeywords(walkerCtx map[string]any) []string {
+	var keywords []string
+	if fp, ok := walkerCtx[KeyParamsFailure].(*FailureParams); ok && fp != nil {
+		if fp.TestName != "" {
+			keywords = append(keywords, fp.TestName)
+		}
+	}
+	if prior, ok := walkerCtx[KeyParamsPrior].(*PriorParams); ok && prior != nil {
+		if prior.TriageResult != nil {
+			keywords = append(keywords, prior.TriageResult.CandidateRepos...)
+		}
+		if prior.ResolveResult != nil {
+			for _, sel := range prior.ResolveResult.SelectedRepos {
+				keywords = append(keywords, sel.Name)
+			}
+		}
+	}
+	return keywords
+}
+
+func splitRepoKey(key string) []string {
+	for i, c := range key {
+		if c == '/' {
+			return []string{key[:i], key[i+1:]}
+		}
+	}
+	return nil
+}

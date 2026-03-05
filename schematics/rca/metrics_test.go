@@ -486,7 +486,7 @@ func TestScorerM10_RepoSelectionRecall(t *testing.T) {
 
 func TestScorerM11_RedHerringRejection(t *testing.T) {
 	scenario := buildFixtureScenario()
-	scenario.Workspace = WorkspaceConfig{
+	scenario.SourcePack = SourcePackConfig{
 		Repos: []RepoConfig{
 			{Name: "linuxptp-daemon"},
 			{Name: "red-herring", IsRedHerring: true},

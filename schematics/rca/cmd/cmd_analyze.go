@@ -18,17 +18,17 @@ import (
 )
 
 var analyzeFlags struct {
-	launch        string
-	workspacePath string
-	artifactPath  string
-	dbPath        string
-	backendName   string
-	dispatchMode  string
-	promptDir     string
-	rpBase        string
-	rpKeyPath     string
-	rpProject     string
-	report        bool
+	launch       string
+	sources      string
+	artifactPath string
+	dbPath       string
+	backendName  string
+	dispatchMode string
+	promptDir    string
+	rpBase       string
+	rpKeyPath    string
+	rpProject    string
+	report       bool
 }
 
 var analyzeCmd = &cobra.Command{
@@ -55,7 +55,7 @@ does not exist, the tool will show you how to get and save the token.`,
 func init() {
 	f := analyzeCmd.Flags()
 	f.StringVar(&analyzeFlags.launch, "launch", "", "Path to envelope JSON or launch ID")
-	f.StringVar(&analyzeFlags.workspacePath, "workspace", "", "Path to context workspace file (YAML/JSON)")
+	f.StringVar(&analyzeFlags.sources, "sources", "", "Comma-separated source pack names (e.g. ptp,nrop)")
 	f.StringVarP(&analyzeFlags.artifactPath, "output", "o", "", "Output artifact path (default: .asterisk/output/rca-<launch>.json)")
 	f.StringVar(&analyzeFlags.dbPath, "db", store.DefaultDBPath, "Store DB path")
 	f.StringVar(&analyzeFlags.backendName, "backend", "basic", "Backend: basic (heuristic) or llm (AI via LLM agent)")
@@ -133,19 +133,19 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 	defer st.Close()
 
-	var catalog *knowledge.KnowledgeSourceCatalog
+	var sourceNames []string
+	if analyzeFlags.sources != "" {
+		sourceNames = strings.Split(analyzeFlags.sources, ",")
+	}
+	_, catalog, err := loadSourcePacks(sourceNames, nil)
+	if err != nil {
+		return err
+	}
 	var repoNames []string
-	if analyzeFlags.workspacePath != "" {
-		cat, err := knowledge.LoadFromPath(analyzeFlags.workspacePath)
-		if err != nil {
-			return fmt.Errorf("load catalog: %w", err)
-		}
-		catalog = cat
-		for _, s := range catalog.Sources {
+	for _, s := range catalog.Sources {
+		if s.Kind == knowledge.SourceKindRepo {
 			repoNames = append(repoNames, s.Name)
 		}
-	} else {
-		repoNames = defaultWorkspaceRepos()
 	}
 
 	suiteID, cases := createAnalysisScaffolding(st, env)

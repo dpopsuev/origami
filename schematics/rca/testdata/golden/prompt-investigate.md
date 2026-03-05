@@ -73,6 +73,8 @@ ts2phc[123]: DPLL not locked
 
 
 
+
+
 ## Defect type taxonomy
 
 Defect types:

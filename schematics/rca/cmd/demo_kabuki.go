@@ -276,7 +276,7 @@ for {
 sources := catalog.AlwaysReadSources()
 for _, s := range sources {
     content, _ := os.ReadFile(s.LocalPath)
-    params.AlwaysReadSources = append(params.AlwaysReadSources, AlwaysReadSource{
+    params.Sources.AlwaysRead = append(params.Sources.AlwaysRead, AlwaysReadSource{
         Name: s.Name, Purpose: s.Purpose, Content: string(content),
     })
 }`,

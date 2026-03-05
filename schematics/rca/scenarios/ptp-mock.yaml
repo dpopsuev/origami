@@ -481,7 +481,7 @@ cases:
       expect_skip: false
       expect_cascade: true
       expected_loops: 0
-workspace:
+source_pack:
     repos:
         - name: linuxptp-daemon-operator
           path: ""

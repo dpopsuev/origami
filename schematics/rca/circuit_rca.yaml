@@ -13,36 +13,36 @@ nodes:
   - name: recall
     transformer: rca.recall
     prompt: prompts/recall/judge-similarity.md
-    before: [inject.envelope, inject.failure, inject.workspace, inject.sources, inject.prior, inject.taxonomy, inject.history, inject.recall-digest]
+    before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy, inject.history, inject.recall-digest]
     after: [store.recall]
   - name: triage
     transformer: rca.triage
     prompt: prompts/triage/classify-symptoms.md
-    before: [inject.envelope, inject.failure, inject.workspace, inject.sources, inject.prior, inject.taxonomy, inject.history]
+    before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy, inject.history]
     after: [store.triage]
   - name: resolve
     transformer: rca.resolve
     prompt: prompts/resolve/select-repo.md
-    before: [inject.envelope, inject.failure, inject.workspace, inject.sources, inject.prior, inject.taxonomy]
+    before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
   - name: investigate
     transformer: rca.investigate
     prompt: prompts/investigate/deep-rca.md
-    before: [inject.envelope, inject.failure, inject.workspace, inject.sources, inject.prior, inject.taxonomy]
+    before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
     after: [store.investigate]
   - name: correlate
     transformer: rca.correlate
     prompt: prompts/correlate/match-cases.md
-    before: [inject.envelope, inject.failure, inject.workspace, inject.sources, inject.prior, inject.taxonomy]
+    before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
     after: [store.correlate]
   - name: review
     transformer: rca.review
     prompt: prompts/review/present-findings.md
-    before: [inject.envelope, inject.failure, inject.workspace, inject.sources, inject.prior, inject.taxonomy]
+    before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
     after: [store.review]
   - name: report
     transformer: rca.report
     prompt: prompts/report/regression-table.md
-    before: [inject.envelope, inject.failure, inject.workspace, inject.sources, inject.prior, inject.taxonomy]
+    before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
 
 edges:
   # F0 Recall
@@ -90,7 +90,7 @@ edges:
     when: "output.skip_investigation != true && len(output.candidate_repos) == 1"
   # H7b "triage-hypothesis-repo" is a runner-level interception
   # (calibrate/parallel.go) that deterministically resolves repos from
-  # workspace Purpose metadata when the triage hypothesis matches.
+  # source pack Purpose metadata when the triage hypothesis matches.
   - id: H6
     name: triage-investigate
     from: triage

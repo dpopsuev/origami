@@ -22,7 +22,7 @@ type Scenario struct {
 	Symptoms         []GroundTruthSymptom `json:"symptoms" yaml:"symptoms"`
 	Cases            []GroundTruthCase    `json:"cases" yaml:"cases"`
 	Candidates       []GroundTruthCase    `json:"candidates,omitempty" yaml:"candidates,omitempty"` // unverified cases tracked for dataset growth, never scored
-	Workspace        WorkspaceConfig      `json:"workspace" yaml:"workspace"`
+	SourcePack       SourcePackConfig     `json:"source_pack" yaml:"source_pack"`
 	DryCappedMetrics []string             `json:"dry_capped_metrics,omitempty" yaml:"dry_capped_metrics,omitempty"` // metrics structurally unsolvable without real repo content
 }
 
@@ -143,13 +143,13 @@ type ExpectedReview struct {
 	Decision string `json:"decision" yaml:"decision"` // approve
 }
 
-// WorkspaceConfig describes the context workspace for F2/F3.
-type WorkspaceConfig struct {
+// SourcePackConfig describes the source repositories and docs for F2/F3.
+type SourcePackConfig struct {
 	Repos   []RepoConfig       `json:"repos" yaml:"repos"`
 	Sources []knowledge.Source  `json:"sources,omitempty" yaml:"sources,omitempty"`
 }
 
-// RepoConfig describes one repo in the workspace.
+// RepoConfig describes one repo in the source pack.
 type RepoConfig struct {
 	Name    string `json:"name" yaml:"name"`
 	Path    string `json:"path" yaml:"path"`

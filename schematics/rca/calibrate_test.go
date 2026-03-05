@@ -342,13 +342,12 @@ func TestScenarioCoverage(t *testing.T) {
 			if len(s.Cases) != tc.cases {
 				t.Errorf("expected %d cases, got %d", tc.cases, len(s.Cases))
 			}
-			if len(s.Workspace.Repos) != tc.repos {
-				t.Errorf("expected %d workspace repos, got %d", tc.repos, len(s.Workspace.Repos))
+			if len(s.SourcePack.Repos) != tc.repos {
+				t.Errorf("expected %d source pack repos, got %d", tc.repos, len(s.SourcePack.Repos))
 			}
 
-			// Check red herring exists
 			hasRedHerring := false
-			for _, r := range s.Workspace.Repos {
+			for _, r := range s.SourcePack.Repos {
 				if r.IsRedHerring {
 					hasRedHerring = true
 				}

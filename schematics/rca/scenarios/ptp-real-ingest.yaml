@@ -2230,7 +2230,7 @@ candidates:
       expect_cascade: false
       expected_loops: 0
       source_launch_id: 31356
-workspace:
+source_pack:
     repos:
         - name: cnf-gotests
           path: /home/dpopsuev/Workspace/cnf-gotests

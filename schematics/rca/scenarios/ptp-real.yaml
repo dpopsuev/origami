@@ -357,7 +357,7 @@ cases:
       expect_skip: false
       expect_cascade: false
       expected_loops: 0
-workspace:
+source_pack:
     repos:
         - name: cnf-gotests
           path: ""
