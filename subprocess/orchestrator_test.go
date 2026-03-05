@@ -63,11 +63,10 @@ func TestOrchestrator_Swap(t *testing.T) {
 		t.Errorf("before swap: got %q, want %q", got, "echo: v1")
 	}
 
-	// Swap to a different server (same binary but different env → "slow" server)
-	err = orch.Swap(ctx, "svc", exe, /* no extra args */)
-	// Need to set env on the new server — Swap preserves Env from old.
-	// Since old.Env was "default", the swap will use the same env.
-	// Let's just swap to the same server and verify it's a new process.
+	err = orch.Swap(ctx, "svc", &subprocess.Server{
+		BinaryPath: exe,
+		Env:        []string{runAsServer + "=default"},
+	})
 	if err != nil {
 		t.Fatalf("Swap: %v", err)
 	}

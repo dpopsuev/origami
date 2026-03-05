@@ -20,6 +20,7 @@ type Server struct {
 	BinaryPath string
 	Args       []string
 	Env        []string // additional env vars (appended to os.Environ)
+	Connector  *MCPConnector
 
 	mu      sync.Mutex
 	session *sdkmcp.ClientSession
@@ -45,12 +46,12 @@ func (s *Server) Start(ctx context.Context) error {
 		TerminateDuration: 5 * time.Second,
 	}
 
-	client := sdkmcp.NewClient(
-		&sdkmcp.Implementation{Name: "origami-subprocess-client", Version: "v0.1.0"},
-		nil,
-	)
+	conn := s.Connector
+	if conn == nil {
+		conn = DefaultConnector()
+	}
 
-	session, err := client.Connect(ctx, transport, nil)
+	session, err := conn.Connect(ctx, transport)
 	if err != nil {
 		return fmt.Errorf("connecting to subprocess: %w", err)
 	}

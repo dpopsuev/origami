@@ -3,57 +3,59 @@ package subprocess
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Orchestrator manages multiple named schematic subprocesses with
-// lifecycle operations including hot-swap.
+// Orchestrator manages multiple named schematic backends with
+// lifecycle operations including hot-swap. It accepts any
+// SchematicBackend implementation (Server, ContainerBackend, etc.).
 type Orchestrator struct {
 	mu         sync.RWMutex
-	schematics map[string]*Server
+	schematics map[string]SchematicBackend
 }
 
 // NewOrchestrator creates an empty Orchestrator.
 func NewOrchestrator() *Orchestrator {
 	return &Orchestrator{
-		schematics: make(map[string]*Server),
+		schematics: make(map[string]SchematicBackend),
 	}
 }
 
-// Register adds a named schematic server. It does not start the server.
-func (o *Orchestrator) Register(name string, srv *Server) {
+// Register adds a named schematic backend. It does not start it.
+func (o *Orchestrator) Register(name string, backend SchematicBackend) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	o.schematics[name] = srv
+	o.schematics[name] = backend
 }
 
 // Start launches a named schematic.
 func (o *Orchestrator) Start(ctx context.Context, name string) error {
 	o.mu.RLock()
-	srv, ok := o.schematics[name]
+	backend, ok := o.schematics[name]
 	o.mu.RUnlock()
 	if !ok {
 		return fmt.Errorf("unknown schematic %q", name)
 	}
-	return srv.Start(ctx)
+	return backend.Start(ctx)
 }
 
 // Stop shuts down a named schematic.
 func (o *Orchestrator) Stop(ctx context.Context, name string) error {
 	o.mu.RLock()
-	srv, ok := o.schematics[name]
+	backend, ok := o.schematics[name]
 	o.mu.RUnlock()
 	if !ok {
 		return fmt.Errorf("unknown schematic %q", name)
 	}
-	return srv.Stop(ctx)
+	return backend.Stop(ctx)
 }
 
-// Swap replaces a running schematic with a new binary. The old process is
-// gracefully stopped (drain in-flight requests) before the new one starts.
-func (o *Orchestrator) Swap(ctx context.Context, name string, newBinary string, newArgs ...string) error {
+// Swap replaces a running schematic with a new backend. The old backend
+// is gracefully stopped before the new one starts.
+func (o *Orchestrator) Swap(ctx context.Context, name string, newBackend SchematicBackend) error {
 	o.mu.Lock()
 	old, ok := o.schematics[name]
 	if !ok {
@@ -61,45 +63,36 @@ func (o *Orchestrator) Swap(ctx context.Context, name string, newBinary string, 
 		return fmt.Errorf("unknown schematic %q", name)
 	}
 
-	// Create the replacement server
-	replacement := &Server{
-		BinaryPath: newBinary,
-		Args:       newArgs,
-		Env:        old.Env,
-	}
-	o.schematics[name] = replacement
+	o.schematics[name] = newBackend
 	o.mu.Unlock()
 
-	// Stop old (graceful drain via CommandTransport's stdin close → SIGTERM)
 	if err := old.Stop(ctx); err != nil {
-		// Even if stop fails, proceed with starting the new one
-		_ = err
+		log.Printf("subprocess: warning: stop %q for swap: %v (proceeding)", name, err)
 	}
 
-	// Start new
-	return replacement.Start(ctx)
+	return newBackend.Start(ctx)
 }
 
 // CallTool calls a tool on a named schematic.
 func (o *Orchestrator) CallTool(ctx context.Context, name string, tool string, args map[string]any) (*sdkmcp.CallToolResult, error) {
 	o.mu.RLock()
-	srv, ok := o.schematics[name]
+	backend, ok := o.schematics[name]
 	o.mu.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("unknown schematic %q", name)
 	}
-	return srv.CallTool(ctx, tool, args)
+	return backend.CallTool(ctx, tool, args)
 }
 
 // Healthy checks if a named schematic is healthy.
 func (o *Orchestrator) Healthy(ctx context.Context, name string) bool {
 	o.mu.RLock()
-	srv, ok := o.schematics[name]
+	backend, ok := o.schematics[name]
 	o.mu.RUnlock()
 	if !ok {
 		return false
 	}
-	return srv.Healthy(ctx)
+	return backend.Healthy(ctx)
 }
 
 // StopAll stops all registered schematics.
