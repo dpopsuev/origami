@@ -5,6 +5,7 @@
 
 ## Files
 - `graph-drawing.md` — Graph Drawing — 4-level testing methodology for graph rendering: structural layout/routing assertions, abstract renderer, golden snapshots.
+- `fold-deploy-modes.md` — Fold Deploy Modes — teach `origami fold` to generate correct code for all four deployment modes (in-process, subprocess, container, remote).
 - `remote-backend.md` — Remote Backend — SchematicBackend that connects to an already-running MCP endpoint without owning process lifecycle.
 - `schema-driven-entity-store.md` — Schema-Driven Entity Store — generic CRUD in `connectors/sqlite` derived from `schema.yaml`, eliminating hand-written SQL boilerplate in schematics.
 - `sockets-and-plugs-2.md` — Sockets & Plugs 2: Electric Boogaloo — normalize Envelope, store schema, and RCA output to be source-agnostic (no RP-specific data shapes).

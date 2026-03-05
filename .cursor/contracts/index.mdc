@@ -15,6 +15,7 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
+| `fold-deploy-modes.md` | Fold Deploy Modes — teach `origami fold` codegen to generate correct code for all four deployment modes (in-process, subprocess, container, remote). | gate |
 | `graph-drawing.md` | Graph Drawing — 4-level testing methodology for graph rendering: structural layout/routing assertions, abstract renderer, golden snapshots. | quick-win |
 | `refactor-decompose.md` | Refactor and Decompose — three-level taxonomy (Primitives / Connectors / Schematics), directory renames, SQLite consolidation, RCA RP decontamination. | gate |
 | `remote-backend.md` | Remote Backend — SchematicBackend that connects to an already-running MCP endpoint without owning process lifecycle. K8s foundation + faster dev iteration. | quick-win |

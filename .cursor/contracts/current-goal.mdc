@@ -65,6 +65,7 @@ Asterisk pivot (post-Origami finish line)
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
 | `schema-driven-entity-store` | gate | 3 | Generic schema-driven CRUD in `connectors/sqlite`, eliminating hand-written SQL boilerplate. Last functional framework/domain coupling. |
+| `fold-deploy-modes` | gate | 3 | Teach `origami fold` codegen to generate correct code for all four deployment modes (in-process, subprocess, container, remote). |
 | `decoupled-schematics` | gate | 3 | Multi-schematic composition, unified knowledge layer, subprocess/container deployment via MCP. |
 | `remote-backend` | quick-win | 3 | SchematicBackend that connects to an already-running MCP endpoint without owning process lifecycle. |
 | `sockets-and-plugs` | next-milestone | 3 | Decouple schematics from connectors via typed sockets, plug declarations, manifest bindings. |
