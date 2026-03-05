@@ -7,8 +7,8 @@ import (
 )
 
 // SchematicBackend is the lifecycle and tool-call interface that all
-// schematic backends (subprocess, container) implement. Orchestrator
-// accepts this interface for polymorphic dispatch.
+// schematic backends (subprocess, container, remote) implement.
+// Orchestrator accepts this interface for polymorphic dispatch.
 type SchematicBackend interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
@@ -27,6 +27,8 @@ type ToolCaller interface {
 var (
 	_ SchematicBackend = (*Server)(nil)
 	_ SchematicBackend = (*ContainerBackend)(nil)
+	_ SchematicBackend = (*RemoteBackend)(nil)
 	_ ToolCaller       = (*Server)(nil)
 	_ ToolCaller       = (*ContainerBackend)(nil)
+	_ ToolCaller       = (*RemoteBackend)(nil)
 )

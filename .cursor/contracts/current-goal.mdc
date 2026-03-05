@@ -66,6 +66,7 @@ Asterisk pivot (post-Origami finish line)
 |----------|------|-------|-------|
 | `schema-driven-entity-store` | gate | 3 | Generic schema-driven CRUD in `connectors/sqlite`, eliminating hand-written SQL boilerplate. Last functional framework/domain coupling. |
 | `decoupled-schematics` | gate | 3 | Multi-schematic composition, unified knowledge layer, subprocess/container deployment via MCP. |
+| `remote-backend` | quick-win | 3 | SchematicBackend that connects to an already-running MCP endpoint without owning process lifecycle. |
 | `sockets-and-plugs` | next-milestone | 3 | Decouple schematics from connectors via typed sockets, plug declarations, manifest bindings. |
 | `sockets-and-plugs-2` | next-milestone | 3 | Normalize Envelope, store schema, and RCA output to be source-agnostic — no RP-specific data shapes. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
