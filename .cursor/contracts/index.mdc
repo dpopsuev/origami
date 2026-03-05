@@ -7,7 +7,9 @@
 
 ## Active
 
-(No active contracts)
+| Contract | Goal | Tier |
+|----------|------|------|
+| `active/decoupled-schematics.md` | Schematics as independent processes/containers via MCP, unified knowledge layer replacing Git-only CodeReader. | gate |
 
 ## Draft
 
