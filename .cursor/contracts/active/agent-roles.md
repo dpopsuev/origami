@@ -1,6 +1,6 @@
 # Contract — agent-roles
 
-**Status:** draft  
+**Status:** active  
 **Goal:** Role (worker, manager, enforcer, broker) is a first-class type orthogonal to Persona. Artifact scope filtering restricts what each Walker can see based on its role. Roles are the semantic layer that gives the agentic hierarchy meaning.  
 **Serves:** Containerized Runtime (vision)
 
@@ -124,19 +124,19 @@ Green-yellow-blue cycle.
 
 ### Phase 1 — Role type
 
-- [ ] P1.1: Define `Role` type (string) in `identity.go` with constants: `RoleWorker`, `RoleManager`, `RoleEnforcer`, `RoleBroker`. Empty string means "no role."
-- [ ] P1.2: Add `Role Role` field to `AgentIdentity` struct with JSON/YAML tags.
-- [ ] P1.3: Add `IsRole(r Role) bool` and `HasRole() bool` methods on `AgentIdentity`.
-- [ ] P1.4: Unit tests: role constants, methods on AgentIdentity, zero-value backward compatibility.
-- [ ] P1.5: Validate — `go test -race ./...` green. No existing tests break.
+- [x] P1.1: Define `Role` type (string) in `identity.go` with constants: `RoleWorker`, `RoleManager`, `RoleEnforcer`, `RoleBroker`. Empty string means "no role."
+- [x] P1.2: Add `Role Role` field to `AgentIdentity` struct with JSON/YAML tags.
+- [x] P1.3: Add `IsRole(r Role) bool` and `HasRole() bool` methods on `AgentIdentity`.
+- [x] P1.4: Unit tests: role constants, methods on AgentIdentity, zero-value backward compatibility.
+- [x] P1.5: Validate — `go test -race ./...` green. No existing tests break.
 
 ### Phase 2 — DSL extension
 
-- [ ] P2.1: Add `Role string` field to `WalkerDef` in `dsl.go` with YAML tag `yaml:"role,omitempty"`.
-- [ ] P2.2: Wire `WalkerDef.Role` into walker construction in `BuildGraph()` — set `AgentIdentity.Role` from the YAML field.
-- [ ] P2.3: Lint rule: if `role:` is set, it must be one of `worker`, `manager`, `enforcer`, `broker`. Warning severity.
-- [ ] P2.4: Unit test: parse YAML with `role: worker` on a walker, verify `AgentIdentity.Role == RoleWorker`.
-- [ ] P2.5: Validate — `go test -race ./...` green.
+- [x] P2.1: Add `Role string` field to `WalkerDef` in `dsl.go` with YAML tag `yaml:"role,omitempty"`.
+- [x] P2.2: Wire `WalkerDef.Role` into walker construction in `BuildWalkersFromDef()` — set `AgentIdentity.Role` from the YAML field.
+- [x] P2.3: Lint rule (S16/invalid-walker-role): if `role:` is set, it must be one of `worker`, `manager`, `enforcer`, `broker`. Error severity.
+- [x] P2.4: Unit test: parse YAML with `role: worker` on a walker, verify `AgentIdentity.Role == RoleWorker`. Plus backward-compat test.
+- [x] P2.5: Validate — `go test -race ./...` green.
 
 ### Phase 3 — ArtifactScope type
 
@@ -198,5 +198,7 @@ Green-yellow-blue cycle.
 | A01 Broken Access Control | Artifact scope filtering introduces an information-hiding boundary. Incorrect filtering could leak artifacts to unauthorized roles. | Scope filtering is additive restriction only — default is full visibility. Unit tests verify that restricted artifacts are invisible to non-audience roles. Integration tests with mixed-role WalkTeam. |
 
 ## Notes
+
+2026-03-07 — P1-P2 implemented. Role type (worker/manager/enforcer/broker) in identity.go with ValidRoles map, IsRole/HasRole methods. WalkerDef.Role wired into BuildWalkersFromDef with validation. S16/invalid-walker-role lint rule. 7 new tests (role constants, methods, backward compat, walker wiring). P3-P6 deferred.
 
 2026-03-05 — Contract drafted from agentic hierarchy brainstorming session. Role is the semantic layer that makes the hierarchy meaningful — without it, all agents are equivalent. The key design decision is orthogonality: Role x Persona gives 4x8 = 32 combinations. A Herald Worker and a Herald Manager have the same reasoning style but different organizational responsibilities. Depends on `delegate-node` for full hierarchy expression (Managers delegate to Worker circuits), but Role alone is useful even without delegation (scope filtering on flat circuits).

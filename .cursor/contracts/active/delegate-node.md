@@ -1,6 +1,6 @@
 # Contract — delegate-node
 
-**Status:** draft  
+**Status:** active  
 **Goal:** A circuit node can produce a `CircuitDef` as its artifact; the framework walks the generated circuit as a sub-walk and returns the aggregate result as the outer node's artifact. Enables meta-circuits — circuits generating circuits.  
 **Serves:** Containerized Runtime (vision)
 
@@ -117,36 +117,36 @@ Green-yellow-blue cycle.
 
 ### Phase 1 — Interface and types
 
-- [ ] P1.1: Define `DelegateNode` interface in `delegate.go` (framework root): `GenerateCircuit(ctx context.Context, nc NodeContext) (*CircuitDef, error)`. Extends `Node` — implementations must also satisfy `Node`.
-- [ ] P1.2: Define `DelegateArtifact` type: wraps the sub-walk's merged artifacts, the generated `CircuitDef` (for observability), and aggregate metrics (node count, elapsed time). Implements `Artifact`.
-- [ ] P1.3: Unit tests for `DelegateArtifact` construction and `Artifact` interface compliance.
-- [ ] P1.4: Validate — `go test -race ./...` green.
+- [x] P1.1: Define `DelegateNode` interface in `delegate.go` (framework root): `GenerateCircuit(ctx context.Context, nc NodeContext) (*CircuitDef, error)`. Extends `Node` — implementations must also satisfy `Node`.
+- [x] P1.2: Define `DelegateArtifact` type: wraps the sub-walk's merged artifacts, the generated `CircuitDef` (for observability), and aggregate metrics (node count, elapsed time). Implements `Artifact`.
+- [x] P1.3: Unit tests for `DelegateArtifact` construction and `Artifact` interface compliance.
+- [x] P1.4: Validate — `go test -race ./...` green.
 
 ### Phase 2 — Sub-walk execution
 
-- [ ] P2.1: In `graph.go`, detect `DelegateNode` via type assertion in the walk loop. When detected: call `GenerateCircuit()`, call `BuildGraph()` on the result, call `Walk()` on the sub-graph with a cloned walker, collect sub-walk artifacts.
-- [ ] P2.2: Sub-walk observer forwarding — wrap the outer walk's `WalkObserver` to prefix sub-walk events with the delegate node name (e.g., `"delegate:plan_work:inner_node_1"`).
-- [ ] P2.3: Context propagation — sub-walk inherits the outer `context.Context` (timeout, cancellation). Sub-walk timeout is bounded by the outer walk's remaining budget.
-- [ ] P2.4: Artifact aggregation — sub-walk's `WalkerState.Outputs` are merged into the outer `WalkerState.Outputs` under a namespace key (`"delegate:<node_name>"`). The `DelegateArtifact` wrapping the merged result is set as the outer node's artifact.
-- [ ] P2.5: Integration test: outer circuit with 3 nodes (A → Delegate → C). Delegate generates a 2-node inner circuit. Verify: inner circuit walks, artifacts propagate to C, outer walk completes.
-- [ ] P2.6: Integration test: cancellation propagation — cancel outer context mid-sub-walk, verify sub-walk aborts.
-- [ ] P2.7: Validate — `go test -race ./...` green.
+- [x] P2.1: In `graph.go`, detect `DelegateNode` via type assertion in the walk loop. When detected: call `GenerateCircuit()`, call `BuildGraph()` on the result, call `Walk()` on the sub-graph with a cloned walker, collect sub-walk artifacts.
+- [x] P2.2: Sub-walk observer forwarding — wrap the outer walk's `WalkObserver` to prefix sub-walk events with the delegate node name (e.g., `"delegate:plan_work:inner_node_1"`).
+- [x] P2.3: Context propagation — sub-walk inherits the outer `context.Context` (timeout, cancellation). Sub-walk timeout is bounded by the outer walk's remaining budget.
+- [x] P2.4: Artifact aggregation — sub-walk's `WalkerState.Outputs` are merged into the outer `WalkerState.Outputs` under a namespace key (`"delegate:<node_name>"`). The `DelegateArtifact` wrapping the merged result is set as the outer node's artifact.
+- [x] P2.5: Integration test: outer circuit with 3 nodes (A → Delegate → C). Delegate generates a 2-node inner circuit. Verify: inner circuit walks, artifacts propagate to C, outer walk completes.
+- [x] P2.6: Integration test: cancellation propagation — cancel outer context mid-sub-walk, verify sub-walk aborts.
+- [x] P2.7: Validate — `go test -race ./...` green.
 
 ### Phase 3 — DSL extension
 
-- [ ] P3.1: Add `Delegate bool` and `Generator string` fields to `NodeDef` in `dsl.go`.
-- [ ] P3.2: In `BuildGraph()`, when `NodeDef.Delegate` is true, create a `DelegateNode` implementation that looks up the `Generator` transformer from the registry and calls it to produce a `CircuitDef`.
-- [ ] P3.3: Lint rule (`origami lint`): warn if a delegate node has `transformer:` set (the `generator:` field replaces it). Error if `delegate: true` without `generator:`.
-- [ ] P3.4: Unit test: parse YAML with `delegate: true` node, verify `NodeDef` fields.
-- [ ] P3.5: Integration test: YAML circuit with delegate node, walk end-to-end.
-- [ ] P3.6: Validate — `go test -race ./...` green.
+- [x] P3.1: Add `Delegate bool` and `Generator string` fields to `NodeDef` in `dsl.go`.
+- [x] P3.2: In `BuildGraph()`, when `NodeDef.Delegate` is true, create a `DelegateNode` implementation that looks up the `Generator` transformer from the registry and calls it to produce a `CircuitDef`.
+- [x] P3.3: Lint rule (`origami lint`): warn if a delegate node has `transformer:` set (the `generator:` field replaces it). Error if `delegate: true` without `generator:`.
+- [x] P3.4: Unit test: parse YAML with `delegate: true` node, verify `NodeDef` fields.
+- [x] P3.5: Integration test: YAML circuit with delegate node, walk end-to-end.
+- [x] P3.6: Validate — `go test -race ./...` green.
 
 ### Phase 4 — Topology validation
 
-- [ ] P4.1: Add `delegate` topology primitive to `topology/registry.go`. Rules: exactly 1 input edge, exactly 1 output edge (the sub-walk replaces fan-out), no self-loops.
-- [ ] P4.2: Lint rule: delegate nodes should not be in a zone with `stickiness > 0` (sub-walks manage their own zone transitions).
-- [ ] P4.3: Unit tests for topology validation of delegate nodes.
-- [ ] P4.4: Validate — `go test -race ./...` green.
+- [x] P4.1: Add `delegate` topology primitive to `topology/registry.go`. Rules: exactly 1 input edge, exactly 1 output edge (the sub-walk replaces fan-out), no self-loops.
+- [ ] P4.2: Lint rule: delegate nodes should not be in a zone with `stickiness > 0` (sub-walks manage their own zone transitions). *(deferred)*
+- [x] P4.3: Unit tests for topology validation of delegate nodes.
+- [x] P4.4: Validate — `go test -race ./...` green.
 
 ### Phase 5 — Calibration support
 
@@ -188,5 +188,7 @@ Green-yellow-blue cycle.
 No trust boundaries affected. Sub-walks execute in the same process with the same permissions as the outer walk. The generated `CircuitDef` is validated by `BuildGraph()` before execution — malformed circuits are rejected at build time, not at walk time.
 
 ## Notes
+
+2026-03-07 — P1-P4 implemented. DelegateNode interface + DelegateArtifact type in delegate.go. Sub-walk execution wired into Walk() and WalkTeam() in graph.go with observer forwarding (delegateObserver) and context propagation. DSL extension: delegate: + generator: on NodeDef, dslDelegateNode wired in resolveNode, S15 lint rule. Topology: delegate primitive registered as 6th built-in topology. 13 unit/integration tests. P5-P6 deferred.
 
 2026-03-05 — Contract drafted from agentic hierarchy brainstorming session. DelegateNode is the keystone primitive that enables the Operator pattern: Managers produce circuits, Workers execute them. The fractal property (circuits generating circuits) emerges from this single interface. Depends on no other new contracts. All subsequent Operator API contracts (`agent-roles`, `operator-reconciliation`, `finding-router`) build on this foundation.

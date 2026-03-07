@@ -21,7 +21,7 @@ description: Active goal manifest — single-read orientation for agents to know
 - [x] Ingestion pipeline decoupled — generic `ingest.Run()` ETL harness; RCA/RP becomes an adapter
 - [x] Monolith retired — fold-generated monolith binary replaced by test wrappers + MCP tools; fold generates only domain-serve
 - [x] Framework API layered — root package documented with `doc.go` and category headers, 26 dead exports cleaned
-- [ ] Root `README.md` positions Origami as a standalone framework
+- [x] Root `README.md` positions Origami as a standalone framework
 
 ## Execution Roadmap
 
@@ -52,13 +52,15 @@ Phase 2b — Knowledge maturity                          ✓
 Phase 2c — Layering purity                                  ✓
 └── layering-purity                                          ✓
 
-Phase 3 — Deployment reshape
+Phase 3 — Deployment reshape                               ✓
 ├── monolith-retirement                                      ✓
-└── Root README.md
+└── Root README.md                                           ✓
 
 Phase 4 — Vision
 ├── washi
-└── operator-api (delegate-node → agent-roles → operator-reconciliation → finding-router)
+├── delegate-node (P1-P4 ✓, P5-P6 deferred)
+├── agent-roles (P1-P2 ✓, P3-P6 deferred)
+└── operator-api (operator-reconciliation → finding-router)
 
 Asterisk pivot (post-Origami containerization)
 ├── design-principle-deterministic                        ✓
@@ -69,7 +71,10 @@ Asterisk pivot (post-Origami containerization)
 
 ## Active Contracts
 
-(No active contracts)
+| Contract | Phase | Status |
+|----------|-------|--------|
+| `delegate-node` | 4 | P1-P4 complete (interface, sub-walk, DSL, topology). P5-P6 deferred. |
+| `agent-roles` | 4 | P1-P2 complete (Role type, DSL extension). P3-P6 deferred. |
 
 ## Draft Contracts
 
@@ -78,8 +83,6 @@ Asterisk pivot (post-Origami containerization)
 | `ouroboros-probe-extensions` | next-milestone | — | Timed handicap, scaffolded prompt-chain, transcript persistence + review API. |
 | `ouroboros-workbench` | next-milestone | — | Mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
-| `delegate-node` | vision | 4 | DelegateNode interface — meta-circuits (circuits generating circuits). Keystone primitive for Operator pattern. |
-| `agent-roles` | vision | 4 | Role type (worker/manager/enforcer/broker) orthogonal to Persona. ArtifactScope filtering. Depends on delegate-node. |
 | `operator-reconciliation` | vision | 4 | Operator interface + reconciliation loop + CircuitContainer runtime. K8s Operator pattern for AI agents. Depends on delegate-node, agent-roles. |
 | `finding-router` | vision | 4 | Enforcer feedback routing by severity/domain. Veto mechanism. Three enforcement patterns. Depends on agent-roles. |
 

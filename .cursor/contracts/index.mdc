@@ -7,7 +7,10 @@
 
 ## Active
 
-(No active contracts)
+| Contract | Goal | Phase | Status |
+|----------|------|-------|--------|
+| `delegate-node.md` | DelegateNode — meta-circuits (circuits generating circuits). Sub-walk execution, DSL extension, topology validation. | 4 | P1-P4 complete, P5-P6 deferred |
+| `agent-roles.md` | Role type (worker/manager/enforcer/broker) orthogonal to Persona. DSL wiring. | 4 | P1-P2 complete, P3-P6 deferred |
 
 ## Draft
 
@@ -16,8 +19,6 @@
 | `ouroboros-probe-extensions.md` | Ouroboros Probe Extensions — timed handicap probes (timeout enforcement), scaffolded prompt-chain probes (HITL dependency), transcript persistence with review API. | next-milestone |
 | `ouroboros-workbench.md` | Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing via Demiurge pattern, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. | next-milestone |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
-| `delegate-node.md` | Delegate Node — DelegateNode interface enabling meta-circuits (circuits generating circuits). Sub-walk execution, DSL extension, topology validation. Keystone primitive for the Operator pattern. | vision |
-| `agent-roles.md` | Agent Roles — Role type (worker, manager, enforcer, broker) orthogonal to Persona. ArtifactScope filtering restricts artifact visibility by role. Ouroboros role affinity. | vision |
 | `operator-reconciliation.md` | Operator Reconciliation — Operator interface (Observe, Reconcile, Evaluate) with reconciliation loop. CircuitContainer lifecycle management. K8s Operator pattern for AI agents. | vision |
 | `finding-router.md` | Finding Router — Enforcer findings routed by severity and domain. Three enforcement patterns (Hook, Signal, Parallel Circuit). Veto mechanism via confidence override. | vision |
 
