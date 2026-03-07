@@ -83,6 +83,14 @@ func buildWalker(d WalkerDef) (*ProcessWalker, error) {
 		id.StepAffinity = d.StepAffinity
 	}
 
+	if d.Role != "" {
+		r := Role(strings.ToLower(d.Role))
+		if !ValidRoles[r] {
+			return nil, fmt.Errorf("unknown role %q (valid: worker, manager, enforcer, broker)", d.Role)
+		}
+		id.Role = r
+	}
+
 	return &ProcessWalker{
 		identity: id,
 		state:    NewWalkerState(d.Name),

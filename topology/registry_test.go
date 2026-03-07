@@ -29,7 +29,7 @@ func TestRegistry_List(t *testing.T) {
 	names := r.List()
 	sort.Strings(names)
 
-	want := []string{"bridge", "cascade", "fan-in", "fan-out", "feedback-loop"}
+	want := []string{"bridge", "cascade", "delegate", "fan-in", "fan-out", "feedback-loop"}
 	if len(names) != len(want) {
 		t.Fatalf("List() = %v, want %v", names, want)
 	}

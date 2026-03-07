@@ -15,6 +15,7 @@
 // The minimal graph model. Everything else builds on these types.
 //
 //   - [Node]         — processing stage (node.go)
+//   - [DelegateNode] — node that generates and walks a sub-circuit (delegate.go)
 //   - [Edge]         — conditional connection between nodes (edge.go)
 //   - [ExpressionEdge] — edge with CEL expression evaluation (expression_edge.go)
 //   - [Graph]        — directed graph of nodes and edges (graph.go)
@@ -45,7 +46,7 @@
 //   - [Narrator]     — human-readable step narration (narrate.go)
 //   - [Vocabulary]   — domain term definitions for prompts (vocabulary.go)
 //   - [Capture]      — output capture utilities (capture.go)
-//   - [Identity]     — walker identity (persona + element) (identity.go)
+//   - [Identity]     — walker identity (persona + element + role) (identity.go)
 //   - [IsDeterministic] — determinism analysis for nodes/circuits (determinism.go)
 //   - models/        — LLM model registry (models/registry.go)
 //   - [Errors]       — sentinel errors (errors.go)

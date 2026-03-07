@@ -47,6 +47,7 @@ type WalkerDef struct {
 	Preamble       string             `yaml:"preamble,omitempty"`
 	OffsetPreamble string             `yaml:"offset_preamble,omitempty"`
 	StepAffinity   map[string]float64 `yaml:"step_affinity,omitempty"`
+	Role           string             `yaml:"role,omitempty"`
 }
 
 // ContextFilterDef declares which context keys are allowed or blocked
@@ -85,6 +86,8 @@ type NodeDef struct {
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
 	Cache       *CacheDef       `yaml:"cache,omitempty"`
 	Meta        map[string]any  `yaml:"meta,omitempty"`
+	Delegate    bool            `yaml:"delegate,omitempty"`
+	Generator   string          `yaml:"generator,omitempty"`
 }
 
 // CacheDef configures node-level caching via the DSL.
@@ -507,6 +510,7 @@ func (def *CircuitDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 	if err != nil {
 		return nil, err
 	}
+	g.registries = &reg
 
 	if def.Topology != "" {
 		if err := validateTopology(g, def); err != nil {
@@ -589,6 +593,26 @@ func buildGraphShape(g *DefaultGraph, def *CircuitDef) GraphShape {
 // Transformer > Extractor > NodeRegistry (Family/Name).
 func (def *CircuitDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error) {
 	elem, _ := ResolveApproach(strings.ToLower(nd.Approach))
+
+	if nd.Delegate {
+		if nd.Generator == "" {
+			return nil, fmt.Errorf("node %q: delegate node requires a generator transformer", nd.Name)
+		}
+		if reg.Transformers == nil {
+			return nil, fmt.Errorf("node %q: generator %q not found (registry is nil)", nd.Name, nd.Generator)
+		}
+		gen, err := reg.Transformers.Get(nd.Generator)
+		if err != nil {
+			return nil, fmt.Errorf("node %q: generator: %w", nd.Name, err)
+		}
+		return &dslDelegateNode{
+			name:    nd.Name,
+			element: elem,
+			gen:     gen,
+			config:  def.Vars,
+			meta:    nd.Meta,
+		}, nil
+	}
 
 	if nd.Transformer != "" {
 		var t Transformer

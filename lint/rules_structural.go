@@ -446,3 +446,63 @@ func levenshtein(a, b string) int {
 	}
 	return prev[lb]
 }
+
+// InvalidWalkerRole checks that walker role values are recognized roles.
+type InvalidWalkerRole struct{}
+
+func (r *InvalidWalkerRole) ID() string          { return "S16/invalid-walker-role" }
+func (r *InvalidWalkerRole) Description() string { return "walker role must be a recognized role (worker, manager, enforcer, broker)" }
+func (r *InvalidWalkerRole) Severity() Severity   { return SeverityError }
+func (r *InvalidWalkerRole) Tags() []string       { return []string{"structural"} }
+
+func (r *InvalidWalkerRole) Check(ctx *LintContext) []Finding {
+	validRoles := map[string]bool{
+		"worker": true, "manager": true, "enforcer": true, "broker": true,
+	}
+	var out []Finding
+	for _, w := range ctx.Def.Walkers {
+		if w.Role != "" && !validRoles[strings.ToLower(w.Role)] {
+			out = append(out, Finding{
+				RuleID:   r.ID(),
+				Severity: r.Severity(),
+				Message:  fmt.Sprintf("walker %q: unknown role %q (valid: worker, manager, enforcer, broker)", w.Name, w.Role),
+				File:     ctx.File,
+				Line:     ctx.WalkerLine(w.Name),
+			})
+		}
+	}
+	return out
+}
+
+// DelegateWithoutGenerator warns when a delegate node lacks a generator.
+type DelegateWithoutGenerator struct{}
+
+func (r *DelegateWithoutGenerator) ID() string        { return "S15/delegate-without-generator" }
+func (r *DelegateWithoutGenerator) Description() string { return "delegate node requires a generator transformer" }
+func (r *DelegateWithoutGenerator) Severity() Severity { return SeverityWarning }
+func (r *DelegateWithoutGenerator) Tags() []string     { return []string{"structural"} }
+
+func (r *DelegateWithoutGenerator) Check(ctx *LintContext) []Finding {
+	var out []Finding
+	for _, nd := range ctx.Def.Nodes {
+		if nd.Delegate && nd.Generator == "" {
+			out = append(out, Finding{
+				RuleID:   r.ID(),
+				Severity: r.Severity(),
+				Message:  fmt.Sprintf("delegate node %q requires a generator: field", nd.Name),
+				File:     ctx.File,
+				Line:     ctx.NodeLine(nd.Name),
+			})
+		}
+		if nd.Delegate && nd.Transformer != "" {
+			out = append(out, Finding{
+				RuleID:   r.ID(),
+				Severity: SeverityWarning,
+				Message:  fmt.Sprintf("delegate node %q has both transformer: and delegate: true; use generator: instead", nd.Name),
+				File:     ctx.File,
+				Line:     ctx.NodeLine(nd.Name),
+			})
+		}
+	}
+	return out
+}

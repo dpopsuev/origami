@@ -121,5 +121,19 @@ func DefaultRegistry() *Registry {
 		},
 	})
 
+	// Delegate: exactly 1 input, exactly 1 output. The sub-walk replaces
+	// fan-out — a delegate node produces a CircuitDef and walks it internally.
+	_ = r.Register(&TopologyDef{
+		Name:        "delegate",
+		Description: "Single delegate node: 1 input, 1 output, sub-walk replaces fan-out",
+		MinNodes:    1,
+		MaxNodes:    -1,
+		Rules: []PositionRule{
+			{Position: PositionEntry, MinInputs: 0, MaxInputs: 0, MinOutputs: 1, MaxOutputs: 1},
+			{Position: PositionIntermediate, MinInputs: 1, MaxInputs: 1, MinOutputs: 1, MaxOutputs: 1},
+			{Position: PositionExit, MinInputs: 1, MaxInputs: 1, MinOutputs: 0, MaxOutputs: 0},
+		},
+	})
+
 	return r
 }

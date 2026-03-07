@@ -39,14 +39,15 @@ type Zone struct {
 // edges in maps for O(1) lookup while preserving edge definition order
 // for deterministic first-match evaluation.
 type DefaultGraph struct {
-	name      string
-	nodes     []Node
-	edges     []Edge
-	zones     []Zone
-	nodeIndex map[string]Node
-	edgeIndex map[string][]Edge // from-node -> edges in definition order
-	doneNode  string            // terminal pseudo-node name (walk stops here)
-	observer  WalkObserver      // graph-level observer, used by Walk and composed with team observer in WalkTeam
+	name       string
+	nodes      []Node
+	edges      []Edge
+	zones      []Zone
+	nodeIndex  map[string]Node
+	edgeIndex  map[string][]Edge // from-node -> edges in definition order
+	doneNode   string            // terminal pseudo-node name (walk stops here)
+	observer   WalkObserver      // graph-level observer, used by Walk and composed with team observer in WalkTeam
+	registries *GraphRegistries  // retained for DelegateNode sub-walk building
 }
 
 // GraphOption configures a DefaultGraph during construction.
@@ -164,7 +165,13 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 			Meta:          make(map[string]any),
 		}
 
-		artifact, err := walker.Handle(ctx, node, nc)
+		var artifact Artifact
+		var err error
+		if dn, isDel := node.(DelegateNode); isDel {
+			artifact, err = g.walkDelegate(ctx, walker, obs, dn, nc)
+		} else {
+			artifact, err = walker.Handle(ctx, node, nc)
+		}
 		nodeElapsed := time.Since(nodeStart)
 
 		if err != nil {
@@ -372,7 +379,13 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 			Meta:          make(map[string]any),
 		}
 
-		artifact, err := walker.Handle(ctx, node, nc)
+		var artifact Artifact
+		var err error
+		if dn, isDel := node.(DelegateNode); isDel {
+			artifact, err = g.walkDelegate(ctx, walker, obs, dn, nc)
+		} else {
+			artifact, err = walker.Handle(ctx, node, nc)
+		}
 		nodeElapsed := time.Since(nodeStart)
 
 		if err != nil {
@@ -502,6 +515,99 @@ func composeObservers(a, b WalkObserver) WalkObserver {
 		return a
 	}
 	return MultiObserver{a, b}
+}
+
+// walkDelegate handles a DelegateNode encounter during Walk or WalkTeam.
+// It calls GenerateCircuit, builds and walks the sub-graph, and returns
+// a DelegateArtifact wrapping the inner walk's results.
+func (g *DefaultGraph) walkDelegate(ctx context.Context, walker Walker, obs WalkObserver, dn DelegateNode, nc NodeContext) (*DelegateArtifact, error) {
+	emitEvent(obs, WalkEvent{
+		Type: EventDelegateStart,
+		Node: dn.Name(),
+		Walker: walker.Identity().PersonaName,
+	})
+
+	circuitDef, err := dn.GenerateCircuit(ctx, nc)
+	if err != nil {
+		return nil, fmt.Errorf("delegate %s: generate circuit: %w", dn.Name(), err)
+	}
+
+	var reg GraphRegistries
+	if g.registries != nil {
+		reg = *g.registries
+	}
+
+	subGraph, err := circuitDef.BuildGraph(reg)
+	if err != nil {
+		return nil, fmt.Errorf("delegate %s: build sub-graph: %w", dn.Name(), err)
+	}
+
+	subWalker := NewProcessWalker(walker.State().ID + ":delegate:" + dn.Name())
+	subWalker.SetIdentity(walker.Identity())
+
+	prefixObs := &delegateObserver{inner: obs, prefix: "delegate:" + dn.Name() + ":"}
+	if dg, ok := subGraph.(*DefaultGraph); ok {
+		dg.SetObserver(prefixObs)
+	}
+
+	start := time.Now()
+	walkErr := subGraph.Walk(ctx, subWalker, circuitDef.Start)
+	elapsed := time.Since(start)
+
+	da := &DelegateArtifact{
+		GeneratedCircuit: circuitDef,
+		InnerArtifacts:   subWalker.State().Outputs,
+		NodeCount:        len(circuitDef.Nodes),
+		Elapsed:          elapsed,
+		InnerError:       walkErr,
+	}
+
+	// Namespace inner artifacts into the outer walker's outputs.
+	outerState := walker.State()
+	if outerState.Outputs == nil {
+		outerState.Outputs = make(map[string]Artifact)
+	}
+	for innerName, art := range subWalker.State().Outputs {
+		outerState.Outputs["delegate:"+dn.Name()+":"+innerName] = art
+	}
+
+	emitEvent(obs, WalkEvent{
+		Type:     EventDelegateEnd,
+		Node:     dn.Name(),
+		Walker:   walker.Identity().PersonaName,
+		Elapsed:  elapsed,
+		Artifact: da,
+		Error:    walkErr,
+		Metadata: map[string]any{
+			"node_count":  da.NodeCount,
+			"inner_error": walkErr != nil,
+		},
+	})
+
+	if walkErr != nil {
+		return da, fmt.Errorf("delegate %s: sub-walk: %w", dn.Name(), walkErr)
+	}
+	return da, nil
+}
+
+// delegateObserver wraps a WalkObserver and prefixes all node/edge names
+// so outer observers can distinguish inner walk events from outer events.
+type delegateObserver struct {
+	inner  WalkObserver
+	prefix string
+}
+
+func (d *delegateObserver) OnEvent(e WalkEvent) {
+	if d.inner == nil {
+		return
+	}
+	if e.Node != "" {
+		e.Node = d.prefix + e.Node
+	}
+	if e.Edge != "" {
+		e.Edge = d.prefix + e.Edge
+	}
+	d.inner.OnEvent(e)
 }
 
 // evidenceSNR computes signal-to-noise ratio: outputItems / inputItems.

@@ -25,6 +25,8 @@ func structuralRules() []Rule {
 		&SchemaInUnstructuredZone{},
 		&MissingZoneDomain{},
 		&InvalidZoneDomain{},
+		&DelegateWithoutGenerator{},
+		&InvalidWalkerRole{},
 	}
 }
 

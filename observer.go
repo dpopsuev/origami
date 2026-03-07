@@ -28,6 +28,8 @@ const (
 	EventCircuitClose       WalkEventType = "circuit_close"
 	EventRateLimit          WalkEventType = "rate_limit"
 	EventThermalWarning     WalkEventType = "thermal_warning"
+	EventDelegateStart      WalkEventType = "delegate_start"
+	EventDelegateEnd        WalkEventType = "delegate_end"
 )
 
 // WalkEvent is a single observation from a graph walk. The Metadata map

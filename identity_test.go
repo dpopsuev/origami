@@ -35,3 +35,45 @@ func TestAgentIdentity_Tag_ZeroValue(t *testing.T) {
 		t.Errorf("Tag() zero value = %q, want %q", tag, "[none/anon]")
 	}
 }
+
+func TestRole_Constants(t *testing.T) {
+	for _, r := range []Role{RoleWorker, RoleManager, RoleEnforcer, RoleBroker} {
+		if !ValidRoles[r] {
+			t.Errorf("Role %q not in ValidRoles", r)
+		}
+	}
+	if ValidRoles["bogus"] {
+		t.Error("bogus role should not be valid")
+	}
+}
+
+func TestAgentIdentity_IsRole(t *testing.T) {
+	id := AgentIdentity{PersonaName: "Herald", Role: RoleWorker}
+	if !id.IsRole(RoleWorker) {
+		t.Error("IsRole(RoleWorker) = false, want true")
+	}
+	if id.IsRole(RoleManager) {
+		t.Error("IsRole(RoleManager) = true, want false")
+	}
+}
+
+func TestAgentIdentity_HasRole(t *testing.T) {
+	var id AgentIdentity
+	if id.HasRole() {
+		t.Error("HasRole() = true on zero-value, want false")
+	}
+	id.Role = RoleEnforcer
+	if !id.HasRole() {
+		t.Error("HasRole() = false after setting role, want true")
+	}
+}
+
+func TestRole_BackwardCompat_ZeroValue(t *testing.T) {
+	id := AgentIdentity{PersonaName: "Herald"}
+	if id.Role != "" {
+		t.Errorf("zero-value Role = %q, want empty", id.Role)
+	}
+	if id.HasRole() {
+		t.Error("HasRole() = true on zero-value, want false")
+	}
+}

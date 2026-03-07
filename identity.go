@@ -58,6 +58,26 @@ const (
 	MetaPhasePt MetaPhase = "Paint"
 )
 
+// Role represents an agent's organizational role in an agentic hierarchy.
+// Orthogonal to Persona — a Sentinel persona can be an Enforcer or a Worker.
+// Role determines information scope and communication patterns.
+type Role string
+
+const (
+	RoleWorker   Role = "worker"
+	RoleManager  Role = "manager"
+	RoleEnforcer Role = "enforcer"
+	RoleBroker   Role = "broker"
+)
+
+// ValidRoles contains all recognized role values for validation.
+var ValidRoles = map[Role]bool{
+	RoleWorker:   true,
+	RoleManager:  true,
+	RoleEnforcer: true,
+	RoleBroker:   true,
+}
+
 // CostProfile describes the resource cost of using an agent.
 type CostProfile struct {
 	TokensPerStep int     `json:"tokens_per_step"`
@@ -76,6 +96,7 @@ type AgentIdentity struct {
 	Alignment       Alignment `json:"alignment"`
 	HomeZone        MetaPhase `json:"home_zone"`
 	StickinessLevel int       `json:"stickiness_level"`
+	Role            Role      `json:"role,omitempty"`
 
 	Model ModelIdentity `json:"model"`
 
@@ -83,6 +104,16 @@ type AgentIdentity struct {
 	PersonalityTags []string           `json:"personality_tags,omitempty"`
 	PromptPreamble  string             `json:"prompt_preamble,omitempty"`
 	CostProfile     CostProfile        `json:"cost_profile,omitempty"`
+}
+
+// IsRole returns true if the agent's role matches the given role.
+func (id AgentIdentity) IsRole(r Role) bool {
+	return id.Role == r
+}
+
+// HasRole returns true if the agent has a role assigned (non-empty).
+func (id AgentIdentity) HasRole() bool {
+	return id.Role != ""
 }
 
 // HomeZoneFor returns the MetaPhase for a given Position.

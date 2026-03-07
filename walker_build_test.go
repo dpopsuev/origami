@@ -253,6 +253,49 @@ func TestHierarchicalDelegationPatternParsesAndBuilds(t *testing.T) {
 	}
 }
 
+func TestBuildWalkersFromDefWithRole(t *testing.T) {
+	defs := []WalkerDef{
+		{Name: "lead", Persona: "herald", Role: "manager"},
+		{Name: "grunt", Persona: "sentinel", Role: "worker"},
+	}
+	walkers, err := BuildWalkersFromDef(defs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if walkers[0].Identity().Role != RoleManager {
+		t.Errorf("walker 0 role = %q, want %q", walkers[0].Identity().Role, RoleManager)
+	}
+	if walkers[1].Identity().Role != RoleWorker {
+		t.Errorf("walker 1 role = %q, want %q", walkers[1].Identity().Role, RoleWorker)
+	}
+}
+
+func TestBuildWalkersFromDefUnknownRole(t *testing.T) {
+	defs := []WalkerDef{
+		{Name: "bad", Persona: "herald", Role: "ceo"},
+	}
+	_, err := BuildWalkersFromDef(defs)
+	if err == nil {
+		t.Fatal("expected error for unknown role")
+	}
+}
+
+func TestBuildWalkersFromDefNoRole_BackwardCompat(t *testing.T) {
+	defs := []WalkerDef{
+		{Name: "old", Persona: "herald"},
+	}
+	walkers, err := BuildWalkersFromDef(defs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if walkers[0].Identity().Role != "" {
+		t.Errorf("role = %q, want empty (backward compat)", walkers[0].Identity().Role)
+	}
+	if walkers[0].Identity().HasRole() {
+		t.Error("HasRole() = true, want false for no-role walker")
+	}
+}
+
 func TestValidateElement(t *testing.T) {
 	tests := []struct {
 		input   string
