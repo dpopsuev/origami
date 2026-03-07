@@ -1,8 +1,9 @@
 # Contract — refactor-decompose
 
-**Status:** active  
+**Status:** abandoned  
 **Goal:** Origami packages are organized into a three-level taxonomy (Primitives / Connectors / Schematics) with zero RP-specific concepts in the generic RCA schematic.  
-**Serves:** API Stabilization
+**Serves:** API Stabilization  
+**Absorbed by:** RCA decontamination → `domain-separation-container.md` (Phase 5, genericize processing). SQLite consolidation → `schema-driven-entity-store.md`. Directory taxonomy → already partially done by naming-taxonomy + decoupled-schematics.
 
 ## Contract rules
 

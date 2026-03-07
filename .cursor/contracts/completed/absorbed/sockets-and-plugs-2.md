@@ -1,8 +1,9 @@
 # Contract — sockets-and-plugs-2
 
-**Status:** draft  
+**Status:** abandoned  
 **Goal:** The RCA schematic's data shapes (Envelope, store schema, RCA output) are source-agnostic — any CI tracker can plug in without touching schematic code.  
-**Serves:** API Stabilization (next-milestone)
+**Serves:** API Stabilization (next-milestone)  
+**Absorbed by:** `domain-separation-container.md` Phase 5 — genericize processing pipeline (`map[string]any` artifacts, remove all RP-specific data shapes from the engine).
 
 ## Contract rules
 

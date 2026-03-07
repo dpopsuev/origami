@@ -1,0 +1,11 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `cloud-native.md` — Three-service K8s deployment (Gateway, RCA, Knowledge) with MCP routing, health probes, Docker Compose, K8s manifests, WorkerPool, LLM containers, wet Llama run.
+- `container-ready-serve.md` — HTTP transport for `serve` command (`--transport http`), Dockerfile, OCI-based distribution.
+- `fold-deploy-modes.md` — `origami fold` codegen for all four deployment modes (in-process, subprocess, container, remote).
+- `remote-backend.md` — `RemoteBackend` connecting to running MCP endpoints without lifecycle ownership.
+- `monolith-retirement.md` — Monolith Retirement: retired fold-generated monolith binary, migrated commands to test wrappers + MCP tools, fold generates only domain-serve.

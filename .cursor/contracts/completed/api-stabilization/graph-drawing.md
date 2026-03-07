@@ -1,6 +1,6 @@
 # Contract — graph-drawing
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** Graph rendering tests validate layout correctness through structural assertions, not brittle ASCII character checks.  
 **Serves:** API Stabilization
 
@@ -83,17 +83,17 @@ Bottom-up by test level. Each level adds test infrastructure and tests before mo
 
 ## Tasks
 
-- [ ] Add Level 1 test helpers (`assertRow`, `assertCol`, `assertBefore`, `assertColSpan`) to `view/grid_test.go`
-- [ ] Write Level 1 structural layout tests for: linear chain, circuit with shortcuts, circuit with loops, circuit with zones
-- [ ] Export `computeEdgeRouting` (or add a test-only wrapper) so Level 2 tests can call it
-- [ ] Add Level 2 test helpers (`assertInline`, `assertBelow`, `assertLoop`, `assertChannelCount`) to `sumi/graph_test.go`
-- [ ] Write Level 2 structural edge routing tests for: deduplication, inline classification, below classification with channels, loop classification
-- [ ] Implement `RenderAbstract(def, layout)` function in `sumi/graph.go`
-- [ ] Write Level 3 abstract rendering tests for: linear, shortcut, loop, mixed topologies
-- [ ] Convert existing Level-4-style tests to golden snapshot files (`.golden`)
-- [ ] Validate (green) — all tests pass, acceptance criteria met.
-- [ ] Tune (blue) — refactor for quality. No behavior changes.
-- [ ] Validate (green) — all tests still pass after tuning.
+- [x] Add Level 1 test helpers (`assertRow`, `assertCol`, `assertBefore`, `assertColSpan`) to `view/layout_test.go` (583 LOC)
+- [x] Write Level 1 structural layout tests for: linear chain, circuit with shortcuts, circuit with loops, circuit with zones (10+ tests)
+- [x] Export `ComputeEdgeRouting` in `sumi/graph.go`
+- [x] Add Level 2 test helpers (`assertInline`, `assertBelow`, `assertLoop`, `assertChannelCount`, `assertCrossRow`, `assertNoEdge`) to `sumi/graph_test.go`
+- [x] Write Level 2 structural edge routing tests for: deduplication, inline classification, below classification with channels, loop classification (8 tests)
+- [x] Implement `RenderAbstract(def, layout)` function in `sumi/graph.go`
+- [x] Write Level 3 abstract rendering tests for: linear, shortcut, loop, mixed topologies (12 tests)
+- [x] Convert existing Level-4-style tests to golden snapshot files (11 `.golden` files; all brittle character checks removed)
+- [x] Validate (green) — `go test -race ./sumi/ ./view/` passes.
+- [x] Tune (blue) — deleted redundant `TestRenderGraph_ShortcutEdge` (covered by `TestGolden_Dialectic` + Level 2).
+- [x] Validate (green) — all tests still pass after tuning.
 
 ## Acceptance criteria
 
@@ -123,5 +123,7 @@ Bottom-up by test level. Each level adds test infrastructure and tests before mo
 No trust boundaries affected.
 
 ## Notes
+
+2026-03-06 18:25 — **Contract marked complete.** Sanity-check audit found Levels 1-4 already implemented. Final cleanup converted 5 remaining brittle character-check tests to golden snapshots (`node-states`, `ds-badges`, `breakpoints`, `shortcuts-visible-below`, `loop-routes-to-target`), removed brittle `┌`/`┘` and `▸`/`─` assertions from 2 tests, and deleted redundant `TestRenderGraph_ShortcutEdge`. Total: 11 golden files, 0 character-assertion tests remaining.
 
 2026-03-04 11:00 — Contract created. Motivated by the vertical-bars bug where topology loss in watch mode was never caught by tests. Research into graphviz, ratatui-testlib, and bubbletea teatest confirmed the 4-level approach: structural assertions for correctness, golden snapshots for regression.

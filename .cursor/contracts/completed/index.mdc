@@ -10,8 +10,9 @@
 - `analysis/` — completed case study/analysis contracts
 - `absorbed/` — contracts whose scope was absorbed by other contracts
 - `polishing/` — completed polishing & presentation-phase contracts
-- `api-stabilization/` — completed API stabilization gate contracts (signal-domains, signal-integrity, dialectic-hardening)
+- `api-stabilization/` — completed API stabilization gate contracts (signal-domains, signal-integrity, dialectic-hardening, schema-driven-entity-store, graph-drawing)
 - `sumi/` — completed Sumi TUI contracts (war-room)
+- `cloud-native/` — completed cloud-native and deployment-phase contracts (K8s deploy, container-ready-serve, fold-deploy-modes, remote-backend, monolith-retirement)
 
 ## Files
 (No files)

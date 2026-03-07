@@ -4,84 +4,118 @@ description: Active goal manifest — single-read orientation for agents to know
 
 # Current Goal
 
-**Goal:** API Stabilization  
-**Summary:** Origami is a graph-based agentic circuit framework with Elements, Personas, Masks, Adversarial Dialectic, and a declarative YAML DSL. The framework is feature-complete. The goal is now API stabilization: freeze the public surface, harden documentation, and ensure the playground and README tell a coherent standalone story. Breaking changes require migration windows.
+**Goal:** Containerized Runtime  
+**Summary:** Origami is a graph-based agentic circuit framework. The API is stabilized (90 contracts complete). The goal is now a containerized, product-agnostic runtime: the engine validates circuit topology, processes `map[string]any` artifacts, fetches domain data over MCP via `MCPRemoteFS`, and deploys as a 4-service OCI topology (Gateway, Engine, Knowledge, Domain). Product repos (Asterisk, Achilles) provide pure config/data — zero Go. `origami fold` is the universal compiler from YAML manifest to running containers.
 
 ## Open Checklist
 
-- [x] Gate contracts complete — `signal-domains`, `signal-integrity`, `dialectic-hardening`
-- [x] Quick-win contracts complete — `resilience`, `ouroboros-signal-analysis`
-- [x] Dead-code excision — `Marble` primitive removed (superseded by Components, zero consumers)
-- [x] RCA decoupled from RP — `rcatype/` + `rpconv/` boundary, zero `connectors/rp` imports in core
-- [x] Three-level taxonomy — Primitives / Connectors / Schematics directory structure, RP decontamination
-- [x] Public API surface audit — 450+ symbols, 20+ packages, Good/Bad/Ugly assessment, test coverage matrix
-- [ ] Public API surface is stable — no breaking changes pending
-- [ ] Test coverage on public interfaces is solid
-- [ ] Root `README.md` positions Origami as a standalone framework (does not exist yet)
-- [x] ViewModel layer — `CircuitStore`, `CircuitRenderer`, `LayoutEngine` (external dependency)
-- [x] Origami LSP — validation, completion, hover docs for circuit YAML (external dependency)
-- [x] Sumi — terminal circuit viewer/debugger (external dependency)
-- [x] `examples/playground/` demonstrates all 9 concepts (Elements, Personas, DSL, Mermaid, Walk, Masks, Cycles, Dialectic, Team Walk)
-- [x] `docs/framework-guide.md` covers Three CLIs, Extractors, Elements, Personas, DSL, Walk
-- [x] `testdata/` contains canonical circuit YAMLs: `defect-dialectic.yaml`, `defect-court.yaml`, `rca-investigation.yaml`; curation in `curate/testdata/`
-- [x] `RichVocabulary` interface with `VocabEntry` wired into Kami, LSP, Kabuki
-- [x] Thesis/Antithesis rename — terminology aligned with Hegelian dialectic model
+- [x] Domain data externalized — all product data in Asterisk `internal/`, served over MCP via `domainserve`
+- [x] `MCPRemoteFS` + `domainserve` library — virtual filesystem over MCP, domain server as a reusable package
+- [x] `origami fold` domain-serve codegen — generates domain-serve binary from `domain_serve:` YAML manifest
+- [x] `map[string]any` artifact processing — typed artifact structs deleted, generic extractors in place
+- [x] Calibration harness decoupled — `calibrate.Run()` with `ScenarioLoader`/`CaseCollector`/`ReportRenderer`
+- [x] 4-service deploy configs — docker-compose + K8s manifests for Gateway, Engine, Knowledge, Asterisk (DSC P6)
+- [x] Domain-separation final validation — full circuit E2E through containerized stack (DSC P7)
+- [x] Topology validation at load time — `topology:` field enforced with graph-shape + cardinality checks
+- [x] Schematic runtime toolkit — generic patterns extracted from `schematics/rca/` to `schematics/toolkit/`
+- [x] Ingestion pipeline decoupled — generic `ingest.Run()` ETL harness; RCA/RP becomes an adapter
+- [x] Monolith retired — fold-generated monolith binary replaced by test wrappers + MCP tools; fold generates only domain-serve
+- [x] Framework API layered — root package documented with `doc.go` and category headers, 26 dead exports cleaned
+- [ ] Root `README.md` positions Origami as a standalone framework
 
 ## Execution Roadmap
 
 ```
-Phase 1 — Gates (parallel where possible)
-├── signal-domains        ← foundational, do first
-├── dialectic-hardening   ← independent, parallel with signal-domains
-└── signal-integrity      ← after signal-domains (uses zone domain labels)
+Prior — API Stabilization (all complete)                 ✓
+├── signal-domains, dialectic-hardening, signal-integrity  ✓
+├── resilience, ouroboros-signal-analysis                   ✓
+├── Dead-code excision, RCA/RP decoupling, API audit       ✓
+├── fold-deploy-modes, container-ready-serve, remote-backend ✓
+├── decoupled-schematics, viewmodel-layer, LSP, Sumi       ✓
+├── schema-driven-entity-store, graph-drawing               ✓
+└── calibration-harness-decoupling                         ✓
 
-Phase 2 — Quick-wins (parallel)
-├── resilience
-└── ouroboros-signal-analysis
+Phase 1 — Domain separation (complete)                   ✓
+├── domain-separation-container P1-P5                      ✓
+├── domain-separation-container P6                         ✓
+└── domain-separation-container P7                         ✓
 
-Phase 3 — Finish line
-├── Dead-code excision (Marble)     ✓
-├── RCA/RP decoupling               ✓
-├── Public API surface audit         ✓
-├── P1 quick fixes (from audit)
-├── P2 test gaps (from audit)
-├── Root README.md
-├── viewmodel-layer                  ✓
-├── origami-lsp                      ✓
-└── sumi                             ✓
+Phase 2 — Engine generalization (parallel tracks)
+├── framework-api-layering                                    ✓
+├── schematic-runtime-toolkit                                ✓
+├── topology-layer                                            ✓
+└── ingestion-pipeline-decoupling                             ✓
 
-Phase 4 — Vision (post-stabilization)
-└── washi
+Phase 2b — Knowledge maturity                          ✓
+└── knowledge-layer                                       ✓
 
-Asterisk pivot (post-Origami finish line)
-├── design-principle-deterministic   ✓
-├── origami-autodoc                  ✓
+Phase 2c — Layering purity                                  ✓
+└── layering-purity                                          ✓
+
+Phase 3 — Deployment reshape
+├── monolith-retirement                                      ✓
+└── Root README.md
+
+Phase 4 — Vision
+├── washi
+└── operator-api (delegate-node → agent-roles → operator-reconciliation → finding-router)
+
+Asterisk pivot (post-Origami containerization)
+├── design-principle-deterministic                        ✓
+├── origami-autodoc                                       ✓
 ├── yaml-playbook-docs
 └── kabuki-demo-revamp
 ```
 
 ## Active Contracts
 
+(No active contracts)
+
+## Draft Contracts
+
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
-| `schema-driven-entity-store` | gate | 3 | Generic schema-driven CRUD in `connectors/sqlite`, eliminating hand-written SQL boilerplate. Last functional framework/domain coupling. |
-| `fold-deploy-modes` | gate | 3 | Teach `origami fold` codegen to generate correct code for all four deployment modes (in-process, subprocess, container, remote). |
-| `decoupled-schematics` | gate | 3 | Multi-schematic composition, unified knowledge layer, subprocess/container deployment via MCP. |
-| `remote-backend` | quick-win | 3 | SchematicBackend that connects to an already-running MCP endpoint without owning process lifecycle. |
-| `sockets-and-plugs` | next-milestone | 3 | Decouple schematics from connectors via typed sockets, plug declarations, manifest bindings. |
-| `sockets-and-plugs-2` | next-milestone | 3 | Normalize Envelope, store schema, and RCA output to be source-agnostic — no RP-specific data shapes. |
+| `ouroboros-probe-extensions` | next-milestone | — | Timed handicap, scaffolded prompt-chain, transcript persistence + review API. |
+| `ouroboros-workbench` | next-milestone | — | Mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
+| `delegate-node` | vision | 4 | DelegateNode interface — meta-circuits (circuits generating circuits). Keystone primitive for Operator pattern. |
+| `agent-roles` | vision | 4 | Role type (worker/manager/enforcer/broker) orthogonal to Persona. ArtifactScope filtering. Depends on delegate-node. |
+| `operator-reconciliation` | vision | 4 | Operator interface + reconciliation loop + CircuitContainer runtime. K8s Operator pattern for AI agents. Depends on delegate-node, agent-roles. |
+| `finding-router` | vision | 4 | Enforcer feedback routing by severity/domain. Veto mechanism. Three enforcement patterns. Depends on agent-roles. |
 
 ## Completed Work
 
-81 contracts across 12 phases — all complete. Includes Thesis/Antithesis rename (polishing), Phase 1 API Stabilization gates, Phase 2 quick-wins (resilience, ouroboros-signal-analysis), Phase 3 surface reduction (RCA/RP decoupling, Marble excision, API hygiene, LSP, public API audit, ViewModel layer, Sumi).
+99 contracts across 13 phases — all complete. Recent completions:
 
-Full contract list: see git history of this file.
+- `layering-purity` — Layering Purity: `logging` package deleted (9 consumers → `log/slog`), `Driver` to toolkit, `element/` + `models/` extracted, RCA domain decoupled (SessionObserver, ConsumeFunc, rpconv deleted). Root fan-out 2→1. Deferred: element alias removal, doc.go polish. **Complete.**
+
+- `monolith-retirement` — Monolith Retirement: retired fold-generated monolith binary, migrated CLI commands to test wrappers (calibrate, analyze) + MCP admin tools (consume, dataset, push, status, gt), stripped fold to domain-serve only, deleted `schematics/rca/cmd/` tree. Asterisk `origami.yaml` simplified to name + version + domain_serve. **Complete.**
+
+- `knowledge-layer` — Knowledge Layer: workspace→sources rename (inject.workspace eliminated), Synthesizer interface, StructuralSynthesizer (3 section builders, budget fitting), knowledge_synthesize MCP tool. 11 unit tests. Merged from knowledge-sources-github + knowledge-synthesis. **Complete.**
+- `schematic-runtime-toolkit` — Generic patterns (mapaccess, artifact, params, component, hooks, routing, hitl, tuning, report, source types) extracted from `schematics/rca/` to `schematics/toolkit/`. Root `knowledge/` directory eliminated. Achilles validated as second consumer. **Complete.**
+- `topology-layer` — `topology/` package with 5 built-in primitives, validation engine wired into `BuildGraph()`, `Topology` field on `CircuitDef`. RCA circuit annotated with `topology: cascade`. **Complete.**
+- `framework-api-layering` — Root package 5-layer `doc.go`, `// Category:` headers on all 43 files, 26 dead exports unexported. Feature extraction deferred (6/8 features tightly coupled to core). **Complete.**
+- `ingestion-pipeline-decoupling` — Generic `ingest.Run()` ETL harness with `Source`, `Matcher`, `DedupStore`, `CandidateWriter` interfaces. RCA/RP is an adapter. Decorative `ingest.yaml` circuit deleted. **Complete.**
+- `domain-separation-container` — Topology-driven domain separation: 7-phase contract covering fs.FS parameterization, MCPRemoteFS, domainserve library, fold codegen, domain data move to Asterisk, map[string]any genericization, and 4-service deployment. Engine is product-agnostic. **Complete.**
+- `calibration-harness-decoupling` — Generic calibration harness: `ScenarioLoader`, `CaseCollector`, `ReportRenderer` interfaces and `calibrate.Run()` orchestrator. Stream A+B done, Stream C (manifest YAML) deferred. **Complete.**
+- `fold-deploy-modes` — `origami fold` codegen for all four deployment modes (in-process, subprocess, container, remote). **Complete.**
+- `container-ready-serve` — HTTP transport for `serve` command + Dockerfile, OCI-based distribution. **Complete.**
+- `remote-backend` — `RemoteBackend` connecting to running MCP endpoints without lifecycle ownership. **Complete.**
+- `decoupled-schematics` — Multi-schematic composition, unified knowledge layer, subprocess/container deployment via MCP. **Complete.**
+- `schema-driven-entity-store` — Schema-driven entity CRUD in `connectors/sqlite` (`EntityStore`, `MemEntityStore`, `Row` type). SqlStore is a thin adapter; 2 legitimate raw SQL remain (atomic counter, bulk status). Work absorbed incrementally. **Complete.**
+- `graph-drawing` — 4-level graph rendering test methodology (structural layout/routing, abstract renderer, golden snapshots). 11 golden files, all brittle character checks eliminated. **Complete.**
+- `sockets-and-plugs` — Typed sockets, plug declarations, manifest bindings. **Absorbed** by `domain-separation-container` EE abstraction stack (topology → socket types → schematic → connectors → implementation).
+- `sockets-and-plugs-2` — Source-agnostic data shapes for RCA. **Absorbed** by `domain-separation-container` Phase 5 (genericize processing, `map[string]any`).
+- `refactor-decompose` — Three-level taxonomy, directory renames, RCA decontamination. **Absorbed** by `domain-separation-container` + `schema-driven-entity-store`.
+
+Earlier phases: Thesis/Antithesis rename (polishing), Phase 1 API Stabilization gates, Phase 2 quick-wins (resilience, ouroboros-signal-analysis), Phase 3 surface reduction (RCA/RP decoupling, Marble excision, API hygiene, LSP, public API audit, ViewModel layer, Sumi).
+
+Full contract list: see `contracts/index.mdc`.
 
 ## Goal Transition Protocol
 
-When API stabilization is complete:
+When containerized runtime is complete:
 
-1. Archive this manifest in `notes/` as `goal-history-api-stabilization.md`
-2. Evaluate next goal: component hub, module ecosystem, or v1.0 release
+1. Archive this manifest in `notes/` as `goal-history-containerized-runtime.md`
+2. Evaluate next goal: Asterisk wet calibration, Achilles bootstrap, or v1.0 release
 3. Reassess vision contracts — re-tier relative to the next goal

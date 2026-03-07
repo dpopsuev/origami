@@ -1,6 +1,6 @@
 # Contract — decoupled-schematics
 
-**Status:** active  
+**Status:** complete  
 **Goal:** Schematics run as independent processes or containers, communicating via MCP, with a unified knowledge layer replacing the Git-only CodeReader.  
 **Serves:** API Stabilization — multi-schematic composition is the final framework primitive before surface freeze.
 
@@ -174,35 +174,35 @@ Seven phases, strictly ordered. Each phase begins with tests, then implementatio
 - [x] P4.9: Add `fold --container` flag to generate Dockerfile alongside `main.go`
 - [x] P4.10: Build + test gate — `go test -race ./subprocess/... ./fold/...` passes
 
-### Phase 5 — RCA integration + Asterisk wiring
+### Phase 5 — RCA integration + Asterisk wiring ✅
 
-- [ ] P5.1: Generalize `SourcePack` — rename `Operator` → `Domain`, add `Docs []SourcePackDoc`, remove hardcoded OCP conventions
-- [ ] P5.2: Delete `schematics/rca/code_reader.go` (superseded by `knowledge.Reader`)
-- [ ] P5.3: Fix `schematics/rca/hooks_inject.go` — replace `WorkspaceParams`/`buildWorkspaceParams` with knowledge-based injection
-- [ ] P5.4: Update RCA inject hooks to use `knowledge.Reader` for code access instead of `CodeReader`
-- [ ] P5.5: Update Asterisk `origami.yaml` — add knowledge schematic import + bindings, source packs with doc entries
-- [ ] P5.6: Full end-to-end test — Asterisk with decoupled knowledge schematic in subprocess mode
-- [ ] P5.7: Validate (green) — all tests pass, build green across Origami + Asterisk
-- [ ] P5.8: Tune (blue) — refactor for quality, no behavior changes
-- [ ] P5.9: Validate (green) — all tests still pass after tuning
+- [x] P5.1: Generalize `SourcePack` — rename `Operator` → `Domain`, add `Docs []SourcePackDoc`, remove hardcoded OCP conventions
+- [x] P5.2: Delete `schematics/rca/code_reader.go` (superseded by `knowledge.Reader`)
+- [x] P5.3: Fix `schematics/rca/hooks_inject.go` — replace `WorkspaceParams`/`buildWorkspaceParams` with knowledge-based injection
+- [x] P5.4: Update RCA inject hooks to use `knowledge.Reader` for code access instead of `CodeReader`
+- [x] P5.5: Update Asterisk `origami.yaml` — add knowledge schematic import + bindings, source packs with doc entries
+- [x] P5.6: Full end-to-end test — Asterisk with decoupled knowledge schematic in subprocess mode
+- [x] P5.7: Validate (green) — all tests pass, build green across Origami + Asterisk
+- [x] P5.8: Tune (blue) — refactor for quality, no behavior changes
+- [x] P5.9: Validate (green) — all tests still pass after tuning
 
-### Phase 6 — Architecture hardening
+### Phase 6 — Architecture hardening ✅
 
-- [ ] P6.1: Define `SchematicBackend` interface in `subprocess/backend.go` — `Start`, `Stop`, `CallTool`, `Healthy` (R1)
-- [ ] P6.2: Extract `MCPConnector` — shared client creation + session setup, parameterized by `sdkmcp.Transport` (R3)
-- [ ] P6.3: Refactor `Server` to implement `SchematicBackend`, delegate MCP setup to `MCPConnector` (R1, R3)
-- [ ] P6.4: Split `ContainerManager` → `ContainerRuntime` (OCI lifecycle) + `ContainerBackend` (implements `SchematicBackend`) (R2)
-- [ ] P6.5: Fix `Swap` port loss — save port before `Stop` (R4)
-- [ ] P6.6: Bind container ports to `127.0.0.1` (R5)
-- [ ] P6.7: Align `Swap` error semantics across backends — log warning on stop failure, proceed (R8)
-- [ ] P6.8: Refactor `Orchestrator` to accept `SchematicBackend` instead of `*Server` (R1)
-- [ ] P6.9: Wire drivers in serve binary via flag/env, handle `json.Marshal` errors (R6, R7)
-- [ ] P6.10: Add MCP-to-Router integration test — stub driver → AccessRouter → tool handler → HTTP → client → assert (R9)
-- [ ] P6.11: Add `WithRepoCache` option to `GitDriver` for unit-test mocking (R12)
-- [ ] P6.12: Extract `ModuleResolver` interface, share between fold and lint, remove hardcoded `$HOME/Workspace` (R11)
-- [ ] P6.13: Split `fold.Run()` into `LoadAndValidate`, `Generate`, `Compile` phases (R10)
-- [ ] P6.14: Make timeouts configurable via options structs (R13)
-- [ ] P6.15: Build + test gate — `go test -race ./subprocess/... ./fold/... ./schematics/knowledge/...` passes
+- [x] P6.1: Define `SchematicBackend` interface in `subprocess/backend.go` — `Start`, `Stop`, `CallTool`, `Healthy` (R1)
+- [x] P6.2: Extract `MCPConnector` — shared client creation + session setup, parameterized by `sdkmcp.Transport` (R3)
+- [x] P6.3: Refactor `Server` to implement `SchematicBackend`, delegate MCP setup to `MCPConnector` (R1, R3)
+- [x] P6.4: Split `ContainerManager` → `ContainerRuntime` (OCI lifecycle) + `ContainerBackend` (implements `SchematicBackend`) (R2)
+- [x] P6.5: Fix `Swap` port loss — save port before `Stop` (R4)
+- [x] P6.6: Bind container ports to `127.0.0.1` (R5)
+- [x] P6.7: Align `Swap` error semantics across backends — log warning on stop failure, proceed (R8)
+- [x] P6.8: Refactor `Orchestrator` to accept `SchematicBackend` instead of `*Server` (R1)
+- [x] P6.9: Wire drivers in serve binary via flag/env, handle `json.Marshal` errors (R6, R7)
+- [x] P6.10: Add MCP-to-Router integration test — stub driver → AccessRouter → tool handler → HTTP → client → assert (R9)
+- [x] P6.11: Add `WithRepoCache` option to `GitDriver` for unit-test mocking (R12)
+- [x] P6.12: Extract `ModuleResolver` interface, share between fold and lint, remove hardcoded `$HOME/Workspace` (R11)
+- [x] P6.13: Split `fold.Run()` into `LoadAndValidate`, `Generate`, `Compile` phases (R10)
+- [x] P6.14: Make timeouts configurable via options structs (R13)
+- [x] P6.15: Build + test gate — `go test -race ./subprocess/... ./fold/... ./schematics/knowledge/...` passes
 
 ## Acceptance criteria
 

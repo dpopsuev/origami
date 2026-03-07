@@ -1,8 +1,9 @@
 # Contract — sockets-and-plugs
 
-**Status:** draft  
+**Status:** abandoned  
 **Goal:** Schematics declare typed sockets, connectors declare plugs, product manifests bind them — validated at LSP, lint, and compile layers.  
-**Serves:** API Stabilization (next-milestone)
+**Serves:** API Stabilization (next-milestone)  
+**Superseded by:** `domain-separation-container.md` — EE abstraction stack (topology → socket types → schematic → connectors → implementation) provides a richer model. Future "Topology layer" contract formalizes the validation engine.
 
 ## Contract rules
 

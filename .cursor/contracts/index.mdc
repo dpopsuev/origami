@@ -7,23 +7,35 @@
 
 ## Active
 
-| Contract | Goal | Tier |
-|----------|------|------|
-| `active/decoupled-schematics.md` | Schematics as independent processes/containers via MCP, unified knowledge layer replacing Git-only CodeReader. | gate |
+(No active contracts)
 
 ## Draft
 
 | Contract | Goal | Tier |
 |----------|------|------|
-| `fold-deploy-modes.md` | Fold Deploy Modes — teach `origami fold` codegen to generate correct code for all four deployment modes (in-process, subprocess, container, remote). | gate |
-| `graph-drawing.md` | Graph Drawing — 4-level testing methodology for graph rendering: structural layout/routing assertions, abstract renderer, golden snapshots. | quick-win |
-| `refactor-decompose.md` | Refactor and Decompose — three-level taxonomy (Primitives / Connectors / Schematics), directory renames, SQLite consolidation, RCA RP decontamination. | gate |
-| `remote-backend.md` | Remote Backend — SchematicBackend that connects to an already-running MCP endpoint without owning process lifecycle. K8s foundation + faster dev iteration. | quick-win |
-| `schema-driven-entity-store.md` | Schema-Driven Entity Store — generic CRUD in `connectors/sqlite` derived from `schema.yaml`, eliminating hand-written SQL boilerplate in schematics. | gate |
-| `sockets-and-plugs.md` | Sockets and Plugs — decouple schematics from connectors via typed sockets, plug declarations, manifest bindings, fold codegen, and M1-M4 lint rules. | next-milestone |
+| `ouroboros-probe-extensions.md` | Ouroboros Probe Extensions — timed handicap probes (timeout enforcement), scaffolded prompt-chain probes (HITL dependency), transcript persistence with review API. | next-milestone |
+| `ouroboros-workbench.md` | Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing via Demiurge pattern, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. | next-milestone |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
+| `delegate-node.md` | Delegate Node — DelegateNode interface enabling meta-circuits (circuits generating circuits). Sub-walk execution, DSL extension, topology validation. Keystone primitive for the Operator pattern. | vision |
+| `agent-roles.md` | Agent Roles — Role type (worker, manager, enforcer, broker) orthogonal to Persona. ArtifactScope filtering restricts artifact visibility by role. Ouroboros role affinity. | vision |
+| `operator-reconciliation.md` | Operator Reconciliation — Operator interface (Observe, Reconcile, Evaluate) with reconciliation loop. CircuitContainer lifecycle management. K8s Operator pattern for AI agents. | vision |
+| `finding-router.md` | Finding Router — Enforcer findings routed by severity and domain. Three enforcement patterns (Hook, Signal, Parallel Circuit). Veto mechanism via confidence override. | vision |
 
 ## Completed (recent)
+
+### Cloud-native phase
+
+- `completed/cloud-native/cloud-native.md` — Three-service K8s deployment (Gateway, RCA, Knowledge) with MCP routing, health probes, Docker Compose, K8s manifests, WorkerPool, LLM containers, wet Llama run. Complete.
+- `completed/cloud-native/container-ready-serve.md` — HTTP transport for `serve` command (`--transport http`), Dockerfile, OCI-based distribution. Complete.
+- `completed/cloud-native/remote-backend.md` — `RemoteBackend` connecting to running MCP endpoints without lifecycle ownership (~105 LOC, 8 unit tests). Complete.
+- `completed/cloud-native/fold-deploy-modes.md` — `origami fold` codegen for all four deployment modes (in-process, subprocess, container, remote). Complete.
+- `completed/cloud-native/monolith-retirement.md` — Monolith Retirement: retired fold-generated monolith binary, migrated CLI commands to test wrappers + MCP admin tools, stripped fold to domain-serve only, deleted `schematics/rca/cmd/` tree. Complete.
+
+### Absorbed (superseded by domain-separation-container)
+
+- `completed/absorbed/sockets-and-plugs.md` — Typed sockets, plug declarations, manifest bindings. **Superseded** by EE abstraction stack (topology → socket types → schematic → connectors → implementation) in `domain-separation-container`.
+- `completed/absorbed/sockets-and-plugs-2.md` — Source-agnostic data shapes for RCA. **Absorbed** by domain-separation-container Phase 5 (genericize processing, `map[string]any`).
+- `completed/absorbed/refactor-decompose.md` — Three-level taxonomy, directory renames, RCA decontamination. **Absorbed** by domain-separation-container (RCA genericization) + schema-driven-entity-store (SQLite consolidation).
 
 ### Sumi phase
 
@@ -47,6 +59,17 @@
 - `completed/api-stabilization/naming-taxonomy.md` — Rename marbles/ to modules/ (now schematics/), DeterministicTransformer marker, IsCircuitDeterministic(), B7 lint rule. Complete.
 - `completed/api-stabilization/design-principle-deterministic.md` — Deterministic-first design principle, D/S boundary docs, ADC node pattern, B7s aggregate summary lint rule. Complete.
 - `completed/api-stabilization/origami-autodoc.md` — `origami autodoc` CLI: docs tree scaffold, Mermaid + Markdown generation, D/S boundary, context flow, stochastic enrichment. Complete.
+- `completed/api-stabilization/decoupled-schematics.md` — Schematics as independent processes/containers via MCP, unified knowledge layer with Git + HTTP drivers, multi-schematic fold/codegen. Complete.
+- `completed/api-stabilization/schema-driven-entity-store.md` — Schema-driven entity CRUD in `connectors/sqlite` (`EntityStore`, `MemEntityStore`, `Row` type). SqlStore is a thin adapter. Work absorbed incrementally during prior sessions. Complete.
+- `completed/api-stabilization/calibration-harness-decoupling.md` — Generic calibration harness: `ScenarioLoader`, `CaseCollector`, `ReportRenderer` interfaces and `calibrate.Run()` orchestrator. Stream C (manifest YAML) deferred. Complete.
+- `completed/api-stabilization/domain-separation-container.md` — Topology-driven domain separation: 7-phase contract (fs.FS parameterization, MCPRemoteFS, domainserve, fold codegen, domain data move, map[string]any genericization, 4-service deploy). Engine is product-agnostic. Complete.
+- `completed/api-stabilization/graph-drawing.md` — 4-level graph rendering test methodology: structural layout/routing assertions, abstract renderer, golden snapshots. 11 golden files, all brittle character checks eliminated. Complete.
+- `completed/api-stabilization/ingestion-pipeline-decoupling.md` — Generic `ingest.Run()` ETL harness with `Source`, `Matcher`, `DedupStore`, `CandidateWriter` interfaces. RCA/RP is an adapter. Decorative `ingest.yaml` circuit deleted. Complete.
+- `completed/api-stabilization/schematic-runtime-toolkit.md` — Schematic Runtime Toolkit: generic patterns extracted to `schematics/toolkit/`, root `knowledge/` eliminated, Achilles validated as second consumer. Complete.
+- `completed/api-stabilization/framework-api-layering.md` — Root package 5-layer `doc.go`, `// Category:` headers on all 43 files, 26 dead exports unexported. Feature extraction deferred (coupling). Complete.
+- `completed/api-stabilization/topology-layer.md` — `topology/` package with 5 built-in primitives (cascade, fan-out, fan-in, feedback-loop, bridge), validation engine, wired into `BuildGraph()`. RCA circuit annotated. Complete.
+- `completed/api-stabilization/knowledge-layer.md` — Knowledge Layer: workspace→sources rename, Synthesizer interface, StructuralSynthesizer, knowledge_synthesize MCP tool. Merged from knowledge-sources-github + knowledge-synthesis. Complete.
+- `completed/api-stabilization/layering-purity.md` — Layering Purity: logging deleted, Driver to toolkit, element/ + models/ extracted, RCA domain decoupled. Deferred: element alias removal, doc.go polish. Complete.
 
 ### Refinement phase
 

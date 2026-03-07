@@ -92,6 +92,7 @@ All BYO interfaces: `NodeRegistry`, `EdgeFactory`, `ExtractorRegistry`, `Transfo
 - Network-capable `MuxDispatcher` (gRPC / HTTP)
 - CRD-based Kubernetes circuit operator (nodes as Jobs/Pods, edges as event triggers)
 - Separate UI product (circuit visualization, run history, artifact inspection — like Ansible Tower for Origami)
+- **Operator API** — four-role agentic hierarchy (Broker, Manager, Worker, Enforcer) with meta-circuits (`DelegateNode` — circuits generating circuits), role-based artifact scoping (`ArtifactScope`), K8s-style reconciliation loop (`Operator` interface: Observe/Reconcile/Evaluate), and enforcer feedback routing (`FindingRouter`). See `docs/agentic-hierarchy-design.md` and contracts: `delegate-node`, `agent-roles`, `operator-reconciliation`, `finding-router`.
 
 ### Red — Won't do (permanent exclusions)
 

@@ -4,9 +4,10 @@
 (No directories)
 
 ## Files
-- `graph-drawing.md` — Graph Drawing — 4-level testing methodology for graph rendering: structural layout/routing assertions, abstract renderer, golden snapshots.
-- `fold-deploy-modes.md` — Fold Deploy Modes — teach `origami fold` to generate correct code for all four deployment modes (in-process, subprocess, container, remote).
-- `remote-backend.md` — Remote Backend — SchematicBackend that connects to an already-running MCP endpoint without owning process lifecycle.
-- `schema-driven-entity-store.md` — Schema-Driven Entity Store — generic CRUD in `connectors/sqlite` derived from `schema.yaml`, eliminating hand-written SQL boilerplate in schematics.
-- `sockets-and-plugs-2.md` — Sockets & Plugs 2: Electric Boogaloo — normalize Envelope, store schema, and RCA output to be source-agnostic (no RP-specific data shapes).
+- `ouroboros-probe-extensions.md` — Ouroboros Probe Extensions — timed handicap probes, scaffolded prompt-chain probes, transcript persistence with review API.
+- `ouroboros-workbench.md` — Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode.
 - `washi.md` — Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.
+- `delegate-node.md` — Delegate Node — DelegateNode interface enabling meta-circuits (circuits generating circuits). Sub-walk execution, DSL extension, topology validation.
+- `agent-roles.md` — Agent Roles — Role type (worker, manager, enforcer, broker) orthogonal to Persona. ArtifactScope filtering. Ouroboros role affinity.
+- `operator-reconciliation.md` — Operator Reconciliation — Operator interface with reconciliation loop, CircuitContainer lifecycle, K8s Operator pattern for AI agents.
+- `finding-router.md` — Finding Router — Enforcer findings routed by severity and domain. Three enforcement patterns. Veto mechanism via confidence override.

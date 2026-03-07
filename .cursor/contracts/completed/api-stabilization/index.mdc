@@ -19,3 +19,11 @@
 - `naming-taxonomy.md` — Rename marbles/ to modules/, DeterministicTransformer marker interface, IsCircuitDeterministic(), B7 lint rule. Complete.
 - `design-principle-deterministic.md` — Deterministic-first design principle, D/S boundary docs, ADC node pattern, B7s aggregate summary lint rule. Complete.
 - `origami-autodoc.md` — `origami autodoc` CLI: docs tree scaffold (Kubernetes pattern), Mermaid + Markdown generation, D/S boundary visualization, context flow diagrams, stochastic enrichment. Complete.
+- `decoupled-schematics.md` — Schematics as independent processes/containers via MCP, unified knowledge layer with Git + HTTP drivers, multi-schematic fold/codegen. Complete.
+- `calibration-harness-decoupling.md` — Generic calibration harness: `ScenarioLoader`, `CaseCollector`, `ReportRenderer` interfaces and `calibrate.Run()` orchestrator. Stream C (manifest YAML) deferred. Complete.
+- `domain-separation-container.md` — Topology-driven domain separation: 7-phase contract (fs.FS parameterization, MCPRemoteFS, domainserve, fold codegen, domain data move, map[string]any genericization, 4-service deploy). Engine is product-agnostic. Complete.
+- `schematic-runtime-toolkit.md` — Schematic Runtime Toolkit: generic patterns (mapaccess, artifact, params, component, hooks, routing, hitl, tuning, report, source types) extracted from `schematics/rca/` to `schematics/toolkit/`. Root `knowledge/` directory eliminated. Achilles validated as second consumer. Complete.
+- `ingestion-pipeline-decoupling.md` — Generic `ingest.Run()` ETL harness with `Source`, `Matcher`, `DedupStore`, `CandidateWriter` interfaces. RCA/RP is an adapter. Complete.
+- `framework-api-layering.md` — Root package 5-layer `doc.go`, `// Category:` headers on all 43 files, 26 dead exports unexported. Complete.
+- `topology-layer.md` — `topology/` package with 5 built-in primitives, validation engine wired into `BuildGraph()`. Complete.
+- `layering-purity.md` — Layering Purity: logging deleted, Driver to toolkit, element/ + models/ extracted, RCA domain decoupled (SessionObserver, ConsumeFunc, slog migration, rpconv deleted). Deferred: element alias removal, doc.go polish. Complete.
