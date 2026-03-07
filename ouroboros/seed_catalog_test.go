@@ -13,8 +13,8 @@ func TestSeedCatalog_AllSeedsValid(t *testing.T) {
 		t.Fatalf("read seeds directory: %v", err)
 	}
 
-	if len(entries) < 8 {
-		t.Fatalf("expected at least 8 seeds, found %d", len(entries))
+	if len(entries) < 40 {
+		t.Fatalf("expected at least 40 seeds, found %d", len(entries))
 	}
 
 	for _, entry := range entries {

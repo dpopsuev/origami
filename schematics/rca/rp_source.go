@@ -2,9 +2,8 @@ package rca
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
-
-	"github.com/dpopsuev/origami/logging"
 
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 )
@@ -14,7 +13,7 @@ import (
 // Cases without SourceLaunchID are left unchanged. Envelopes are cached by launch
 // ID so multiple cases sharing a launch only trigger one API call.
 func ResolveRPCases(fetcher rcatype.EnvelopeFetcher, scenario *Scenario) error {
-	logger := logging.New("rp-source")
+	logger := slog.Default().With("component", "rp-source")
 	cache := make(map[int]*rcatype.Envelope)
 
 	for i := range scenario.Cases {

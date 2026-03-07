@@ -99,7 +99,7 @@ func TestClassifyTrajectory(t *testing.T) {
 	cases := []struct {
 		name    string
 		history []float64
-		want    TrajectoryType
+		want    trajectoryType
 	}{
 		{"insufficient-0", nil, TrajectoryInsufficient},
 		{"insufficient-2", []float64{0.5, 0.7}, TrajectoryInsufficient},
@@ -110,9 +110,9 @@ func TestClassifyTrajectory(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ClassifyTrajectory(tc.history)
+			got := classifyTrajectory(tc.history)
 			if got != tc.want {
-				t.Errorf("ClassifyTrajectory(%v) = %q, want %q", tc.history, got, tc.want)
+				t.Errorf("classifyTrajectory(%v) = %q, want %q", tc.history, got, tc.want)
 			}
 		})
 	}

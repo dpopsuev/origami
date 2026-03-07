@@ -49,7 +49,7 @@ Given the triage classification and the available repos, select which repo(s) to
 
 Previous investigation converged at **0.85** with defect type `pb001`:
 
-> root cause from subagent-3
+> root cause from subagent-2
 
 The convergence was too low. Select a different repo or broader scope for the retry.
 
@@ -64,22 +64,6 @@ ptp4l[23456.789]: port 1: FREERUN state, holdover exceeded after 60s (expected 3
 
 
 
-
-*No launch attributes available.*
-
-
-*No linked Jira tickets.*
-
-
-## Available repos
-
-| Repo | Path | Purpose | Branch |
-|------|------|---------|--------|
-| linuxptp-daemon-operator |  | PTP operator: manages linuxptp-daemon DaemonSet, PtpConfig CRD, clock sync | release-4.21 |
-| ptp-test-framework |  | E2E test suite for PTP operator: Ginkgo specs, test helpers, fixtures | main |
-| cluster-infra-config |  | CI cluster configuration: job profiles, NTP config, network templates | main |
-| sriov-network-operator |  | SR-IOV network operator: VF allocation, device plugin (NOT PTP-related) | release-4.21 |
-| cnf-features-deploy |  | CNF deployment manifests and CI profiles: contains job definitions for all telco operators | master |
 
 
 

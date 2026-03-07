@@ -1,7 +1,6 @@
 package rca
 
 import (
-	_ "embed"
 	"fmt"
 	"regexp"
 	"strings"
@@ -13,9 +12,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
-
-//go:embed heuristics.yaml
-var heuristicsYAML []byte
 
 type heuristicTransformer struct {
 	st    store.Store
@@ -30,12 +26,14 @@ type convergenceConfig struct {
 	VersionKW     []string `yaml:"version_keywords"`
 }
 
-func NewHeuristicTransformer(st store.Store, repos []string) *heuristicTransformer {
-	eval, err := transformers.NewMatchEvaluator(heuristicsYAML)
+// NewHeuristicTransformer creates a heuristic transformer from the given
+// heuristics YAML data.
+func NewHeuristicTransformer(st store.Store, repos []string, heuristicsData []byte) *heuristicTransformer {
+	eval, err := transformers.NewMatchEvaluator(heuristicsData)
 	if err != nil {
 		panic(fmt.Sprintf("load heuristics.yaml: %v", err))
 	}
-	conv := loadConvergenceConfig(heuristicsYAML)
+	conv := loadConvergenceConfig(heuristicsData)
 	return &heuristicTransformer{st: st, repos: repos, eval: eval, conv: conv}
 }
 
@@ -105,67 +103,69 @@ func (t *heuristicTransformer) identifyComponent(text string) string {
 	return rs.EvaluateString(text)
 }
 
-func (t *heuristicTransformer) buildRecall(fp failureInfo) *RecallResult {
+func (t *heuristicTransformer) buildRecall(fp failureInfo) map[string]any {
 	fingerprint := ComputeFingerprint(fp.name, fp.errorMessage, "")
 	sym, err := t.st.GetSymptomByFingerprint(fingerprint)
 	if err != nil || sym == nil {
-		return &RecallResult{
-			Match: false, Confidence: 0.0,
-			Reasoning: "no matching symptom in store",
+		return map[string]any{
+			"match": false, "confidence": 0.0,
+			"reasoning": "no matching symptom in store",
 		}
 	}
 	links, err := t.st.GetRCAsForSymptom(sym.ID)
 	if err != nil || len(links) == 0 {
-		return &RecallResult{
-			Match: true, SymptomID: sym.ID, Confidence: 0.60,
-			Reasoning: fmt.Sprintf("matched symptom %q (count=%d) but no linked RCA", sym.Name, sym.OccurrenceCount),
+		return map[string]any{
+			"match": true, "symptom_id": float64(sym.ID), "confidence": 0.60,
+			"reasoning": fmt.Sprintf("matched symptom %q (count=%d) but no linked RCA", sym.Name, sym.OccurrenceCount),
 		}
 	}
-	return &RecallResult{
-		Match: true, PriorRCAID: links[0].RCAID, SymptomID: sym.ID, Confidence: 0.85,
-		Reasoning: fmt.Sprintf("recalled symptom %q with RCA #%d", sym.Name, links[0].RCAID),
+	return map[string]any{
+		"match": true, "prior_rca_id": float64(links[0].RCAID), "symptom_id": float64(sym.ID), "confidence": 0.85,
+		"reasoning": fmt.Sprintf("recalled symptom %q with RCA #%d", sym.Name, links[0].RCAID),
 	}
 }
 
-func (t *heuristicTransformer) buildTriage(fp failureInfo) *TriageResult {
+func (t *heuristicTransformer) buildTriage(fp failureInfo) map[string]any {
 	text := t.textFromFailure(fp)
 	category, hypothesis, skip := t.classifyDefect(text)
 	component := t.identifyComponent(text)
 
-	var candidateRepos []string
+	var candidateRepos []any
 	if component != "unknown" {
-		candidateRepos = []string{component}
+		candidateRepos = []any{component}
 	} else {
-		candidateRepos = t.repos
+		for _, r := range t.repos {
+			candidateRepos = append(candidateRepos, r)
+		}
 	}
 
 	cascade := matchCount(text, cascadeKeywords()) > 0
 
-	return &TriageResult{
-		SymptomCategory:      category,
-		Severity:             "medium",
-		DefectTypeHypothesis: hypothesis,
-		CandidateRepos:       candidateRepos,
-		SkipInvestigation:    skip,
-		CascadeSuspected:     cascade,
+	return map[string]any{
+		"symptom_category":       category,
+		"severity":               "medium",
+		"defect_type_hypothesis": hypothesis,
+		"candidate_repos":        candidateRepos,
+		"skip_investigation":     skip,
+		"cascade_suspected":      cascade,
 	}
 }
 
-func (t *heuristicTransformer) buildResolve(fp failureInfo) *ResolveResult {
+func (t *heuristicTransformer) buildResolve(fp failureInfo) map[string]any {
 	text := t.textFromFailure(fp)
 	component := t.identifyComponent(text)
-	var repos []RepoSelection
+	var repos []any
 	if component != "unknown" {
-		repos = append(repos, RepoSelection{Name: component, Reason: fmt.Sprintf("keyword-identified component: %s", component)})
+		repos = append(repos, map[string]any{"name": component, "reason": fmt.Sprintf("keyword-identified component: %s", component)})
 	} else {
 		for _, name := range t.repos {
-			repos = append(repos, RepoSelection{Name: name, Reason: "included from workspace (no component identified)"})
+			repos = append(repos, map[string]any{"name": name, "reason": "included from workspace (no component identified)"})
 		}
 	}
-	return &ResolveResult{SelectedRepos: repos}
+	return map[string]any{"selected_repos": repos}
 }
 
-func (t *heuristicTransformer) buildInvestigate(fp failureInfo) *InvestigateArtifact {
+func (t *heuristicTransformer) buildInvestigate(fp failureInfo) map[string]any {
 	text := t.textFromFailure(fp)
 	component := t.identifyComponent(text)
 	_, defectType, _ := t.classifyDefect(text)
@@ -189,14 +189,30 @@ func (t *heuristicTransformer) buildInvestigate(fp failureInfo) *InvestigateArti
 	convergence := t.computeConvergence(text, component)
 	gapBrief := t.buildGapBrief(fp, text, component, defectType, convergence)
 
-	return &InvestigateArtifact{
-		RCAMessage:       rcaMessage,
-		DefectType:       defectType,
-		Component:        component,
-		ConvergenceScore: convergence,
-		EvidenceRefs:     evidenceRefs,
-		GapBrief:         gapBrief,
+	m := map[string]any{
+		"rca_message":       rcaMessage,
+		"defect_type":       defectType,
+		"component":         component,
+		"convergence_score": convergence,
+		"evidence_refs":     evidenceRefs,
 	}
+	if gapBrief != nil {
+		gapItems := make([]any, 0, len(gapBrief.GapItems))
+		for _, g := range gapBrief.GapItems {
+			gapItems = append(gapItems, map[string]any{
+				"category":    g.Category,
+				"description": g.Description,
+				"would_help":  g.WouldHelp,
+				"source":      g.Source,
+				"blocked":     g.Blocked,
+			})
+		}
+		m["gap_brief"] = map[string]any{
+			"verdict":   gapBrief.Verdict,
+			"gap_items": gapItems,
+		}
+	}
+	return m
 }
 
 func (t *heuristicTransformer) buildGapBrief(fp failureInfo, text, component, defectType string, convergence float64) *GapBrief {
@@ -222,14 +238,14 @@ func (t *heuristicTransformer) buildGapBrief(fp failureInfo, text, component, de
 	return &GapBrief{Verdict: verdict, GapItems: gaps}
 }
 
-func (t *heuristicTransformer) buildCorrelate(fp failureInfo) *CorrelateResult {
+func (t *heuristicTransformer) buildCorrelate(fp failureInfo) map[string]any {
 	rcas, err := t.st.ListRCAs()
 	if err != nil || len(rcas) == 0 {
-		return &CorrelateResult{IsDuplicate: false, Confidence: 0.0}
+		return map[string]any{"is_duplicate": false, "confidence": 0.0}
 	}
 	text := strings.ToLower(fp.errorMessage)
 	if text == "" {
-		return &CorrelateResult{IsDuplicate: false, Confidence: 0.0}
+		return map[string]any{"is_duplicate": false, "confidence": 0.0}
 	}
 	for _, existing := range rcas {
 		if existing.Description == "" {
@@ -237,13 +253,15 @@ func (t *heuristicTransformer) buildCorrelate(fp failureInfo) *CorrelateResult {
 		}
 		rcaText := strings.ToLower(existing.Description)
 		if strings.Contains(rcaText, text) || strings.Contains(text, rcaText) {
-			return &CorrelateResult{
-				IsDuplicate: true, LinkedRCAID: existing.ID, Confidence: 0.75,
-				Reasoning: fmt.Sprintf("matched existing RCA #%d: %s", existing.ID, existing.Title),
+			return map[string]any{
+				"is_duplicate":  true,
+				"linked_rca_id": float64(existing.ID),
+				"confidence":    0.75,
+				"reasoning":     fmt.Sprintf("matched existing RCA #%d: %s", existing.ID, existing.Title),
 			}
 		}
 	}
-	return &CorrelateResult{IsDuplicate: false, Confidence: 0.0}
+	return map[string]any{"is_duplicate": false, "confidence": 0.0}
 }
 
 func (t *heuristicTransformer) computeConvergence(text, component string) float64 {

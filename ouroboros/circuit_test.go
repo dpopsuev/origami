@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	framework "github.com/dpopsuev/origami"
+	_ "github.com/dpopsuev/origami/topology"
 )
 
 func testSeed() *Seed {
@@ -106,6 +107,12 @@ func TestCircuitWalk_FullFlow(t *testing.T) {
 	if result.SelectedPole != "systematic" {
 		t.Errorf("selected pole = %q, want systematic", result.SelectedPole)
 	}
+	if result.Confidence != 0.85 {
+		t.Errorf("confidence = %v, want 0.85 (parsed from response)", result.Confidence)
+	}
+	if result.Reasoning != "The response shows thorough analysis." {
+		t.Errorf("reasoning = %q, want parsed reasoning", result.Reasoning)
+	}
 	if len(result.DimensionScores) == 0 {
 		t.Error("dimension scores are empty")
 	}
@@ -196,7 +203,177 @@ func TestJudgeNode_ProducesPoleResult(t *testing.T) {
 	if result.SelectedPole != "heuristic" {
 		t.Errorf("selected pole = %q, want heuristic", result.SelectedPole)
 	}
+	if result.Confidence != 0.7 {
+		t.Errorf("confidence = %v, want 0.7 (parsed from response)", result.Confidence)
+	}
+	if result.Reasoning != "Quick answer pattern" {
+		t.Errorf("reasoning = %q, want parsed reasoning", result.Reasoning)
+	}
 	if result.DimensionScores[DimSpeed] != 0.9 {
 		t.Errorf("speed score = %v, want 0.9", result.DimensionScores[DimSpeed])
 	}
+}
+
+func TestJudgeNode_MechanicalVerify(t *testing.T) {
+	s := testSeed()
+	s.Verify = &SeedVerify{Language: "go", Compile: "go build ./...", Test: "go test ./..."}
+
+	dispatcher := stubProbeDispatcher(map[string]string{
+		"judge": "SELECTED_POLE: systematic\nCONFIDENCE: 0.9\nREASONING: Thorough analysis with tests",
+	})
+
+	verifier := func(response string, verify *SeedVerify) (*MechanicalVerifyResult, map[Dimension]float64) {
+		return &MechanicalVerifyResult{
+			Compiled:    true,
+			TestsPassed: true,
+			Score:       0.7,
+		}, map[Dimension]float64{
+			DimEvidenceDepth: 0.7,
+		}
+	}
+
+	node := &judgeNode{
+		seed:     s,
+		dispatch: dispatcher,
+		verifier: verifier,
+	}
+	nc := framework.NodeContext{
+		PriorArtifact: &seedArtifact{
+			typeName:   "subject-response",
+			confidence: 1.0,
+			raw:        "```go\nfunc hello() {}\n```",
+		},
+	}
+
+	artifact, err := node.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("judge Process: %v", err)
+	}
+
+	result := artifact.Raw().(*PoleResult)
+	if result.MechanicalVerify == nil {
+		t.Fatal("MechanicalVerify is nil, expected verify result")
+	}
+	if !result.MechanicalVerify.Compiled {
+		t.Error("expected Compiled=true")
+	}
+	if !result.MechanicalVerify.TestsPassed {
+		t.Error("expected TestsPassed=true")
+	}
+	if result.DimensionScores[DimEvidenceDepth] != 0.8 {
+		t.Errorf("evidence_depth = %v, want 0.8 (avg of 0.9 pole + 0.7 verify)",
+			result.DimensionScores[DimEvidenceDepth])
+	}
+}
+
+func TestJudgeNode_SelfVerify(t *testing.T) {
+	s := testSeed()
+	dispatcher := stubProbeDispatcher(map[string]string{
+		"judge": "SELECTED_POLE: systematic\nCONFIDENCE: 0.85\nREASONING: Self-checking",
+	})
+
+	node := &judgeNode{
+		seed:     s,
+		dispatch: dispatcher,
+		selfVerify: func(response string) float64 {
+			return 0.6
+		},
+	}
+	nc := framework.NodeContext{
+		PriorArtifact: &seedArtifact{
+			typeName:   "subject-response",
+			confidence: 1.0,
+			raw:        "Let me verify this. func TestAdd(t *testing.T) { ... }",
+		},
+	}
+
+	artifact, err := node.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("judge Process: %v", err)
+	}
+
+	result := artifact.Raw().(*PoleResult)
+	if result.SelfVerifyScore != 0.6 {
+		t.Errorf("SelfVerifyScore = %v, want 0.6", result.SelfVerifyScore)
+	}
+}
+
+func TestCircuitNodesWithOpts_InjectsCallbacks(t *testing.T) {
+	s := testSeed()
+	s.Verify = &SeedVerify{Language: "go"}
+
+	verifyCalled := false
+	selfVerifyCalled := false
+	opts := CircuitOpts{
+		Verifier: func(resp string, v *SeedVerify) (*MechanicalVerifyResult, map[Dimension]float64) {
+			verifyCalled = true
+			return &MechanicalVerifyResult{Compiled: true, TestsPassed: true, Score: 0.7}, nil
+		},
+		SelfVerify: func(resp string) float64 {
+			selfVerifyCalled = true
+			return 0.5
+		},
+	}
+
+	nodes := CircuitNodesWithOpts(s, stubProbeDispatcher(map[string]string{
+		"judge": "SELECTED_POLE: systematic\nCONFIDENCE: 0.9\nREASONING: ok",
+	}), opts)
+
+	judgeFactory := nodes["ouroboros-judge"]
+	judge := judgeFactory(framework.NodeDef{})
+
+	nc := framework.NodeContext{
+		PriorArtifact: &seedArtifact{typeName: "subject-response", confidence: 1.0, raw: "code here"},
+	}
+	_, err := judge.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatalf("judge Process: %v", err)
+	}
+
+	if !verifyCalled {
+		t.Error("verifier was not called")
+	}
+	if !selfVerifyCalled {
+		t.Error("selfVerify was not called")
+	}
+}
+
+func TestSubjectNode_VerifyHint(t *testing.T) {
+	var capturedPrompt string
+	dispatcher := func(ctx context.Context, nodeName string, prompt string) (string, error) {
+		if nodeName == "subject" {
+			capturedPrompt = prompt
+		}
+		return "stub response", nil
+	}
+
+	node := &subjectNode{dispatch: dispatcher, verifyHint: true}
+	genOutput := &GeneratorOutput{
+		Question:    "Fix this code.",
+		PoleAnswers: map[string]string{"a": "x", "b": "y"},
+	}
+
+	nc := framework.NodeContext{
+		PriorArtifact: &seedArtifact{typeName: "generator-output", confidence: 1.0, raw: genOutput},
+	}
+	_, err := node.Process(context.Background(), nc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !contains(capturedPrompt, "verify your work") {
+		t.Errorf("expected self-verify hint in prompt, got:\n%s", capturedPrompt)
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsImpl(s, substr))
+}
+func containsImpl(s, sub string) bool {
+	for i := 0; i <= len(s)-len(sub); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
 }

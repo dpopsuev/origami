@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 )
 
 func testProfile() ModelProfile {
@@ -22,12 +23,12 @@ func testProfile() ModelProfile {
 			DimEvidenceDepth:        0.9,
 			DimFailureMode:          0.5,
 		},
-		ElementMatch: framework.ElementWater,
-		ElementScores: map[framework.Element]float64{
-			framework.ElementWater: 1.0,
-			framework.ElementEarth: 0.85,
+		ElementMatch: element.ElementWater,
+		ElementScores: map[element.Element]float64{
+			element.ElementWater: 1.0,
+			element.ElementEarth: 0.85,
 		},
-		SuggestedPersonas: []string{"water-primary", "earth-primary"},
+		SuggestedPersonas: []string{"Seeker", "Sentinel"},
 	}
 }
 
@@ -50,7 +51,7 @@ func TestEmitPersonaSheet_AllStepsHavePersonas(t *testing.T) {
 	profile := testProfile()
 	circuit := testCircuit()
 
-	sheet, err := EmitPersonaSheet(profile, circuit)
+	sheet, err := EmitPersonaSheet(profile, circuit, testRCAStepDims)
 	if err != nil {
 		t.Fatalf("EmitPersonaSheet: %v", err)
 	}
@@ -81,7 +82,7 @@ func TestEmitPersonaSheet_AllStepsHavePersonas(t *testing.T) {
 	}
 }
 
-func TestEmitPersonaSheet_3StepCircuit(t *testing.T) {
+func TestEmitPersonaSheet_3StepCircuit_NilStepDims(t *testing.T) {
 	profile := testProfile()
 	circuit := framework.CircuitDef{
 		Circuit: "ouroboros-probe",
@@ -92,7 +93,7 @@ func TestEmitPersonaSheet_3StepCircuit(t *testing.T) {
 		},
 	}
 
-	sheet, err := EmitPersonaSheet(profile, circuit)
+	sheet, err := EmitPersonaSheet(profile, circuit, nil)
 	if err != nil {
 		t.Fatalf("EmitPersonaSheet: %v", err)
 	}
@@ -102,9 +103,15 @@ func TestEmitPersonaSheet_3StepCircuit(t *testing.T) {
 	}
 
 	for _, step := range []string{"generate", "subject", "judge"} {
-		if _, ok := sheet.SuggestedPersonas[step]; !ok {
+		personaName, ok := sheet.SuggestedPersonas[step]
+		if !ok {
 			t.Errorf("missing persona for %q", step)
+			continue
 		}
+		if personaName == "" {
+			t.Errorf("step %q has empty persona", step)
+		}
+		t.Logf("step %q -> %s (generalist via ElementMatch)", step, personaName)
 	}
 }
 
@@ -112,7 +119,7 @@ func TestEmitPersonaSheet_EmptyModel_Error(t *testing.T) {
 	profile := ModelProfile{}
 	circuit := testCircuit()
 
-	_, err := EmitPersonaSheet(profile, circuit)
+	_, err := EmitPersonaSheet(profile, circuit, nil)
 	if err == nil {
 		t.Fatal("expected error for empty model, got nil")
 	}
@@ -122,7 +129,7 @@ func TestPersonaSheet_MarshalYAML(t *testing.T) {
 	profile := testProfile()
 	circuit := testCircuit()
 
-	sheet, err := EmitPersonaSheet(profile, circuit)
+	sheet, err := EmitPersonaSheet(profile, circuit, testRCAStepDims)
 	if err != nil {
 		t.Fatalf("EmitPersonaSheet: %v", err)
 	}
@@ -143,7 +150,7 @@ func TestEmitPersonaSheet_WithNonZeroAffinityOnly(t *testing.T) {
 	profile := testProfile()
 	circuit := testCircuit()
 
-	sheet, err := EmitPersonaSheet(profile, circuit)
+	sheet, err := EmitPersonaSheet(profile, circuit, testRCAStepDims)
 	if err != nil {
 		t.Fatalf("EmitPersonaSheet: %v", err)
 	}

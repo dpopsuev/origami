@@ -2,7 +2,7 @@
 
 **Case:** #7  
 **Test:** [T-TSC] PTP Recovery after grandmaster clock switchover  
-**Step:** F0_RECALL
+**Step:** recall
 
 ---
 

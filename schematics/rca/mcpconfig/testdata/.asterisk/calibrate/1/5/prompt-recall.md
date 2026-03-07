@@ -22,7 +22,7 @@
 
 **Case:** #5  
 **Test:** OCP-83300 PTP config cleanup  
-**Step:** F0_RECALL
+**Step:** recall
 
 ---
 

@@ -3,6 +3,7 @@ package rca
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/dpopsuev/origami/schematics/rca/store"
@@ -10,17 +11,18 @@ import (
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/format"
-	"github.com/dpopsuev/origami/knowledge"
-	"github.com/dpopsuev/origami/logging"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
 // AnalysisConfig holds configuration for an analysis run.
 type AnalysisConfig struct {
-	Components   []*framework.Component
-	Envelope   *rcatype.Envelope
-	Catalog    *knowledge.KnowledgeSourceCatalog
-	Thresholds Thresholds
-	BasePath   string // root directory for investigation artifacts; defaults to DefaultBasePath
+	Components      []*framework.Component
+	Envelope        *rcatype.Envelope
+	Catalog         toolkit.SourceCatalog
+	Thresholds      Thresholds
+	BasePath        string // root directory for investigation artifacts; defaults to DefaultBasePath
+	CircuitData     []byte // circuit definition YAML; required
+	KnowledgeReader toolkit.SourceReader
 }
 
 // AnalysisReport is the output of an analysis run.
@@ -66,7 +68,7 @@ func RunAnalysis(st store.Store, cases []*store.Case, suiteID int64, cfg Analysi
 		TotalCases: len(cases),
 	}
 
-	logger := logging.New("analyze")
+	logger := slog.Default().With("component", "analyze")
 
 	for i, caseData := range cases {
 		caseLabel := fmt.Sprintf("A%d", i+1)
@@ -116,19 +118,27 @@ func walkAnalysisCase(
 	injectComp := &framework.Component{
 		Namespace: "inject",
 		Name:      "rca-inject-hooks",
-		Hooks:     InjectHooks(st, caseData, cfg.Envelope, cfg.Catalog, caseDir),
+		Hooks: InjectHooksWithOpts(InjectHookOpts{
+			Store:           st,
+			CaseData:        caseData,
+			Envelope:        cfg.Envelope,
+			Catalog:         cfg.Catalog,
+			CaseDir:         caseDir,
+			KnowledgeReader: cfg.KnowledgeReader,
+		}),
 	}
 	comps := append(cfg.Components, hooksComp, injectComp)
 
 	walkCfg := WalkConfig{
-		Store:      st,
-		CaseData:   caseData,
-		Envelope:   cfg.Envelope,
-		Catalog:    cfg.Catalog,
-		CaseDir:    caseDir,
-		CaseLabel:  caseLabel,
-		Thresholds: cfg.Thresholds,
-		Components:   comps,
+		Store:       st,
+		CaseData:    caseData,
+		Envelope:    cfg.Envelope,
+		Catalog:     cfg.Catalog,
+		CaseDir:     caseDir,
+		CaseLabel:   caseLabel,
+		Thresholds:  cfg.Thresholds,
+		CircuitData: cfg.CircuitData,
+		Components:  comps,
 	}
 
 	walkResult, err := WalkCase(context.Background(), walkCfg)
@@ -139,8 +149,7 @@ func walkAnalysisCase(
 	result.Path = walkResult.Path
 
 	for nodeName, art := range walkResult.StepArtifacts {
-		step := NodeNameToStep(nodeName)
-		extractAnalysisStepData(result, step, art.Raw())
+		extractAnalysisStepData(result, nodeName, art.Raw())
 	}
 
 	updated, err := st.GetCase(caseData.ID)
@@ -161,34 +170,35 @@ func walkAnalysisCase(
 }
 
 // extractAnalysisStepData captures per-step results without ground truth comparison.
-func extractAnalysisStepData(result *AnalysisCaseResult, step CircuitStep, artifact any) {
-	switch step {
-	case StepF0Recall:
-		if r, ok := artifact.(*RecallResult); ok && r != nil {
-			result.RecallHit = r.Match && r.Confidence >= 0.80
+func extractAnalysisStepData(result *AnalysisCaseResult, nodeName string, artifact any) {
+	m := asMap(artifact)
+	if m == nil {
+		return
+	}
+	switch nodeName {
+	case "recall":
+		result.RecallHit = mapBool(m, "match") && mapFloat(m, "confidence") >= 0.80
+	case "triage":
+		result.Category = mapStr(m, "symptom_category")
+		result.Skip = mapBool(m, "skip_investigation")
+		result.Cascade = mapBool(m, "cascade_suspected")
+		candidates := mapStrSlice(m, "candidate_repos")
+		if len(candidates) == 1 && !mapBool(m, "skip_investigation") {
+			result.SelectedRepos = append(result.SelectedRepos, candidates[0])
 		}
-	case StepF1Triage:
-		if r, ok := artifact.(*TriageResult); ok && r != nil {
-			result.Category = r.SymptomCategory
-			result.Skip = r.SkipInvestigation
-			result.Cascade = r.CascadeSuspected
-			if len(r.CandidateRepos) == 1 && !r.SkipInvestigation {
-				result.SelectedRepos = append(result.SelectedRepos, r.CandidateRepos[0])
+	case "resolve":
+		for _, r := range mapSlice(m, "selected_repos") {
+			if rm, ok := r.(map[string]any); ok {
+				if name := mapStr(rm, "name"); name != "" {
+					result.SelectedRepos = append(result.SelectedRepos, name)
+				}
 			}
 		}
-	case StepF2Resolve:
-		if r, ok := artifact.(*ResolveResult); ok && r != nil {
-			for _, repo := range r.SelectedRepos {
-				result.SelectedRepos = append(result.SelectedRepos, repo.Name)
-			}
-		}
-	case StepF3Invest:
-		if r, ok := artifact.(*InvestigateArtifact); ok && r != nil {
-			result.DefectType = r.DefectType
-			result.RCAMessage = r.RCAMessage
-			result.EvidenceRefs = r.EvidenceRefs
-			result.Convergence = r.ConvergenceScore
-		}
+	case "investigate":
+		result.DefectType = mapStr(m, "defect_type")
+		result.RCAMessage = mapStr(m, "rca_message")
+		result.EvidenceRefs = mapStrSlice(m, "evidence_refs")
+		result.Convergence = mapFloat(m, "convergence_score")
 	}
 }
 

@@ -2,7 +2,7 @@
 
 **Case:** #7  
 **Launch:** ptp-ci-nightly (run-123)  
-**Step:** F2_RESOLVE
+**Step:** resolve
 
 ---
 

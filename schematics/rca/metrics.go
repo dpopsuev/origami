@@ -33,12 +33,12 @@ func computeMetrics(scenario *Scenario, results []CaseResult, sc *cal.ScoreCard)
 		ms.Metrics = append(ms.Metrics, m20def.ToMetric(0, "single run"))
 	}
 
-	applyDryCaps(&ms, scenario.DryCappedMetrics)
+	ApplyDryCaps(&ms, scenario.DryCappedMetrics)
 	return ms
 }
 
-// applyDryCaps marks metrics that are structurally unsolvable in dry calibration.
-func applyDryCaps(ms *MetricSet, capped []string) {
+// ApplyDryCaps marks metrics that are structurally unsolvable in dry calibration.
+func ApplyDryCaps(ms *MetricSet, capped []string) {
 	if len(capped) == 0 {
 		return
 	}
@@ -161,8 +161,8 @@ func PrepareBatchInput(results []CaseResult, scenario *Scenario) ([]map[string]a
 	return batch, batchCtx
 }
 
-// aggregateRunMetrics computes the mean and variance across multiple runs.
-func aggregateRunMetrics(runs []MetricSet, sc *cal.ScoreCard) MetricSet {
+// AggregateRunMetrics computes the mean and variance across multiple runs.
+func AggregateRunMetrics(runs []MetricSet, sc *cal.ScoreCard) MetricSet {
 	if len(runs) == 0 {
 		return MetricSet{}
 	}

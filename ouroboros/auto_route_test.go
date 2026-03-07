@@ -4,20 +4,21 @@ import (
 	"testing"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 )
 
 func TestProviderHints_MapsElementToProvider(t *testing.T) {
 	sheet := &PersonaSheet{
 		SuggestedPersonas: map[string]string{
-			"investigate": "water-specialist",
-			"triage":      "fire-specialist",
-			"recall":      "lightning-specialist",
+			"investigate": "Seeker",     // Water element
+			"triage":      "Herald",     // Fire element
+			"recall":      "Specter",    // Lightning element
 		},
 	}
 
-	providerElements := map[string]framework.Element{
-		"anthropic": framework.ElementWater,
-		"openai":    framework.ElementFire,
+	providerElements := map[string]element.Element{
+		"anthropic": element.ElementWater,
+		"openai":    element.ElementFire,
 	}
 
 	hints := sheet.ProviderHints(providerElements)
@@ -37,14 +38,14 @@ func TestInjectAutoRoute_SetsWalkerContext(t *testing.T) {
 	walker := framework.NewProcessWalker("test")
 	sheet := &PersonaSheet{
 		SuggestedPersonas: map[string]string{
-			"investigate": "water-specialist",
-			"triage":      "fire-specialist",
+			"investigate": "Seeker",  // Water element
+			"triage":      "Herald",  // Fire element
 		},
 	}
 
-	providerElements := map[string]framework.Element{
-		"anthropic": framework.ElementWater,
-		"openai":    framework.ElementFire,
+	providerElements := map[string]element.Element{
+		"anthropic": element.ElementWater,
+		"openai":    element.ElementFire,
 	}
 
 	InjectAutoRoute(walker, sheet, providerElements)

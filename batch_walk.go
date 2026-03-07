@@ -1,7 +1,10 @@
 package framework
 
+// Category: Execution
+
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -77,6 +80,9 @@ func BatchWalk(ctx context.Context, cfg BatchWalkConfig) []BatchWalkResult {
 		}
 
 		walkErr := runner.Walk(ctx, walker, cfg.Def.Start)
+		if walkErr != nil {
+			slog.Warn("case walk failed", "component", "batch_walk", "case_id", bc.ID, "error", walkErr)
+		}
 
 		results[i] = BatchWalkResult{
 			CaseID:        bc.ID,

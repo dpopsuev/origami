@@ -6,7 +6,7 @@ import (
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	kn "github.com/dpopsuev/origami/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 	"github.com/dpopsuev/origami/subprocess"
 )
 
@@ -22,7 +22,7 @@ func NewMCPReader(caller subprocess.ToolCaller) *MCPReader {
 	return &MCPReader{caller: caller}
 }
 
-func (r *MCPReader) Ensure(ctx context.Context, src kn.Source) error {
+func (r *MCPReader) Ensure(ctx context.Context, src toolkit.Source) error {
 	args := map[string]any{"source": src}
 	result, err := r.caller.CallTool(ctx, "knowledge_ensure", args)
 	if err != nil {
@@ -34,20 +34,20 @@ func (r *MCPReader) Ensure(ctx context.Context, src kn.Source) error {
 	return nil
 }
 
-func (r *MCPReader) Search(ctx context.Context, src kn.Source, query string, maxResults int) ([]kn.SearchResult, error) {
+func (r *MCPReader) Search(ctx context.Context, src toolkit.Source, query string, maxResults int) ([]toolkit.SearchResult, error) {
 	args := map[string]any{
 		"source":      src,
 		"query":       query,
 		"max_results": maxResults,
 	}
-	results, err := subprocess.CallToolTyped[[]kn.SearchResult](ctx, r.caller, "knowledge_search", args)
+	results, err := subprocess.CallToolTyped[[]toolkit.SearchResult](ctx, r.caller, "knowledge_search", args)
 	if err != nil {
 		return nil, fmt.Errorf("MCPReader.Search: %w", err)
 	}
 	return results, nil
 }
 
-func (r *MCPReader) Read(ctx context.Context, src kn.Source, path string) ([]byte, error) {
+func (r *MCPReader) Read(ctx context.Context, src toolkit.Source, path string) ([]byte, error) {
 	args := map[string]any{
 		"source": src,
 		"path":   path,
@@ -62,13 +62,13 @@ func (r *MCPReader) Read(ctx context.Context, src kn.Source, path string) ([]byt
 	return []byte(firstText(result)), nil
 }
 
-func (r *MCPReader) List(ctx context.Context, src kn.Source, root string, maxDepth int) ([]kn.ContentEntry, error) {
+func (r *MCPReader) List(ctx context.Context, src toolkit.Source, root string, maxDepth int) ([]toolkit.ContentEntry, error) {
 	args := map[string]any{
 		"source":    src,
 		"root":      root,
 		"max_depth": maxDepth,
 	}
-	entries, err := subprocess.CallToolTyped[[]kn.ContentEntry](ctx, r.caller, "knowledge_list", args)
+	entries, err := subprocess.CallToolTyped[[]toolkit.ContentEntry](ctx, r.caller, "knowledge_list", args)
 	if err != nil {
 		return nil, fmt.Errorf("MCPReader.List: %w", err)
 	}
@@ -85,4 +85,4 @@ func firstText(result *sdkmcp.CallToolResult) string {
 }
 
 // Compile-time check.
-var _ kn.Reader = (*MCPReader)(nil)
+var _ toolkit.SourceReader = (*MCPReader)(nil)

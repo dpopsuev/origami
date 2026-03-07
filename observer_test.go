@@ -103,7 +103,7 @@ func TestMultiObserver(t *testing.T) {
 }
 
 func TestLogObserver_NilLogger(t *testing.T) {
-	obs := &LogObserver{}
+	obs := &logObserver{}
 	obs.OnEvent(WalkEvent{Type: EventNodeEnter, Node: "A", Walker: "herald"})
 	obs.OnEvent(WalkEvent{Type: EventWalkError, Error: errors.New("boom")})
 }

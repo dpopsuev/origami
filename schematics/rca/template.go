@@ -22,6 +22,9 @@ var PromptFuncMap = template.FuncMap{
 // the given params, and returns the rendered string. Template guards (G1–G34)
 // are embedded in the templates via conditional blocks ({{if .Field}}).
 func FillTemplateFS(fsys fs.FS, templatePath string, params *TemplateParams) (string, error) {
+	if fsys == nil {
+		return "", fmt.Errorf("read template %s: prompt filesystem is nil", templatePath)
+	}
 	data, err := fs.ReadFile(fsys, templatePath)
 	if err != nil {
 		return "", fmt.Errorf("read template %s: %w", templatePath, err)
@@ -207,7 +210,7 @@ func derefType(t reflect.Type) reflect.Type {
 // ExtractTemplateFields parses a Go text/template and returns all root-relative
 // field paths referenced via {{.X.Y}} syntax.  Range and with blocks produce
 // prefixed paths (e.g. "Siblings.Name" for {{range .Siblings}}{{.Name}}{{end}}).
-// Intermediate paths are included (e.g. "Prior" from {{.Prior.TriageResult}}).
+// Intermediate paths are included (e.g. "Prior" from {{.Prior.Triage}}).
 func ExtractTemplateFields(content string, rootType reflect.Type, funcMap template.FuncMap) ([]string, error) {
 	if funcMap == nil {
 		funcMap = template.FuncMap{}

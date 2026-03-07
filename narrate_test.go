@@ -29,11 +29,11 @@ func (c *collector) all() []string {
 }
 
 func TestNarrationObserver_ZeroConfig(t *testing.T) {
-	obs := NewNarrationObserver()
+	obs := newNarrationObserver()
 	if obs == nil {
-		t.Fatal("NewNarrationObserver() returned nil")
+		t.Fatal("newNarrationObserver() returned nil")
 	}
-	p := obs.Progress()
+	p := obs.progress()
 	if p.NodesVisited != 0 {
 		t.Errorf("fresh observer: NodesVisited = %d, want 0", p.NodesVisited)
 	}
@@ -42,10 +42,10 @@ func TestNarrationObserver_ZeroConfig(t *testing.T) {
 func TestNarrationObserver_NodeEnterExit(t *testing.T) {
 	c := &collector{}
 	vocab := NewMapVocabulary().Register("F0", "Recall").Register("F1", "Triage")
-	obs := NewNarrationObserver(
-		WithVocabulary(vocab),
-		WithSink(c.sink),
-		WithMilestoneInterval(0),
+	obs := newNarrationObserver(
+		withVocabulary(vocab),
+		withSink(c.sink),
+		withMilestoneInterval(0),
 	)
 
 	obs.OnEvent(WalkEvent{Type: EventNodeEnter, Node: "F0"})
@@ -71,7 +71,7 @@ func TestNarrationObserver_NodeEnterExit(t *testing.T) {
 		t.Errorf("line 3: %q, want duration '2.0s'", lines[3])
 	}
 
-	p := obs.Progress()
+	p := obs.progress()
 	if p.NodesVisited != 2 {
 		t.Errorf("NodesVisited = %d, want 2", p.NodesVisited)
 	}
@@ -79,7 +79,7 @@ func TestNarrationObserver_NodeEnterExit(t *testing.T) {
 
 func TestNarrationObserver_WalkerSwitch(t *testing.T) {
 	c := &collector{}
-	obs := NewNarrationObserver(WithSink(c.sink), WithMilestoneInterval(0))
+	obs := newNarrationObserver(withSink(c.sink), withMilestoneInterval(0))
 
 	obs.OnEvent(WalkEvent{Type: EventWalkerSwitch, Walker: "Ember", Node: "F2"})
 	lines := c.all()
@@ -93,7 +93,7 @@ func TestNarrationObserver_WalkerSwitch(t *testing.T) {
 
 func TestNarrationObserver_WalkComplete(t *testing.T) {
 	c := &collector{}
-	obs := NewNarrationObserver(WithSink(c.sink), WithMilestoneInterval(0))
+	obs := newNarrationObserver(withSink(c.sink), withMilestoneInterval(0))
 
 	obs.OnEvent(WalkEvent{Type: EventNodeEnter, Node: "start"})
 	obs.OnEvent(WalkEvent{Type: EventNodeExit, Node: "start", Elapsed: time.Millisecond})
@@ -111,7 +111,7 @@ func TestNarrationObserver_WalkComplete(t *testing.T) {
 
 func TestNarrationObserver_WalkError(t *testing.T) {
 	c := &collector{}
-	obs := NewNarrationObserver(WithSink(c.sink), WithMilestoneInterval(0))
+	obs := newNarrationObserver(withSink(c.sink), withMilestoneInterval(0))
 
 	obs.OnEvent(WalkEvent{Type: EventWalkError, Node: "F3", Error: errors.New("timeout")})
 	lines := c.all()
@@ -128,10 +128,10 @@ func TestNarrationObserver_WalkError(t *testing.T) {
 
 func TestNarrationObserver_Milestone(t *testing.T) {
 	c := &collector{}
-	obs := NewNarrationObserver(
-		WithSink(c.sink),
-		WithMilestoneInterval(3),
-		WithETA(true),
+	obs := newNarrationObserver(
+		withSink(c.sink),
+		withMilestoneInterval(3),
+		withETA(true),
 	)
 
 	for i := 0; i < 6; i++ {
@@ -143,7 +143,7 @@ func TestNarrationObserver_Milestone(t *testing.T) {
 	lines := c.all()
 	milestones := 0
 	for _, l := range lines {
-		if strings.Contains(l, "--- Progress:") {
+		if strings.Contains(l, "--- progress:") {
 			milestones++
 		}
 	}
@@ -154,7 +154,7 @@ func TestNarrationObserver_Milestone(t *testing.T) {
 
 func TestNarrationObserver_WithWalkerTag(t *testing.T) {
 	c := &collector{}
-	obs := NewNarrationObserver(WithSink(c.sink), WithMilestoneInterval(0))
+	obs := newNarrationObserver(withSink(c.sink), withMilestoneInterval(0))
 
 	obs.OnEvent(WalkEvent{Type: EventNodeEnter, Node: "F0", Walker: "Ember"})
 	lines := c.all()
@@ -165,7 +165,7 @@ func TestNarrationObserver_WithWalkerTag(t *testing.T) {
 
 func TestNarrationObserver_ErrorInExit(t *testing.T) {
 	c := &collector{}
-	obs := NewNarrationObserver(WithSink(c.sink), WithMilestoneInterval(0))
+	obs := newNarrationObserver(withSink(c.sink), withMilestoneInterval(0))
 
 	obs.OnEvent(WalkEvent{
 		Type:  EventNodeExit,
@@ -181,7 +181,7 @@ func TestNarrationObserver_ErrorInExit(t *testing.T) {
 
 func TestNarrationObserver_SilentEvents(t *testing.T) {
 	c := &collector{}
-	obs := NewNarrationObserver(WithSink(c.sink), WithMilestoneInterval(0))
+	obs := newNarrationObserver(withSink(c.sink), withMilestoneInterval(0))
 
 	obs.OnEvent(WalkEvent{Type: EventTransition, Node: "F0", Edge: "e1"})
 	obs.OnEvent(WalkEvent{Type: EventEdgeEvaluate, Node: "F0", Edge: "e1"})

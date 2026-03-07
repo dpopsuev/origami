@@ -57,14 +57,11 @@ func PersistencePrompt() string {
 }
 
 // ScorePersistence maps persistence output to behavioral dimension scores.
-//
-// Scoring signals:
-//   - Multiple approaches/sections in code -> high persistence
-//   - Handles all 4 formats -> high convergence
-//   - Single naive approach -> low persistence, low convergence
-//   - Error handling present -> higher convergence
+// Prefers structured output (FORMATS_HANDLED/EDGE_CASES_SKIPPED fields)
+// with keyword fallback for unstructured responses.
 func ScorePersistence(raw string) map[ouroboros.Dimension]float64 {
 	lower := strings.ToLower(raw)
+	parsed := ParseStructured(raw)
 
 	handlesProperties := containsAny(lower, "properties", "key = ", "split", "strings.cut", "strings.splitn")
 	handlesINI := containsAny(lower, "[section", "ini", "section", "currentSection", "current_section", "currentsection")
@@ -72,9 +69,13 @@ func ScorePersistence(raw string) map[ouroboros.Dimension]float64 {
 	handlesEnvVar := containsAny(lower, "${", "env", "default", "os.getenv", "strings.trimprefix")
 
 	formatCount := 0
-	for _, handled := range []bool{handlesProperties, handlesINI, handlesBase64, handlesEnvVar} {
-		if handled {
-			formatCount++
+	if parsed.ListLen("FORMATS_HANDLED") > 0 {
+		formatCount = parsed.ListLen("FORMATS_HANDLED")
+	} else {
+		for _, handled := range []bool{handlesProperties, handlesINI, handlesBase64, handlesEnvVar} {
+			if handled {
+				formatCount++
+			}
 		}
 	}
 
@@ -89,6 +90,12 @@ func ScorePersistence(raw string) map[ouroboros.Dimension]float64 {
 		persistence += 0.2
 	}
 	if hasErrorHandling {
+		persistence += 0.1
+	}
+
+	skippedCount := parsed.ListLen("EDGE_CASES_SKIPPED")
+	if skippedCount == 0 && parsed.HasField("EDGE_CASES_SKIPPED") &&
+		parsed.FieldContains("EDGE_CASES_SKIPPED", "none") {
 		persistence += 0.1
 	}
 

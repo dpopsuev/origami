@@ -582,7 +582,7 @@ func TestAggregateRunMetrics(t *testing.T) {
 	sc := testScoreCard(t)
 
 	t.Run("empty", func(t *testing.T) {
-		agg := aggregateRunMetrics(nil, sc)
+		agg := AggregateRunMetrics(nil, sc)
 		if len(agg.AllMetrics()) != 0 {
 			t.Error("expected empty MetricSet")
 		}
@@ -593,7 +593,7 @@ func TestAggregateRunMetrics(t *testing.T) {
 			{ID: "M1", Value: 0.9},
 			{ID: "M19", Value: 0.85},
 		}}
-		agg := aggregateRunMetrics([]MetricSet{ms}, sc)
+		agg := AggregateRunMetrics([]MetricSet{ms}, sc)
 		if agg.Metrics[0].Value != 0.9 {
 			t.Errorf("expected 0.9, got %f", agg.Metrics[0].Value)
 		}
@@ -609,7 +609,7 @@ func TestAggregateRunMetrics(t *testing.T) {
 			{ID: "M19", Value: 0.75, Threshold: 0.70},
 			{ID: "M20", Value: 0, Threshold: 0.15},
 		}}
-		agg := aggregateRunMetrics([]MetricSet{ms, ms}, sc)
+		agg := AggregateRunMetrics([]MetricSet{ms, ms}, sc)
 		if math.Abs(agg.Metrics[0].Value-0.8) > 1e-9 {
 			t.Errorf("M1 mean = %f, want 0.8", agg.Metrics[0].Value)
 		}

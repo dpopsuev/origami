@@ -9,4 +9,4 @@ requires:
   origami: ">=0.3.0"
 satisfies:
   - socket: docs
-    factory: NewDocsDriver
+    factory: DefaultDocsDriver

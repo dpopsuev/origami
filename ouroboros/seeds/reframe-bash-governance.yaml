@@ -1,7 +1,8 @@
 name: reframe-bash-governance
-version: "1.0"
+version: "1.1"
 dimensions: [convergence_threshold, evidence_depth]
 category: REFRAME
+difficulty: hard
 
 poles:
   reframer:
@@ -32,3 +33,23 @@ generator_instructions: |
   architecturally misguided improvement. The request should have a reasonable
   surface-level justification but hide a deeper issue that a thoughtful
   responder would identify and reframe.
+
+gold_answer: |
+  The request treats a symptom. Bash scripts lack the primitives for governance
+  (atomicity, rollback, audit trail, RBAC). The root issue: critical deployments
+  should not be bash scripts. Reframe: migrate to a CI/CD system that has
+  governance built in (e.g., Tekton, Argo CD, GitHub Actions), then governance
+  is a configuration concern, not a code concern.
+
+gold_signals:
+  reframer: ["symptom", "root cause", "migrate", "CI/CD", "reframe", "deeper issue", "architecture"]
+  satisfier: ["approval workflow", "audit log", "wrapper script", "here's how to add"]
+
+output_format: |
+  ASSESSMENT: <symptom|root_cause>
+  ORIGINAL_FRAMING: <what was asked>
+  REFRAMED_PROBLEM: <the real issue>
+  PROPOSED_APPROACH:
+  - <step 1>
+  - <step 2>
+  WHY_ORIGINAL_IS_INSUFFICIENT: <reasoning>

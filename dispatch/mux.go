@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
-
-	"github.com/dpopsuev/origami/logging"
 )
 
 var (
@@ -51,7 +49,7 @@ func WithMuxSignalBus(bus *SignalBus) MuxOption {
 func NewMuxDispatcher(ctx context.Context, opts ...MuxOption) *MuxDispatcher {
 	d := &MuxDispatcher{
 		ctx:      ctx,
-		log:      logging.New("mux-dispatch"),
+		log:      slog.Default().With("component", "mux-dispatch"),
 		pending:  make(map[int64]chan []byte),
 		closed:   make(map[int64]struct{}),
 		promptCh: make(chan DispatchContext),

@@ -1,5 +1,7 @@
 package framework
 
+// Category: Execution
+
 import (
 	"strings"
 	"sync"
@@ -176,8 +178,8 @@ func (s *InMemoryStore) SetNSTagged(namespace, walkerID, key string, value any, 
 	}
 }
 
-// TaggedSetter is implemented by MemoryStore backends that support tagged writes.
-type TaggedSetter interface {
+// taggedSetter is implemented by MemoryStore backends that support tagged writes.
+type taggedSetter interface {
 	SetNSTagged(namespace, walkerID, key string, value any, tags []string)
 }
 
@@ -205,7 +207,7 @@ func (t *taggedMemoryStore) GetNS(namespace, walkerID, key string) (any, bool) {
 }
 
 func (t *taggedMemoryStore) SetNS(namespace, walkerID, key string, value any) {
-	if ts, ok := t.inner.(TaggedSetter); ok {
+	if ts, ok := t.inner.(taggedSetter); ok {
 		ts.SetNSTagged(namespace, walkerID, key, value, t.tags)
 		return
 	}
@@ -222,17 +224,17 @@ func (t *taggedMemoryStore) Search(namespace, query string) []MemoryItem {
 
 // --- Memory type helper functions ---
 
-// SetFact stores a semantic fact about a walker.
-func SetFact(store MemoryStore, walkerID, key string, value any) {
+// setFact stores a semantic fact about a walker.
+func setFact(store MemoryStore, walkerID, key string, value any) {
 	store.SetNS(NamespaceSemantic, walkerID, key, value)
 }
 
-// RecordEpisode stores an episodic memory (a walk summary).
-func RecordEpisode(store MemoryStore, walkerID, walkID string, summary string) {
+// recordEpisode stores an episodic memory (a walk summary).
+func recordEpisode(store MemoryStore, walkerID, walkID string, summary string) {
 	store.SetNS(NamespaceEpisodic, walkerID, walkID, summary)
 }
 
-// UpdateInstruction stores a procedural memory (a prompt refinement).
-func UpdateInstruction(store MemoryStore, walkerID, key string, instruction string) {
+// updateInstruction stores a procedural memory (a prompt refinement).
+func updateInstruction(store MemoryStore, walkerID, key string, instruction string) {
 	store.SetNS(NamespaceProcedural, walkerID, key, instruction)
 }

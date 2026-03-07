@@ -1,5 +1,7 @@
 package framework
 
+// Category: Execution
+
 import (
 	"context"
 	"fmt"
@@ -108,7 +110,7 @@ func WithTaggedMemory(store MemoryStore, tags ...string) RunOption {
 
 // WithNodeCache enables node-level caching. When a node has a CacheDef,
 // the runner checks the cache before processing. On cache hit, the cached
-// artifact is returned and EventNodeCacheHit is emitted.
+// artifact is returned and eventNodeCacheHit is emitted.
 func WithNodeCache(cache NodeCache) RunOption {
 	return func(c *runConfig) { c.nodeCache = cache }
 }

@@ -17,10 +17,15 @@ import (
 	"strings"
 
 	fw "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/cycle"
+	"github.com/dpopsuev/origami/dialectic"
+	"github.com/dpopsuev/origami/element"
+	"github.com/dpopsuev/origami/mask"
+	"github.com/dpopsuev/origami/persona"
 )
 
-func resolveNodeElement(d fw.NodeDef) fw.Element {
-	e, _ := fw.ResolveApproach(strings.ToLower(d.Approach))
+func resolveNodeElement(d fw.NodeDef) element.Element {
+	e, _ := element.ResolveApproach(strings.ToLower(d.Approach))
 	return e
 }
 
@@ -114,8 +119,8 @@ func showElements() {
 		"Element", "Speed", "Loops", "Converg.", "Shortcuts", "Depth", "Failure Mode")
 	fmt.Printf("  %s\n", strings.Repeat("-", 85))
 
-	for _, el := range fw.AllElements() {
-		t := fw.DefaultTraits(el)
+	for _, el := range element.AllElements() {
+		t := element.DefaultTraits(el)
 		color := elementColor(el)
 		fmt.Printf("  %s%-12s%s %-10s %-6d %-8.2f %-10.1f %-5d %s\n",
 			color, el, reset,
@@ -125,19 +130,19 @@ func showElements() {
 
 }
 
-func elementColor(e fw.Element) string {
+func elementColor(e element.Element) string {
 	switch e {
-	case fw.ElementFire:
+	case element.ElementFire:
 		return red
-	case fw.ElementLightning:
+	case element.ElementLightning:
 		return yellow
-	case fw.ElementEarth:
+	case element.ElementEarth:
 		return green
-	case fw.ElementDiamond:
+	case element.ElementDiamond:
 		return white
-	case fw.ElementWater:
+	case element.ElementWater:
 		return blue
-	case fw.ElementAir:
+	case element.ElementAir:
 		return cyan
 	default:
 		return dim
@@ -153,7 +158,7 @@ func showPersonas() {
 	fmt.Printf("an %selement%s, a dialectic %sposition%s, and either %sThesis%s or %sAntithesis%s alignment.\n\n", bold, reset, bold, reset, green, reset, red, reset)
 
 	fmt.Printf("  %sThesis (Cadai) — the investigation team:%s\n", green, reset)
-	for _, p := range fw.ThesisPersonas() {
+	for _, p := range persona.Thesis() {
 		id := p.Identity
 		fmt.Printf("    %s%-12s%s %-10s %-10s %-12s %s\n",
 			elementColor(id.Element), id.PersonaName, reset,
@@ -162,7 +167,7 @@ func showPersonas() {
 
 	fmt.Println()
 	fmt.Printf("  %sAntithesis (Cytharai) — the adversarial dialectic:%s\n", red, reset)
-	for _, p := range fw.AntithesisPersonas() {
+	for _, p := range persona.Antithesis() {
 		id := p.Identity
 		fmt.Printf("    %s%-12s%s %-10s %-10s %-12s %s\n",
 			elementColor(id.Element), id.PersonaName, reset,
@@ -282,7 +287,7 @@ func walkTriageCircuit(def *fw.CircuitDef) {
 		return
 	}
 
-	herald, _ := fw.PersonaByName("Herald")
+	herald, _ := persona.ByName("Herald")
 	walker := &demoWalker{
 		identity: herald.Identity,
 		state:    fw.NewWalkerState("demo-walk-1"),
@@ -327,11 +332,11 @@ func newDemoScenario() *demoScenario {
 // demoNode implements framework.Node for the playground.
 type demoNode struct {
 	name    string
-	element fw.Element
+	element element.Element
 }
 
-func (n *demoNode) Name() string              { return n.name }
-func (n *demoNode) ElementAffinity() fw.Element { return n.element }
+func (n *demoNode) Name() string                 { return n.name }
+func (n *demoNode) ElementAffinity() element.Element { return n.element }
 func (n *demoNode) Process(ctx context.Context, nc fw.NodeContext) (fw.Artifact, error) {
 	return &demoArtifact{typ: n.name, conf: 0.75}, nil
 }
@@ -450,20 +455,20 @@ func showMasks() {
 	fmt.Printf("  Masks are detachable middleware that grant powers at specific nodes.\n")
 	fmt.Printf("  They wrap a node's processing: %spre -> node -> post%s.\n\n", bold, reset)
 
-	masks := fw.DefaultThesisMasks()
+	masks := mask.DefaultThesisMasks()
 	fmt.Printf("  %s4 Thesis Masks:%s\n", bold, reset)
-	for name, mask := range masks {
-		nodes := strings.Join(mask.ValidNodes(), ", ")
+	for name, m := range masks {
+		nodes := strings.Join(m.ValidNodes(), ", ")
 		fmt.Printf("    %-24s at %-14s %s%s%s\n",
-			name, nodes, dim, mask.Description(), reset)
+			name, nodes, dim, m.Description(), reset)
 	}
 
 	fmt.Println()
 	fmt.Printf("  %sExample — equipping Mask of Recall on a 'recall' node:%s\n\n", dim, reset)
 
-	recallNode := &demoNode{name: "recall", element: fw.ElementFire}
-	recallMask := fw.NewRecallMask()
-	masked, err := fw.EquipMask(recallNode, recallMask)
+	recallNode := &demoNode{name: "recall", element: element.ElementFire}
+	recallMask := mask.NewRecallMask()
+	masked, err := mask.Equip(recallNode, recallMask)
 	if err != nil {
 		fmt.Printf("    %sError: %v%s\n", red, err, reset)
 		return
@@ -488,7 +493,7 @@ func showCycles() {
 	fmt.Printf("  Elements interact through two cycles (inspired by Wu Xing):\n\n")
 
 	fmt.Printf("  %sGenerative (sheng) — each element strengthens the next:%s\n", green, reset)
-	for _, rule := range fw.GenerativeCycle() {
+	for _, rule := range cycle.GenerativeCycle() {
 		fc := elementColor(rule.From)
 		tc := elementColor(rule.To)
 		fmt.Printf("    %s%-12s%s -> %s%-12s%s  %s%s%s\n",
@@ -497,7 +502,7 @@ func showCycles() {
 
 	fmt.Println()
 	fmt.Printf("  %sDestructive (ke) — each element challenges another:%s\n", red, reset)
-	for _, rule := range fw.DestructiveCycle() {
+	for _, rule := range cycle.DestructiveCycle() {
 		fc := elementColor(rule.From)
 		tc := elementColor(rule.To)
 		fmt.Printf("    %s%-12s%s -> %s%-12s%s  %s%s%s\n",
@@ -517,7 +522,7 @@ func showDialectic() {
 	fmt.Printf("  When the Thesis circuit's confidence is uncertain (0.50-0.85),\n")
 	fmt.Printf("  the adversarial dialectic activates for thesis-antithesis-synthesis review.\n\n")
 
-	cfg := fw.DefaultDialecticConfig()
+	cfg := dialectic.DefaultConfig()
 	cfg.Enabled = true
 	fmt.Printf("  Dialectic config: contradiction_threshold=%.2f, max_turns=%d, max_negations=%d, ttl=%s\n\n",
 		cfg.ContradictionThreshold, cfg.MaxTurns, cfg.MaxNegations, cfg.TTL)
@@ -607,10 +612,10 @@ func teamWalkDemo(def *fw.CircuitDef) {
 		return
 	}
 
-	herald, _ := fw.PersonaByName("Herald")
-	seeker, _ := fw.PersonaByName("Seeker")
-	sentinel, _ := fw.PersonaByName("Sentinel")
-	weaver, _ := fw.PersonaByName("Weaver")
+	herald, _ := persona.ByName("Herald")
+	seeker, _ := persona.ByName("Seeker")
+	sentinel, _ := persona.ByName("Sentinel")
+	weaver, _ := persona.ByName("Weaver")
 
 	walkers := []fw.Walker{
 		&demoWalker{identity: herald.Identity, state: fw.NewWalkerState("herald-team"), scenario: scenario},

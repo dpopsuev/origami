@@ -10,8 +10,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/dpopsuev/origami/logging"
 )
 
 // Client is a high-level client for the Report Portal API.
@@ -56,7 +54,7 @@ func New(baseURL, bearerToken string, opts ...Option) (*Client, error) {
 
 	logger := cfg.logger
 	if logger == nil {
-		logger = logging.New("rp-client")
+		logger = slog.Default().With("component", "rp-client")
 	}
 
 	return &Client{

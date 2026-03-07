@@ -6,23 +6,19 @@ import (
 	"fmt"
 )
 
-// StepExtractor wraps parseJSON[T] as a framework.Extractor implementation.
-// Demonstrates that the Extractor interface handles the existing calibration
-// pattern: json.RawMessage -> typed struct per circuit step.
-//
-// Input: json.RawMessage or []byte. Output: *T.
-type StepExtractor[T any] struct {
+// MapExtractor is a framework.Extractor that unmarshals JSON into map[string]any.
+// All circuit steps use the same extractor — no typed generics needed.
+type MapExtractor struct {
 	name string
 }
 
-// NewStepExtractor creates an Extractor that unmarshals JSON into *T.
-func NewStepExtractor[T any](name string) *StepExtractor[T] {
-	return &StepExtractor[T]{name: name}
+func NewMapExtractor(name string) *MapExtractor {
+	return &MapExtractor{name: name}
 }
 
-func (e *StepExtractor[T]) Name() string { return e.name }
+func (e *MapExtractor) Name() string { return e.name }
 
-func (e *StepExtractor[T]) Extract(_ context.Context, input any) (any, error) {
+func (e *MapExtractor) Extract(_ context.Context, input any) (any, error) {
 	var data []byte
 	switch v := input.(type) {
 	case json.RawMessage:
@@ -30,11 +26,11 @@ func (e *StepExtractor[T]) Extract(_ context.Context, input any) (any, error) {
 	case []byte:
 		data = v
 	default:
-		return nil, fmt.Errorf("StepExtractor %q: expected json.RawMessage or []byte, got %T", e.name, input)
+		return nil, fmt.Errorf("MapExtractor %q: expected json.RawMessage or []byte, got %T", e.name, input)
 	}
-	var result T
+	var result map[string]any
 	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("StepExtractor %q: %w", e.name, err)
+		return nil, fmt.Errorf("MapExtractor %q: %w", e.name, err)
 	}
-	return &result, nil
+	return result, nil
 }

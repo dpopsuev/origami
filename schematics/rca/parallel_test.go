@@ -24,7 +24,8 @@ func TestParallel_ResultsMatch(t *testing.T) {
 		Thresholds: rca.DefaultThresholds(),
 		Parallel:   1,
 		BasePath:   tmpDir,
-		ScoreCard:  loadTestScoreCard(t),
+		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 	serialReport, err := rca.RunCalibration(context.Background(), serialCfg)
 	if err != nil {
@@ -40,7 +41,8 @@ func TestParallel_ResultsMatch(t *testing.T) {
 		Thresholds: rca.DefaultThresholds(),
 		Parallel:   4,
 		BasePath:   tmpDir,
-		ScoreCard:  loadTestScoreCard(t),
+		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 	parallelReport, err := rca.RunCalibration(context.Background(), parallelCfg)
 	if err != nil {
@@ -85,7 +87,8 @@ func TestParallel_NoRace(t *testing.T) {
 		Thresholds: rca.DefaultThresholds(),
 		Parallel:   4,
 		BasePath:   tmpDir,
-		ScoreCard:  loadTestScoreCard(t),
+		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)
@@ -112,7 +115,8 @@ func TestParallel_AllCasesComplete(t *testing.T) {
 		Thresholds: rca.DefaultThresholds(),
 		Parallel:   4,
 		BasePath:   tmpDir,
-		ScoreCard:  loadTestScoreCard(t),
+		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)

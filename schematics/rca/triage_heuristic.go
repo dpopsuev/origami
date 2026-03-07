@@ -19,21 +19,23 @@ func (t *triageHeuristic) Transform(_ context.Context, tc *framework.Transformer
 	category, hypothesis, skip := t.ht.classifyDefect(text)
 	component := t.ht.identifyComponent(text)
 
-	var candidateRepos []string
+	var candidateRepos []any
 	if component != "unknown" {
-		candidateRepos = []string{component}
+		candidateRepos = []any{component}
 	} else {
-		candidateRepos = t.ht.repos
+		for _, r := range t.ht.repos {
+			candidateRepos = append(candidateRepos, r)
+		}
 	}
 
 	cascade := matchCount(text, cascadeKeywords()) > 0
 
-	return &TriageResult{
-		SymptomCategory:      category,
-		Severity:             "medium",
-		DefectTypeHypothesis: hypothesis,
-		CandidateRepos:       candidateRepos,
-		SkipInvestigation:    skip,
-		CascadeSuspected:     cascade,
+	return map[string]any{
+		"symptom_category":       category,
+		"severity":               "medium",
+		"defect_type_hypothesis": hypothesis,
+		"candidate_repos":        candidateRepos,
+		"skip_investigation":     skip,
+		"cascade_suspected":      cascade,
 	}, nil
 }

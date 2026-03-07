@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestRun_IntegrationBuild(t *testing.T) {
+func TestRun_IntegrationBuild_DomainServe(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test skipped in short mode")
 	}
@@ -16,18 +16,28 @@ func TestRun_IntegrationBuild(t *testing.T) {
 		t.Skip("go toolchain not found")
 	}
 
-	manifest := filepath.Join(t.TempDir(), "origami.yaml")
+	tmpDir := t.TempDir()
+
+	circuitDir := filepath.Join(tmpDir, "internal", "circuits")
+	if err := os.MkdirAll(circuitDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(circuitDir, "test.yaml"), []byte("topology: cascade\ndescription: test circuit\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	manifest := filepath.Join(tmpDir, "origami.yaml")
 	if err := os.WriteFile(manifest, []byte(`
-name: test-tool
-description: Integration test tool
-version: "1.0"
-imports:
-  - origami.schematics.rca
+name: test-domain
+version: "0.1"
+domain_serve:
+  port: 9300
+  embed: internal/
 `), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	output := filepath.Join(t.TempDir(), "test-tool")
+	output := filepath.Join(t.TempDir(), "test-domain")
 
 	err := Run(Options{
 		ManifestPath: manifest,
@@ -38,7 +48,23 @@ imports:
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(output); err != nil {
-		t.Fatalf("output binary not found: %v", err)
+	domainBinary := output + "-domain-serve"
+	if _, err := os.Stat(domainBinary); err != nil {
+		t.Fatalf("domain-serve binary not found: %v", err)
+	}
+}
+
+func TestRun_MissingDomainServe(t *testing.T) {
+	manifest := filepath.Join(t.TempDir(), "origami.yaml")
+	if err := os.WriteFile(manifest, []byte(`
+name: test-no-serve
+version: "1.0"
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := Run(Options{ManifestPath: manifest})
+	if err == nil {
+		t.Fatal("expected error for manifest without domain_serve")
 	}
 }

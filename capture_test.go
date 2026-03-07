@@ -12,7 +12,7 @@ func (a captureTestArtifact) Confidence() float64 { return 1.0 }
 func (a captureTestArtifact) Raw() any            { return string(a) }
 
 func TestOutputCapture_CapturesNodeExitArtifacts(t *testing.T) {
-	capture := NewOutputCapture()
+	capture := newOutputCapture()
 
 	capture.OnEvent(WalkEvent{Type: EventNodeEnter, Node: "recall"})
 	capture.OnEvent(WalkEvent{Type: EventNodeExit, Node: "recall", Artifact: captureTestArtifact("data-1")})
@@ -33,7 +33,7 @@ func TestOutputCapture_CapturesNodeExitArtifacts(t *testing.T) {
 }
 
 func TestOutputCapture_IgnoresNilArtifacts(t *testing.T) {
-	capture := NewOutputCapture()
+	capture := newOutputCapture()
 	capture.OnEvent(WalkEvent{Type: EventNodeExit, Node: "empty"})
 
 	arts := capture.Artifacts()
@@ -43,7 +43,7 @@ func TestOutputCapture_IgnoresNilArtifacts(t *testing.T) {
 }
 
 func TestOutputCapture_ArtifactAt(t *testing.T) {
-	capture := NewOutputCapture()
+	capture := newOutputCapture()
 	capture.OnEvent(WalkEvent{Type: EventNodeExit, Node: "report", Artifact: captureTestArtifact("result")})
 
 	art, ok := capture.ArtifactAt("report")
@@ -61,7 +61,7 @@ func TestOutputCapture_ArtifactAt(t *testing.T) {
 }
 
 func TestOutputCapture_ConcurrentSafety(t *testing.T) {
-	capture := NewOutputCapture()
+	capture := newOutputCapture()
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {
@@ -78,7 +78,7 @@ func TestOutputCapture_ConcurrentSafety(t *testing.T) {
 }
 
 func TestOutputCapture_Reset(t *testing.T) {
-	capture := NewOutputCapture()
+	capture := newOutputCapture()
 	capture.OnEvent(WalkEvent{Type: EventNodeExit, Node: "a", Artifact: captureTestArtifact("x")})
 	capture.Reset()
 
@@ -88,11 +88,11 @@ func TestOutputCapture_Reset(t *testing.T) {
 }
 
 func TestWithOutputCapture_ComposesWithExistingObserver(t *testing.T) {
-	capture := NewOutputCapture()
+	capture := newOutputCapture()
 	trace := &TraceCollector{}
 
 	cfg := &runConfig{observer: trace}
-	WithOutputCapture(capture)(cfg)
+	withOutputCapture(capture)(cfg)
 
 	multi, ok := cfg.observer.(MultiObserver)
 	if !ok {
@@ -104,9 +104,9 @@ func TestWithOutputCapture_ComposesWithExistingObserver(t *testing.T) {
 }
 
 func TestWithOutputCapture_SetsDirectlyWhenNoExisting(t *testing.T) {
-	capture := NewOutputCapture()
+	capture := newOutputCapture()
 	cfg := &runConfig{}
-	WithOutputCapture(capture)(cfg)
+	withOutputCapture(capture)(cfg)
 
 	if cfg.observer != capture {
 		t.Fatal("expected capture as direct observer")

@@ -20,9 +20,11 @@ import (
 	"github.com/dpopsuev/origami/lint"
 	originamilsp "github.com/dpopsuev/origami/lsp"
 	fwmcp "github.com/dpopsuev/origami/mcp"
+	"github.com/dpopsuev/origami/models"
 	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/ouroboros"
 	"github.com/dpopsuev/origami/ouroboros/mcp"
+	"github.com/dpopsuev/origami/ouroboros/probes"
 	studiobackend "github.com/dpopsuev/origami/studio/backend"
 	"github.com/dpopsuev/origami/sumi"
 	"github.com/dpopsuev/origami/transformers"
@@ -361,7 +363,7 @@ func ouroborosPrompt(args []string) error {
 		}
 	}
 
-	fmt.Print(ouroboros.BuildFullPromptWith(exclude, ouroboros.BuildProbePrompt()))
+	fmt.Print(ouroboros.BuildFullPromptWith(exclude, probes.RefactorPrompt()))
 	return nil
 }
 
@@ -407,15 +409,15 @@ func ouroborosAnalyze(args []string) error {
 		return fmt.Errorf("parse code: %w", err)
 	}
 
-	score := ouroboros.ScoreRefactorOutput(code)
+	score := probes.ScoreRefactorOutput(code)
 
 	result := analyzeResult{
 		Identity: mi,
 		Key:      ouroboros.ModelKey(mi),
 		Code:     code,
 		Score:    score,
-		Known:    framework.IsKnownModel(mi),
-		Wrapper:  framework.IsWrapperName(mi.ModelName),
+		Known:    models.IsKnownModel(mi),
+		Wrapper:  models.IsWrapperName(mi.ModelName),
 	}
 
 	out, err := json.MarshalIndent(result, "", "  ")
@@ -516,7 +518,7 @@ func lintCmd(args []string) error {
 		return out
 	})
 	promptOpts := []lint.Option{
-		lint.WithPromptFS(rca.DefaultPromptFS),
+		lint.WithPromptFS(os.DirFS("internal/prompts")),
 		lint.WithPromptValidator(promptValidator),
 	}
 

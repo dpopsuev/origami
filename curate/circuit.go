@@ -7,10 +7,11 @@ import (
 	"strings"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 )
 
-func resolveApproachElement(approach string) framework.Element {
-	e, _ := framework.ResolveApproach(strings.ToLower(approach))
+func resolveApproachElement(approach string) element.Element {
+	e, _ := element.ResolveApproach(strings.ToLower(approach))
 	return e
 }
 
@@ -31,12 +32,12 @@ func ParseCurationCircuit(data []byte) (*framework.CircuitDef, error) {
 // curationNode implements framework.Node for curation circuit stages.
 type curationNode struct {
 	name    string
-	element framework.Element
+	element element.Element
 	family  string
 }
 
-func (n *curationNode) Name() string                        { return n.name }
-func (n *curationNode) ElementAffinity() framework.Element  { return n.element }
+func (n *curationNode) Name() string                       { return n.name }
+func (n *curationNode) ElementAffinity() element.Element   { return n.element }
 func (n *curationNode) Process(_ context.Context, _ framework.NodeContext) (framework.Artifact, error) {
 	return nil, nil
 }

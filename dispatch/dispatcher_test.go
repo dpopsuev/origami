@@ -369,14 +369,18 @@ func TestFileDispatcher_StaleToleranceExceeded(t *testing.T) {
 	// responder that keeps producing artifacts with the wrong dispatch_id.
 	// The goroutine waits briefly so the dispatcher's pre-cleanup runs first,
 	// then continuously re-writes stale artifacts during polling.
+	// Writes use atomic rename to avoid partial-read noise in this test —
+	// we're testing stale dispatch_id rejection, not partial-write handling.
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		time.Sleep(5 * time.Millisecond) // let dispatch start and remove any pre-existing artifact
 		stale := ArtifactWrapper{DispatchID: 999, Data: json.RawMessage(`{"stale": true}`)}
 		staleData, _ := json.MarshalIndent(stale, "", "  ")
+		tmp := artifactPath + ".tmp"
 		for i := 0; i < 20; i++ {
-			_ = os.WriteFile(artifactPath, staleData, 0644)
+			_ = os.WriteFile(tmp, staleData, 0644)
+			_ = os.Rename(tmp, artifactPath)
 			time.Sleep(5 * time.Millisecond)
 		}
 	}()

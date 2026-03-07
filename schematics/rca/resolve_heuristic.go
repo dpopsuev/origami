@@ -18,13 +18,13 @@ func (t *resolveHeuristic) Transform(_ context.Context, tc *framework.Transforme
 	fp := failureFromContext(tc.WalkerState)
 	text := t.ht.textFromFailure(fp)
 	component := t.ht.identifyComponent(text)
-	var repos []RepoSelection
+	var repos []any
 	if component != "unknown" {
-		repos = append(repos, RepoSelection{Name: component, Reason: fmt.Sprintf("keyword-identified component: %s", component)})
+		repos = append(repos, map[string]any{"name": component, "reason": fmt.Sprintf("keyword-identified component: %s", component)})
 	} else {
 		for _, name := range t.ht.repos {
-			repos = append(repos, RepoSelection{Name: name, Reason: "included from workspace (no component identified)"})
+			repos = append(repos, map[string]any{"name": name, "reason": "included from workspace (no component identified)"})
 		}
 	}
-	return &ResolveResult{SelectedRepos: repos}, nil
+	return map[string]any{"selected_repos": repos}, nil
 }

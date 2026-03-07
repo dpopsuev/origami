@@ -1,5 +1,7 @@
 package framework
 
+// Category: DSL & Build
+
 import (
 	"fmt"
 	"sort"

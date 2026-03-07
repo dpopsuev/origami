@@ -22,7 +22,7 @@
 
 **Case:** #1  
   
-**Step:** F3_INVESTIGATE
+**Step:** investigate
 
 ---
 
@@ -62,14 +62,18 @@ FAIL: Expected clock state to be LOCKED within 300s timeout
 ## Repo selection (from F2)
 
 ### linuxptp-daemon-operator
-- **Path:** 
+- **Path:** <no value>
 - **Focus paths:** 
-- **Branch:** 
+- **Branch:** <no value>
 - **Reason:** Product code with holdover config
 
 
 
 
+*No launch attributes available.*
+
+
+*No linked Jira tickets.*
 
 
 

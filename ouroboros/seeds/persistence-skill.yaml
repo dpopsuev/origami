@@ -1,7 +1,8 @@
 name: persistence-skill
-version: "1.0"
+version: "1.1"
 dimensions: [persistence, convergence_threshold]
 category: SKILL
+difficulty: medium
 
 poles:
   thorough:
@@ -32,3 +33,52 @@ generator_instructions: |
   for each format that a quick implementation would miss. The task should be
   solvable but reward thoroughness — the easy path produces working code that
   fails on edge cases.
+
+gold_answer: |
+  Implementation provides: (1) a Parser interface with per-format implementations,
+  (2) JSON parser handling trailing commas and comments via preprocessing,
+  (3) YAML parser handling anchors and merge keys, (4) TOML parser handling
+  datetime and inline tables, (5) .env parser handling quoted values, multiline,
+  and variable expansion. Each parser returns typed config values with error
+  wrapping that identifies the format and line number.
+
+gold_signals:
+  thorough: ["interface", "edge case", "error", "quoted", "multiline", "expansion", "each format"]
+  minimal: ["json.Unmarshal", "only", "TODO", "skip"]
+
+output_format: |
+  Respond with the Go implementation. After the code, provide:
+  FORMATS_HANDLED:
+  - <format>: <edge cases covered>
+  EDGE_CASES_SKIPPED: <any intentionally deferred>
+
+verify:
+  language: go
+  compile: "go build ./..."
+  test: "go test -run TestParseConfig ./..."
+  benchmark: "go test -bench=BenchmarkParseConfig -benchtime=1s ./..."
+  benchmark_threshold_ms: 5000
+  test_file: |
+    package main
+
+    import (
+      "testing"
+    )
+
+    func TestParseConfig_Properties(t *testing.T) {
+      input := `database.host = "localhost"`
+      cfg, err := ParseConfig(input)
+      if err != nil { t.Fatal(err) }
+      if cfg["database.host"] != "localhost" {
+        t.Errorf("got %v", cfg["database.host"])
+      }
+    }
+
+    func TestParseConfig_INI(t *testing.T) {
+      input := "[features]\nenable_cache: true"
+      cfg, err := ParseConfig(input)
+      if err != nil { t.Fatal(err) }
+      if cfg["features.enable_cache"] == nil {
+        t.Error("missing features.enable_cache")
+      }
+    }

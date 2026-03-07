@@ -1,5 +1,7 @@
 package framework
 
+// Category: Execution
+
 import (
 	"context"
 	"errors"

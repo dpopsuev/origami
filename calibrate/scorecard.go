@@ -200,23 +200,28 @@ func (sc *ScoreCard) Report(scenario, transformer string, runs int, values map[s
 	}, nil
 }
 
-// LoadScoreCard reads a YAML or JSON scorecard definition from disk.
+// ParseScoreCard unmarshals a YAML scorecard definition from raw bytes.
+func ParseScoreCard(data []byte) (*ScoreCard, error) {
+	var sc ScoreCard
+	if err := yaml.Unmarshal(data, &sc); err != nil {
+		return nil, fmt.Errorf("parse scorecard: %w", err)
+	}
+	return &sc, nil
+}
+
+// LoadScoreCard reads a YAML scorecard definition from disk.
 func LoadScoreCard(path string) (*ScoreCard, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read scorecard %s: %w", path, err)
 	}
-	var sc ScoreCard
 	ext := filepath.Ext(path)
 	switch ext {
 	case ".yaml", ".yml":
-		if err := yaml.Unmarshal(data, &sc); err != nil {
-			return nil, fmt.Errorf("parse scorecard YAML %s: %w", path, err)
-		}
+		return ParseScoreCard(data)
 	default:
 		return nil, fmt.Errorf("unsupported scorecard format: %s (use .yaml or .yml)", ext)
 	}
-	return &sc, nil
 }
 
 // --- Default Metrics (universal, domain-agnostic) ---

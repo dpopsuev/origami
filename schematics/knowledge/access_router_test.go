@@ -5,30 +5,30 @@ import (
 	"fmt"
 	"testing"
 
-	kn "github.com/dpopsuev/origami/knowledge"
 	knowledge "github.com/dpopsuev/origami/schematics/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
 // stubDriver implements Driver for testing.
 type stubDriver struct {
-	kind         kn.SourceKind
+	kind         toolkit.SourceKind
 	ensureErr    error
-	searchResult []kn.SearchResult
+	searchResult []toolkit.SearchResult
 	readResult   []byte
-	listResult   []kn.ContentEntry
+	listResult   []toolkit.ContentEntry
 }
 
-func (d *stubDriver) Handles() kn.SourceKind { return d.kind }
+func (d *stubDriver) Handles() toolkit.SourceKind { return d.kind }
 
-func (d *stubDriver) Ensure(_ context.Context, _ kn.Source) error {
+func (d *stubDriver) Ensure(_ context.Context, _ toolkit.Source) error {
 	return d.ensureErr
 }
 
-func (d *stubDriver) Search(_ context.Context, src kn.Source, query string, max int) ([]kn.SearchResult, error) {
+func (d *stubDriver) Search(_ context.Context, src toolkit.Source, query string, max int) ([]toolkit.SearchResult, error) {
 	if d.searchResult != nil {
 		return d.searchResult, nil
 	}
-	return []kn.SearchResult{{
+	return []toolkit.SearchResult{{
 		Source:  src.Name,
 		Path:    "test.go",
 		Line:    42,
@@ -36,33 +36,33 @@ func (d *stubDriver) Search(_ context.Context, src kn.Source, query string, max 
 	}}, nil
 }
 
-func (d *stubDriver) Read(_ context.Context, src kn.Source, path string) ([]byte, error) {
+func (d *stubDriver) Read(_ context.Context, src toolkit.Source, path string) ([]byte, error) {
 	if d.readResult != nil {
 		return d.readResult, nil
 	}
 	return []byte(fmt.Sprintf("content of %s from %s", path, src.Name)), nil
 }
 
-func (d *stubDriver) List(_ context.Context, _ kn.Source, _ string, _ int) ([]kn.ContentEntry, error) {
+func (d *stubDriver) List(_ context.Context, _ toolkit.Source, _ string, _ int) ([]toolkit.ContentEntry, error) {
 	if d.listResult != nil {
 		return d.listResult, nil
 	}
-	return []kn.ContentEntry{{Path: "README.md", IsDir: false, Size: 100}}, nil
+	return []toolkit.ContentEntry{{Path: "README.md", IsDir: false, Size: 100}}, nil
 }
 
 func TestRouter_DispatchByKind(t *testing.T) {
 	ctx := context.Background()
 
-	gitDriver := &stubDriver{kind: kn.SourceKindRepo}
-	docDriver := &stubDriver{kind: kn.SourceKindDoc}
+	gitDriver := &stubDriver{kind: toolkit.SourceKindRepo}
+	docDriver := &stubDriver{kind: toolkit.SourceKindDoc}
 
 	router := knowledge.NewRouter(
 		knowledge.WithGitDriver(gitDriver),
 		knowledge.WithDocsDriver(docDriver),
 	)
 
-	repoSrc := kn.Source{Name: "test-repo", Kind: kn.SourceKindRepo, URI: "https://github.com/test/repo"}
-	docSrc := kn.Source{Name: "test-docs", Kind: kn.SourceKindDoc, URI: "https://docs.example.com"}
+	repoSrc := toolkit.Source{Name: "test-repo", Kind: toolkit.SourceKindRepo, URI: "https://github.com/test/repo"}
+	docSrc := toolkit.Source{Name: "test-docs", Kind: toolkit.SourceKindDoc, URI: "https://docs.example.com"}
 
 	// Search git source
 	results, err := router.Search(ctx, repoSrc, "main", 10)
@@ -87,7 +87,7 @@ func TestRouter_UnknownKind(t *testing.T) {
 	ctx := context.Background()
 	router := knowledge.NewRouter()
 
-	src := kn.Source{Name: "unknown", Kind: "unknown"}
+	src := toolkit.Source{Name: "unknown", Kind: "unknown"}
 	_, err := router.Search(ctx, src, "query", 10)
 	if err == nil {
 		t.Fatal("expected error for unregistered kind")
@@ -96,10 +96,10 @@ func TestRouter_UnknownKind(t *testing.T) {
 
 func TestRouter_Ensure(t *testing.T) {
 	ctx := context.Background()
-	driver := &stubDriver{kind: kn.SourceKindRepo}
+	driver := &stubDriver{kind: toolkit.SourceKindRepo}
 	router := knowledge.NewRouter(knowledge.WithGitDriver(driver))
 
-	src := kn.Source{Name: "repo", Kind: kn.SourceKindRepo, URI: "https://github.com/test/repo"}
+	src := toolkit.Source{Name: "repo", Kind: toolkit.SourceKindRepo, URI: "https://github.com/test/repo"}
 	if err := router.Ensure(ctx, src); err != nil {
 		t.Fatalf("Ensure: %v", err)
 	}
@@ -113,10 +113,10 @@ func TestRouter_Ensure(t *testing.T) {
 
 func TestRouter_Read(t *testing.T) {
 	ctx := context.Background()
-	driver := &stubDriver{kind: kn.SourceKindRepo}
+	driver := &stubDriver{kind: toolkit.SourceKindRepo}
 	router := knowledge.NewRouter(knowledge.WithGitDriver(driver))
 
-	src := kn.Source{Name: "repo", Kind: kn.SourceKindRepo}
+	src := toolkit.Source{Name: "repo", Kind: toolkit.SourceKindRepo}
 	data, err := router.Read(ctx, src, "main.go")
 	if err != nil {
 		t.Fatalf("Read: %v", err)
@@ -128,10 +128,10 @@ func TestRouter_Read(t *testing.T) {
 
 func TestRouter_List(t *testing.T) {
 	ctx := context.Background()
-	driver := &stubDriver{kind: kn.SourceKindRepo}
+	driver := &stubDriver{kind: toolkit.SourceKindRepo}
 	router := knowledge.NewRouter(knowledge.WithGitDriver(driver))
 
-	src := kn.Source{Name: "repo", Kind: kn.SourceKindRepo}
+	src := toolkit.Source{Name: "repo", Kind: toolkit.SourceKindRepo}
 	entries, err := router.List(ctx, src, ".", 2)
 	if err != nil {
 		t.Fatalf("List: %v", err)
@@ -146,14 +146,14 @@ func TestRouter_Register(t *testing.T) {
 	router := knowledge.NewRouter()
 
 	// Starts with no drivers
-	src := kn.Source{Name: "repo", Kind: kn.SourceKindRepo}
+	src := toolkit.Source{Name: "repo", Kind: toolkit.SourceKindRepo}
 	_, err := router.Search(ctx, src, "q", 10)
 	if err == nil {
 		t.Fatal("expected error with no drivers")
 	}
 
 	// Register and retry
-	router.Register(&stubDriver{kind: kn.SourceKindRepo})
+	router.Register(&stubDriver{kind: toolkit.SourceKindRepo})
 	_, err = router.Search(ctx, src, "q", 10)
 	if err != nil {
 		t.Fatalf("Search after register: %v", err)
@@ -161,7 +161,7 @@ func TestRouter_Register(t *testing.T) {
 }
 
 func TestRouter_ReaderInterface(t *testing.T) {
-	var r kn.Reader = knowledge.NewRouter()
+	var r toolkit.SourceReader = knowledge.NewRouter()
 	if r == nil {
 		t.Fatal("NewRouter should satisfy Reader interface")
 	}

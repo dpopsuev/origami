@@ -17,10 +17,12 @@ import (
 // MCP over stdio. It handles lifecycle (start/stop/restart) and provides
 // typed tool call access.
 type Server struct {
-	BinaryPath string
-	Args       []string
-	Env        []string // additional env vars (appended to os.Environ)
-	Connector  *MCPConnector
+	BinaryPath        string
+	Args              []string
+	Env               []string // additional env vars (appended to os.Environ)
+	Connector         *MCPConnector
+	TerminateDuration time.Duration // SIGTERM→SIGKILL escalation delay (default 5s)
+	PingTimeout       time.Duration // health check ping deadline (default 2s)
 
 	mu      sync.Mutex
 	session *sdkmcp.ClientSession
@@ -41,9 +43,14 @@ func (s *Server) Start(ctx context.Context) error {
 		cmd.Env = append(cmd.Environ(), s.Env...)
 	}
 
+	terminateDur := s.TerminateDuration
+	if terminateDur == 0 {
+		terminateDur = 5 * time.Second
+	}
+
 	transport := &sdkmcp.CommandTransport{
 		Command:           cmd,
-		TerminateDuration: 5 * time.Second,
+		TerminateDuration: terminateDur,
 	}
 
 	conn := s.Connector
@@ -97,7 +104,12 @@ func (s *Server) Healthy(ctx context.Context) bool {
 		return false
 	}
 
-	pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	pingTimeout := s.PingTimeout
+	if pingTimeout == 0 {
+		pingTimeout = 2 * time.Second
+	}
+
+	pingCtx, cancel := context.WithTimeout(ctx, pingTimeout)
 	defer cancel()
 
 	return session.Ping(pingCtx, nil) == nil

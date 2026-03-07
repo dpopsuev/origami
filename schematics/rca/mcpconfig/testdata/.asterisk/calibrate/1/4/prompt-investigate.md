@@ -22,7 +22,7 @@
 
 **Case:** #4  
   
-**Step:** F3_INVESTIGATE
+**Step:** investigate
 
 ---
 
@@ -35,7 +35,7 @@ Note: Timestamps may originate from different clock planes (executor, test node,
 ## Failure under investigation
 
 **Test name:** `OCP-83299 PTP config isolation`  
-**Status:** open
+**Status:** triaged
 
 **Error message:**
 ```
@@ -64,12 +64,16 @@ FAIL: Stale PTP config CRD found from previous test suite
 ### test-repo
 - **Path:** 
 - **Focus paths:** 
-- **Branch:** 
+- **Branch:** <no value>
 - **Reason:** test
 
 
 
 
+*No launch attributes available.*
+
+
+*No linked Jira tickets.*
 
 
 

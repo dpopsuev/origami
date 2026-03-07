@@ -8,7 +8,7 @@ import (
 
 func TestDefaultStimuli_AllProbesPresent(t *testing.T) {
 	stimuli := DefaultStimuli()
-	expected := []string{"refactor", "debug", "summarize", "ambiguity", "persistence"}
+	expected := []string{"refactor", "debug", "summarize", "ambiguity", "persistence", "gbwp"}
 	for _, name := range expected {
 		s, ok := stimuli[name]
 		if !ok {
@@ -27,6 +27,51 @@ func TestDefaultStimuli_AllProbesPresent(t *testing.T) {
 	}
 }
 
+func TestCuratedStimuli_LoadsAll(t *testing.T) {
+	loaded, err := LoadStimuli("stimuli/curated.yaml")
+	if err != nil {
+		t.Fatalf("LoadStimuli: %v", err)
+	}
+	if len(loaded) < 20 {
+		t.Errorf("expected 20+ curated stimuli, got %d", len(loaded))
+	}
+	for name, s := range loaded {
+		if s.Input == "" {
+			t.Errorf("curated stimulus %q has empty Input", name)
+		}
+	}
+}
+
+func TestGameStimuli_LoadsAll(t *testing.T) {
+	loaded, err := LoadStimuli("stimuli/game.yaml")
+	if err != nil {
+		t.Fatalf("LoadStimuli: %v", err)
+	}
+	if len(loaded) < 7 {
+		t.Errorf("expected 7+ game stimuli, got %d", len(loaded))
+	}
+
+	expectedProbes := []string{
+		"refactor-globe-renderer",
+		"debug-ws-lagged",
+		"debug-plate-mend",
+		"debug-tangent-singularity",
+		"debug-crosslang-wire",
+		"persistence-delta-compression",
+		"gbwp-protocol-contract",
+	}
+	for _, name := range expectedProbes {
+		s, ok := loaded[name]
+		if !ok {
+			t.Errorf("missing game stimulus %q", name)
+			continue
+		}
+		if s.Input == "" {
+			t.Errorf("game stimulus %q has empty Input", name)
+		}
+	}
+}
+
 func TestDefaultStimuli_LanguageFields(t *testing.T) {
 	stimuli := DefaultStimuli()
 	wantLang := map[string]string{
@@ -35,6 +80,7 @@ func TestDefaultStimuli_LanguageFields(t *testing.T) {
 		"summarize":   "",
 		"ambiguity":   "Go",
 		"persistence": "Go",
+		"gbwp":        "",
 	}
 	for name, want := range wantLang {
 		if got := stimuli[name].Language; got != want {

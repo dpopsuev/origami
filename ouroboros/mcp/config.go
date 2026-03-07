@@ -4,14 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 	"github.com/dpopsuev/origami/dispatch"
-	"github.com/dpopsuev/origami/logging"
 	fwmcp "github.com/dpopsuev/origami/mcp"
+	"github.com/dpopsuev/origami/models"
 	"github.com/dpopsuev/origami/ouroboros"
+	"github.com/dpopsuev/origami/ouroboros/probes"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -69,19 +73,14 @@ func createDiscoverySession(
 	runsDir string,
 ) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
 	config := ouroboros.DefaultConfig()
-	if v, ok := params.Extra["max_iterations"].(float64); ok && v > 0 {
+	if v := toolkit.MapFloat(params.Extra, "max_iterations"); v > 0 {
 		config.MaxIterations = int(v)
 	}
-	if v, ok := params.Extra["probe_id"].(string); ok && v != "" {
+	if v := toolkit.MapStr(params.Extra, "probe_id"); v != "" {
 		config.ProbeID = v
 	}
-	if ids, ok := params.Extra["probe_ids"].([]any); ok && len(ids) > 0 {
-		config.ProbeIDs = make([]string, 0, len(ids))
-		for _, raw := range ids {
-			if s, ok := raw.(string); ok && s != "" {
-				config.ProbeIDs = append(config.ProbeIDs, s)
-			}
-		}
+	if ids := toolkit.MapStrSlice(params.Extra, "probe_ids"); len(ids) > 0 {
+		config.ProbeIDs = ids
 	}
 	if v, ok := params.Extra["terminate_on_repeat"].(bool); ok {
 		config.TerminateOnRepeat = v
@@ -128,7 +127,7 @@ func runDiscovery(
 	bus *dispatch.SignalBus,
 	runsDir string,
 ) (*ouroboros.RunReport, error) {
-	log := logging.New("ouroboros-discovery")
+	log := slog.Default().With("component", "ouroboros-discovery")
 	var seen []framework.ModelIdentity
 	seenMap := make(map[string]ouroboros.DiscoveryResult)
 	var results []ouroboros.DiscoveryResult
@@ -146,7 +145,7 @@ func runDiscovery(
 		if handler != nil {
 			prompt = ouroboros.BuildFullPromptWith(seen, handler.Prompt())
 		} else {
-			prompt = ouroboros.BuildFullPromptWith(seen, ouroboros.BuildProbePrompt())
+			prompt = ouroboros.BuildFullPromptWith(seen, probes.RefactorPrompt())
 		}
 
 		artifactBytes, err := disp.Dispatch(dispatch.DispatchContext{
@@ -177,7 +176,7 @@ func runDiscovery(
 			continue
 		}
 
-		if framework.IsWrapperName(mi.ModelName) {
+		if models.IsWrapperName(mi.ModelName) {
 			bus.Emit("identity_rejected", "server", "", "", map[string]string{
 				"model":  mi.ModelName,
 				"reason": "wrapper",
@@ -201,7 +200,7 @@ func runDiscovery(
 				continue
 			}
 			probeOutput = code
-			score = ouroboros.ScoreRefactorOutput(code)
+			score = probes.ScoreRefactorOutput(code)
 			if handler != nil {
 				dimScores = handler.Score(code)
 			}
@@ -277,7 +276,7 @@ func runMultiProbeDiscovery(
 	bus *dispatch.SignalBus,
 	runsDir string,
 ) (*ouroboros.RunReport, error) {
-	log := logging.New("ouroboros-multi-probe")
+	log := slog.Default().With("component", "ouroboros-multi-probe")
 	startTime := time.Now()
 	runID := fmt.Sprintf("mc-%d", time.Now().UnixNano())
 
@@ -398,7 +397,7 @@ func assembleProfilesFromStore(runsDir string) (assembleProfilesOutput, error) {
 			BatteryVersion: ouroboros.BatteryVersion,
 			Timestamp:      time.Now(),
 			Dimensions:     make(map[ouroboros.Dimension]float64),
-			ElementScores:  make(map[framework.Element]float64),
+			ElementScores:  make(map[element.Element]float64),
 		}
 
 		sums := make(map[ouroboros.Dimension]float64)

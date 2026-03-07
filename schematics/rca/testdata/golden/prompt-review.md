@@ -2,7 +2,7 @@
 
 **Case:** #7  
 **Launch:** launch-42  
-**Step:** F5_REVIEW
+**Step:** review
 
 ---
 

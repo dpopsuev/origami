@@ -8,79 +8,76 @@ import (
 	"github.com/dpopsuev/origami"
 )
 
-type testArtifact struct {
-	Status string `json:"status"`
-	Score  int    `json:"score"`
-}
-
-func TestStepExtractor_ImplementsExtractor(t *testing.T) {
-	var ext framework.Extractor = NewStepExtractor[testArtifact]("test-step")
+func TestMapExtractor_ImplementsExtractor(t *testing.T) {
+	var ext framework.Extractor = NewMapExtractor("test-step")
 	if ext.Name() != "test-step" {
 		t.Errorf("Name() = %q, want %q", ext.Name(), "test-step")
 	}
 }
 
-func TestStepExtractor_RawMessage(t *testing.T) {
-	ext := NewStepExtractor[testArtifact]("step-raw")
+func TestMapExtractor_RawMessage(t *testing.T) {
+	ext := NewMapExtractor("step-raw")
 	input := json.RawMessage(`{"status":"ok","score":99}`)
 	result, err := ext.Extract(context.Background(), input)
 	if err != nil {
 		t.Fatalf("Extract: %v", err)
 	}
-	art, ok := result.(*testArtifact)
+	m, ok := result.(map[string]any)
 	if !ok {
-		t.Fatalf("result type = %T, want *testArtifact", result)
+		t.Fatalf("result type = %T, want map[string]any", result)
 	}
-	if art.Status != "ok" || art.Score != 99 {
-		t.Errorf("got {%q, %d}, want {ok, 99}", art.Status, art.Score)
+	if m["status"] != "ok" {
+		t.Errorf("status = %v, want ok", m["status"])
+	}
+	if m["score"] != float64(99) {
+		t.Errorf("score = %v, want 99", m["score"])
 	}
 }
 
-func TestStepExtractor_Bytes(t *testing.T) {
-	ext := NewStepExtractor[testArtifact]("step-bytes")
+func TestMapExtractor_Bytes(t *testing.T) {
+	ext := NewMapExtractor("step-bytes")
 	result, err := ext.Extract(context.Background(), []byte(`{"status":"done","score":1}`))
 	if err != nil {
 		t.Fatalf("Extract: %v", err)
 	}
-	art := result.(*testArtifact)
-	if art.Status != "done" {
-		t.Errorf("Status = %q, want %q", art.Status, "done")
+	m := result.(map[string]any)
+	if m["status"] != "done" {
+		t.Errorf("status = %v, want done", m["status"])
 	}
 }
 
-func TestStepExtractor_MalformedJSON(t *testing.T) {
-	ext := NewStepExtractor[testArtifact]("step-bad")
+func TestMapExtractor_MalformedJSON(t *testing.T) {
+	ext := NewMapExtractor("step-bad")
 	_, err := ext.Extract(context.Background(), json.RawMessage(`{broken`))
 	if err == nil {
 		t.Fatal("expected error for malformed JSON")
 	}
 }
 
-func TestStepExtractor_WrongType(t *testing.T) {
-	ext := NewStepExtractor[testArtifact]("step-type")
+func TestMapExtractor_WrongType(t *testing.T) {
+	ext := NewMapExtractor("step-type")
 	_, err := ext.Extract(context.Background(), "not bytes")
 	if err == nil {
 		t.Fatal("expected error for string input")
 	}
 }
 
-func TestStepExtractor_MatchesParseJSON(t *testing.T) {
+func TestMapExtractor_MatchesParseJSON(t *testing.T) {
 	data := json.RawMessage(`{"status":"match","score":42}`)
 
-	oldResult, err := parseJSON[testArtifact](data)
+	oldResult, err := parseJSON[map[string]any](data)
 	if err != nil {
 		t.Fatalf("parseJSON: %v", err)
 	}
 
-	ext := NewStepExtractor[testArtifact]("match-test")
+	ext := NewMapExtractor("match-test")
 	newResult, err := ext.Extract(context.Background(), data)
 	if err != nil {
 		t.Fatalf("Extract: %v", err)
 	}
-	art := newResult.(*testArtifact)
+	m := newResult.(map[string]any)
 
-	if art.Status != oldResult.Status || art.Score != oldResult.Score {
-		t.Errorf("mismatch: extractor={%q,%d} vs parseJSON={%q,%d}",
-			art.Status, art.Score, oldResult.Status, oldResult.Score)
+	if m["status"] != (*oldResult)["status"] || m["score"] != (*oldResult)["score"] {
+		t.Errorf("mismatch: extractor=%v vs parseJSON=%v", m, *oldResult)
 	}
 }

@@ -5,7 +5,7 @@ package rca
 
 import (
 	cal "github.com/dpopsuev/origami/calibrate"
-	"github.com/dpopsuev/origami/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
 // Metric is an alias for the generic calibrate.Metric type.
@@ -146,7 +146,7 @@ type ExpectedReview struct {
 // SourcePackConfig describes the source repositories and docs for F2/F3.
 type SourcePackConfig struct {
 	Repos   []RepoConfig       `json:"repos" yaml:"repos"`
-	Sources []knowledge.Source  `json:"sources,omitempty" yaml:"sources,omitempty"`
+	Sources []toolkit.Source  `json:"sources,omitempty" yaml:"sources,omitempty"`
 }
 
 // RepoConfig describes one repo in the source pack.

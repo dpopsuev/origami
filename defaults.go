@@ -1,4 +1,5 @@
 package framework
+// Category: Processing & Support
 
 // DefaultWalker returns a zero-config Walker suitable for consumers that
 // don't need persona or element customization. Uses Earth element
@@ -17,8 +18,12 @@ func DefaultWalkerWithElement(element Element) Walker {
 }
 
 func defaultWalkerWith(element Element) *ProcessWalker {
-	persona, _ := PersonaByName("Sentinel")
-	id := persona.Identity
+	var id AgentIdentity
+	if DefaultPersonaResolver != nil {
+		if p, ok := DefaultPersonaResolver("Sentinel"); ok {
+			id = p.Identity
+		}
+	}
 	id.Element = element
 	return &ProcessWalker{
 		identity: id,

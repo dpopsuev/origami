@@ -1,5 +1,7 @@
 package framework
 
+// Category: Core Primitives
+
 import (
 	"encoding/json"
 	"fmt"

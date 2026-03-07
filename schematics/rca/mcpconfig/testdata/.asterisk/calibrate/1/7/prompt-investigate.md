@@ -22,7 +22,7 @@
 
 **Case:** #7  
   
-**Step:** F3_INVESTIGATE
+**Step:** investigate
 
 ---
 
@@ -35,7 +35,7 @@ Note: Timestamps may originate from different clock planes (executor, test node,
 ## Failure under investigation
 
 **Test name:** `OCP-83300 PTP config cleanup`  
-**Status:** open
+**Status:** triaged
 
 **Error message:**
 ```
@@ -63,12 +63,16 @@ FAIL: Stale CRD
 ### test-repo
 - **Path:** 
 - **Focus paths:** 
-- **Branch:** 
+- **Branch:** <no value>
 - **Reason:** test
 
 
 
 
+*No launch attributes available.*
+
+
+*No linked Jira tickets.*
 
 
 

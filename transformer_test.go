@@ -391,7 +391,7 @@ func TestBuiltinGoTemplate_RendersPrompt(t *testing.T) {
 		Done:  "_done",
 	}
 
-	cap := NewOutputCapture()
+	cap := newOutputCapture()
 	runner, err := NewRunnerWith(def, GraphRegistries{})
 	if err != nil {
 		t.Fatalf("NewRunnerWith: %v", err)
@@ -431,7 +431,7 @@ func TestBuiltinPassthrough_ReturnsInput(t *testing.T) {
 		Done:  "_done",
 	}
 
-	cap := NewOutputCapture()
+	cap := newOutputCapture()
 	runner, err := NewRunnerWith(def, GraphRegistries{})
 	if err != nil {
 		t.Fatalf("NewRunnerWith: %v", err)

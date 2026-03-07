@@ -15,10 +15,10 @@ import (
 // via the "resume_input" context key, and this transformer parses and
 // returns it.
 type hitlTransformerNode struct {
-	step CircuitStep
+	nodeName string
 }
 
-func (t *hitlTransformerNode) Name() string        { return "hitl-" + string(t.step) }
+func (t *hitlTransformerNode) Name() string        { return "hitl-" + t.nodeName }
 func (t *hitlTransformerNode) Deterministic() bool { return false }
 
 func (t *hitlTransformerNode) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
@@ -26,39 +26,36 @@ func (t *hitlTransformerNode) Transform(_ context.Context, tc *framework.Transfo
 		delete(tc.WalkerState.Context, "resume_input")
 		data, err := json.Marshal(input)
 		if err != nil {
-			return nil, fmt.Errorf("hitl %s: marshal resume_input: %w", t.step, err)
+			return nil, fmt.Errorf("hitl %s: marshal resume_input: %w", t.nodeName, err)
 		}
-		return parseTypedArtifact(t.step, json.RawMessage(data))
+		return parseArtifact(json.RawMessage(data))
 	}
 
 	caseDir, _ := tc.WalkerState.Context[KeyCaseDir].(string)
 
 	promptFS, _ := tc.WalkerState.Context[KeyPromptFS].(fs.FS)
-	if promptFS == nil {
-		promptFS = DefaultPromptFS
-	}
 
 	params := ParamsFromContext(tc.WalkerState.Context)
-	params.StepName = string(t.step)
+	params.StepName = t.nodeName
 
 	templatePath := tc.Prompt
 	if templatePath == "" {
-		return nil, fmt.Errorf("hitl %s: node %q has no prompt: field", t.step, tc.NodeName)
+		return nil, fmt.Errorf("hitl %s: node %q has no prompt: field", t.nodeName, tc.NodeName)
 	}
 
 	prompt, err := FillTemplateFS(promptFS, templatePath, params)
 	if err != nil {
-		return nil, fmt.Errorf("hitl %s: fill template: %w", t.step, err)
+		return nil, fmt.Errorf("hitl %s: fill template: %w", t.nodeName, err)
 	}
 
 	loopIter := tc.WalkerState.LoopCounts[tc.NodeName]
-	promptPath, err := WritePrompt(caseDir, t.step, loopIter, prompt)
+	promptPath, err := WriteNodePrompt(caseDir, t.nodeName, loopIter, prompt)
 	if err != nil {
-		return nil, fmt.Errorf("hitl %s: write prompt: %w", t.step, err)
+		return nil, fmt.Errorf("hitl %s: write prompt: %w", t.nodeName, err)
 	}
 
 	return nil, framework.Interrupt{
-		Reason: fmt.Sprintf("awaiting human input for %s", t.step),
-		Data:   map[string]any{"prompt_path": promptPath, "step": string(t.step)},
+		Reason: fmt.Sprintf("awaiting human input for %s", t.nodeName),
+		Data:   map[string]any{"prompt_path": promptPath, "step": t.nodeName},
 	}
 }

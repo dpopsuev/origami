@@ -44,29 +44,34 @@ func DebugPrompt() string {
 }
 
 // ScoreDebug maps debugging output to behavioral dimension scores.
-//
-// Scoring signals:
-//   - Root cause identified (goroutine leak / connection pool) -> convergence
-//   - Red herring rejected (memory) -> not shortcut-prone
-//   - Deployment correlation (v2.14.0) -> evidence depth
-//   - Brevity vs detail -> speed indicator
+// Prefers structured output (ROOT_CAUSE/EVIDENCE/REJECTED_HYPOTHESES fields)
+// with keyword fallback for unstructured responses.
 func ScoreDebug(raw string) map[ouroboros.Dimension]float64 {
 	lower := strings.ToLower(raw)
 	lines := strings.Split(raw, "\n")
+	parsed := ParseStructured(raw)
 
-	rootCauseFound := containsAny(lower,
-		"goroutine leak", "goroutine count", "connection pool",
-		"leaked goroutine", "goroutine explosion",
-	)
-	deploymentLinked := containsAny(lower,
-		"v2.14", "async notification", "async-notification",
-		"deployment", "feature flag",
-	)
-	redHerringRejected := containsAny(lower,
-		"red herring", "not the root cause", "symptom",
-		"memory is not", "52%", "not critical",
-	)
-	hasStructuredOutput := countSections(raw) >= 3
+	rootCauseFound := parsed.FieldContains("ROOT_CAUSE", "goroutine") ||
+		parsed.FieldContains("ROOT_CAUSE", "connection pool") ||
+		containsAny(lower,
+			"goroutine leak", "goroutine count", "connection pool",
+			"leaked goroutine", "goroutine explosion",
+		)
+
+	deploymentLinked := parsed.FieldContains("EVIDENCE", "v2.14") ||
+		parsed.FieldContains("EVIDENCE", "deployment") ||
+		containsAny(lower,
+			"v2.14", "async notification", "async-notification",
+			"deployment", "feature flag",
+		)
+
+	redHerringRejected := parsed.HasField("REJECTED_HYPOTHESES") ||
+		containsAny(lower,
+			"red herring", "not the root cause", "symptom",
+			"memory is not", "52%", "not critical",
+		)
+
+	hasStructuredOutput := parsed.HasField("ROOT_CAUSE") || countSections(raw) >= 3
 
 	convergence := 0.0
 	if rootCauseFound {

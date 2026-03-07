@@ -1,4 +1,5 @@
 package framework
+// Category: Processing & Support
 
 import (
 	"log/slog"
@@ -64,12 +65,12 @@ func (m MultiObserver) OnEvent(e WalkEvent) {
 	}
 }
 
-// LogObserver writes walk events as structured slog lines.
-type LogObserver struct {
+// logObserver writes walk events as structured slog lines.
+type logObserver struct {
 	Logger *slog.Logger
 }
 
-func (o *LogObserver) OnEvent(e WalkEvent) {
+func (o *logObserver) OnEvent(e WalkEvent) {
 	logger := o.Logger
 	if logger == nil {
 		logger = slog.Default()

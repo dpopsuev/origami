@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/dpopsuev/origami/logging"
 )
 
 // BatchFileDispatcher writes N signals concurrently, generates a batch
@@ -38,7 +36,7 @@ func NewBatchFileDispatcher(cfg BatchFileDispatcherConfig) *BatchFileDispatcher 
 	}
 	l := cfg.Logger
 	if l == nil {
-		l = logging.New("batch-dispatch")
+		l = slog.Default().With("component", "batch-dispatch")
 	}
 	return &BatchFileDispatcher{
 		cfg:         cfg.FileConfig,

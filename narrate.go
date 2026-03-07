@@ -1,4 +1,5 @@
 package framework
+// Category: Processing & Support
 
 import (
 	"fmt"
@@ -7,50 +8,50 @@ import (
 	"time"
 )
 
-// NarrationSink receives a single human-readable narration line.
-type NarrationSink func(line string)
+// narrationSink receives a single human-readable narration line.
+type narrationSink func(line string)
 
-// NarrationOption configures a NarrationObserver.
-type NarrationOption func(*NarrationObserver)
+// narrationOption configures a narrationObserver.
+type narrationOption func(*narrationObserver)
 
-// WithVocabulary sets the vocabulary for translating node/edge names.
-func WithVocabulary(v Vocabulary) NarrationOption {
-	return func(n *NarrationObserver) { n.vocab = v }
+// withVocabulary sets the vocabulary for translating node/edge names.
+func withVocabulary(v Vocabulary) narrationOption {
+	return func(n *narrationObserver) { n.vocab = v }
 }
 
-// WithSink sets the output destination for narration lines.
-func WithSink(s NarrationSink) NarrationOption {
-	return func(n *NarrationObserver) { n.sink = s }
+// withSink sets the output destination for narration lines.
+func withSink(s narrationSink) narrationOption {
+	return func(n *narrationObserver) { n.sink = s }
 }
 
-// WithMilestoneInterval sets how often milestone summaries are emitted.
+// withMilestoneInterval sets how often milestone summaries are emitted.
 // A value of 0 disables milestones. Default is 5.
-func WithMilestoneInterval(every int) NarrationOption {
-	return func(n *NarrationObserver) { n.milestoneEvery = every }
+func withMilestoneInterval(every int) narrationOption {
+	return func(n *narrationObserver) { n.milestoneEvery = every }
 }
 
-// WithETA enables or disables ETA estimation in narration output.
-func WithETA(enabled bool) NarrationOption {
-	return func(n *NarrationObserver) { n.showETA = enabled }
+// withETA enables or disables ETA estimation in narration output.
+func withETA(enabled bool) narrationOption {
+	return func(n *narrationObserver) { n.showETA = enabled }
 }
 
-// Progress captures a snapshot of walk progress.
-type Progress struct {
+// progress captures a snapshot of walk progress.
+type progress struct {
 	NodesVisited int
 	Elapsed      time.Duration
 	CurrentNode  string
 	LastWalker   string
 }
 
-// NarrationObserver is a WalkObserver that produces human-readable narration
+// narrationObserver is a WalkObserver that produces human-readable narration
 // lines from walk events. It translates node names via a Vocabulary, tracks
 // progress, computes ETA, and emits milestone summaries.
 //
-// Zero-config: NewNarrationObserver() with no options logs to slog.Info.
-type NarrationObserver struct {
+// Zero-config: newNarrationObserver() with no options logs to slog.Info.
+type narrationObserver struct {
 	mu             sync.Mutex
 	vocab          Vocabulary
-	sink           NarrationSink
+	sink           narrationSink
 	milestoneEvery int
 	showETA        bool
 
@@ -61,10 +62,10 @@ type NarrationObserver struct {
 	errors       int
 }
 
-// NewNarrationObserver creates a narration observer with sensible defaults.
-// Pass NarrationOption values to customize vocabulary, sink, etc.
-func NewNarrationObserver(opts ...NarrationOption) *NarrationObserver {
-	n := &NarrationObserver{
+// newNarrationObserver creates a narration observer with sensible defaults.
+// Pass narrationOption values to customize vocabulary, sink, etc.
+func newNarrationObserver(opts ...narrationOption) *narrationObserver {
+	n := &narrationObserver{
 		vocab:          VocabularyFunc(func(code string) string { return code }),
 		sink:           func(line string) { slog.Info(line) },
 		milestoneEvery: 5,
@@ -76,15 +77,15 @@ func NewNarrationObserver(opts ...NarrationOption) *NarrationObserver {
 	return n
 }
 
-// Progress returns a snapshot of current walk progress.
-func (n *NarrationObserver) Progress() Progress {
+// progress returns a snapshot of current walk progress.
+func (n *narrationObserver) progress() progress {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	elapsed := time.Duration(0)
 	if !n.walkStart.IsZero() {
 		elapsed = time.Since(n.walkStart)
 	}
-	return Progress{
+	return progress{
 		NodesVisited: n.nodesVisited,
 		Elapsed:      elapsed,
 		CurrentNode:  n.currentNode,
@@ -93,7 +94,7 @@ func (n *NarrationObserver) Progress() Progress {
 }
 
 // OnEvent implements WalkObserver.
-func (n *NarrationObserver) OnEvent(e WalkEvent) {
+func (n *narrationObserver) OnEvent(e WalkEvent) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -158,13 +159,13 @@ func (n *NarrationObserver) OnEvent(e WalkEvent) {
 	}
 }
 
-func (n *NarrationObserver) emit(line string) {
+func (n *narrationObserver) emit(line string) {
 	n.sink(line)
 }
 
-func (n *NarrationObserver) emitMilestone() {
+func (n *narrationObserver) emitMilestone() {
 	elapsed := time.Since(n.walkStart)
-	line := fmt.Sprintf("--- Progress: %d nodes visited | Elapsed: %s",
+	line := fmt.Sprintf("--- progress: %d nodes visited | Elapsed: %s",
 		n.nodesVisited, fmtNarrateDuration(elapsed))
 	if n.showETA && n.nodesVisited > 0 {
 		avgPerNode := elapsed / time.Duration(n.nodesVisited)

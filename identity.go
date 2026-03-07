@@ -1,9 +1,27 @@
 package framework
+// Category: Processing & Support
 
 import (
 	"fmt"
 	"strings"
 )
+
+// Persona is a perennial agent identity template — stable across model
+// releases while the models behind them shift. Ouroboros measures the
+// transient model; Personas provide the enduring role.
+type Persona struct {
+	Identity    AgentIdentity
+	Description string
+}
+
+// PersonaResolver looks up a persona by name. Set by importing a persona
+// registry package (e.g. import _ "github.com/dpopsuev/origami/persona").
+type PersonaResolver func(name string) (Persona, bool)
+
+// DefaultPersonaResolver is the active persona lookup function. It is nil
+// until a persona package registers itself via init(). Callers must handle
+// the nil case (return zero Persona, false).
+var DefaultPersonaResolver PersonaResolver
 
 // Color represents an agent's personality on the warm-cool spectrum.
 type Color struct {

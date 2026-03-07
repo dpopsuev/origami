@@ -1,9 +1,10 @@
 {
-  "symptom_category": "automation",
-  "severity": "medium",
-  "defect_type_hypothesis": "au001",
   "candidate_repos": [
     "cnf-gotests"
   ],
-  "skip_investigation": true
+  "cascade_suspected": false,
+  "defect_type_hypothesis": "au001",
+  "severity": "medium",
+  "skip_investigation": true,
+  "symptom_category": "automation"
 }

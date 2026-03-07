@@ -3,13 +3,13 @@ package rca
 import (
 	"strings"
 
-	"github.com/dpopsuev/origami/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
-// ScenarioToCatalog converts a SourcePackConfig to a knowledge.KnowledgeSourceCatalog
+// ScenarioToCatalog converts a SourcePackConfig to a toolkit.SourceCatalog
 // for inject hooks and template parameter assembly.
-func ScenarioToCatalog(wc SourcePackConfig) *knowledge.KnowledgeSourceCatalog {
-	cat := &knowledge.KnowledgeSourceCatalog{}
+func ScenarioToCatalog(wc SourcePackConfig) toolkit.SourceCatalog {
+	var sources []toolkit.Source
 	for _, r := range wc.Repos {
 		tags := map[string]string{
 			"layer": "base",
@@ -17,17 +17,17 @@ func ScenarioToCatalog(wc SourcePackConfig) *knowledge.KnowledgeSourceCatalog {
 		if r.Purpose != "" {
 			tags["role"] = inferRole(r.Purpose)
 		}
-		cat.Sources = append(cat.Sources, knowledge.Source{
+		sources = append(sources, toolkit.Source{
 			Name:    r.Name,
-			Kind:    knowledge.SourceKindRepo,
+			Kind:    toolkit.SourceKindRepo,
 			URI:     r.Path,
 			Purpose: r.Purpose,
 			Branch:  r.Branch,
 			Tags:    tags,
 		})
 	}
-	cat.Sources = append(cat.Sources, wc.Sources...)
-	return cat
+	sources = append(sources, wc.Sources...)
+	return &toolkit.SliceCatalog{Items: sources}
 }
 
 // inferRole derives a tag role from a source's purpose string.

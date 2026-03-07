@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -18,7 +17,8 @@ import (
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/dpopsuev/origami/knowledge"
+	"github.com/dpopsuev/origami/connectors/docs"
+	"github.com/dpopsuev/origami/connectors/github"
 	skn "github.com/dpopsuev/origami/schematics/knowledge"
 )
 
@@ -27,29 +27,63 @@ func main() {
 	drivers := flag.String("drivers", "", "comma-separated driver names to register (e.g. git,docs)")
 	flag.Parse()
 
-	router := skn.NewRouter()
-
+	var opts []skn.RouterOption
 	if *drivers != "" {
 		for _, name := range strings.Split(*drivers, ",") {
 			name = strings.TrimSpace(name)
-			log.Printf("driver %q requested but no built-in implementation yet", name)
+			switch name {
+			case "git":
+				d, err := github.DefaultGitDriver()
+				if err != nil {
+					log.Fatalf("create git driver: %v", err)
+				}
+				opts = append(opts, skn.WithGitDriver(d))
+				log.Printf("registered driver: git")
+			case "docs":
+				d, err := docs.DefaultDocsDriver()
+				if err != nil {
+					log.Fatalf("create docs driver: %v", err)
+				}
+				opts = append(opts, skn.WithDocsDriver(d))
+				log.Printf("registered driver: docs")
+			default:
+				log.Fatalf("unknown driver %q (known: git, docs)", name)
+			}
 		}
 	}
+	router := skn.NewRouter(opts...)
 
 	server := sdkmcp.NewServer(
 		&sdkmcp.Implementation{Name: "origami-knowledge", Version: "v0.1.0"},
 		nil,
 	)
 
-	registerTools(server, router)
+	skn.RegisterTools(server, router)
+	skn.RegisterSynthesizeTool(server, skn.SynthesizeToolOpts{
+		Synthesizer: &skn.StructuralSynthesizer{},
+		Router:      router,
+	})
 
-	handler := sdkmcp.NewStreamableHTTPHandler(
+	mcpHandler := sdkmcp.NewStreamableHTTPHandler(
 		func(_ *http.Request) *sdkmcp.Server { return server },
 		&sdkmcp.StreamableHTTPOptions{Stateless: true},
 	)
 
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", mcpHandler)
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		if router.Ready() {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+
 	addr := fmt.Sprintf(":%d", *port)
-	httpServer := &http.Server{Addr: addr, Handler: handler}
+	httpServer := &http.Server{Addr: addr, Handler: mux}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -65,118 +99,3 @@ func main() {
 	}
 }
 
-func registerTools(server *sdkmcp.Server, router *skn.AccessRouter) {
-	server.AddTool(
-		&sdkmcp.Tool{
-			Name:        "knowledge_ensure",
-			Description: "Ensure a knowledge source is available (e.g. clone a repo)",
-			InputSchema: json.RawMessage(`{"type":"object","properties":{"source":{"type":"object","description":"Knowledge source descriptor"}}}`),
-		},
-		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
-			var args struct {
-				Source knowledge.Source `json:"source"`
-			}
-			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
-				return errResult("invalid arguments: " + err.Error()), nil
-			}
-			if err := router.Ensure(ctx, args.Source); err != nil {
-				return errResult(err.Error()), nil
-			}
-			return &sdkmcp.CallToolResult{
-				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: "ok"}},
-			}, nil
-		},
-	)
-
-	server.AddTool(
-		&sdkmcp.Tool{
-			Name:        "knowledge_search",
-			Description: "Search a knowledge source for matching content",
-			InputSchema: json.RawMessage(`{"type":"object","properties":{"source":{"type":"object","description":"Knowledge source descriptor"},"query":{"type":"string","description":"Search query"},"max_results":{"type":"integer","description":"Maximum results to return"}}}`),
-		},
-		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
-			var args struct {
-				Source     knowledge.Source `json:"source"`
-				Query      string          `json:"query"`
-				MaxResults int             `json:"max_results"`
-			}
-			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
-				return errResult("invalid arguments: " + err.Error()), nil
-			}
-			if args.MaxResults <= 0 {
-				args.MaxResults = 10
-			}
-			results, err := router.Search(ctx, args.Source, args.Query, args.MaxResults)
-			if err != nil {
-				return errResult(err.Error()), nil
-			}
-			data, err := json.Marshal(results)
-			if err != nil {
-				return errResult("marshal search results: " + err.Error()), nil
-			}
-			return &sdkmcp.CallToolResult{
-				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: string(data)}},
-			}, nil
-		},
-	)
-
-	server.AddTool(
-		&sdkmcp.Tool{
-			Name:        "knowledge_read",
-			Description: "Read content from a knowledge source at a given path",
-			InputSchema: json.RawMessage(`{"type":"object","properties":{"source":{"type":"object","description":"Knowledge source descriptor"},"path":{"type":"string","description":"Path to read"}}}`),
-		},
-		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
-			var args struct {
-				Source knowledge.Source `json:"source"`
-				Path   string          `json:"path"`
-			}
-			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
-				return errResult("invalid arguments: " + err.Error()), nil
-			}
-			content, err := router.Read(ctx, args.Source, args.Path)
-			if err != nil {
-				return errResult(err.Error()), nil
-			}
-			return &sdkmcp.CallToolResult{
-				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: string(content)}},
-			}, nil
-		},
-	)
-
-	server.AddTool(
-		&sdkmcp.Tool{
-			Name:        "knowledge_list",
-			Description: "List contents of a knowledge source directory",
-			InputSchema: json.RawMessage(`{"type":"object","properties":{"source":{"type":"object","description":"Knowledge source descriptor"},"root":{"type":"string","description":"Root path to list from"},"max_depth":{"type":"integer","description":"Maximum directory depth"}}}`),
-		},
-		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
-			var args struct {
-				Source   knowledge.Source `json:"source"`
-				Root     string          `json:"root"`
-				MaxDepth int             `json:"max_depth"`
-			}
-			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
-				return errResult("invalid arguments: " + err.Error()), nil
-			}
-			entries, err := router.List(ctx, args.Source, args.Root, args.MaxDepth)
-			if err != nil {
-				return errResult(err.Error()), nil
-			}
-			data, err := json.Marshal(entries)
-			if err != nil {
-				return errResult("marshal list entries: " + err.Error()), nil
-			}
-			return &sdkmcp.CallToolResult{
-				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: string(data)}},
-			}, nil
-		},
-	)
-}
-
-func errResult(msg string) *sdkmcp.CallToolResult {
-	return &sdkmcp.CallToolResult{
-		IsError: true,
-		Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: msg}},
-	}
-}

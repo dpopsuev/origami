@@ -1,5 +1,7 @@
 package framework
 
+// Category: Core Primitives
+
 import "context"
 
 // Walker is an agent traversing a graph. It combines identity
@@ -12,8 +14,7 @@ type Walker interface {
 }
 
 // WalkerState tracks a walker's progress through a graph.
-// It mirrors orchestrate.CaseState with string-based node names
-// instead of typed CircuitStep.
+// It mirrors orchestrate.CaseState with string-based node names.
 type WalkerState struct {
 	ID                string              `json:"id"`
 	CurrentNode       string              `json:"current_node"`
@@ -68,24 +69,24 @@ func (ws *WalkerState) MergeContext(additions map[string]any) {
 	}
 }
 
-// TrajectoryType classifies a confidence convergence pattern.
-type TrajectoryType string
+// trajectoryType classifies a confidence convergence pattern.
+type trajectoryType string
 
 const (
-	TrajectoryUnderdamped      TrajectoryType = "underdamped"
-	TrajectoryOverdamped       TrajectoryType = "overdamped"
-	TrajectoryCriticallyDamped TrajectoryType = "critically_damped"
-	TrajectoryUnstable         TrajectoryType = "unstable"
-	TrajectoryInsufficient     TrajectoryType = "insufficient"
+	TrajectoryUnderdamped      trajectoryType = "underdamped"
+	TrajectoryOverdamped       trajectoryType = "overdamped"
+	TrajectoryCriticallyDamped trajectoryType = "critically_damped"
+	TrajectoryUnstable         trajectoryType = "unstable"
+	TrajectoryInsufficient     trajectoryType = "insufficient"
 )
 
-// ClassifyTrajectory analyzes a confidence history to determine the convergence pattern.
+// classifyTrajectory analyzes a confidence history to determine the convergence pattern.
 // Underdamped: many oscillations (3+ sign changes in derivative).
 // Overdamped: monotonically increasing (0 sign changes).
 // Critically damped: converging within 1 oscillation (1-2 sign changes).
 // Unstable: final value lower than first (diverging).
 // Insufficient: fewer than 3 data points.
-func ClassifyTrajectory(history []float64) TrajectoryType {
+func classifyTrajectory(history []float64) trajectoryType {
 	if len(history) < 3 {
 		return TrajectoryInsufficient
 	}
@@ -116,11 +117,11 @@ func ClassifyTrajectory(history []float64) TrajectoryType {
 	}
 }
 
-// ReadOnlyContext returns a shallow copy of the context map.
+// readOnlyContext returns a shallow copy of the context map.
 // Used to snapshot context at dialectic entry so nodes cannot mutate
 // the shared state during adversarial debate. The original map is never
 // exposed; writes to the copy are discarded after the dialectic round.
-func ReadOnlyContext(ctx map[string]any) map[string]any {
+func readOnlyContext(ctx map[string]any) map[string]any {
 	if ctx == nil {
 		return nil
 	}

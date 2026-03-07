@@ -51,34 +51,30 @@ func (t *stubTransformer) getSymptomID(gtID string) int64 {
 }
 
 func (t *stubTransformer) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
-	step := NodeNameToStep(tc.NodeName)
-	if step == "" {
-		return nil, fmt.Errorf("stub transformer: unknown node %q", tc.NodeName)
-	}
-
+	nodeName := tc.NodeName
 	caseID := tc.WalkerState.ID
 	gtCase := t.findCase(caseID)
 	if gtCase == nil {
 		return nil, fmt.Errorf("stub transformer: unknown case %q", caseID)
 	}
 
-	switch step {
-	case StepF0Recall:
+	switch nodeName {
+	case "recall":
 		return t.buildRecall(gtCase), nil
-	case StepF1Triage:
+	case "triage":
 		return t.buildTriage(gtCase), nil
-	case StepF2Resolve:
+	case "resolve":
 		return t.buildResolve(gtCase), nil
-	case StepF3Invest:
+	case "investigate":
 		return t.buildInvestigate(gtCase), nil
-	case StepF4Correlate:
+	case "correlate":
 		return t.buildCorrelate(gtCase), nil
-	case StepF5Review:
+	case "review":
 		return t.buildReview(gtCase), nil
-	case StepF6Report:
+	case "report":
 		return t.buildReport(gtCase), nil
 	default:
-		return nil, fmt.Errorf("stub transformer: no response for step %s", step)
+		return nil, fmt.Errorf("stub transformer: no response for node %s", nodeName)
 	}
 }
 
@@ -100,83 +96,86 @@ func (t *stubTransformer) findRCA(id string) *GroundTruthRCA {
 	return nil
 }
 
-func (t *stubTransformer) buildRecall(c *GroundTruthCase) *RecallResult {
+func (t *stubTransformer) buildRecall(c *GroundTruthCase) map[string]any {
 	if c.ExpectedRecall != nil {
-		r := &RecallResult{Match: c.ExpectedRecall.Match, Confidence: c.ExpectedRecall.Confidence}
+		m := map[string]any{
+			"match":      c.ExpectedRecall.Match,
+			"confidence": c.ExpectedRecall.Confidence,
+		}
 		if c.ExpectedRecall.Match {
-			r.Reasoning = fmt.Sprintf("Recalled prior RCA for symptom matching case %s", c.ID)
+			m["reasoning"] = fmt.Sprintf("Recalled prior RCA for symptom matching case %s", c.ID)
 			if c.RCAID != "" {
-				r.PriorRCAID = t.getRCAID(c.RCAID)
+				m["prior_rca_id"] = float64(t.getRCAID(c.RCAID))
 			}
 			if c.SymptomID != "" {
-				r.SymptomID = t.getSymptomID(c.SymptomID)
+				m["symptom_id"] = float64(t.getSymptomID(c.SymptomID))
 			}
 		} else {
-			r.Reasoning = "No prior RCA found matching this failure pattern"
+			m["reasoning"] = "No prior RCA found matching this failure pattern"
 		}
-		return r
+		return m
 	}
-	return &RecallResult{Match: false, Confidence: 0.0, Reasoning: "no recall data"}
+	return map[string]any{"match": false, "confidence": 0.0, "reasoning": "no recall data"}
 }
 
-func (t *stubTransformer) buildTriage(c *GroundTruthCase) *TriageResult {
+func (t *stubTransformer) buildTriage(c *GroundTruthCase) map[string]any {
 	if c.ExpectedTriage != nil {
-		return &TriageResult{
-			SymptomCategory:      c.ExpectedTriage.SymptomCategory,
-			Severity:             c.ExpectedTriage.Severity,
-			DefectTypeHypothesis: c.ExpectedTriage.DefectTypeHypothesis,
-			CandidateRepos:       c.ExpectedTriage.CandidateRepos,
-			SkipInvestigation:    c.ExpectedTriage.SkipInvestigation,
-			CascadeSuspected:     c.ExpectedTriage.CascadeSuspected,
+		return map[string]any{
+			"symptom_category":       c.ExpectedTriage.SymptomCategory,
+			"severity":               c.ExpectedTriage.Severity,
+			"defect_type_hypothesis": c.ExpectedTriage.DefectTypeHypothesis,
+			"candidate_repos":        c.ExpectedTriage.CandidateRepos,
+			"skip_investigation":     c.ExpectedTriage.SkipInvestigation,
+			"cascade_suspected":      c.ExpectedTriage.CascadeSuspected,
 		}
 	}
-	return &TriageResult{SymptomCategory: "unknown"}
+	return map[string]any{"symptom_category": "unknown"}
 }
 
-func (t *stubTransformer) buildResolve(c *GroundTruthCase) *ResolveResult {
+func (t *stubTransformer) buildResolve(c *GroundTruthCase) map[string]any {
 	if c.ExpectedResolve != nil {
-		var repos []RepoSelection
+		repos := make([]any, 0, len(c.ExpectedResolve.SelectedRepos))
 		for _, r := range c.ExpectedResolve.SelectedRepos {
-			repos = append(repos, RepoSelection{Name: r.Name, Reason: r.Reason})
+			repos = append(repos, map[string]any{"name": r.Name, "reason": r.Reason})
 		}
-		return &ResolveResult{SelectedRepos: repos}
+		return map[string]any{"selected_repos": repos}
 	}
-	return &ResolveResult{}
+	return map[string]any{"selected_repos": []any{}}
 }
 
-func (t *stubTransformer) buildInvestigate(c *GroundTruthCase) *InvestigateArtifact {
+func (t *stubTransformer) buildInvestigate(c *GroundTruthCase) map[string]any {
 	if c.ExpectedInvest != nil {
-		return &InvestigateArtifact{
-			RCAMessage:       c.ExpectedInvest.RCAMessage,
-			DefectType:       c.ExpectedInvest.DefectType,
-			Component:        c.ExpectedInvest.Component,
-			ConvergenceScore: c.ExpectedInvest.ConvergenceScore,
-			EvidenceRefs:     c.ExpectedInvest.EvidenceRefs,
+		return map[string]any{
+			"rca_message":       c.ExpectedInvest.RCAMessage,
+			"defect_type":       c.ExpectedInvest.DefectType,
+			"component":         c.ExpectedInvest.Component,
+			"convergence_score": c.ExpectedInvest.ConvergenceScore,
+			"evidence_refs":     c.ExpectedInvest.EvidenceRefs,
 		}
 	}
-	return &InvestigateArtifact{ConvergenceScore: 0.5}
+	return map[string]any{"convergence_score": 0.5}
 }
 
-func (t *stubTransformer) buildCorrelate(c *GroundTruthCase) *CorrelateResult {
+func (t *stubTransformer) buildCorrelate(c *GroundTruthCase) map[string]any {
 	if c.ExpectedCorrelate != nil {
-		r := &CorrelateResult{
-			IsDuplicate:       c.ExpectedCorrelate.IsDuplicate,
-			Confidence:        c.ExpectedCorrelate.Confidence,
-			CrossVersionMatch: c.ExpectedCorrelate.CrossVersionMatch,
+		m := map[string]any{
+			"is_duplicate":        c.ExpectedCorrelate.IsDuplicate,
+			"confidence":          c.ExpectedCorrelate.Confidence,
+			"cross_version_match": c.ExpectedCorrelate.CrossVersionMatch,
 		}
 		if c.ExpectedCorrelate.IsDuplicate && c.RCAID != "" {
-			r.LinkedRCAID = t.getRCAID(c.RCAID)
+			m["linked_rca_id"] = float64(t.getRCAID(c.RCAID))
 		}
-		return r
+		return m
 	}
-	return &CorrelateResult{IsDuplicate: false}
+	return map[string]any{"is_duplicate": false}
 }
 
-func (t *stubTransformer) buildReview(c *GroundTruthCase) *ReviewDecision {
+func (t *stubTransformer) buildReview(c *GroundTruthCase) map[string]any {
 	if c.ExpectedReview != nil {
-		return &ReviewDecision{Decision: c.ExpectedReview.Decision}
+		return map[string]any{"decision": c.ExpectedReview.Decision}
 	}
-	return &ReviewDecision{Decision: "approve"}
+	return map[string]any{"decision": "approve"}
 }
 
 func (t *stubTransformer) buildReport(c *GroundTruthCase) map[string]any {

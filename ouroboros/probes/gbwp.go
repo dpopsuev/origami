@@ -42,13 +42,31 @@ func BuildGBWPPrompt(s ProbeStimulus) string {
 }
 
 // ScoreGBWP scores a single GBWP probe response against the known verdict.
+// Prefers structured output (VERDICT/CONFIDENCE/JUSTIFICATION fields)
+// with keyword fallback for unstructured responses.
 func ScoreGBWP(raw string) map[ouroboros.Dimension]float64 {
 	lower := strings.ToLower(raw)
+	parsed := ParseStructured(raw)
 
-	verdictCorrect := strings.Contains(lower, "verdict: correct") ||
-		strings.Contains(lower, "verdict:correct")
+	verdictCorrect := false
+	if v, ok := parsed.Fields["VERDICT"]; ok {
+		verdictCorrect = strings.EqualFold(strings.TrimSpace(v), "CORRECT")
+	} else {
+		verdictCorrect = strings.Contains(lower, "verdict: correct") ||
+			strings.Contains(lower, "verdict:correct")
+	}
 
-	confidence := parseConfidence(lower)
+	confidence := 0.0
+	if v, ok := parsed.Fields["CONFIDENCE"]; ok {
+		if val, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil {
+			confidence = val
+		}
+	} else {
+		confidence = parseConfidence(lower)
+	}
+
+	hasJustification := parsed.HasField("JUSTIFICATION") ||
+		parsed.HasField("SUPPORTING_EVIDENCE")
 
 	accuracy := 0.0
 	if verdictCorrect {
@@ -57,6 +75,9 @@ func ScoreGBWP(raw string) map[ouroboros.Dimension]float64 {
 			accuracy = 1.0
 		} else if confidence >= 0.7 {
 			accuracy = 0.75
+		}
+		if hasJustification {
+			accuracy = clamp(accuracy + 0.05)
 		}
 	}
 

@@ -5,22 +5,21 @@ import (
 	"fmt"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/knowledge"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
 // Context keys used by inject hooks to store assembled template data.
 const (
-	KeyParamsEnvelope  = "params.envelope"
-	KeyParamsFailure   = "params.failure"
-	KeyParamsWorkspace = "params.workspace"
-	KeyParamsHistory   = "params.history"
-	KeyParamsDigest    = "params.recall_digest"
-	KeyParamsSources   = "params.sources"
-	KeyParamsPrior     = "params.prior"
-	KeyParamsTaxonomy  = "params.taxonomy"
-	KeyParamsCode      = "params.code"
+	KeyParamsEnvelope = "params.envelope"
+	KeyParamsFailure  = "params.failure"
+	KeyParamsHistory  = "params.history"
+	KeyParamsDigest   = "params.recall_digest"
+	KeyParamsSources  = "params.sources"
+	KeyParamsPrior    = "params.prior"
+	KeyParamsTaxonomy = "params.taxonomy"
+	KeyParamsCode     = "params.code"
 )
 
 const maxCodeTokenBudget = 32000
@@ -30,15 +29,15 @@ type InjectHookOpts struct {
 	Store           store.Store
 	CaseData        *store.Case
 	Envelope        *rcatype.Envelope
-	Catalog         *knowledge.KnowledgeSourceCatalog
+	Catalog         toolkit.SourceCatalog
 	CaseDir         string
-	KnowledgeReader knowledge.Reader
+	KnowledgeReader toolkit.SourceReader
 }
 
 // InjectHooks creates a HookRegistry with the inject.* before-hooks
 // that populate walker.Context with per-concern template data.
 // Each hook uses WalkerStateFromContext to write into walker.Context.
-func InjectHooks(st store.Store, caseData *store.Case, env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, caseDir string) framework.HookRegistry {
+func InjectHooks(st store.Store, caseData *store.Case, env *rcatype.Envelope, catalog toolkit.SourceCatalog, caseDir string) framework.HookRegistry {
 	return InjectHooksWithOpts(InjectHookOpts{
 		Store:    st,
 		CaseData: caseData,
@@ -55,10 +54,9 @@ func InjectHooksWithOpts(opts InjectHookOpts) framework.HookRegistry {
 
 	reg.Register(newInjectEnvelopeHook(opts.Envelope))
 	reg.Register(newInjectFailureHook(opts.CaseData))
-	reg.Register(newInjectWorkspaceHook(opts.Envelope, opts.Catalog))
 	reg.Register(newInjectHistoryHook(opts.Store, opts.CaseData))
 	reg.Register(newInjectRecallDigestHook(opts.Store))
-	reg.Register(newInjectSourcesHook(opts.Catalog))
+	reg.Register(newInjectSourcesHook(opts.Envelope, opts.Catalog))
 	reg.Register(newInjectPriorHook(opts.CaseDir))
 	reg.Register(newInjectTaxonomyHook())
 
@@ -72,90 +70,44 @@ func InjectHooksWithOpts(opts InjectHookOpts) framework.HookRegistry {
 }
 
 func newInjectEnvelopeHook(env *rcatype.Envelope) framework.Hook {
-	return framework.NewHookFunc("inject.envelope", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectEnvelopeData(env, ws.Context)
-		return nil
+	return toolkit.NewContextInjector("inject.envelope", func(walkerCtx map[string]any) {
+		injectEnvelopeData(env, walkerCtx)
 	})
 }
 
 func newInjectFailureHook(caseData *store.Case) framework.Hook {
-	return framework.NewHookFunc("inject.failure", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectFailureData(caseData, ws.Context)
-		return nil
-	})
-}
-
-func newInjectWorkspaceHook(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
-	return framework.NewHookFunc("inject.workspace", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectWorkspaceData(env, catalog, ws.Context)
-		return nil
+	return toolkit.NewContextInjector("inject.failure", func(walkerCtx map[string]any) {
+		injectFailureData(caseData, walkerCtx)
 	})
 }
 
 func newInjectHistoryHook(st store.Store, caseData *store.Case) framework.Hook {
-	return framework.NewHookFunc("inject.history", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectHistoryData(st, caseData, ws.Context)
-		return nil
+	return toolkit.NewContextInjector("inject.history", func(walkerCtx map[string]any) {
+		injectHistoryData(st, caseData, walkerCtx)
 	})
 }
 
 func newInjectRecallDigestHook(st store.Store) framework.Hook {
-	return framework.NewHookFunc("inject.recall-digest", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectRecallDigestData(st, ws.Context)
-		return nil
+	return toolkit.NewContextInjector("inject.recall-digest", func(walkerCtx map[string]any) {
+		injectRecallDigestData(st, walkerCtx)
 	})
 }
 
-func newInjectSourcesHook(catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
-	return framework.NewHookFunc("inject.sources", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectSourcesData(catalog, ws.Context)
-		return nil
+func newInjectSourcesHook(env *rcatype.Envelope, catalog toolkit.SourceCatalog) framework.Hook {
+	return toolkit.NewContextInjector("inject.sources", func(walkerCtx map[string]any) {
+		injectSourcesData(env, catalog, walkerCtx)
 	})
 }
 
 func newInjectPriorHook(caseDir string) framework.Hook {
-	return framework.NewHookFunc("inject.prior", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectPriorData(caseDir, ws.Context)
-		return nil
+	return toolkit.NewContextInjector("inject.prior", func(walkerCtx map[string]any) {
+		injectPriorData(caseDir, walkerCtx)
 	})
 }
 
 func newInjectTaxonomyHook() framework.Hook {
-	return framework.NewHookFunc("inject.taxonomy", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		injectTaxonomyData(ws.Context)
-		return nil
+	return toolkit.NewContextInjector("inject.taxonomy", func(walkerCtx map[string]any) {
+		injectTaxonomyData(walkerCtx)
 	})
 }
 
@@ -175,7 +127,7 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 		params.Failure = v
 	}
 
-	if v, ok := walkerCtx[KeyParamsWorkspace].(*SourceParams); ok {
+	if v, ok := walkerCtx[KeyParamsSources].(*SourceParams); ok {
 		params.Sources = v
 	}
 
@@ -185,10 +137,6 @@ func ParamsFromContext(walkerCtx map[string]any) *TemplateParams {
 
 	if v, ok := walkerCtx[KeyParamsDigest].([]RecallDigestEntry); ok {
 		params.RecallDigest = v
-	}
-
-	if v, ok := walkerCtx[KeyParamsSources].([]AlwaysReadSource); ok && params.Sources != nil {
-		params.Sources.AlwaysRead = v
 	}
 
 	if v, ok := walkerCtx[KeyParamsPrior].(*PriorParams); ok {
@@ -251,10 +199,6 @@ func injectFailureData(caseData *store.Case, walkerCtx map[string]any) {
 	}
 }
 
-func injectWorkspaceData(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
-	walkerCtx[KeyParamsWorkspace] = buildSourceParams(env, catalog)
-}
-
 func injectHistoryData(st store.Store, caseData *store.Case, walkerCtx map[string]any) {
 	if st == nil || caseData == nil {
 		return
@@ -273,11 +217,8 @@ func injectRecallDigestData(st store.Store, walkerCtx map[string]any) {
 	walkerCtx[KeyParamsDigest] = buildRecallDigest(st)
 }
 
-func injectSourcesData(catalog *knowledge.KnowledgeSourceCatalog, walkerCtx map[string]any) {
-	if catalog == nil {
-		return
-	}
-	walkerCtx[KeyParamsSources] = loadAlwaysReadSources(catalog)
+func injectSourcesData(env *rcatype.Envelope, catalog toolkit.SourceCatalog, walkerCtx map[string]any) {
+	walkerCtx[KeyParamsSources] = buildSourceParams(env, catalog)
 }
 
 func injectPriorData(caseDir string, walkerCtx map[string]any) {
@@ -293,15 +234,11 @@ func injectTaxonomyData(walkerCtx map[string]any) {
 
 // Code injection hooks
 
-func newInjectCodeTreeHook(reader knowledge.Reader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
-	return framework.NewHookFunc("inject.code.tree", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		code := ensureCodeParams(ws.Context)
-		for _, src := range catalog.Sources {
-			if src.Kind != knowledge.SourceKindRepo {
+func newInjectCodeTreeHook(reader toolkit.SourceReader, catalog toolkit.SourceCatalog) framework.Hook {
+	return toolkit.NewContextInjectorErr("inject.code.tree", func(ctx context.Context, walkerCtx map[string]any) error {
+		code := ensureCodeParams(walkerCtx)
+		for _, src := range catalog.Sources() {
+			if src.Kind != toolkit.SourceKindRepo {
 				continue
 			}
 			if err := reader.Ensure(ctx, src); err != nil {
@@ -325,21 +262,17 @@ func newInjectCodeTreeHook(reader knowledge.Reader, catalog *knowledge.Knowledge
 	})
 }
 
-func newInjectCodeSearchHook(reader knowledge.Reader, catalog *knowledge.KnowledgeSourceCatalog) framework.Hook {
-	return framework.NewHookFunc("inject.code.search", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		code := ensureCodeParams(ws.Context)
+func newInjectCodeSearchHook(reader toolkit.SourceReader, catalog toolkit.SourceCatalog) framework.Hook {
+	return toolkit.NewContextInjectorErr("inject.code.search", func(ctx context.Context, walkerCtx map[string]any) error {
+		code := ensureCodeParams(walkerCtx)
 
-		keywords := extractSearchKeywords(ws.Context)
+		keywords := extractSearchKeywords(walkerCtx)
 		if len(keywords) == 0 {
 			return nil
 		}
 
-		for _, src := range catalog.Sources {
-			if src.Kind != knowledge.SourceKindRepo {
+		for _, src := range catalog.Sources() {
+			if src.Kind != toolkit.SourceKindRepo {
 				continue
 			}
 			query := keywords[0]
@@ -364,13 +297,9 @@ func newInjectCodeSearchHook(reader knowledge.Reader, catalog *knowledge.Knowled
 	})
 }
 
-func newInjectCodeReadHook(reader knowledge.Reader) framework.Hook {
-	return framework.NewHookFunc("inject.code.read", func(ctx context.Context, _ string, _ framework.Artifact) error {
-		ws := framework.WalkerStateFromContext(ctx)
-		if ws == nil {
-			return nil
-		}
-		code := ensureCodeParams(ws.Context)
+func newInjectCodeReadHook(reader toolkit.SourceReader) framework.Hook {
+	return toolkit.NewContextInjectorErr("inject.code.read", func(ctx context.Context, walkerCtx map[string]any) error {
+		code := ensureCodeParams(walkerCtx)
 
 		seen := make(map[string]bool)
 		budgetRemaining := maxCodeTokenBudget
@@ -385,11 +314,11 @@ func newInjectCodeReadHook(reader knowledge.Reader) framework.Hook {
 			if parts == nil {
 				continue
 			}
-			src := knowledge.Source{
-				Org:  parts[0],
-				Name: parts[1],
-				Kind: knowledge.SourceKindRepo,
-			}
+		src := toolkit.Source{
+			Org:  parts[0],
+			Name: parts[1],
+			Kind: toolkit.SourceKindRepo,
+		}
 			data, err := reader.Read(ctx, src, sr.File)
 			if err != nil {
 				continue
@@ -436,12 +365,24 @@ func extractSearchKeywords(walkerCtx map[string]any) []string {
 		}
 	}
 	if prior, ok := walkerCtx[KeyParamsPrior].(*PriorParams); ok && prior != nil {
-		if prior.TriageResult != nil {
-			keywords = append(keywords, prior.TriageResult.CandidateRepos...)
+		if prior.Triage != nil {
+			if repos, ok := prior.Triage["candidate_repos"].([]any); ok {
+				for _, r := range repos {
+					if s, ok := r.(string); ok {
+						keywords = append(keywords, s)
+					}
+				}
+			}
 		}
-		if prior.ResolveResult != nil {
-			for _, sel := range prior.ResolveResult.SelectedRepos {
-				keywords = append(keywords, sel.Name)
+		if prior.Resolve != nil {
+			if repos, ok := prior.Resolve["selected_repos"].([]any); ok {
+				for _, r := range repos {
+					if rm, ok := r.(map[string]any); ok {
+						if name, ok := rm["name"].(string); ok {
+							keywords = append(keywords, name)
+						}
+					}
+				}
 			}
 		}
 	}

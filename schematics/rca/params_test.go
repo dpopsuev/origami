@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dpopsuev/origami/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
 func TestLoadAlwaysReadSources_HappyPath(t *testing.T) {
@@ -13,13 +13,13 @@ func TestLoadAlwaysReadSources_HappyPath(t *testing.T) {
 	docPath := filepath.Join(dir, "architecture.md")
 	os.WriteFile(docPath, []byte("# PTP Architecture\nlinuxptp-daemon is a pod."), 0644)
 
-	cat := &knowledge.KnowledgeSourceCatalog{
-		Sources: []knowledge.Source{
+	cat := &toolkit.SliceCatalog{
+		Items: []toolkit.Source{
 			{
 				Name:       "ptp-architecture",
-				Kind:       knowledge.SourceKindDoc,
+				Kind:       toolkit.SourceKindDoc,
 				Purpose:    "Disambiguation doc",
-				ReadPolicy: knowledge.ReadAlways,
+				ReadPolicy: toolkit.ReadAlways,
 				LocalPath:  docPath,
 			},
 		},
@@ -41,12 +41,12 @@ func TestLoadAlwaysReadSources_HappyPath(t *testing.T) {
 }
 
 func TestLoadAlwaysReadSources_ConditionalOnly(t *testing.T) {
-	cat := &knowledge.KnowledgeSourceCatalog{
-		Sources: []knowledge.Source{
+	cat := &toolkit.SliceCatalog{
+		Items: []toolkit.Source{
 			{
 				Name:       "repo-a",
-				Kind:       knowledge.SourceKindRepo,
-				ReadPolicy: knowledge.ReadConditional,
+				Kind:       toolkit.SourceKindRepo,
+				ReadPolicy: toolkit.ReadConditional,
 			},
 		},
 	}
@@ -58,12 +58,12 @@ func TestLoadAlwaysReadSources_ConditionalOnly(t *testing.T) {
 }
 
 func TestLoadAlwaysReadSources_MissingLocalPath(t *testing.T) {
-	cat := &knowledge.KnowledgeSourceCatalog{
-		Sources: []knowledge.Source{
+	cat := &toolkit.SliceCatalog{
+		Items: []toolkit.Source{
 			{
 				Name:       "no-path-doc",
-				Kind:       knowledge.SourceKindDoc,
-				ReadPolicy: knowledge.ReadAlways,
+				Kind:       toolkit.SourceKindDoc,
+				ReadPolicy: toolkit.ReadAlways,
 			},
 		},
 	}
@@ -75,12 +75,12 @@ func TestLoadAlwaysReadSources_MissingLocalPath(t *testing.T) {
 }
 
 func TestLoadAlwaysReadSources_NonexistentFile(t *testing.T) {
-	cat := &knowledge.KnowledgeSourceCatalog{
-		Sources: []knowledge.Source{
+	cat := &toolkit.SliceCatalog{
+		Items: []toolkit.Source{
 			{
 				Name:       "ghost-doc",
-				Kind:       knowledge.SourceKindDoc,
-				ReadPolicy: knowledge.ReadAlways,
+				Kind:       toolkit.SourceKindDoc,
+				ReadPolicy: toolkit.ReadAlways,
 				LocalPath:  "/tmp/nonexistent-doc-12345.md",
 			},
 		},

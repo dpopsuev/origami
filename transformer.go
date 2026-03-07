@@ -1,4 +1,5 @@
 package framework
+// Category: Processing & Support
 
 import (
 	"context"

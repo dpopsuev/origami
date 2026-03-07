@@ -1,5 +1,7 @@
 package framework
 
+// Category: DSL & Build
+
 import (
 	"fmt"
 	"strings"
@@ -10,8 +12,9 @@ import (
 // CircuitDef is the top-level DSL structure for declaring a circuit graph.
 // Layout follows P3 (reading-first): circuit > zones > nodes > edges > start/done.
 type CircuitDef struct {
-	Circuit    string             `yaml:"circuit"`
+	Circuit     string             `yaml:"circuit"`
 	Description string             `yaml:"description,omitempty"`
+	Topology    string             `yaml:"topology,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
@@ -119,6 +122,7 @@ const (
 type rawCircuitDef struct {
 	Circuit     string             `yaml:"circuit"`
 	Description string             `yaml:"description,omitempty"`
+	Topology    string             `yaml:"topology,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
@@ -177,6 +181,7 @@ func (raw *rawCircuitDef) normalize() (*CircuitDef, error) {
 	def := &CircuitDef{
 		Circuit:     raw.Circuit,
 		Description: raw.Description,
+		Topology:    raw.Topology,
 		Imports:     raw.Imports,
 		Vars:        raw.Vars,
 		Extractors:  raw.Extractors,
@@ -498,7 +503,86 @@ func (def *CircuitDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 		})
 	}
 
-	return NewGraph(def.Circuit, fwNodes, fwEdges, fwZones, WithDoneNode(def.Done))
+	g, err := NewGraph(def.Circuit, fwNodes, fwEdges, fwZones, WithDoneNode(def.Done))
+	if err != nil {
+		return nil, err
+	}
+
+	if def.Topology != "" {
+		if err := validateTopology(g, def); err != nil {
+			return nil, err
+		}
+	}
+
+	return g, nil
+}
+
+// TopologyValidator validates a built graph's structure against a named topology.
+// When nil, topology validation is skipped. The topology/ package provides the
+// default implementation via RegisterTopologyValidator.
+type TopologyValidator func(topoName string, shape GraphShape) error
+
+// GraphShape describes the structural properties of a graph for topology validation.
+type GraphShape struct {
+	StartNode string
+	DoneNode  string
+	Nodes     []GraphNodeInfo
+}
+
+// GraphNodeInfo describes a single node's edge cardinality.
+type GraphNodeInfo struct {
+	Name    string
+	Inputs  int
+	Outputs int
+}
+
+// DefaultTopologyValidator is the active topology validation function.
+// It is nil until a topology package registers itself via
+// RegisterTopologyValidator. When nil, BuildGraph skips topology checks.
+var DefaultTopologyValidator TopologyValidator
+
+// RegisterTopologyValidator sets the default topology validator.
+// Called by topology/ init() to wire in the built-in topology registry.
+func RegisterTopologyValidator(v TopologyValidator) {
+	DefaultTopologyValidator = v
+}
+
+// validateTopology checks the graph against the declared topology.
+func validateTopology(g *DefaultGraph, def *CircuitDef) error {
+	v := DefaultTopologyValidator
+	if v == nil {
+		return fmt.Errorf("topology %q declared but no topology validator registered (import topology package)", def.Topology)
+	}
+	shape := buildGraphShape(g, def)
+	return v(def.Topology, shape)
+}
+
+func buildGraphShape(g *DefaultGraph, def *CircuitDef) GraphShape {
+	nodes := make([]GraphNodeInfo, 0, len(g.nodes))
+	for _, n := range g.nodes {
+		inputs := 0
+		for _, e := range g.edges {
+			if e.To() == n.Name() && !e.IsShortcut() && !e.IsLoop() {
+				inputs++
+			}
+		}
+		outputs := 0
+		for _, e := range g.edges {
+			if e.From() == n.Name() && !e.IsShortcut() && !e.IsLoop() {
+				outputs++
+			}
+		}
+		nodes = append(nodes, GraphNodeInfo{
+			Name:    n.Name(),
+			Inputs:  inputs,
+			Outputs: outputs,
+		})
+	}
+	return GraphShape{
+		StartNode: def.Start,
+		DoneNode:  g.doneNode,
+		Nodes:     nodes,
+	}
 }
 
 // resolveNode creates a Node from a NodeDef using the priority chain:

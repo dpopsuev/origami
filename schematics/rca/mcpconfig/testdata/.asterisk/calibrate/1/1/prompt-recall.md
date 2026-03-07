@@ -22,7 +22,7 @@
 
 **Case:** #1  
 **Test:** OCP-83297 PTP sync stability  
-**Step:** F0_RECALL
+**Step:** recall
 
 ---
 

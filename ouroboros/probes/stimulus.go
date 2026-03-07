@@ -4,9 +4,37 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dpopsuev/origami/ouroboros"
 	"gopkg.in/yaml.v3"
 )
+
+// MessyInput is a deliberately poorly written Go function used as the
+// refactoring probe stimulus. The code is valid but uses single-letter
+// names, has no comments, and crams everything into one function.
+// The scorer measures what the model does to improve it.
+const MessyInput = `func d(a []int, b string, c bool) (int, string, error) {
+	r := 0
+	s := ""
+	for i := 0; i < len(a); i++ {
+		if a[i] > 0 {
+			r = r + a[i]
+			if c {
+				s = s + fmt.Sprintf("%d,", a[i])
+			}
+		} else if a[i] < 0 {
+			r = r - a[i]
+			if c {
+				s = s + fmt.Sprintf("(%d),", a[i])
+			}
+		}
+	}
+	if r == 0 {
+		return 0, "", fmt.Errorf("empty result for %s", b)
+	}
+	if b != "" {
+		s = b + ": " + s
+	}
+	return r, s, nil
+}`
 
 // ProbeStimulus is a named input stimulus for an Ouroboros behavioral probe.
 // Consumers can load custom stimuli from YAML to replace or extend the defaults.
@@ -25,7 +53,7 @@ func DefaultStimuli() StimuliSet {
 	return StimuliSet{
 		"refactor": {
 			Name:             "refactor",
-			Input:            ouroboros.MessyInput,
+			Input:            MessyInput,
 			Language:         "Go",
 			ExpectedBehavior: "Refactored code with descriptive names, split functions, and comments",
 		},

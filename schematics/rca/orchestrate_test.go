@@ -19,24 +19,33 @@ func TestArtifactReadWrite(t *testing.T) {
 	}
 
 	// Write a recall result
-	recall := &RecallResult{
-		Match: true, PriorRCAID: 42, Confidence: 0.85, Reasoning: "same error pattern",
+	recall := map[string]any{
+		"match": true, "prior_rca_id": float64(42), "confidence": 0.85, "reasoning": "same error pattern",
 	}
 	if err := WriteArtifact(caseDir, "recall-result.json", recall); err != nil {
 		t.Fatalf("WriteArtifact: %v", err)
 	}
 
 	// Read it back
-	got, err := ReadArtifact[RecallResult](caseDir, "recall-result.json")
+	got, err := ReadMapArtifact(caseDir, "recall-result.json")
 	if err != nil {
-		t.Fatalf("ReadArtifact: %v", err)
+		t.Fatalf("ReadMapArtifact: %v", err)
 	}
-	if got == nil || !got.Match || got.PriorRCAID != 42 || got.Confidence != 0.85 {
-		t.Errorf("ReadArtifact mismatch: got %+v", got)
+	if got == nil {
+		t.Fatal("ReadMapArtifact returned nil")
+	}
+	if m, _ := got["match"].(bool); !m {
+		t.Errorf("ReadMapArtifact match: got %v", got["match"])
+	}
+	if p, _ := got["prior_rca_id"].(float64); p != 42 {
+		t.Errorf("ReadMapArtifact prior_rca_id: got %v", got["prior_rca_id"])
+	}
+	if c, _ := got["confidence"].(float64); c != 0.85 {
+		t.Errorf("ReadMapArtifact confidence: got %v", got["confidence"])
 	}
 
 	// Read non-existent = nil
-	missing, err := ReadArtifact[RecallResult](caseDir, "missing.json")
+	missing, err := ReadMapArtifact(caseDir, "missing.json")
 	if err != nil {
 		t.Fatalf("ReadArtifact missing: %v", err)
 	}
@@ -52,7 +61,7 @@ func TestWritePrompt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := WritePrompt(caseDir, StepF1Triage, 0, "# Triage prompt\nContent here")
+	path, err := WriteNodePrompt(caseDir, "triage", 0, "# Triage prompt\nContent here")
 	if err != nil {
 		t.Fatalf("WritePrompt: %v", err)
 	}
@@ -61,7 +70,7 @@ func TestWritePrompt(t *testing.T) {
 	}
 
 	// Loop iteration
-	path, err = WritePrompt(caseDir, StepF3Invest, 2, "# Investigate loop 2")
+	path, err = WriteNodePrompt(caseDir, "investigate", 2, "# Investigate loop 2")
 	if err != nil {
 		t.Fatalf("WritePrompt loop: %v", err)
 	}
@@ -72,23 +81,23 @@ func TestWritePrompt(t *testing.T) {
 
 func TestArtifactFilename(t *testing.T) {
 	tests := []struct {
-		step CircuitStep
-		want string
+		nodeName string
+		want     string
 	}{
-		{StepF0Recall, "recall-result.json"},
-		{StepF1Triage, "triage-result.json"},
-		{StepF2Resolve, "resolve-result.json"},
-		{StepF3Invest, "artifact.json"},
-		{StepF4Correlate, "correlate-result.json"},
-		{StepF5Review, "review-decision.json"},
-		{StepF6Report, "jira-draft.json"},
-		{StepInit, ""},
-		{StepDone, ""},
+		{"recall", "recall-result.json"},
+		{"triage", "triage-result.json"},
+		{"resolve", "resolve-result.json"},
+		{"investigate", "artifact.json"},
+		{"correlate", "correlate-result.json"},
+		{"review", "review-decision.json"},
+		{"report", "jira-draft.json"},
+		{"INIT", ""},
+		{"DONE", ""},
 	}
 	for _, tt := range tests {
-		got := ArtifactFilename(tt.step)
+		got := NodeArtifactFilename(tt.nodeName)
 		if got != tt.want {
-			t.Errorf("ArtifactFilename(%s): got %q want %q", tt.step, got, tt.want)
+			t.Errorf("NodeArtifactFilename(%s): got %q want %q", tt.nodeName, got, tt.want)
 		}
 	}
 }
@@ -107,7 +116,7 @@ func (noopTransformer) Transform(_ context.Context, _ *framework.TransformerCont
 
 func buildTestRunner(t *testing.T) *framework.Runner {
 	t.Helper()
-	runner, err := BuildRunner(DefaultThresholds(), TransformerComponent(&noopTransformer{}))
+	runner, err := BuildRunner(readInternalTestdata(t, "circuit_rca.yaml"), DefaultThresholds(), TransformerComponent(&noopTransformer{}))
 	if err != nil {
 		t.Fatalf("BuildRunner: %v", err)
 	}
@@ -127,7 +136,7 @@ func evaluateEdge(runner *framework.Runner, nodeName string, art framework.Artif
 
 func TestEdge_RecallHit(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF0Recall, &RecallResult{Match: true, PriorRCAID: 5, Confidence: 0.9})
+	art := WrapNodeArtifact("recall", map[string]any{"match": true, "prior_rca_id": float64(5), "confidence": 0.9})
 	ws := framework.NewWalkerState("10")
 
 	target, edgeID := evaluateEdge(runner, "recall", art, ws)
@@ -138,7 +147,7 @@ func TestEdge_RecallHit(t *testing.T) {
 
 func TestEdge_RecallMiss(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF0Recall, &RecallResult{Match: false, Confidence: 0})
+	art := WrapNodeArtifact("recall", map[string]any{"match": false, "confidence": float64(0)})
 	ws := framework.NewWalkerState("10")
 
 	target, edgeID := evaluateEdge(runner, "recall", art, ws)
@@ -149,7 +158,7 @@ func TestEdge_RecallMiss(t *testing.T) {
 
 func TestEdge_RecallUncertain(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF0Recall, &RecallResult{Match: true, PriorRCAID: 5, Confidence: 0.6})
+	art := WrapNodeArtifact("recall", map[string]any{"match": true, "prior_rca_id": float64(5), "confidence": 0.6})
 	ws := framework.NewWalkerState("10")
 
 	target, edgeID := evaluateEdge(runner, "recall", art, ws)
@@ -160,7 +169,7 @@ func TestEdge_RecallUncertain(t *testing.T) {
 
 func TestEdge_TriageSkipInfra(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF1Triage, &TriageResult{SymptomCategory: "infra", SkipInvestigation: true})
+	art := WrapNodeArtifact("triage", map[string]any{"symptom_category": "infra", "skip_investigation": true})
 	ws := framework.NewWalkerState("10")
 
 	target, edgeID := evaluateEdge(runner, "triage", art, ws)
@@ -171,8 +180,8 @@ func TestEdge_TriageSkipInfra(t *testing.T) {
 
 func TestEdge_TriageInvestigate(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF1Triage, &TriageResult{
-		SymptomCategory: "assertion", SkipInvestigation: false, CandidateRepos: []string{"repo-a", "repo-b"},
+	art := WrapNodeArtifact("triage", map[string]any{
+		"symptom_category": "assertion", "skip_investigation": false, "candidate_repos": []any{"repo-a", "repo-b"},
 	})
 	ws := framework.NewWalkerState("10")
 
@@ -184,8 +193,8 @@ func TestEdge_TriageInvestigate(t *testing.T) {
 
 func TestEdge_TriageSingleRepo(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF1Triage, &TriageResult{
-		SymptomCategory: "assertion", SkipInvestigation: false, CandidateRepos: []string{"repo-a"},
+	art := WrapNodeArtifact("triage", map[string]any{
+		"symptom_category": "assertion", "skip_investigation": false, "candidate_repos": []any{"repo-a"},
 	})
 	ws := framework.NewWalkerState("10")
 
@@ -197,7 +206,7 @@ func TestEdge_TriageSingleRepo(t *testing.T) {
 
 func TestEdge_InvestigateConverged(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF3Invest, &InvestigateArtifact{ConvergenceScore: 0.85})
+	art := WrapNodeArtifact("investigate", map[string]any{"convergence_score": 0.85})
 	ws := framework.NewWalkerState("10")
 
 	target, edgeID := evaluateEdge(runner, "investigate", art, ws)
@@ -208,8 +217,8 @@ func TestEdge_InvestigateConverged(t *testing.T) {
 
 func TestEdge_InvestigateLowLoop(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF3Invest, &InvestigateArtifact{
-		ConvergenceScore: 0.40, EvidenceRefs: []string{"some-evidence"},
+	art := WrapNodeArtifact("investigate", map[string]any{
+		"convergence_score": 0.40, "evidence_refs": []any{"some-evidence"},
 	})
 	ws := framework.NewWalkerState("10")
 
@@ -221,8 +230,8 @@ func TestEdge_InvestigateLowLoop(t *testing.T) {
 
 func TestEdge_InvestigateExhausted(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF3Invest, &InvestigateArtifact{
-		ConvergenceScore: 0.40, EvidenceRefs: []string{"some-evidence"},
+	art := WrapNodeArtifact("investigate", map[string]any{
+		"convergence_score": 0.40, "evidence_refs": []any{"some-evidence"},
 	})
 	ws := framework.NewWalkerState("10")
 	ws.LoopCounts["investigate"] = 1
@@ -235,7 +244,7 @@ func TestEdge_InvestigateExhausted(t *testing.T) {
 
 func TestEdge_ReviewApprove(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF5Review, &ReviewDecision{Decision: "approve"})
+	art := WrapNodeArtifact("review", map[string]any{"decision": "approve"})
 	ws := framework.NewWalkerState("10")
 
 	target, edgeID := evaluateEdge(runner, "review", art, ws)
@@ -246,7 +255,7 @@ func TestEdge_ReviewApprove(t *testing.T) {
 
 func TestEdge_ReviewReassess(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF5Review, &ReviewDecision{Decision: "reassess", LoopTarget: StepF3Invest})
+	art := WrapNodeArtifact("review", map[string]any{"decision": "reassess", "loop_target": "investigate"})
 	ws := framework.NewWalkerState("10")
 
 	target, edgeID := evaluateEdge(runner, "review", art, ws)
@@ -257,9 +266,9 @@ func TestEdge_ReviewReassess(t *testing.T) {
 
 func TestEdge_ReviewOverturn(t *testing.T) {
 	runner := buildTestRunner(t)
-	art := WrapArtifact(StepF5Review, &ReviewDecision{
-		Decision:      "overturn",
-		HumanOverride: &HumanOverride{DefectType: "pb001", RCAMessage: "human says this"},
+	art := WrapNodeArtifact("review", map[string]any{
+		"decision": "overturn",
+		"human_override": map[string]any{"defect_type": "pb001", "rca_message": "human says this"},
 	})
 	ws := framework.NewWalkerState("10")
 

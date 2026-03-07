@@ -1,4 +1,5 @@
 package framework
+// Category: Processing & Support
 
 import "sync"
 
@@ -72,12 +73,12 @@ func NameWithCode(v Vocabulary, code string) string {
 	return name + " (" + paren + ")"
 }
 
-// ChainVocabulary tries multiple vocabularies in order. The first one that
+// chainVocabulary tries multiple vocabularies in order. The first one that
 // returns a value different from the input code wins. If none translates
 // the code, the code is returned as-is.
-type ChainVocabulary []Vocabulary
+type chainVocabulary []Vocabulary
 
-func (c ChainVocabulary) Name(code string) string {
+func (c chainVocabulary) Name(code string) string {
 	for _, v := range c {
 		if name := v.Name(code); name != code {
 			return name
@@ -183,11 +184,11 @@ func (v *RichMapVocabulary) Description(code string) string {
 	return ""
 }
 
-// RichChainVocabulary tries multiple RichVocabulary implementations in order.
+// richChainVocabulary tries multiple RichVocabulary implementations in order.
 // The first one that has an entry for the code wins.
-type RichChainVocabulary []RichVocabulary
+type richChainVocabulary []RichVocabulary
 
-func (c RichChainVocabulary) Name(code string) string {
+func (c richChainVocabulary) Name(code string) string {
 	for _, v := range c {
 		if _, ok := v.Entry(code); ok {
 			return v.Name(code)
@@ -196,7 +197,7 @@ func (c RichChainVocabulary) Name(code string) string {
 	return code
 }
 
-func (c RichChainVocabulary) Entry(code string) (VocabEntry, bool) {
+func (c richChainVocabulary) Entry(code string) (VocabEntry, bool) {
 	for _, v := range c {
 		if e, ok := v.Entry(code); ok {
 			return e, true
@@ -205,7 +206,7 @@ func (c RichChainVocabulary) Entry(code string) (VocabEntry, bool) {
 	return VocabEntry{}, false
 }
 
-func (c RichChainVocabulary) Short(code string) string {
+func (c richChainVocabulary) Short(code string) string {
 	for _, v := range c {
 		if _, ok := v.Entry(code); ok {
 			return v.Short(code)
@@ -214,7 +215,7 @@ func (c RichChainVocabulary) Short(code string) string {
 	return ""
 }
 
-func (c RichChainVocabulary) Description(code string) string {
+func (c richChainVocabulary) Description(code string) string {
 	for _, v := range c {
 		if _, ok := v.Entry(code); ok {
 			return v.Description(code)

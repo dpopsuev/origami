@@ -7,7 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dpopsuev/origami"
+	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/models"
 )
 
 func TestBuildExclusionPrompt_NoExclusions(t *testing.T) {
@@ -38,7 +39,8 @@ func TestBuildExclusionPrompt_WithExclusions(t *testing.T) {
 }
 
 func TestBuildFullPrompt_CombinesAll(t *testing.T) {
-	prompt := BuildFullPromptWith(nil, BuildProbePrompt())
+	probePrompt := "Refactor this Go function for production quality."
+	prompt := BuildFullPromptWith(nil, probePrompt)
 
 	if !strings.Contains(prompt, "model_name") {
 		t.Error("missing identity prompt")
@@ -54,7 +56,8 @@ func TestBuildFullPrompt_CombinesAll(t *testing.T) {
 // TestBuildFullPrompt_IdentityFirst ensures identity is placed before the
 // probe so the model identifies itself before being primed by task instructions.
 func TestBuildFullPrompt_IdentityFirst(t *testing.T) {
-	prompt := BuildFullPromptWith(nil, BuildProbePrompt())
+	probePrompt := "Refactor this Go function for production quality."
+	prompt := BuildFullPromptWith(nil, probePrompt)
 
 	idxIdentity := strings.Index(prompt, "RESPONSE FORMAT")
 	idxProbe := strings.Index(prompt, "Refactor")
@@ -139,10 +142,10 @@ func TestIdentityOnly_ReturnsFoundation(t *testing.T) {
 		t.Fatalf("parse identity-only response: %v", err)
 	}
 
-	if framework.IsWrapperName(mi.ModelName) {
+	if models.IsWrapperName(mi.ModelName) {
 		t.Errorf("identity-only response should yield foundation model, not wrapper; got model_name=%q", mi.ModelName)
 	}
-	if !framework.IsKnownModel(mi) {
+	if !models.IsKnownModel(mi) {
 		t.Logf("identity-only: foundation model %s not yet in KnownModels (add if desired)", mi.String())
 	}
 }
@@ -162,7 +165,7 @@ func TestCombinedPrompt_BeforeFix_ReturnsWrapper(t *testing.T) {
 		t.Fatalf("parse combined (before fix) response: %v", err)
 	}
 
-	if !framework.IsWrapperName(mi.ModelName) {
+	if !models.IsWrapperName(mi.ModelName) {
 		t.Errorf("before fix, combined response was wrapper; got model_name=%q", mi.ModelName)
 	}
 }
@@ -182,7 +185,7 @@ func TestCombinedPrompt_ReturnsFoundation(t *testing.T) {
 		t.Fatalf("parse combined response: %v", err)
 	}
 
-	if framework.IsWrapperName(mi.ModelName) {
+	if models.IsWrapperName(mi.ModelName) {
 		t.Errorf("combined prompt must elicit foundation identity, not wrapper; got model_name=%q", mi.ModelName)
 	}
 }
@@ -324,18 +327,16 @@ func TestDiscoverModels_StubRecursive(t *testing.T) {
 			t.Fatalf("iteration %d: parse probe: %v", iteration, err)
 		}
 
-		score := ScoreRefactorOutput(code)
 		seen[key] = DiscoveryResult{
 			Iteration: iteration,
 			Model:     mi,
 			Probe: ProbeResult{
 				ProbeID:   "refactor-v1",
 				RawOutput: code,
-				Score:     score,
 			},
 		}
 
-		t.Logf("iteration %d: discovered %s (score=%.2f)", iteration, mi.String(), score.TotalScore)
+		t.Logf("iteration %d: discovered %s", iteration, mi.String())
 
 		discover(t, iteration+1)
 	}

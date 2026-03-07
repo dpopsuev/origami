@@ -4,7 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dpopsuev/origami"
+	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 )
 
 func makeTestProfile(modelName string, ts time.Time) ModelProfile {
@@ -20,7 +21,7 @@ func makeTestProfile(modelName string, ts time.Time) ModelProfile {
 			DimEvidenceDepth:        0.4,
 			DimFailureMode:          0.5,
 		},
-		ElementMatch: framework.ElementFire,
+		ElementMatch: element.ElementFire,
 	}
 }
 

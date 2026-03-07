@@ -5,18 +5,20 @@ package rca
 import (
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/knowledge"
 )
 
 // ComponentConfig holds runtime dependencies injected into the RCA component.
 type ComponentConfig struct {
-	Store     store.Store
-	CaseData  *store.Case
-	Envelope  *rcatype.Envelope
-	Catalog   *knowledge.KnowledgeSourceCatalog
-	CaseDir string
+	Store           store.Store
+	CaseData        *store.Case
+	Envelope        *rcatype.Envelope
+	Catalog         toolkit.SourceCatalog
+	CaseDir         string
+	KnowledgeReader toolkit.SourceReader
+	CircuitDef      *framework.CircuitDef
 }
 
 // Component returns an Origami Component bundling all RCA circuit plumbing
@@ -29,19 +31,30 @@ func Component(cfg ComponentConfig) *framework.Component {
 		Version:      "1.0.0",
 		Description:  "RCA circuit plumbing for CI root-cause analysis",
 		Transformers: buildTransformers(cfg),
-		Extractors:   buildExtractors(),
+		Extractors:   buildExtractors(cfg.CircuitDef),
 		Hooks:        buildHooks(cfg),
 	}
 }
 
-// allNodeNames lists every RCA circuit node name. Used when registering
-// a single monolithic transformer under each node for backwards compat.
+// allNodeNames lists every RCA circuit node name. Used as fallback when
+// no CircuitDef is available.
 var allNodeNames = []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
+
+// nodeNames returns node names from the CircuitDef when available,
+// falling back to the hardcoded allNodeNames list.
+func nodeNames(cd *framework.CircuitDef) []string {
+	if cd != nil {
+		if names := toolkit.NodeNamesFromCircuit(cd); len(names) > 0 {
+			return names
+		}
+	}
+	return allNodeNames
+}
 
 // HeuristicComponent returns a Component with per-node heuristic transformers
 // that implement deterministic, keyword-based RCA logic.
-func HeuristicComponent(st store.Store, repos []string) *framework.Component {
-	ht := NewHeuristicTransformer(st, repos)
+func HeuristicComponent(st store.Store, repos []string, heuristicsData []byte) *framework.Component {
+	ht := NewHeuristicTransformer(st, repos, heuristicsData)
 	return &framework.Component{
 		Namespace: "rca",
 		Name:      "rca-heuristic",
@@ -60,29 +73,32 @@ func HeuristicComponent(st store.Store, repos []string) *framework.Component {
 // TransformerComponent wraps a monolithic framework.Transformer (e.g. stub, rca)
 // and registers it under every node name so that DSL transformer: resolution
 // can find it. The transformer's Transform() dispatches on tc.NodeName.
-func TransformerComponent(t framework.Transformer) *framework.Component {
-	reg := framework.TransformerRegistry{}
-	for _, name := range allNodeNames {
-		reg[name] = t
+// An optional CircuitDef derives node names dynamically; without it,
+// the hardcoded allNodeNames list is used.
+func TransformerComponent(t framework.Transformer, cd ...*framework.CircuitDef) *framework.Component {
+	var def *framework.CircuitDef
+	if len(cd) > 0 {
+		def = cd[0]
 	}
 	return &framework.Component{
 		Namespace:    "rca",
 		Name:         "rca-transformer",
-		Transformers: reg,
+		Transformers: toolkit.TransformerForAllNodes(t, nodeNames(def)),
 	}
 }
 
 // HITLComponent returns a Component with per-node HITL transformers that
 // fill prompt templates and return framework.Interrupt for human input.
-func HITLComponent() *framework.Component {
-	reg := framework.TransformerRegistry{}
-	steps := map[string]CircuitStep{
-		"recall": StepF0Recall, "triage": StepF1Triage, "resolve": StepF2Resolve,
-		"investigate": StepF3Invest, "correlate": StepF4Correlate, "review": StepF5Review,
-		"report": StepF6Report,
+// An optional CircuitDef derives node names dynamically; without it,
+// the hardcoded allNodeNames list is used.
+func HITLComponent(cd ...*framework.CircuitDef) *framework.Component {
+	var def *framework.CircuitDef
+	if len(cd) > 0 {
+		def = cd[0]
 	}
-	for name, step := range steps {
-		reg[name] = &hitlTransformerNode{step: step}
+	reg := framework.TransformerRegistry{}
+	for _, name := range nodeNames(def) {
+		reg[name] = &hitlTransformerNode{nodeName: name}
 	}
 	return &framework.Component{
 		Namespace:    "rca",
@@ -95,22 +111,23 @@ func buildTransformers(_ ComponentConfig) framework.TransformerRegistry {
 	return framework.TransformerRegistry{}
 }
 
-func buildExtractors() framework.ExtractorRegistry {
-	reg := framework.ExtractorRegistry{}
-	reg["recall"] = NewStepExtractor[RecallResult]("recall")
-	reg["triage"] = NewStepExtractor[TriageResult]("triage")
-	reg["resolve"] = NewStepExtractor[ResolveResult]("resolve")
-	reg["investigate"] = NewStepExtractor[InvestigateArtifact]("investigate")
-	reg["correlate"] = NewStepExtractor[CorrelateResult]("correlate")
-	reg["review"] = NewStepExtractor[ReviewDecision]("review")
-	reg["report"] = NewStepExtractor[InvestigateArtifact]("report")
-	return reg
+func buildExtractors(cd *framework.CircuitDef) framework.ExtractorRegistry {
+	return toolkit.ExtractorForAllNodes(func(name string) framework.Extractor {
+		return NewMapExtractor(name)
+	}, nodeNames(cd))
 }
 
 func buildHooks(cfg ComponentConfig) framework.HookRegistry {
 	reg := framework.HookRegistry{}
 
-	inject := InjectHooks(cfg.Store, cfg.CaseData, cfg.Envelope, cfg.Catalog, cfg.CaseDir)
+	inject := InjectHooksWithOpts(InjectHookOpts{
+		Store:           cfg.Store,
+		CaseData:        cfg.CaseData,
+		Envelope:        cfg.Envelope,
+		Catalog:         cfg.Catalog,
+		CaseDir:         cfg.CaseDir,
+		KnowledgeReader: cfg.KnowledgeReader,
+	})
 	for name, h := range inject {
 		reg[name] = h
 	}

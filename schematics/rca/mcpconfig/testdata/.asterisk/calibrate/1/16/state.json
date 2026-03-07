@@ -1,33 +1,33 @@
 {
   "case_id": 16,
   "suite_id": 1,
-  "current_step": "F6_REPORT",
+  "current_step": "report",
   "loop_counts": {},
   "status": "done",
   "history": [
     {
-      "step": "F0_RECALL",
+      "step": "recall",
       "outcome": "H2",
       "heuristic_id": "H2",
-      "timestamp": "2026-03-05T14:49:25Z"
+      "timestamp": "2026-03-07T21:45:58Z"
     },
     {
-      "step": "F1_TRIAGE",
+      "step": "triage",
       "outcome": "H18",
       "heuristic_id": "H18",
-      "timestamp": "2026-03-05T14:49:25Z"
+      "timestamp": "2026-03-07T21:45:58Z"
     },
     {
-      "step": "F5_REVIEW",
+      "step": "review",
       "outcome": "H12",
       "heuristic_id": "H12",
-      "timestamp": "2026-03-05T14:49:25Z"
+      "timestamp": "2026-03-07T21:45:58Z"
     },
     {
-      "step": "F6_REPORT",
+      "step": "report",
       "outcome": "FALLBACK",
       "heuristic_id": "FALLBACK",
-      "timestamp": "2026-03-05T14:49:25Z"
+      "timestamp": "2026-03-07T21:45:58Z"
     }
   ]
 }

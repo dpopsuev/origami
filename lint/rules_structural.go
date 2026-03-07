@@ -6,6 +6,7 @@ import (
 	"time"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/persona"
 )
 
 var validApproaches = map[string]bool{
@@ -21,7 +22,7 @@ var validMergeStrategies = map[string]bool{
 
 func knownPersonas() map[string]bool {
 	m := make(map[string]bool)
-	for _, p := range framework.AllPersonas() {
+	for _, p := range persona.All() {
 		m[strings.ToLower(p.Identity.PersonaName)] = true
 	}
 	return m

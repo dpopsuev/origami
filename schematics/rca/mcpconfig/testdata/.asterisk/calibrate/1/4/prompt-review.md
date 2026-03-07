@@ -22,7 +22,7 @@
 
 **Case:** #4  
   
-**Step:** F5_REVIEW
+**Step:** review
 
 ---
 
@@ -38,7 +38,7 @@ This step presents the investigation findings for your review. **No write to RP 
 
 | Field | Value |
 |-------|-------|
-| **RCA message** | root cause from subagent-2 |
+| **RCA message** | root cause from subagent-3 |
 | **Defect type** | `pb001` |
 | **Convergence score** | 0.85 |
 
@@ -60,7 +60,7 @@ This step presents the investigation findings for your review. **No write to RP 
 ### Correlation result
 
 - Not a duplicate (confidence: 0.1)
-- Reasoning: 
+- Reasoning: <no value>
 
 
 

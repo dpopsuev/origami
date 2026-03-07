@@ -126,21 +126,21 @@ func TestFillTemplateString_PriorArtifacts(t *testing.T) {
 		CaseID:  1,
 		Failure: &FailureParams{TestName: "test"},
 		Prior: &PriorParams{
-			TriageResult: &TriageResult{
-				SymptomCategory:      "assertion",
-				DefectTypeHypothesis: "pb001",
+			Triage: map[string]any{
+				"symptom_category":       "assertion",
+				"defect_type_hypothesis": "pb001",
 			},
-			InvestigateResult: &InvestigateArtifact{
-				RCAMessage:       "Root cause found",
-				DefectType:       "pb001",
-				ConvergenceScore: 0.85,
+			Investigate: map[string]any{
+				"rca_message":       "Root cause found",
+				"defect_type":       "pb001",
+				"convergence_score": 0.85,
 			},
 		},
 		Taxonomy: DefaultTaxonomy(),
 	}
 
-	tmpl := `{{if .Prior}}{{if .Prior.TriageResult}}Category: {{.Prior.TriageResult.SymptomCategory}}{{end}}
-{{if .Prior.InvestigateResult}}RCA: {{.Prior.InvestigateResult.RCAMessage}} ({{.Prior.InvestigateResult.ConvergenceScore}}){{end}}{{end}}`
+	tmpl := `{{if .Prior}}{{if .Prior.Triage}}Category: {{.Prior.Triage.symptom_category}}{{end}}
+{{if .Prior.Investigate}}RCA: {{.Prior.Investigate.rca_message}} ({{.Prior.Investigate.convergence_score}}){{end}}{{end}}`
 
 	result, err := FillTemplateString("prior", tmpl, params)
 	if err != nil {
@@ -181,7 +181,7 @@ func TestValidateTemplateFields(t *testing.T) {
 		},
 		{
 			name:     "deeply nested field",
-			tmpl:     `{{if .Prior}}{{.Prior.TriageResult.DefectTypeHypothesis}}{{end}}`,
+			tmpl:     `{{if .Prior}}{{.Prior.Triage.defect_type_hypothesis}}{{end}}`,
 			wantErrs: 0,
 		},
 		{
@@ -277,25 +277,25 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 		"Failure.Path":   "file path used for Go-level routing, not in prompts",
 		"Envelope.Status": "launch status used for Go-level filtering, not in prompts",
 
-		"Prior.TriageResult.DataQualityNotes":  "populated by triage but not consumed by downstream prompts",
-		"Prior.TriageResult.SkipInvestigation": "routing flag consumed by Go edge conditions, not prompts",
+		"Prior.Triage.data_quality_notes":  "populated by triage but not consumed by downstream prompts",
+		"Prior.Triage.skip_investigation": "routing flag consumed by Go edge conditions, not prompts",
 
-		"Prior.RecallResult.Reasoning": "LLM-generated explanation, not consumed by downstream templates",
-		"Prior.RecallResult.SymptomID": "numeric ID used for Go-level store lookup, not in prompts",
+		"Prior.Recall.reasoning": "LLM-generated explanation, not consumed by downstream templates",
+		"Prior.Recall.symptom_id": "numeric ID used for Go-level store lookup, not in prompts",
 
-		"Prior.InvestigateResult.RunID":  "duplicates top-level SourceID; not repeated in prompts",
-		"Prior.InvestigateResult.CaseIDs":   "used for Go-level case grouping, not in prompts",
-		"Prior.InvestigateResult.Component": "used for Go-level scoring and dedup, not in prompts",
+		"Prior.Investigate.run_id":   "duplicates top-level SourceID; not repeated in prompts",
+		"Prior.Investigate.case_ids": "used for Go-level case grouping, not in prompts",
+		"Prior.Investigate.component": "used for Go-level scoring and dedup, not in prompts",
 
-		// GapBrief and all its sub-fields — structured gap data scored by Go code.
-		"Prior.InvestigateResult.GapBrief":                      "scored by Go, not template-rendered",
-		"Prior.InvestigateResult.GapBrief.Verdict":               "sub-field of excluded GapBrief",
-		"Prior.InvestigateResult.GapBrief.GapItems":              "sub-field of excluded GapBrief",
-		"Prior.InvestigateResult.GapBrief.GapItems.Category":     "sub-field of excluded GapBrief",
-		"Prior.InvestigateResult.GapBrief.GapItems.Description":  "sub-field of excluded GapBrief",
-		"Prior.InvestigateResult.GapBrief.GapItems.WouldHelp":    "sub-field of excluded GapBrief",
-		"Prior.InvestigateResult.GapBrief.GapItems.Source":       "sub-field of excluded GapBrief",
-		"Prior.InvestigateResult.GapBrief.GapItems.Blocked":      "sub-field of excluded GapBrief",
+		// gap_brief and its sub-fields — structured gap data scored by Go code.
+		"Prior.Investigate.gap_brief":                      "scored by Go, not template-rendered",
+		"Prior.Investigate.gap_brief.verdict":             "sub-field of excluded gap_brief",
+		"Prior.Investigate.gap_brief.gap_items":            "sub-field of excluded gap_brief",
+		"Prior.Investigate.gap_brief.gap_items.category":   "sub-field of excluded gap_brief",
+		"Prior.Investigate.gap_brief.gap_items.description": "sub-field of excluded gap_brief",
+		"Prior.Investigate.gap_brief.gap_items.would_help": "sub-field of excluded gap_brief",
+		"Prior.Investigate.gap_brief.gap_items.source":    "sub-field of excluded gap_brief",
+		"Prior.Investigate.gap_brief.gap_items.blocked":   "sub-field of excluded gap_brief",
 
 		"History.PriorRCAs.DaysSinceResolved": "available but not surfaced in current prompt templates",
 
@@ -310,11 +310,12 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 
 	// Collect all field references across all embedded prompt templates.
 	refs := make(map[string]bool)
-	err := fs.WalkDir(DefaultPromptFS, ".", func(path string, d fs.DirEntry, walkErr error) error {
+	promptFS := testdataPromptFS()
+	err := fs.WalkDir(promptFS, ".", func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
-		data, readErr := fs.ReadFile(DefaultPromptFS, path)
+		data, readErr := fs.ReadFile(promptFS, path)
 		if readErr != nil {
 			return nil
 		}

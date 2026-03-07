@@ -22,7 +22,7 @@
 
 **Case:** #9  
   
-**Step:** F3_INVESTIGATE
+**Step:** investigate
 
 ---
 
@@ -35,7 +35,7 @@ Note: Timestamps may originate from different clock planes (executor, test node,
 ## Failure under investigation
 
 **Test name:** `OCP-83297 PTP sync stability`  
-**Status:** triaged
+**Status:** open
 
 **Error message:**
 ```
@@ -63,12 +63,16 @@ FAIL: Expected clock state to be LOCKED
 ### test-repo
 - **Path:** 
 - **Focus paths:** 
-- **Branch:** 
+- **Branch:** <no value>
 - **Reason:** test
 
 
 
 
+*No launch attributes available.*
+
+
+*No linked Jira tickets.*
 
 
 

@@ -1,13 +1,11 @@
 package rca
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -15,16 +13,8 @@ import (
 	"github.com/dpopsuev/origami/dispatch"
 	"github.com/dpopsuev/origami/format"
 	"github.com/dpopsuev/origami/report"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
-
-//go:embed calibration-report.yaml
-var calibrationTemplateYAML []byte
-
-//go:embed rca-report.yaml
-var rcaReportTemplateYAML []byte
-
-//go:embed transcript-report.yaml
-var transcriptTemplateYAML []byte
 
 // --- Calibration report ---
 
@@ -176,10 +166,9 @@ func CalibrationReportData(r *CalibrationReport) map[string]any {
 	return data
 }
 
-// RenderCalibrationReport produces the human-readable calibration report
-// using the embedded YAML template.
-func RenderCalibrationReport(r *CalibrationReport) (string, error) {
-	def, err := report.ParseReportDef(calibrationTemplateYAML)
+// RenderCalibrationReport produces the human-readable calibration report.
+func RenderCalibrationReport(r *CalibrationReport, templateData []byte) (string, error) {
+	def, err := report.ParseReportDef(templateData)
 	if err != nil {
 		return "", fmt.Errorf("parse calibration report template: %w", err)
 	}
@@ -246,12 +235,12 @@ func AnalysisReportData(r *AnalysisReport, timestamp time.Time) map[string]any {
 		summaryParts = append(summaryParts, fmt.Sprintf("%d cascades", cascades))
 	}
 	summary := strings.Join(summaryParts, ", ")
-	summary += "\n\n**Components:** " + formatDistribution(compCounts, false)
-	summary += "\n\n**Defect types:** " + formatDistribution(defectCounts, true)
+	summary += "\n\n**Components:** " + toolkit.FormatDistribution(compCounts, nil)
+	summary += "\n\n**Defect types:** " + toolkit.FormatDistribution(defectCounts, vocabNameWithCode)
 	data["summary_text"] = summary
 
 	groups := groupAnalysisByComponent(r.CaseResults)
-	sortedComps := sortedComponentKeys(groups)
+	sortedComps := toolkit.SortedKeys(groups)
 	var components []map[string]any
 	for _, comp := range sortedComps {
 		cases := groups[comp]
@@ -275,7 +264,7 @@ func AnalysisReportData(r *AnalysisReport, timestamp time.Time) map[string]any {
 			evidenceText = "**Evidence:** " + strings.Join(evidenceSet, ", ")
 		}
 		components = append(components, map[string]any{
-			"component_title": fmt.Sprintf("%s (%d %s)", comp, len(cases), pluralizeCount(len(cases), "failure", "failures")),
+			"component_title": fmt.Sprintf("%s (%d %s)", comp, len(cases), toolkit.PluralizeCount(len(cases), "failure", "failures")),
 			"cases":           caseRows,
 			"evidence_text":   evidenceText,
 		})
@@ -334,12 +323,13 @@ func AnalysisReportData(r *AnalysisReport, timestamp time.Time) map[string]any {
 	return data
 }
 
-// RenderAnalysisReport produces a Markdown RCA report using the embedded YAML template.
-func RenderAnalysisReport(r *AnalysisReport, timestamp time.Time) (string, error) {
+// RenderAnalysisReport produces a Markdown RCA report.
+// When templateData is nil the embedded rca-report.yaml is used.
+func RenderAnalysisReport(r *AnalysisReport, timestamp time.Time, templateData []byte) (string, error) {
 	if r == nil || len(r.CaseResults) == 0 {
 		return "# RCA Report\n\nNo failures analyzed.\n", nil
 	}
-	def, err := report.ParseReportDef(rcaReportTemplateYAML)
+	def, err := report.ParseReportDef(templateData)
 	if err != nil {
 		return "", fmt.Errorf("parse RCA report template: %w", err)
 	}
@@ -536,10 +526,9 @@ func transcriptEntryData(entries []TranscriptEntry) []map[string]any {
 	return result
 }
 
-// RenderTranscript produces a Markdown document for one RCA transcript
-// using the embedded YAML template.
-func RenderTranscript(t *RCATranscript) (string, error) {
-	def, err := report.ParseReportDef(transcriptTemplateYAML)
+// RenderTranscript produces a Markdown document for one RCA transcript.
+func RenderTranscript(t *RCATranscript, templateData []byte) (string, error) {
+	def, err := report.ParseReportDef(templateData)
 	if err != nil {
 		return "", fmt.Errorf("parse transcript template: %w", err)
 	}
@@ -582,36 +571,41 @@ func buildCaseTranscript(calReport *CalibrationReport, cr *CaseResult) (*CaseTra
 
 	caseDir := CaseDir(calReport.BasePath, calReport.SuiteID, cr.StoreCaseID)
 
-	state, err := ReadArtifact[CaseState](caseDir, "state.json")
-	if err != nil {
-		return ct, fmt.Errorf("load state: %w", err)
+	stateData, stateErr := os.ReadFile(filepath.Join(caseDir, "state.json"))
+	if stateErr != nil {
+		if os.IsNotExist(stateErr) {
+			return ct, nil
+		}
+		return ct, fmt.Errorf("load state: %w", stateErr)
 	}
-	if state == nil {
-		return ct, nil
+	var stateVal CaseState
+	if err := json.Unmarshal(stateData, &stateVal); err != nil {
+		return ct, fmt.Errorf("parse state: %w", err)
 	}
+	state := &stateVal
 
 	for _, record := range state.History {
 		step := record.Step
-		if step == StepInit || step == StepDone {
+		if step == "INIT" || step == "DONE" {
 			continue
 		}
 
 		entry := TranscriptEntry{
-			Step:        string(step),
-			StepName:    vocabName(string(step)),
+			Step:        step,
+			StepName:    vocabName(step),
 			HeuristicID: record.HeuristicID,
 			Decision:    record.Outcome,
 			Timestamp:   record.Timestamp,
 		}
 
-		promptFile := PromptFilename(step, 0)
+		promptFile := NodePromptFilename(step, 0)
 		if promptFile != "" {
 			if data, err := os.ReadFile(filepath.Join(caseDir, promptFile)); err == nil {
 				entry.Prompt = string(data)
 			}
 		}
 
-		artifactFile := ArtifactFilename(step)
+		artifactFile := NodeArtifactFilename(step)
 		if artifactFile != "" {
 			if data, err := os.ReadFile(filepath.Join(caseDir, artifactFile)); err == nil {
 				var buf json.RawMessage
@@ -645,36 +639,6 @@ func groupAnalysisByComponent(cases []AnalysisCaseResult) map[string][]AnalysisC
 	return groups
 }
 
-func sortedComponentKeys(m map[string][]AnalysisCaseResult) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func formatDistribution(counts map[string]int, humanize bool) string {
-	type kv struct {
-		Key   string
-		Count int
-	}
-	sorted := make([]kv, 0, len(counts))
-	for k, v := range counts {
-		sorted = append(sorted, kv{k, v})
-	}
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Count > sorted[j].Count })
-
-	parts := make([]string, len(sorted))
-	for i, item := range sorted {
-		label := item.Key
-		if humanize {
-			label = vocabNameWithCode(item.Key)
-		}
-		parts[i] = fmt.Sprintf("%s (%d)", label, item.Count)
-	}
-	return strings.Join(parts, ", ")
-}
 
 func collectAnalysisEvidence(cases []AnalysisCaseResult) []string {
 	seen := make(map[string]bool)
@@ -690,9 +654,3 @@ func collectAnalysisEvidence(cases []AnalysisCaseResult) []string {
 	return result
 }
 
-func pluralizeCount(n int, singular, plural string) string {
-	if n == 1 {
-		return singular
-	}
-	return plural
-}

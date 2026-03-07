@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -54,9 +55,15 @@ func projectRoot(t *testing.T) string {
 	}
 }
 
+func testDomainFS(t *testing.T) fs.FS {
+	t.Helper()
+	_, f, _, _ := runtime.Caller(0)
+	return os.DirFS(filepath.Join(filepath.Dir(f), "testdata"))
+}
+
 func newTestServer(t *testing.T) *mcpserver.Server {
 	t.Helper()
-	srv := mcpserver.NewServer("test-rca")
+	srv := mcpserver.NewServer("test-rca", mcpserver.WithDomainFS(testDomainFS(t)))
 	srv.ProjectRoot = projectRoot(t)
 	t.Cleanup(srv.Shutdown)
 	return srv
@@ -153,6 +160,21 @@ func startCircuit(t *testing.T, ctx context.Context, session *sdkmcp.ClientSessi
 	return callTool(t, ctx, session, "start_circuit", args)
 }
 
+// requireStep calls get_next_step and fatals with the circuit error if done=true.
+func requireStep(t *testing.T, ctx context.Context, session *sdkmcp.ClientSession, sessionID string) map[string]any {
+	t.Helper()
+	step := callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+	})
+	if done, _ := step["done"].(bool); done {
+		if errMsg, _ := step["error"].(string); errMsg != "" {
+			t.Fatalf("circuit failed: %s", errMsg)
+		}
+		t.Fatal("expected a step, got done=true (no error)")
+	}
+	return step
+}
+
 // --- Artifact helpers ---
 
 func artifactForStepViaResolve(step string, subagentID int) string {
@@ -166,19 +188,19 @@ func artifactForStepViaResolve(step string, subagentID int) string {
 
 func artifactForStep(step string, subagentID int) string {
 	switch step {
-	case "F0_RECALL":
+	case "recall":
 		return fmt.Sprintf(`{"match":false,"confidence":0.0,"reasoning":"subagent-%d"}`, subagentID)
-	case "F1_TRIAGE":
+	case "triage":
 		return `{"symptom_category":"product","severity":"high","defect_type_hypothesis":"pb001","candidate_repos":["test-repo"],"skip_investigation":false,"cascade_suspected":false}`
-	case "F2_RESOLVE":
+	case "resolve":
 		return `{"selected_repos":[{"name":"test-repo","reason":"test"}]}`
-	case "F3_INVESTIGATE":
+	case "investigate":
 		return fmt.Sprintf(`{"rca_message":"root cause from subagent-%d","defect_type":"pb001","component":"test-component","convergence_score":0.85,"evidence_refs":["ref-1"]}`, subagentID)
-	case "F4_CORRELATE":
+	case "correlate":
 		return `{"is_duplicate":false,"confidence":0.1}`
-	case "F5_REVIEW":
+	case "review":
 		return `{"decision":"approve"}`
-	case "F6_REPORT":
+	case "report":
 		return fmt.Sprintf(`{"defect_type":"pb001","case_id":"auto","summary":"test summary","subagent":%d}`, subagentID)
 	default:
 		return fmt.Sprintf(`{"defect_type":"pb001","subagent":%d}`, subagentID)
@@ -316,13 +338,20 @@ func TestServer_SubmitStep_UnknownStep(t *testing.T) {
 	defer session.Close()
 
 	startResult := startCircuit(t, ctx, session, "ptp-mock", "llm", 1)
+	t.Logf("start_circuit result: %+v", startResult)
 	sessionID, _ := startResult["session_id"].(string)
 
+	time.Sleep(200 * time.Millisecond)
 	stepResult := callTool(t, ctx, session, "get_next_step", map[string]any{
 		"session_id": sessionID,
+		"timeout_ms": float64(3000),
 	})
+	t.Logf("get_next_step result: %+v", stepResult)
 	if done, _ := stepResult["done"].(bool); done {
-		t.Fatal("expected a step, got done=true")
+		if errMsg, _ := stepResult["error"].(string); errMsg != "" {
+			t.Fatalf("circuit failed: %s", errMsg)
+		}
+		t.Fatal("expected a step, got done=true (no error)")
 	}
 	dispatchID, _ := stepResult["dispatch_id"].(float64)
 
@@ -605,6 +634,8 @@ func TestServer_FourSubagents_ViaResolve(t *testing.T) {
 				step, _ := res["step"].(string)
 				dispatchID, _ := res["dispatch_id"].(float64)
 
+				t.Logf("[sub-%d] pull case=%s step=%s dispatch=%.0f", subID, caseID, step, dispatchID)
+
 				_, err = callToolE(ctx, session, "submit_step", map[string]any{
 					"session_id":  sessionID,
 					"dispatch_id": int64(dispatchID),
@@ -633,27 +664,36 @@ func TestServer_FourSubagents_ViaResolve(t *testing.T) {
 	for caseID, steps := range stepLog {
 		t.Logf("case %s: %v", caseID, steps)
 		for _, s := range steps {
-			if s == "F2_RESOLVE" {
+			if s == "resolve" {
 				f2Count++
 			}
-			if s == "F3_INVESTIGATE" {
+			if s == "investigate" {
 				f3Count++
 			}
 		}
 	}
 
-	// With hypothesis-based repo routing (H7b), F2 Resolve is bypassed
-	// deterministically when the triage hypothesis matches a workspace repo
-	// Purpose. F2 dispatches may be 0; F3 must still be reached.
 	if f3Count == 0 {
-		t.Error("no cases reached F3_INVESTIGATE")
+		t.Error("no cases reached investigate")
 	}
-	t.Logf("F2 dispatches: %d, F3 dispatches: %d", f2Count, f3Count)
+	t.Logf("resolve dispatches: %d, investigate dispatches: %d", f2Count, f3Count)
 
 	reportResult := callTool(t, ctx, session, "get_report", map[string]any{
 		"session_id": sessionID,
 	})
 	status, _ := reportResult["status"].(string)
+	t.Logf("report status=%s", status)
+	if structured, ok := reportResult["structured"].(map[string]any); ok {
+		if cases, ok := structured["case_results"].([]any); ok {
+			for _, c := range cases {
+				if cm, ok := c.(map[string]any); ok {
+					if ce, ok := cm["circuit_error"].(string); ok && ce != "" {
+						t.Logf("  case %v circuit_error: %s", cm["case_id"], ce)
+					}
+				}
+			}
+		}
+	}
 	if status != "done" {
 		t.Fatalf("expected status=done, got %s", status)
 	}
@@ -850,12 +890,7 @@ func TestGetNextStep_InlinePrompt(t *testing.T) {
 	startResult := startCircuit(t, ctx, session, "ptp-mock", "llm", 1)
 	sessionID := startResult["session_id"].(string)
 
-	step := callTool(t, ctx, session, "get_next_step", map[string]any{
-		"session_id": sessionID,
-	})
-	if done, _ := step["done"].(bool); done {
-		t.Fatal("expected a step, got done=true")
-	}
+	step := requireStep(t, ctx, session, sessionID)
 
 	promptContent, _ := step["prompt_content"].(string)
 	promptPath, _ := step["prompt_path"].(string)
@@ -889,12 +924,8 @@ func TestGetNextStep_Timeout(t *testing.T) {
 	startResult := startCircuit(t, ctx, session, "ptp-mock", "llm", 1)
 	sessionID := startResult["session_id"].(string)
 
-	step1 := callTool(t, ctx, session, "get_next_step", map[string]any{
-		"session_id": sessionID,
-	})
-	if done, _ := step1["done"].(bool); done {
-		t.Fatal("expected a step, got done=true")
-	}
+	step1 := requireStep(t, ctx, session, sessionID)
+	_ = step1
 
 	start := time.Now()
 	res := callTool(t, ctx, session, "get_next_step", map[string]any{
@@ -925,12 +956,8 @@ func TestSession_TTL_Abort(t *testing.T) {
 	startResult := startCircuit(t, ctx, session, "ptp-mock", "llm", 1)
 	sessionID := startResult["session_id"].(string)
 
-	step := callTool(t, ctx, session, "get_next_step", map[string]any{
-		"session_id": sessionID,
-	})
-	if done, _ := step["done"].(bool); done {
-		t.Fatal("expected a step, got done=true")
-	}
+	step := requireStep(t, ctx, session, sessionID)
+	_ = step
 
 	srv.SetSessionTTL(2 * time.Second)
 

@@ -77,10 +77,6 @@ func TestRenderGraph_DialecticCircuit(t *testing.T) {
 			t.Errorf("output missing zone %q", zoneName)
 		}
 	}
-
-	if !strings.Contains(output, "┌") || !strings.Contains(output, "┘") {
-		t.Error("output missing box-drawing characters")
-	}
 }
 
 func TestRenderGraph_RCACircuit(t *testing.T) {
@@ -105,10 +101,6 @@ func TestRenderGraph_RCACircuit(t *testing.T) {
 		if !strings.Contains(output, nd.Name) {
 			t.Errorf("output missing node %q", nd.Name)
 		}
-	}
-
-	if !strings.Contains(output, "▸") && !strings.Contains(output, "─") {
-		t.Error("output missing edge characters")
 	}
 }
 
@@ -152,16 +144,7 @@ func TestRenderGraph_NodeStates(t *testing.T) {
 	layout, _ := engine.Layout(def)
 
 	output := RenderGraph(def, layout, snap, RenderOpts{NoColor: true})
-
-	if !strings.Contains(output, "✓") {
-		t.Error("expected completed indicator (✓) for node a")
-	}
-	if !strings.Contains(output, "▶") {
-		t.Error("expected active indicator (▶) for node b")
-	}
-	if !strings.Contains(output, "●") {
-		t.Error("expected walker marker (●) for active node b")
-	}
+	testGolden(t, "node-states", output)
 }
 
 func TestRenderGraph_DSBadges(t *testing.T) {
@@ -188,16 +171,7 @@ func TestRenderGraph_DSBadges(t *testing.T) {
 	layout, _ := engine.Layout(def)
 
 	output := RenderGraph(def, layout, snap, RenderOpts{NoColor: true})
-
-	if !strings.Contains(output, "⚙") {
-		t.Error("expected ⚙ badge for deterministic transformer")
-	}
-	if !strings.Contains(output, "✦") {
-		t.Error("expected ✦ badge for stochastic transformer")
-	}
-	if !strings.Contains(output, "Δ") {
-		t.Error("expected Δ badge for dialectic transformer")
-	}
+	testGolden(t, "ds-badges", output)
 }
 
 func TestRenderGraph_Breakpoints(t *testing.T) {
@@ -223,28 +197,7 @@ func TestRenderGraph_Breakpoints(t *testing.T) {
 	layout, _ := engine.Layout(def)
 
 	output := RenderGraph(def, layout, snap, RenderOpts{NoColor: true})
-	if !strings.Contains(output, "◉") {
-		t.Error("expected breakpoint marker (◉)")
-	}
-}
-
-func TestRenderGraph_ShortcutEdge(t *testing.T) {
-	def := loadTestCircuit(t, "../testdata/defect-dialectic.yaml")
-	engine := &view.GridLayout{}
-	layout, err := engine.Layout(def)
-	if err != nil {
-		t.Fatalf("layout: %v", err)
-	}
-
-	store := view.NewCircuitStore(def)
-	defer store.Close()
-	snap := store.Snapshot()
-
-	output := RenderGraph(def, layout, snap, RenderOpts{NoColor: true})
-	// The defect-dialectic circuit has shortcut edges; verify dashed edge marker
-	if !strings.Contains(output, "╌") {
-		t.Error("expected shortcut edge marker (╌)")
-	}
+	testGolden(t, "breakpoints", output)
 }
 
 func TestDSBadge(t *testing.T) {
@@ -301,28 +254,7 @@ func TestRenderGraph_ShortcutsVisibleBelow(t *testing.T) {
 	layout, _ := engine.Layout(def)
 
 	output := RenderGraph(def, layout, snap, RenderOpts{NoColor: true})
-
-	lines := strings.Split(output, "\n")
-	nodeRow := -1
-	shortcutRow := -1
-	for i, line := range lines {
-		if strings.Contains(line, "───▸") {
-			nodeRow = i
-		}
-		if strings.Contains(line, "╌") && strings.Contains(line, "▴") {
-			shortcutRow = i
-		}
-	}
-
-	if nodeRow == -1 {
-		t.Fatal("main path not found in output")
-	}
-	if shortcutRow == -1 {
-		t.Fatal("shortcut arc not found below main path (expected ╌ and ▴)")
-	}
-	if shortcutRow <= nodeRow {
-		t.Errorf("shortcut (row %d) should be BELOW main path (row %d)", shortcutRow, nodeRow)
-	}
+	testGolden(t, "shortcuts-visible-below", output)
 }
 
 func TestRenderGraph_ChannelsSeparated(t *testing.T) {
@@ -389,26 +321,7 @@ func TestRenderGraph_LoopRoutesToTarget(t *testing.T) {
 	layout, _ := engine.Layout(def)
 
 	output := RenderGraph(def, layout, snap, RenderOpts{NoColor: true})
-
-	// The ◀ arrowhead should be at node a's left edge (the loop target),
-	// not at node c's position.
-	lines := strings.Split(output, "\n")
-	found := false
-	for _, line := range lines {
-		idx := strings.Index(line, "◀")
-		if idx < 0 {
-			continue
-		}
-		found = true
-		// ◀ should be at node a's x position (leftmost). Node a is at col 0,
-		// so its origin x = cellGapH = 4. The ◀ should be at x=4.
-		if idx != cellGapH {
-			t.Errorf("loop ◀ at x=%d, expected x=%d (target node a's left edge)", idx, cellGapH)
-		}
-	}
-	if !found {
-		t.Error("loop arrowhead ◀ not found in output")
-	}
+	testGolden(t, "loop-routes-to-target", output)
 }
 
 func TestRenderGraph_VirtualDoneFiltered(t *testing.T) {

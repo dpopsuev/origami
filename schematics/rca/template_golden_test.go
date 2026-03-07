@@ -68,58 +68,63 @@ func goldenFixtureParams() *TemplateParams {
 			SourceItem:      "https://rp.example.com/items/7",
 		},
 		Prior: &PriorParams{
-			RecallResult: &RecallResult{
-				Match:        true,
-				PriorRCAID:   42,
-				SymptomID:    7,
-				Confidence:   0.85,
-				Reasoning:    "Same holdover timeout pattern as RCA #42",
-				IsRegression: true,
+			Recall: map[string]any{
+				"match":         true,
+				"prior_rca_id":  float64(42),
+				"symptom_id":    float64(7),
+				"confidence":    0.85,
+				"reasoning":     "Same holdover timeout pattern as RCA #42",
+				"is_regression": true,
 			},
-			TriageResult: &TriageResult{
-				SymptomCategory:      "product",
-				Severity:             "high",
-				DefectTypeHypothesis: "pb001",
-				CandidateRepos:       []string{"ptp-operator", "linuxptp-daemon"},
-				SkipInvestigation:    false,
-				ClockSkewSuspected:   true,
-				CascadeSuspected:     false,
-				DataQualityNotes:     "Log truncated at 4KB",
+			Triage: map[string]any{
+				"symptom_category":       "product",
+				"severity":               "high",
+				"defect_type_hypothesis": "pb001",
+				"candidate_repos":        []any{"ptp-operator", "linuxptp-daemon"},
+				"skip_investigation":     false,
+				"clock_skew_suspected":   true,
+				"cascade_suspected":      false,
+				"data_quality_notes":     "Log truncated at 4KB",
 			},
-			ResolveResult: &ResolveResult{
-				SelectedRepos: []RepoSelection{
-					{
-						Name:       "linuxptp-daemon",
-						Path:       "/repos/linuxptp-daemon",
-						FocusPaths: []string{"pkg/daemon/", "api/v1/"},
-						Branch:     "main",
-						Reason:     "Triage indicates product bug in PTP sync daemon code",
+			Resolve: map[string]any{
+				"selected_repos": []any{
+					map[string]any{
+						"name":        "linuxptp-daemon",
+						"path":        "/repos/linuxptp-daemon",
+						"focus_paths": []any{"pkg/daemon/", "api/v1/"},
+						"branch":      "main",
+						"reason":      "Triage indicates product bug in PTP sync daemon code",
 					},
 				},
-				CrossRefStrategy: "Check test assertion in cnf-gotests, then verify SUT behavior in linuxptp-daemon.",
+				"cross_ref_strategy": "Check test assertion in cnf-gotests, then verify SUT behavior in linuxptp-daemon.",
 			},
-			InvestigateResult: &InvestigateArtifact{
-				RunID:            "launch-42",
-				CaseIDs:          []string{"7"},
-				RCAMessage:       "Holdover timeout changed from 300s to 60s in commit abc1234, causing premature clock class transition to 248.",
-				DefectType:       "pb001",
-				Component:        "linuxptp-daemon",
-				ConvergenceScore: 0.85,
-				EvidenceRefs:     []string{"linuxptp-daemon:pkg/daemon/config.go:abc1234", "cnf-gotests:test/e2e/ptp_recovery_test.go:TestRecovery"},
-				GapBrief: &GapBrief{
-					Verdict: VerdictLowConfidence,
-					GapItems: []EvidenceGap{
-						{Category: GapLogDepth, Description: "Log truncated at 4KB", WouldHelp: "Full log would show complete error chain", Source: "CI console"},
+			Investigate: map[string]any{
+				"run_id":            "launch-42",
+				"case_ids":          []any{"7"},
+				"rca_message":       "Holdover timeout changed from 300s to 60s in commit abc1234, causing premature clock class transition to 248.",
+				"defect_type":       "pb001",
+				"component":         "linuxptp-daemon",
+				"convergence_score": 0.85,
+				"evidence_refs":     []any{"linuxptp-daemon:pkg/daemon/config.go:abc1234", "cnf-gotests:test/e2e/ptp_recovery_test.go:TestRecovery"},
+				"gap_brief": map[string]any{
+					"verdict": "low-confidence",
+					"gap_items": []any{
+						map[string]any{
+							"category":    "log-depth",
+							"description": "Log truncated at 4KB",
+							"would_help":  "Full log would show complete error chain",
+							"source":      "CI console",
+						},
 					},
 				},
 			},
-			CorrelateResult: &CorrelateResult{
-				IsDuplicate:       false,
-				LinkedRCAID:       0,
-				Confidence:        0.3,
-				Reasoning:         "Different error patterns despite similar test names",
-				CrossVersionMatch: true,
-				AffectedVersions:  []string{"4.20", "4.21"},
+			Correlate: map[string]any{
+				"is_duplicate":        false,
+				"linked_rca_id":       float64(0),
+				"confidence":          0.3,
+				"reasoning":           "Different error patterns despite similar test names",
+				"cross_version_match": true,
+				"affected_versions":   []any{"4.20", "4.21"},
 			},
 		},
 		History: &HistoryParams{
@@ -158,27 +163,26 @@ func goldenFixtureParams() *TemplateParams {
 
 func TestPromptGolden(t *testing.T) {
 	steps := []struct {
-		step   CircuitStep
 		family string
 		prompt string
 	}{
-		{StepF0Recall, "recall", "prompts/recall/judge-similarity.md"},
-		{StepF1Triage, "triage", "prompts/triage/classify-symptoms.md"},
-		{StepF2Resolve, "resolve", "prompts/resolve/select-repo.md"},
-		{StepF3Invest, "investigate", "prompts/investigate/deep-rca.md"},
-		{StepF4Correlate, "correlate", "prompts/correlate/match-cases.md"},
-		{StepF5Review, "review", "prompts/review/present-findings.md"},
-		{StepF6Report, "report", "prompts/report/regression-table.md"},
+		{"recall", "prompts/recall/judge-similarity.md"},
+		{"triage", "prompts/triage/classify-symptoms.md"},
+		{"resolve", "prompts/resolve/select-repo.md"},
+		{"investigate", "prompts/investigate/deep-rca.md"},
+		{"correlate", "prompts/correlate/match-cases.md"},
+		{"review", "prompts/review/present-findings.md"},
+		{"report", "prompts/report/regression-table.md"},
 	}
 
 	for _, tt := range steps {
 		t.Run(tt.family, func(t *testing.T) {
 			params := goldenFixtureParams()
-			params.StepName = string(tt.step)
+			params.StepName = tt.family
 
 			templatePath := tt.prompt
 
-			got, err := FillTemplateFS(DefaultPromptFS, templatePath, params)
+			got, err := FillTemplateFS(testdataPromptFS(), templatePath, params)
 			if err != nil {
 				t.Fatalf("FillTemplateFS(%s): %v", templatePath, err)
 			}

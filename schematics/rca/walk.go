@@ -8,19 +8,20 @@ import (
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
-	"github.com/dpopsuev/origami/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
 // WalkConfig holds configuration for a walk-based RCA run.
 type WalkConfig struct {
-	Store      store.Store
-	CaseData   *store.Case
-	Envelope   *rcatype.Envelope
-	Catalog    *knowledge.KnowledgeSourceCatalog
-	CaseDir    string
-	CaseLabel  string
-	Thresholds Thresholds
-	Components   []*framework.Component
+	Store       store.Store
+	CaseData    *store.Case
+	Envelope    *rcatype.Envelope
+	Catalog     toolkit.SourceCatalog
+	CaseDir     string
+	CaseLabel   string
+	Thresholds  Thresholds
+	CircuitData []byte
+	Components  []*framework.Component
 }
 
 // WalkResult captures the outcome of a walk-based RCA.
@@ -37,7 +38,7 @@ func WalkCase(ctx context.Context, cfg WalkConfig) (*WalkResult, error) {
 		th = DefaultThresholds()
 	}
 
-	def, err := AsteriskCircuitDef(th)
+	def, err := LoadCircuitDef(cfg.CircuitData, th)
 	if err != nil {
 		return nil, fmt.Errorf("load circuit def: %w", err)
 	}

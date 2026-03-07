@@ -22,7 +22,7 @@
 
 **Case:** #12  
 **Test:** OCP-83304 PTP ordered setup  
-**Step:** F0_RECALL
+**Step:** recall
 
 ---
 

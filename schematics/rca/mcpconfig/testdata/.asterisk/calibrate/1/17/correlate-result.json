@@ -1,5 +1,5 @@
 {
-  "is_duplicate": false,
   "confidence": 0.3,
-  "reasoning": ""
+  "cross_version_match": false,
+  "is_duplicate": false
 }

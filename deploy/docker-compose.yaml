@@ -1,0 +1,107 @@
+# Origami Cloud-Native — Local Development Stack
+#
+# Starts all four services + N LLM workers via docker compose.
+#
+# Usage:
+#   docker compose up -d                    # start all services
+#   docker compose up -d --scale worker=5   # start with 5 workers
+#   curl http://localhost:9000/healthz      # verify gateway
+#
+# Prerequisites:
+#   Build images first:
+#     podman build -t origami-knowledge -f Dockerfile.knowledge .
+#     podman build -t origami-rca -f Dockerfile.rca .
+#     podman build -t origami-gateway -f Dockerfile.gateway .
+#     podman build -t origami-asterisk-domain -f Dockerfile.asterisk-domain .
+#     podman build -t origami-llm-worker -f Dockerfile.llm-worker .
+
+services:
+  knowledge:
+    image: origami-knowledge
+    ports:
+      - "9100:9100"
+    command: ["--port", "9100", "--drivers", "git,docs"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  asterisk:
+    image: origami-asterisk-domain
+    ports:
+      - "9300:9300"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9300/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  rca:
+    image: origami-rca
+    ports:
+      - "9200:9200"
+    command:
+      - "--port"
+      - "9200"
+      - "--knowledge-endpoint"
+      - "http://knowledge:9100/mcp"
+      - "--domain-endpoint"
+      - "http://asterisk:9300/mcp"
+    environment:
+      - ASTERISK_RP_BASE_URL=${ASTERISK_RP_BASE_URL:-}
+      - ASTERISK_RP_PROJECT=${ASTERISK_RP_PROJECT:-}
+    depends_on:
+      knowledge:
+        condition: service_healthy
+      asterisk:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9200/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  gateway:
+    image: origami-gateway
+    ports:
+      - "9000:9000"
+    command:
+      - "--port"
+      - "9000"
+      - "--backend"
+      - "rca=http://rca:9200/mcp"
+      - "--backend"
+      - "knowledge=http://knowledge:9100/mcp"
+      - "--backend"
+      - "asterisk=http://asterisk:9300/mcp"
+    depends_on:
+      rca:
+        condition: service_healthy
+      knowledge:
+        condition: service_healthy
+      asterisk:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  worker:
+    image: origami-llm-worker
+    environment:
+      - GATEWAY_ENDPOINT=http://gateway:9000/mcp
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - LLM_MODEL=${LLM_MODEL:-llama3.2:3b}
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-http://host.containers.internal:11434}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - SCENARIO=${SCENARIO:-ptp-mock}
+      - BACKEND=${BACKEND:-stub}
+    depends_on:
+      gateway:
+        condition: service_healthy
+    deploy:
+      replicas: ${WORKER_REPLICAS:-1}

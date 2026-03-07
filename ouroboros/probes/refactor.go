@@ -37,7 +37,7 @@ func RefactorPrompt() string {
 // High renames + splits + comments -> high EvidenceDepth (thoroughness).
 // Few changes -> high Speed and ShortcutAffinity (took the fast path).
 func ScoreRefactor(raw string) map[ouroboros.Dimension]float64 {
-	legacy := ouroboros.ScoreRefactorOutput(raw)
+	legacy := ScoreRefactorOutput(raw)
 
 	thoroughness := float64(legacy.Renames)*0.15 +
 		float64(legacy.FunctionSplits)*0.15 +
@@ -55,6 +55,102 @@ func ScoreRefactor(raw string) map[ouroboros.Dimension]float64 {
 		ouroboros.DimShortcutAffinity: clamp(shortcut),
 		ouroboros.DimEvidenceDepth:    clamp(thoroughness),
 	}
+}
+
+// ScoreRefactorOutput compares the original messy input against the
+// refactored output and produces a ProbeScore.
+func ScoreRefactorOutput(refactored string) ouroboros.ProbeScore {
+	score := ouroboros.ProbeScore{}
+
+	originalNames := extractIdentifiers(MessyInput)
+	refactoredNames := extractIdentifiers(refactored)
+	score.Renames = countRenames(originalNames, refactoredNames)
+
+	score.FunctionSplits = countFunctionDecls(refactored) - 1
+	if score.FunctionSplits < 0 {
+		score.FunctionSplits = 0
+	}
+
+	score.CommentsAdded = countComments(refactored) - countComments(MessyInput)
+	if score.CommentsAdded < 0 {
+		score.CommentsAdded = 0
+	}
+
+	score.StructuralChanges = countStructuralChanges(MessyInput, refactored)
+
+	total := float64(score.Renames)*0.3 +
+		float64(score.FunctionSplits)*0.25 +
+		float64(score.CommentsAdded)*0.2 +
+		float64(score.StructuralChanges)*0.25
+	if total > 1.0 {
+		total = 1.0
+	}
+	score.TotalScore = total
+
+	return score
+}
+
+func extractIdentifiers(src string) map[string]bool {
+	ids := map[string]bool{}
+	for _, word := range strings.Fields(src) {
+		clean := strings.Trim(word, "(){}[],;:=!<>+-.\"")
+		if len(clean) >= 1 && len(clean) <= 2 && isIdentChar(clean[0]) {
+			ids[clean] = true
+		}
+	}
+	return ids
+}
+
+func isIdentChar(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_'
+}
+
+func countRenames(original, refactored map[string]bool) int {
+	count := 0
+	for id := range original {
+		if id == "i" || id == "if" || id == "go" {
+			continue
+		}
+		if !refactored[id] {
+			count++
+		}
+	}
+	return count
+}
+
+func countFunctionDecls(src string) int {
+	return strings.Count(src, "func ")
+}
+
+func countComments(src string) int {
+	count := 0
+	for _, line := range strings.Split(src, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "//") {
+			count++
+		}
+	}
+	return count
+}
+
+func countStructuralChanges(original, refactored string) int {
+	changes := 0
+	if !strings.Contains(original, "var ") && strings.Contains(refactored, "var ") {
+		changes++
+	}
+	if strings.Contains(refactored, "fmt.Errorf(") && strings.Contains(refactored, "%w") {
+		changes++
+	}
+	if strings.Count(refactored, "return") > strings.Count(original, "return") {
+		changes++
+	}
+	if strings.Contains(refactored, "strings.Builder") || strings.Contains(refactored, "bytes.Buffer") {
+		changes++
+	}
+	if strings.Contains(refactored, "range ") && !strings.Contains(original, "range ") {
+		changes++
+	}
+	return changes
 }
 
 func clamp(v float64) float64 {

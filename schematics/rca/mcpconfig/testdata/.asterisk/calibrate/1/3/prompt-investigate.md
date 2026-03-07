@@ -22,7 +22,7 @@
 
 **Case:** #3  
   
-**Step:** F3_INVESTIGATE
+**Step:** investigate
 
 ---
 
@@ -63,12 +63,16 @@ FAIL: Expected clock state to be LOCKED within 300s timeout
 ### test-repo
 - **Path:** 
 - **Focus paths:** 
-- **Branch:** 
+- **Branch:** <no value>
 - **Reason:** test
 
 
 
 
+*No launch attributes available.*
+
+
+*No linked Jira tickets.*
 
 
 

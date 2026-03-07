@@ -22,7 +22,7 @@
 
 **Case:** #8  
 **Launch:** OCP-49734 NTP sync validation ()  
-**Step:** F1_TRIAGE
+**Step:** triage
 
 ---
 
@@ -61,6 +61,22 @@ FAIL: Expected NTP sync within 60s
 |  | OCP-49734 NTP sync validation |  |
 
 
+
+*No launch attributes available.*
+
+
+*No linked Jira tickets.*
+
+
+## Available repos
+
+| Repo | Path | Purpose |
+|------|------|---------|
+| linuxptp-daemon-operator |  | PTP operator: manages linuxptp-daemon DaemonSet, PtpConfig CRD, clock sync |
+| ptp-test-framework |  | E2E test suite for PTP operator: Ginkgo specs, test helpers, fixtures |
+| cluster-infra-config |  | CI cluster configuration: job profiles, NTP config, network templates |
+| sriov-network-operator |  | SR-IOV network operator: VF allocation, device plugin (NOT PTP-related) |
+| cnf-features-deploy |  | CNF deployment manifests and CI profiles: contains job definitions for all telco operators |
 
 
 

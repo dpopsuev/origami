@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/dpopsuev/origami/dispatch"
-	"github.com/dpopsuev/origami/logging"
 )
 
 // SessionState tracks the lifecycle of a circuit session.
@@ -72,7 +71,7 @@ func NewCircuitSession(
 ) *CircuitSession {
 	sess := &CircuitSession{
 		ID:              id,
-		log:             logging.New("circuit-session"),
+		log:             slog.Default().With("component", "circuit-session"),
 		state:           StateRunning,
 		TotalCases:      meta.TotalCases,
 		Scenario:        meta.Scenario,

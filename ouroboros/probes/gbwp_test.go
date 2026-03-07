@@ -18,16 +18,18 @@ func TestScoreGBWP_CorrectHighConfidence(t *testing.T) {
 func TestScoreGBWP_CorrectMediumConfidence(t *testing.T) {
 	raw := "VERDICT: CORRECT\nCONFIDENCE: 0.75\nJUSTIFICATION: Likely race."
 	scores := ScoreGBWP(raw)
-	if scores[ouroboros.DimGBWP] != 0.75 {
-		t.Errorf("expected 0.75, got %f", scores[ouroboros.DimGBWP])
+	// 0.75 base + 0.05 justification bonus = 0.80
+	if scores[ouroboros.DimGBWP] != 0.80 {
+		t.Errorf("expected 0.80, got %f", scores[ouroboros.DimGBWP])
 	}
 }
 
 func TestScoreGBWP_CorrectLowConfidence(t *testing.T) {
 	raw := "VERDICT: CORRECT\nCONFIDENCE: 0.5\nJUSTIFICATION: Maybe."
 	scores := ScoreGBWP(raw)
-	if scores[ouroboros.DimGBWP] != 0.5 {
-		t.Errorf("expected 0.5, got %f", scores[ouroboros.DimGBWP])
+	// 0.5 base + 0.05 justification bonus = 0.55
+	if scores[ouroboros.DimGBWP] != 0.55 {
+		t.Errorf("expected 0.55, got %f", scores[ouroboros.DimGBWP])
 	}
 }
 

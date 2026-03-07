@@ -1,5 +1,7 @@
 package framework
 
+// Category: Execution
+
 // SchedulerContext provides all information a Scheduler needs to pick a walker.
 type SchedulerContext struct {
 	Node        Node

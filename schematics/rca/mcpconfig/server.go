@@ -3,22 +3,22 @@ package mcpconfig
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	framework "github.com/dpopsuev/origami"
 	cal "github.com/dpopsuev/origami/calibrate"
 	"github.com/dpopsuev/origami/dispatch"
-	"github.com/dpopsuev/origami/kami"
 	fwmcp "github.com/dpopsuev/origami/mcp"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/scenarios"
 	"github.com/dpopsuev/origami/schematics/rca/store"
-	"github.com/dpopsuev/origami/view"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -29,14 +29,15 @@ var (
 // Server wraps the generic CircuitServer with RCA-specific domain hooks.
 type Server struct {
 	*fwmcp.CircuitServer
-	ProductName   string
-	ProjectRoot   string
-	ReaderFactory rca.SourceReaderFactory
-	StoreFactory  rca.StoreFactory
+	ProductName     string
+	ProjectRoot     string
+	ReaderFactory   rca.SourceReaderFactory
+	StoreFactory    rca.StoreFactory
+	KnowledgeReader toolkit.SourceReader
+	StepSchemas     []fwmcp.StepSchema
+	DomainFS        fs.FS
 
-	KamiServer *kami.Server
-	store      *view.CircuitStore
-	bridge     *kami.EventBridge
+	Observer SessionObserver
 }
 
 // ServerOption configures an RCA MCP server.
@@ -48,6 +49,24 @@ func WithSourceReader(f rca.SourceReaderFactory) ServerOption {
 	return func(s *Server) { s.ReaderFactory = f }
 }
 
+// WithKnowledgeReader injects a SourceReader for code and doc
+// access during RCA investigation steps.
+func WithKnowledgeReader(r toolkit.SourceReader) ServerOption {
+	return func(s *Server) { s.KnowledgeReader = r }
+}
+
+// WithStepSchemas overrides the default RCA step schemas.
+func WithStepSchemas(schemas []fwmcp.StepSchema) ServerOption {
+	return func(s *Server) { s.StepSchemas = schemas }
+}
+
+// WithDomainFS provides an fs.FS for all domain data (scenarios,
+// prompts, heuristics, etc.). Sub-paths like "scenarios/", "prompts/"
+// are resolved relative to this FS. When nil, embedded defaults are used.
+func WithDomainFS(fsys fs.FS) ServerOption {
+	return func(s *Server) { s.DomainFS = fsys }
+}
+
 // NewServer creates an RCA MCP server. The productName identifies the consumer
 // (e.g. "asterisk"). Pass it from the consumer's manifest or CLI config.
 func NewServer(productName string, opts ...ServerOption) *Server {
@@ -56,29 +75,54 @@ func NewServer(productName string, opts ...ServerOption) *Server {
 	for _, opt := range opts {
 		opt(s)
 	}
+
+	if s.DomainFS != nil {
+		if vocabData, err := fs.ReadFile(s.DomainFS, "vocabulary.yaml"); err == nil {
+			rca.InitVocab(vocabData)
+		}
+	}
+
 	s.CircuitServer = fwmcp.NewCircuitServer(s.buildConfig())
 	return s
 }
 
-// Shutdown closes any active Kami bridge and store, then shuts down
+// WithSessionObserver injects a SessionObserver for live visualization
+// (e.g. Kami SSE + view.CircuitStore). When nil, no UI events are emitted.
+func WithSessionObserver(o SessionObserver) ServerOption {
+	return func(s *Server) { s.Observer = o }
+}
+
+// Shutdown closes any active observer resources, then shuts down
 // the underlying CircuitServer.
 func (s *Server) Shutdown() {
-	if s.bridge != nil {
-		s.bridge.Close()
-		s.bridge = nil
-	}
-	if s.store != nil {
-		s.store.Close()
-		s.store = nil
+	if s.Observer != nil {
+		s.Observer.Close()
 	}
 	s.CircuitServer.Shutdown()
 }
 
+func (s *Server) readDomainCircuit() []byte {
+	if s.DomainFS == nil {
+		return nil
+	}
+	data, _ := fs.ReadFile(s.DomainFS, "circuits/rca.yaml")
+	return data
+}
+
 func (s *Server) buildConfig() fwmcp.CircuitConfig {
+	schemas := s.StepSchemas
+	if len(schemas) == 0 && s.DomainFS != nil {
+		if sub, err := fs.Sub(s.DomainFS, "schemas/rca"); err == nil {
+			schemas, _ = LoadStepSchemas(sub)
+		}
+	}
+	if len(schemas) == 0 {
+		schemas = rcaStepSchemas()
+	}
 	cfg := fwmcp.CircuitConfig{
 		Name:        s.ProductName,
 		Version:     "dev",
-		StepSchemas: rcaStepSchemas(),
+		StepSchemas: schemas,
 		WorkerPreamble: fmt.Sprintf("You are a %s calibration worker.", s.ProductName),
 		DefaultGetNextStepTimeout: int(DefaultGetNextStepTimeout / time.Millisecond),
 		DefaultSessionTTL:         int(DefaultSessionTTL / time.Millisecond),
@@ -90,7 +134,11 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 			if !ok {
 				return "", nil, fmt.Errorf("unexpected result type: %T", result)
 			}
-			formatted, err := rca.RenderCalibrationReport(report)
+			var reportTemplate []byte
+			if s.DomainFS != nil {
+				reportTemplate, _ = fs.ReadFile(s.DomainFS, "reports/calibration-report.yaml")
+			}
+			formatted, err := rca.RenderCalibrationReport(report, reportTemplate)
 			if err != nil {
 				return "", nil, fmt.Errorf("render calibration report: %w", err)
 			}
@@ -99,37 +147,25 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 	}
 
 	cfg.OnStepDispatched = func(caseID, step string) {
-		if s.KamiServer != nil && s.store != nil {
-			s.store.OnEvent(framework.WalkEvent{
-				Type:   framework.EventNodeEnter,
-				Node:   stepToNode(step),
-				Walker: caseID,
-			})
+		if s.Observer != nil {
+			s.Observer.OnStepDispatched(caseID, step)
 		}
 	}
 	cfg.OnStepCompleted = func(caseID, step string, dispatchID int64) {
-		if s.KamiServer != nil && s.store != nil {
-			s.store.OnEvent(framework.WalkEvent{
-				Type:   framework.EventNodeExit,
-				Node:   stepToNode(step),
-				Walker: caseID,
-			})
+		if s.Observer != nil {
+			s.Observer.OnStepCompleted(caseID, step, dispatchID)
 		}
 	}
 
 	cfg.OnCircuitDone = func() {
-		if s.KamiServer != nil && s.store != nil {
-			s.store.OnEvent(framework.WalkEvent{
-				Type: framework.EventWalkComplete,
-			})
+		if s.Observer != nil {
+			s.Observer.OnCircuitDone()
 		}
 	}
 
 	cfg.OnSessionEnd = func() {
-		if s.KamiServer != nil && s.store != nil {
-			s.store.OnEvent(framework.WalkEvent{
-				Type: framework.EventWalkComplete,
-			})
+		if s.Observer != nil {
+			s.Observer.OnSessionEnd()
 		}
 	}
 
@@ -137,19 +173,10 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 }
 
 func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
-	if s.KamiServer != nil {
-		if s.bridge != nil {
-			s.bridge.Close()
-		}
-
-		def, err := rca.AsteriskCircuitDef(rca.DefaultThresholds())
+	if s.Observer != nil {
+		def, err := rca.LoadCircuitDef(s.readDomainCircuit(), rca.DefaultThresholds())
 		if err == nil {
-			st := view.NewCircuitStore(def)
-			br := kami.NewEventBridge(bus)
-			br.StartPolling(100 * time.Millisecond)
-			s.KamiServer.SetStore(st)
-			s.store = st
-			s.bridge = br
+			s.Observer.OnSessionCreate(def, bus)
 		}
 	}
 
@@ -160,7 +187,11 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	rpBaseURL, _ := extra["rp_base_url"].(string)
 	rpProject, _ := extra["rp_project"].(string)
 
-	scenario, err := loadScenario(scenarioName)
+	var scenarioFS fs.FS
+	if s.DomainFS != nil {
+		scenarioFS, _ = fs.Sub(s.DomainFS, "scenarios")
+	}
+	scenario, err := scenarios.LoadScenario(scenarioFS, scenarioName)
 	if err != nil {
 		return nil, fwmcp.SessionMeta{}, err
 	}
@@ -187,7 +218,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	}
 
 	root := s.ProjectRoot
-	promptFS := rca.DefaultPromptFS
+	promptFS := s.DomainFS
 	basePath := filepath.Join(root, ".asterisk/calibrate")
 
 	tokenTracker := dispatch.NewTokenTracker()
@@ -217,7 +248,11 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		for _, r := range scenario.SourcePack.Repos {
 			repoNames = append(repoNames, r.Name)
 		}
-		comps = []*framework.Component{rca.HeuristicComponent(basicSt, repoNames)}
+		var heuristicsData []byte
+		if s.DomainFS != nil {
+			heuristicsData, _ = fs.ReadFile(s.DomainFS, "heuristics.yaml")
+		}
+		comps = []*framework.Component{rca.HeuristicComponent(basicSt, repoNames, heuristicsData)}
 		transformerLabel = "basic"
 	default:
 		t := rca.NewRCATransformer(
@@ -238,7 +273,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		return nil, fwmcp.SessionMeta{}, fmt.Errorf("create calibrate dir: %w", err)
 	}
 
-	circuitDef, err := rca.AsteriskCircuitDef(rca.DefaultThresholds())
+	circuitDef, err := rca.LoadCircuitDef(s.readDomainCircuit(), rca.DefaultThresholds())
 	if err != nil {
 		return nil, fwmcp.SessionMeta{}, fmt.Errorf("load circuit def for scorecard: %w", err)
 	}
@@ -251,23 +286,46 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		return nil, fwmcp.SessionMeta{}, fmt.Errorf("load scorecard: %w", err)
 	}
 
-	cfg := rca.RunConfig{
-		Scenario:     scenario,
-		Components: comps,
-		TransformerName: transformerLabel,
-		IDMapper:     idMapper,
-		Runs:         1,
-		Thresholds:   rca.DefaultThresholds(),
-		TokenTracker: tokenTracker,
-		Parallel:     parallel,
-		TokenBudget:  parallel,
-		BasePath:     basePath,
-		SourceFetcher: rpFetcher,
-		ScoreCard:    sc,
+	var calReportTemplate []byte
+	if s.DomainFS != nil {
+		calReportTemplate, _ = fs.ReadFile(s.DomainFS, "reports/calibration-report.yaml")
+	}
+	adapter := &rca.RCACalibrationAdapter{
+		Scenario:        scenario,
+		Components:      comps,
+		IDMapper:        idMapper,
+		BasePath:        basePath,
+		Thresholds:      rca.DefaultThresholds(),
+		ScoreCard:       sc,
+		TokenTracker:    tokenTracker,
+		KnowledgeReader: s.KnowledgeReader,
+		ReportTemplate:  calReportTemplate,
 	}
 
 	runFn := func(ctx context.Context) (any, error) {
-		return rca.RunCalibration(ctx, cfg)
+		genReport, err := cal.Run(ctx, cal.HarnessConfig{
+			Loader:         adapter,
+			Collector:      adapter,
+			Renderer:       adapter,
+			CircuitDef:     circuitDef,
+			ScoreCard:      sc,
+			Scenario:       scenario.Name,
+			Transformer:    transformerLabel,
+			Runs:           1,
+			Parallel:       parallel,
+			OnCaseComplete: adapter.OnCaseComplete(),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		report := adapter.RCAReport(genReport)
+		rca.ApplyDryCaps(&report.Metrics, scenario.DryCappedMetrics)
+		if m20def := sc.FindDef("M20"); m20def != nil {
+			report.Metrics.Metrics = append(report.Metrics.Metrics,
+				m20def.ToMetric(0, "single run"))
+		}
+		return report, nil
 	}
 
 	meta := fwmcp.SessionMeta{
@@ -279,10 +337,67 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 }
 
 // rcaStepSchemas returns the F0-F6 step schemas for RCA calibration.
+// stepSchemaFile is the YAML representation of a StepSchema.
+type stepSchemaFile struct {
+	Name   string            `yaml:"name"`
+	Fields map[string]string `yaml:"fields"`
+	Defs   []fieldDefFile    `yaml:"defs"`
+}
+
+type fieldDefFile struct {
+	Name     string `yaml:"name"`
+	Type     string `yaml:"type"`
+	Required bool   `yaml:"required"`
+	Desc     string `yaml:"desc,omitempty"`
+}
+
+// LoadStepSchemas reads step schema YAML files from fsys (e.g. "schemas/rca/")
+// and returns them as []fwmcp.StepSchema. Each .yaml file in the directory
+// defines one step.
+func LoadStepSchemas(fsys fs.FS) ([]fwmcp.StepSchema, error) {
+	entries, err := fs.ReadDir(fsys, ".")
+	if err != nil {
+		return nil, fmt.Errorf("read step schema dir: %w", err)
+	}
+
+	var schemas []fwmcp.StepSchema
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") {
+			continue
+		}
+		data, err := fs.ReadFile(fsys, e.Name())
+		if err != nil {
+			return nil, fmt.Errorf("read step schema %q: %w", e.Name(), err)
+		}
+		var f stepSchemaFile
+		if err := yaml.Unmarshal(data, &f); err != nil {
+			return nil, fmt.Errorf("parse step schema %q: %w", e.Name(), err)
+		}
+		s := fwmcp.StepSchema{
+			Name:   f.Name,
+			Fields: f.Fields,
+		}
+		for _, d := range f.Defs {
+			s.Defs = append(s.Defs, fwmcp.FieldDef{
+				Name:     d.Name,
+				Type:     d.Type,
+				Required: d.Required,
+				Desc:     d.Desc,
+			})
+		}
+		schemas = append(schemas, s)
+	}
+
+	if len(schemas) == 0 {
+		return nil, fmt.Errorf("no step schemas found")
+	}
+	return schemas, nil
+}
+
 func rcaStepSchemas() []fwmcp.StepSchema {
 	return []fwmcp.StepSchema{
 		{
-			Name:   "F0_RECALL",
+			Name:   "recall",
 			Fields: map[string]string{"match": "bool", "confidence": "float", "reasoning": "string"},
 			Defs: []fwmcp.FieldDef{
 				{Name: "match", Type: "bool", Required: true},
@@ -291,7 +406,7 @@ func rcaStepSchemas() []fwmcp.StepSchema {
 			},
 		},
 		{
-			Name: "F1_TRIAGE",
+			Name: "triage",
 			Fields: map[string]string{
 				"symptom_category": "string", "severity": "string",
 				"defect_type_hypothesis": "string", "candidate_repos[]": "string[]",
@@ -307,14 +422,14 @@ func rcaStepSchemas() []fwmcp.StepSchema {
 			},
 		},
 		{
-			Name:   "F2_RESOLVE",
+			Name:   "resolve",
 			Fields: map[string]string{"selected_repos[]": "{name, reason}"},
 			Defs: []fwmcp.FieldDef{
 				{Name: "selected_repos", Type: "array", Required: true},
 			},
 		},
 		{
-			Name: "F3_INVESTIGATE",
+			Name: "investigate",
 			Fields: map[string]string{
 				"rca_message": "string", "defect_type": "string", "component": "string",
 				"convergence_score": "float", "evidence_refs[]": "string[]",
@@ -328,7 +443,7 @@ func rcaStepSchemas() []fwmcp.StepSchema {
 			},
 		},
 		{
-			Name:   "F4_CORRELATE",
+			Name:   "correlate",
 			Fields: map[string]string{"is_duplicate": "bool", "confidence": "float"},
 			Defs: []fwmcp.FieldDef{
 				{Name: "is_duplicate", Type: "bool", Required: true},
@@ -336,14 +451,14 @@ func rcaStepSchemas() []fwmcp.StepSchema {
 			},
 		},
 		{
-			Name:   "F5_REVIEW",
+			Name:   "review",
 			Fields: map[string]string{"decision": "approve|reassess|overturn"},
 			Defs: []fwmcp.FieldDef{
 				{Name: "decision", Type: "string", Required: true},
 			},
 		},
 		{
-			Name:   "F6_REPORT",
+			Name:   "report",
 			Fields: map[string]string{"defect_type": "string", "case_id": "string", "summary": "string"},
 			Defs: []fwmcp.FieldDef{
 				{Name: "defect_type", Type: "string", Required: true},
@@ -352,16 +467,4 @@ func rcaStepSchemas() []fwmcp.StepSchema {
 			},
 		},
 	}
-}
-
-func loadScenario(name string) (*rca.Scenario, error) {
-	return scenarios.LoadScenario(name)
-}
-
-var stepPrefixRE = regexp.MustCompile(`^F\d+_`)
-
-// stepToNode maps an MCP step name (e.g. "F0_RECALL") to a circuit node
-// name (e.g. "recall") by stripping the F{n}_ prefix and lowercasing.
-func stepToNode(step string) string {
-	return strings.ToLower(stepPrefixRE.ReplaceAllString(step, ""))
 }

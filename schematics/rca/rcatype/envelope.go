@@ -1,7 +1,7 @@
 // Package rcatype defines RCA domain types decoupled from any data source.
-// Both modules/rca and modules/rca/store import this package to avoid
-// circular dependencies. Conversion to/from source-specific types (e.g.
-// components/rp) happens in modules/rca/rpconv.
+// Both schematics/rca and schematics/rca/store import this package to
+// avoid circular dependencies. Conversion to/from source-specific types
+// happens inside each connector (e.g. connectors/rp/source.go).
 package rcatype
 
 // Envelope is the execution envelope (run + failure list).

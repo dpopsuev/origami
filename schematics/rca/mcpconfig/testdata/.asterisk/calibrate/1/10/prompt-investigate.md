@@ -22,7 +22,7 @@
 
 **Case:** #10  
   
-**Step:** F3_INVESTIGATE
+**Step:** investigate
 
 ---
 
@@ -64,12 +64,16 @@ FAIL: PTP lock recovery failed
 ### test-repo
 - **Path:** 
 - **Focus paths:** 
-- **Branch:** 
+- **Branch:** <no value>
 - **Reason:** test
 
 
 
 
+*No launch attributes available.*
+
+
+*No linked Jira tickets.*
 
 
 

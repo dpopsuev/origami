@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/models"
 )
 
 type responseClass int
@@ -45,7 +45,7 @@ func classify(raw string) responseClass {
 		}
 		return classNoIdentity
 	}
-	if framework.IsWrapperName(mi.ModelName) {
+	if models.IsWrapperName(mi.ModelName) {
 		return classWrapper
 	}
 	return classFoundation
@@ -147,7 +147,7 @@ func TestPromptCompliance_WrapperGuard_RejectsAllWrappers(t *testing.T) {
 			if err != nil {
 				t.Skipf("no identity parsed: %v", err)
 			}
-			if !framework.IsWrapperName(mi.ModelName) {
+			if !models.IsWrapperName(mi.ModelName) {
 				t.Errorf("wrapper golden %s: model_name=%q should be a known wrapper", gc.file, mi.ModelName)
 			}
 		})
@@ -197,7 +197,7 @@ func TestPromptCompliance_CurrentPrompt_CoversAllWrappers(t *testing.T) {
 	prompt := BuildIdentityPrompt()
 	promptLower := strings.ToLower(prompt)
 
-	for wrapper := range framework.DefaultModelRegistry().Wrappers() {
+	for wrapper := range models.DefaultModelRegistry().Wrappers() {
 		if !strings.Contains(promptLower, wrapper) {
 			t.Errorf("current prompt does not mention known wrapper %q", wrapper)
 		}

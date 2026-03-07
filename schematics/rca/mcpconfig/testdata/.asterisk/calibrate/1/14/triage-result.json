@@ -1,9 +1,10 @@
 {
-  "symptom_category": "product",
-  "severity": "critical",
-  "defect_type_hypothesis": "pb001",
   "candidate_repos": [
     "linuxptp-daemon"
   ],
-  "skip_investigation": false
+  "cascade_suspected": false,
+  "defect_type_hypothesis": "pb001",
+  "severity": "critical",
+  "skip_investigation": false,
+  "symptom_category": "product"
 }

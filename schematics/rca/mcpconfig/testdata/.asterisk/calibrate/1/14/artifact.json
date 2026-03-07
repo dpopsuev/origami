@@ -1,11 +1,9 @@
 {
-  "run_id": "",
-  "case_ids": null,
-  "rca_message": "https://issues.redhat.com/browse/OCPBUGS-54967",
-  "defect_type": "pb001",
   "component": "linuxptp-daemon",
   "convergence_score": 0.8,
+  "defect_type": "pb001",
   "evidence_refs": [
     "k8snetworkplumbingwg/linuxptp-daemon#29"
-  ]
+  ],
+  "rca_message": "https://issues.redhat.com/browse/OCPBUGS-54967"
 }

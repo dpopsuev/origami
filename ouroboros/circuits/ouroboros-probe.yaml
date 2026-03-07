@@ -4,6 +4,7 @@
 # and the Judge classifies which pole the answer aligns with.
 circuit: ouroboros-probe
 description: "3-node dichotomous behavioral probe circuit"
+topology: cascade
 
 nodes:
   - name: generate

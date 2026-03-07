@@ -50,6 +50,37 @@ type Seed struct {
 	Context               string              `yaml:"context"`
 	Rubric                string              `yaml:"rubric"`
 	GeneratorInstructions string              `yaml:"generator_instructions"`
+	GoldAnswer            string              `yaml:"gold_answer,omitempty"`
+	GoldSignals           map[string][]string `yaml:"gold_signals,omitempty"`
+	Difficulty            string              `yaml:"difficulty,omitempty"`
+	OutputFormat          string              `yaml:"output_format,omitempty"`
+	Rounds                int                 `yaml:"rounds,omitempty"`
+	Verify                *SeedVerify         `yaml:"verify,omitempty"`
+}
+
+// Difficulty levels for progressive calibration.
+const (
+	DifficultyEasy   = "easy"
+	DifficultyMedium = "medium"
+	DifficultyHard   = "hard"
+)
+
+var validDifficulties = map[string]bool{
+	"": true, DifficultyEasy: true, DifficultyMedium: true, DifficultyHard: true,
+}
+
+// SeedVerify defines execution-based verification for code-producing probes.
+// When present, the Judge extracts code from the subject's response, runs
+// compile + test + benchmark commands, and merges the binary pass/fail
+// result into dimension scores. Behavioral LLM-based scoring is secondary.
+type SeedVerify struct {
+	Language           string `yaml:"language"`
+	Compile            string `yaml:"compile"`
+	Test               string `yaml:"test"`
+	TestFile           string `yaml:"test_file"`
+	Benchmark          string `yaml:"benchmark,omitempty"`
+	BenchmarkThreshMs  int    `yaml:"benchmark_threshold_ms,omitempty"`
+	SetupCommands      string `yaml:"setup_commands,omitempty"`
 }
 
 // GeneratorOutput is the structured output of the Generator node.
@@ -59,12 +90,28 @@ type GeneratorOutput struct {
 	PoleAnswers map[string]string `json:"pole_answers" yaml:"pole_answers"`
 }
 
+// MechanicalVerifyResult records the outcome of compiling and testing
+// a code-producing subject response. Nil when the seed has no verify config.
+type MechanicalVerifyResult struct {
+	Compiled         bool    `json:"compiled"`
+	TestsPassed      bool    `json:"tests_passed"`
+	BenchmarkPassed  bool    `json:"benchmark_passed,omitempty"`
+	BenchmarkMs      int     `json:"benchmark_ms,omitempty"`
+	CompileErr       string  `json:"compile_error,omitempty"`
+	TestErr          string  `json:"test_error,omitempty"`
+	BenchmarkErr     string  `json:"benchmark_error,omitempty"`
+	Score            float64 `json:"score"`
+}
+
 // PoleResult is the structured output of the Judge node.
 type PoleResult struct {
-	SelectedPole    string               `json:"selected_pole"    yaml:"selected_pole"`
-	Confidence      float64              `json:"confidence"       yaml:"confidence"`
-	DimensionScores map[Dimension]float64 `json:"dimension_scores" yaml:"dimension_scores"`
-	Reasoning       string               `json:"reasoning"        yaml:"reasoning"`
+	SelectedPole     string                  `json:"selected_pole"    yaml:"selected_pole"`
+	Confidence       float64                 `json:"confidence"       yaml:"confidence"`
+	DimensionScores  map[Dimension]float64   `json:"dimension_scores" yaml:"dimension_scores"`
+	Reasoning        string                  `json:"reasoning"        yaml:"reasoning"`
+	GoldSignalScore  float64                 `json:"gold_signal_score,omitempty" yaml:"gold_signal_score,omitempty"`
+	MechanicalVerify *MechanicalVerifyResult `json:"mechanical_verify,omitempty" yaml:"mechanical_verify,omitempty"`
+	SelfVerifyScore  float64                 `json:"self_verify_score,omitempty" yaml:"self_verify_score,omitempty"`
 }
 
 // LoadSeed reads a seed YAML file and validates its structure.
@@ -113,6 +160,19 @@ func (s *Seed) Validate() error {
 	}
 	if s.Rubric == "" {
 		return fmt.Errorf("seed validation: rubric is required")
+	}
+	if !validDifficulties[s.Difficulty] {
+		return fmt.Errorf("seed validation: unknown difficulty %q", s.Difficulty)
+	}
+	if len(s.GoldSignals) > 0 {
+		for pole := range s.GoldSignals {
+			if _, ok := s.Poles[pole]; !ok {
+				return fmt.Errorf("seed validation: gold_signals references unknown pole %q", pole)
+			}
+		}
+	}
+	if s.Rounds < 0 {
+		return fmt.Errorf("seed validation: rounds must be non-negative")
 	}
 	return nil
 }

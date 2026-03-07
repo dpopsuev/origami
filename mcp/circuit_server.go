@@ -8,8 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"log/slog"
+
 	"github.com/dpopsuev/origami/dispatch"
-	"github.com/dpopsuev/origami/logging"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -84,6 +85,7 @@ type getNextStepInput struct {
 type getNextStepOutput struct {
 	Done             bool   `json:"done"`
 	Available        bool   `json:"available,omitempty"`
+	Error            string `json:"error,omitempty"`
 	CaseID           string `json:"case_id,omitempty"`
 	Step             string `json:"step,omitempty"`
 	PromptPath       string `json:"prompt_path,omitempty"`
@@ -152,11 +154,11 @@ type getWorkerHealthOutput struct {
 
 // --- Tool registration ---
 
-// noOutputSchema wraps a typed handler so the MCP SDK's Out type parameter is
+// NoOutputSchema wraps a typed handler so the MCP SDK's Out type parameter is
 // `any`, which suppresses outputSchema generation. Some MCP clients (including
 // Cursor) don't support outputSchema and fail to parse the tools list when it's
 // present.
-func noOutputSchema[In, Out any](h func(context.Context, *sdkmcp.CallToolRequest, In) (*sdkmcp.CallToolResult, Out, error)) sdkmcp.ToolHandlerFor[In, any] {
+func NoOutputSchema[In, Out any](h func(context.Context, *sdkmcp.CallToolRequest, In) (*sdkmcp.CallToolResult, Out, error)) sdkmcp.ToolHandlerFor[In, any] {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, input In) (*sdkmcp.CallToolResult, any, error) {
 		res, out, err := h(ctx, req, input)
 		return res, out, err
@@ -167,43 +169,43 @@ func (s *CircuitServer) registerTools() {
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "start_circuit",
 		Description: "Start a circuit run. Spawns the runner goroutine and returns a session ID.",
-	}, noOutputSchema(s.handleStartCircuit))
+	}, NoOutputSchema(s.handleStartCircuit))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_next_step",
 		Description: "Get the next circuit step prompt. Blocks until the runner is ready. Returns done=true when all cases are complete.",
-	}, noOutputSchema(s.handleGetNextStep))
+	}, NoOutputSchema(s.handleGetNextStep))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "submit_step",
 		Description: "Submit a schema-validated artifact for a circuit step. The step name selects the schema; fields are validated before routing.",
-	}, noOutputSchema(s.handleSubmitStep))
+	}, NoOutputSchema(s.handleSubmitStep))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_report",
 		Description: "Get the final circuit report with metrics and per-case results.",
-	}, noOutputSchema(s.handleGetReport))
+	}, NoOutputSchema(s.handleGetReport))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "emit_signal",
 		Description: "Emit a signal to the agent message bus for observability. Use to announce dispatch, start, done, error events.",
-	}, noOutputSchema(s.handleEmitSignal))
+	}, NoOutputSchema(s.handleEmitSignal))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_signals",
 		Description: "Read signals from the agent message bus. Returns all signals, or signals since a given index.",
-	}, noOutputSchema(s.handleGetSignals))
+	}, NoOutputSchema(s.handleGetSignals))
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_worker_health",
 		Description: "Get worker health summary. Shows per-worker status, error counts, and replacement recommendations. The supervisor agent calls this to decide whether to replace or stop workers.",
-	}, noOutputSchema(s.handleGetWorkerHealth))
+	}, NoOutputSchema(s.handleGetWorkerHealth))
 }
 
 // --- Tool handlers ---
 
 func (s *CircuitServer) handleStartCircuit(ctx context.Context, _ *sdkmcp.CallToolRequest, input startCircuitInput) (*sdkmcp.CallToolResult, startCircuitOutput, error) {
-	logger := logging.New("circuit-session")
+	logger := slog.Default().With("component", "circuit-session")
 	s.mu.Lock()
 	if s.session != nil {
 		select {
@@ -308,11 +310,15 @@ func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToo
 
 	if done {
 		sess.SetGateExempt()
+		out := getNextStepOutput{Done: true}
+		if sessErr := sess.Err(); sessErr != nil {
+			out.Error = sessErr.Error()
+		}
 		sess.Bus.Emit("circuit_done", "server", "", "", nil)
 		if s.Config.OnCircuitDone != nil {
 			s.Config.OnCircuitDone()
 		}
-		return nil, getNextStepOutput{Done: true}, nil
+		return nil, out, nil
 	}
 
 	if !available {
@@ -356,8 +362,7 @@ func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToo
 		out.CapacityWarning = fmt.Sprintf(
 			"system under capacity: %d/%d workers active",
 			inFlight, desired)
-		logger := logging.New("circuit-session")
-		logger.Debug("under capacity",
+		slog.Debug("under capacity", "component", "circuit-session",
 			"in_flight", inFlight, "desired", desired, "deficit", desired-inFlight)
 	}
 
@@ -371,8 +376,7 @@ func (s *CircuitServer) handleSubmitStep(ctx context.Context, _ *sdkmcp.CallTool
 	}
 
 	if gateErr := sess.CheckCapacityGate(); gateErr != nil {
-		logger := logging.New("circuit-session")
-		logger.Warn("capacity gate advisory on submit_step",
+		slog.Warn("capacity gate advisory on submit_step", "component", "circuit-session",
 			"session_id", input.SessionID, "dispatch_id", input.DispatchID, "detail", gateErr.Error())
 	}
 
@@ -463,7 +467,7 @@ func (s *CircuitServer) handleGetReport(ctx context.Context, _ *sdkmcp.CallToolR
 }
 
 func (s *CircuitServer) handleEmitSignal(ctx context.Context, _ *sdkmcp.CallToolRequest, input emitSignalInput) (*sdkmcp.CallToolResult, emitSignalOutput, error) {
-	logger := logging.New("signal-bus")
+	logger := slog.Default().With("component", "signal-bus")
 	if input.Event == "" {
 		logger.Warn("emit_signal rejected: empty event field")
 		return nil, emitSignalOutput{}, fmt.Errorf("event is required")

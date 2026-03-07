@@ -2,7 +2,7 @@
 
 **Case:** #7  
 **Launch:** launch-42  
-**Step:** F3_INVESTIGATE
+**Step:** investigate
 
 ---
 

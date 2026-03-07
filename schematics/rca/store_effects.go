@@ -2,87 +2,86 @@ package rca
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/dpopsuev/origami/schematics/rca/store"
-
-	"github.com/dpopsuev/origami/logging"
 )
 
 // applyStoreEffects updates Store entities based on the completed step's artifact.
-// Individual apply*Effects functions are called directly from StoreHooks (hooks.go).
-// This dispatch wrapper is retained for test convenience.
 func applyStoreEffects(
 	st store.Store,
 	caseData *store.Case,
-	step CircuitStep,
+	nodeName string,
 	artifact any,
 ) error {
-	switch step {
-	case StepF0Recall:
+	switch nodeName {
+	case "recall":
 		return applyRecallEffects(st, caseData, artifact)
-	case StepF1Triage:
+	case "triage":
 		return applyTriageEffects(st, caseData, artifact)
-	case StepF3Invest:
+	case "investigate":
 		return applyInvestigateEffects(st, caseData, artifact)
-	case StepF4Correlate:
+	case "correlate":
 		return applyCorrelateEffects(st, caseData, artifact)
-	case StepF5Review:
+	case "review":
 		return applyReviewEffects(st, caseData, artifact)
 	}
 	return nil
 }
 
 func applyRecallEffects(st store.Store, caseData *store.Case, artifact any) error {
-	r, ok := artifact.(*RecallResult)
-	if !ok || r == nil || !r.Match {
+	m := asMap(artifact)
+	if m == nil || !mapBool(m, "match") {
 		return nil
 	}
-	if r.SymptomID != 0 {
-		if err := st.LinkCaseToSymptom(caseData.ID, r.SymptomID); err != nil {
+	symptomID := mapInt64(m, "symptom_id")
+	if symptomID != 0 {
+		if err := st.LinkCaseToSymptom(caseData.ID, symptomID); err != nil {
 			return fmt.Errorf("link case to symptom: %w", err)
 		}
-		caseData.SymptomID = r.SymptomID
-		_ = st.UpdateSymptomSeen(r.SymptomID)
+		caseData.SymptomID = symptomID
+		_ = st.UpdateSymptomSeen(symptomID)
 	}
-	if r.PriorRCAID != 0 {
-		if err := st.LinkCaseToRCA(caseData.ID, r.PriorRCAID); err != nil {
+	priorRCAID := mapInt64(m, "prior_rca_id")
+	if priorRCAID != 0 {
+		if err := st.LinkCaseToRCA(caseData.ID, priorRCAID); err != nil {
 			return fmt.Errorf("link case to rca: %w", err)
 		}
-		caseData.RCAID = r.PriorRCAID
+		caseData.RCAID = priorRCAID
 	}
 	return nil
 }
 
 func applyTriageEffects(st store.Store, caseData *store.Case, artifact any) error {
-	r, ok := artifact.(*TriageResult)
-	if !ok || r == nil {
+	m := asMap(artifact)
+	if m == nil {
 		return nil
 	}
 	triage := &store.Triage{
 		CaseID:               caseData.ID,
-		SymptomCategory:      r.SymptomCategory,
-		Severity:             r.Severity,
-		DefectTypeHypothesis: r.DefectTypeHypothesis,
-		SkipInvestigation:    r.SkipInvestigation,
-		ClockSkewSuspected:   r.ClockSkewSuspected,
-		CascadeSuspected:     r.CascadeSuspected,
-		DataQualityNotes:     r.DataQualityNotes,
+		SymptomCategory:      mapStr(m, "symptom_category"),
+		Severity:             mapStr(m, "severity"),
+		DefectTypeHypothesis: mapStr(m, "defect_type_hypothesis"),
+		SkipInvestigation:    mapBool(m, "skip_investigation"),
+		ClockSkewSuspected:   mapBool(m, "clock_skew_suspected"),
+		CascadeSuspected:     mapBool(m, "cascade_suspected"),
+		DataQualityNotes:     mapStr(m, "data_quality_notes"),
 	}
 	if _, err := st.CreateTriage(triage); err != nil {
-		logging.New("orchestrate").Warn("create triage failed", "error", err)
+		slog.Warn("create triage failed", "component", "orchestrate", "error", err)
 	}
 
-	fingerprint := ComputeFingerprint(caseData.Name, caseData.ErrorMessage, r.SymptomCategory)
+	fingerprint := ComputeFingerprint(caseData.Name, caseData.ErrorMessage, mapStr(m, "symptom_category"))
 	sym, err := st.GetSymptomByFingerprint(fingerprint)
 	if err != nil {
-		logging.New("orchestrate").Warn("get symptom by fingerprint failed", "error", err)
+		slog.Warn("get symptom by fingerprint failed", "component", "orchestrate", "error", err)
 	}
 	if sym == nil {
 		newSym := &store.Symptom{
 			Name:            caseData.Name,
 			Fingerprint:     fingerprint,
 			ErrorPattern:    caseData.ErrorMessage,
-			Component:       r.SymptomCategory,
+			Component:       mapStr(m, "symptom_category"),
 			Status:          "active",
 			OccurrenceCount: 1,
 		}
@@ -98,7 +97,7 @@ func applyTriageEffects(st store.Store, caseData *store.Case, artifact any) erro
 
 	if caseData.SymptomID != 0 {
 		if err := st.LinkCaseToSymptom(caseData.ID, caseData.SymptomID); err != nil {
-			logging.New("orchestrate").Warn("link case to symptom failed", "error", err)
+			slog.Warn("link case to symptom failed", "component", "orchestrate", "error", err)
 		}
 	}
 	if err := st.UpdateCaseStatus(caseData.ID, "triaged"); err != nil {
@@ -109,11 +108,11 @@ func applyTriageEffects(st store.Store, caseData *store.Case, artifact any) erro
 }
 
 func applyInvestigateEffects(st store.Store, caseData *store.Case, artifact any) error {
-	r, ok := artifact.(*InvestigateArtifact)
-	if !ok || r == nil {
+	m := asMap(artifact)
+	if m == nil {
 		return nil
 	}
-	title := r.RCAMessage
+	title := mapStr(m, "rca_message")
 	if len(title) > 80 {
 		title = title[:80] + "..."
 	}
@@ -122,10 +121,10 @@ func applyInvestigateEffects(st store.Store, caseData *store.Case, artifact any)
 	}
 	rca := &store.RCA{
 		Title:            title,
-		Description:      r.RCAMessage,
-		DefectType:       r.DefectType,
-		Component:        r.Component,
-		ConvergenceScore: r.ConvergenceScore,
+		Description:      mapStr(m, "rca_message"),
+		DefectType:       mapStr(m, "defect_type"),
+		Component:        mapStr(m, "component"),
+		ConvergenceScore: mapFloat(m, "convergence_score"),
 		Status:           "open",
 	}
 	rcaID, err := st.SaveRCA(rca)
@@ -146,59 +145,65 @@ func applyInvestigateEffects(st store.Store, caseData *store.Case, artifact any)
 		link := &store.SymptomRCA{
 			SymptomID:  caseData.SymptomID,
 			RCAID:      rcaID,
-			Confidence: r.ConvergenceScore,
+			Confidence: mapFloat(m, "convergence_score"),
 			Notes:      "linked from F3 investigation",
 		}
 		if _, err := st.LinkSymptomToRCA(link); err != nil {
-			logging.New("orchestrate").Warn("link symptom to RCA failed", "error", err)
+			slog.Warn("link symptom to RCA failed", "component", "orchestrate", "error", err)
 		}
 	}
 	return nil
 }
 
 func applyCorrelateEffects(st store.Store, caseData *store.Case, artifact any) error {
-	r, ok := artifact.(*CorrelateResult)
-	if !ok || r == nil || !r.IsDuplicate || r.LinkedRCAID == 0 {
+	m := asMap(artifact)
+	if m == nil || !mapBool(m, "is_duplicate") {
 		return nil
 	}
-	if err := st.LinkCaseToRCA(caseData.ID, r.LinkedRCAID); err != nil {
+	linkedRCAID := mapInt64(m, "linked_rca_id")
+	if linkedRCAID == 0 {
+		return nil
+	}
+	if err := st.LinkCaseToRCA(caseData.ID, linkedRCAID); err != nil {
 		return fmt.Errorf("link case to shared rca: %w", err)
 	}
-	caseData.RCAID = r.LinkedRCAID
+	caseData.RCAID = linkedRCAID
 
 	if caseData.SymptomID != 0 {
 		link := &store.SymptomRCA{
 			SymptomID:  caseData.SymptomID,
-			RCAID:      r.LinkedRCAID,
-			Confidence: r.Confidence,
+			RCAID:      linkedRCAID,
+			Confidence: mapFloat(m, "confidence"),
 			Notes:      "linked from F4 correlation",
 		}
 		if _, err := st.LinkSymptomToRCA(link); err != nil {
-			logging.New("orchestrate").Warn("link symptom to RCA failed (correlate)", "error", err)
+			slog.Warn("link symptom to RCA failed (correlate)", "component", "orchestrate", "error", err)
 		}
 	}
 	return nil
 }
 
 func applyReviewEffects(st store.Store, caseData *store.Case, artifact any) error {
-	r, ok := artifact.(*ReviewDecision)
-	if !ok || r == nil {
+	m := asMap(artifact)
+	if m == nil {
 		return nil
 	}
-	if r.Decision == "approve" {
+	decision := mapStr(m, "decision")
+	if decision == "approve" {
 		if err := st.UpdateCaseStatus(caseData.ID, "reviewed"); err != nil {
 			return fmt.Errorf("update case after review: %w", err)
 		}
 		caseData.Status = "reviewed"
 	}
-	if r.Decision == "overturn" && r.HumanOverride != nil {
-		if caseData.RCAID != 0 {
+	if decision == "overturn" {
+		override := mapMap(m, "human_override")
+		if override != nil && caseData.RCAID != 0 {
 			rca, err := st.GetRCA(caseData.RCAID)
 			if err == nil && rca != nil {
-				rca.Description = r.HumanOverride.RCAMessage
-				rca.DefectType = r.HumanOverride.DefectType
+				rca.Description = mapStr(override, "rca_message")
+				rca.DefectType = mapStr(override, "defect_type")
 				if _, err := st.SaveRCA(rca); err != nil {
-					logging.New("orchestrate").Warn("update RCA after overturn failed", "error", err)
+					slog.Warn("update RCA after overturn failed", "component", "orchestrate", "error", err)
 				}
 			}
 		}

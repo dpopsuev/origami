@@ -1,9 +1,10 @@
 {
-  "symptom_category": "product",
-  "severity": "high",
-  "defect_type_hypothesis": "pb001",
   "candidate_repos": [
     "test-repo"
   ],
-  "skip_investigation": false
+  "cascade_suspected": false,
+  "defect_type_hypothesis": "pb001",
+  "severity": "high",
+  "skip_investigation": false,
+  "symptom_category": "product"
 }

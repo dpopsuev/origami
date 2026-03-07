@@ -1,14 +1,10 @@
 package rca
 
 import (
-	_ "embed"
 	"fmt"
 
 	framework "github.com/dpopsuev/origami"
 )
-
-//go:embed circuit_rca.yaml
-var circuitRCAYAML []byte
 
 // ThresholdsToVars converts typed Thresholds to a map for circuit vars / expression config.
 func ThresholdsToVars(th Thresholds) map[string]any {
@@ -21,22 +17,25 @@ func ThresholdsToVars(th Thresholds) map[string]any {
 	}
 }
 
-// AsteriskCircuitDef loads the RCA circuit from the embedded YAML and
+// LoadCircuitDef loads an RCA circuit from the given YAML data and
 // overrides vars with the provided thresholds.
-func AsteriskCircuitDef(th Thresholds) (*framework.CircuitDef, error) {
-	def, err := framework.LoadCircuit(circuitRCAYAML)
+func LoadCircuitDef(data []byte, th Thresholds) (*framework.CircuitDef, error) {
+	if data == nil {
+		return nil, fmt.Errorf("circuit definition data is required")
+	}
+	def, err := framework.LoadCircuit(data)
 	if err != nil {
-		return nil, fmt.Errorf("load embedded circuit YAML: %w", err)
+		return nil, fmt.Errorf("load circuit YAML: %w", err)
 	}
 	def.Vars = ThresholdsToVars(th)
 	return def, nil
 }
 
-// BuildRunner constructs a framework.Runner from the Asterisk circuit
-// definition with the given thresholds and components. The components provide
-// transformers, hooks, and extractors to the graph build.
-func BuildRunner(th Thresholds, comps ...*framework.Component) (*framework.Runner, error) {
-	def, err := AsteriskCircuitDef(th)
+// BuildRunner constructs a framework.Runner from the RCA circuit
+// definition with the given thresholds and components. When circuitData
+// is nil the embedded default is used.
+func BuildRunner(circuitData []byte, th Thresholds, comps ...*framework.Component) (*framework.Runner, error) {
+	def, err := LoadCircuitDef(circuitData, th)
 	if err != nil {
 		return nil, err
 	}

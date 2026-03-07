@@ -40,32 +40,35 @@ func AmbiguityPrompt() string {
 }
 
 // ScoreAmbiguity maps ambiguity-handling output to behavioral dimension scores.
-//
-// Scoring signals:
-//   - Explicitly acknowledges contradictions -> high convergence
-//   - Proposes resolution / asks for clarification -> resilient failure mode
-//   - Ignores contradictions and just implements -> high shortcut, brittle failure mode
-//   - Attempts both (dual path) -> thorough but potentially unfocused
+// Prefers structured output (CONTRADICTION/RESOLUTION/TRADE_OFFS/QUESTIONS fields)
+// with keyword fallback for unstructured responses.
 func ScoreAmbiguity(raw string) map[ouroboros.Dimension]float64 {
 	lower := strings.ToLower(raw)
+	parsed := ParseStructured(raw)
 
-	acknowledgesTimeout := containsAny(lower,
-		"contradiction", "conflict", "incompatible",
-		"7s", "7 second", "exceeds 2s", "exceeds the 2",
-		"budget", "backoff.*budget",
-	)
-	acknowledgesScope := containsAny(lower,
-		"idempoten", "mutating", "post", "put", "delete",
-		"non-idempotent", "scope conflict",
-	)
-	proposesResolution := containsAny(lower,
-		"resolve", "compromise", "recommend", "suggest",
-		"propose", "solution", "adjust", "reduce",
-	)
-	asksClarification := containsAny(lower,
-		"clarif", "ask product", "ask sre", "confirm with",
-		"need to discuss", "ambiguous",
-	)
+	acknowledgesTimeout := parsed.HasField("CONTRADICTION") ||
+		containsAny(lower,
+			"contradiction", "conflict", "incompatible",
+			"7s", "7 second", "exceeds 2s", "exceeds the 2",
+			"budget", "backoff.*budget",
+		)
+	acknowledgesScope := parsed.FieldContains("CONTRADICTION", "idempoten") ||
+		parsed.FieldContains("CONTRADICTION", "mutating") ||
+		containsAny(lower,
+			"idempoten", "mutating", "post", "put", "delete",
+			"non-idempotent", "scope conflict",
+		)
+	proposesResolution := parsed.HasField("RESOLUTION") ||
+		containsAny(lower,
+			"resolve", "compromise", "recommend", "suggest",
+			"propose", "solution", "adjust", "reduce",
+		)
+	asksClarification := parsed.ListLen("QUESTIONS") > 0 ||
+		containsAny(lower,
+			"clarif", "ask product", "ask sre", "confirm with",
+			"need to discuss", "ambiguous",
+		)
+	hasTradeOffs := parsed.HasField("TRADE_OFFS")
 
 	convergence := 0.0
 	if acknowledgesTimeout {
@@ -87,6 +90,9 @@ func ScoreAmbiguity(raw string) map[ouroboros.Dimension]float64 {
 	}
 	if proposesResolution || asksClarification {
 		failureMode += 0.15
+	}
+	if hasTradeOffs {
+		failureMode += 0.1
 	}
 	if !acknowledgesTimeout && !acknowledgesScope {
 		failureMode = 0.1

@@ -8,8 +8,13 @@ import (
 
 var testTime = time.Date(2026, 2, 18, 14, 30, 0, 0, time.UTC)
 
+func rcaReportTemplate(t *testing.T) []byte {
+	t.Helper()
+	return readInternalTestdata(t, "reports/rca-report.yaml")
+}
+
 func TestRenderAnalysisReport_EmptyReport(t *testing.T) {
-	got, err := RenderAnalysisReport(nil, testTime)
+	got, err := RenderAnalysisReport(nil, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -17,7 +22,7 @@ func TestRenderAnalysisReport_EmptyReport(t *testing.T) {
 		t.Errorf("expected empty-report message, got:\n%s", got)
 	}
 
-	got, err = RenderAnalysisReport(&AnalysisReport{}, testTime)
+	got, err = RenderAnalysisReport(&AnalysisReport{}, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -50,7 +55,7 @@ func TestRenderAnalysisReport_SingleCase(t *testing.T) {
 		},
 	}
 
-	got, err := RenderAnalysisReport(report, testTime)
+	got, err := RenderAnalysisReport(report, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -85,7 +90,7 @@ func TestRenderAnalysisReport_MultipleComponentsGrouped(t *testing.T) {
 		},
 	}
 
-	got, err := RenderAnalysisReport(report, testTime)
+	got, err := RenderAnalysisReport(report, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -117,7 +122,7 @@ func TestRenderAnalysisReport_RPTags(t *testing.T) {
 		},
 	}
 
-	got, err := RenderAnalysisReport(report, testTime)
+	got, err := RenderAnalysisReport(report, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -142,7 +147,7 @@ func TestRenderAnalysisReport_Flags(t *testing.T) {
 		},
 	}
 
-	got, err := RenderAnalysisReport(report, testTime)
+	got, err := RenderAnalysisReport(report, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -169,7 +174,7 @@ func TestRenderAnalysisReport_ConvergenceRounding(t *testing.T) {
 		},
 	}
 
-	got, err := RenderAnalysisReport(report, testTime)
+	got, err := RenderAnalysisReport(report, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -189,7 +194,7 @@ func TestRenderAnalysisReport_UnknownComponent(t *testing.T) {
 		},
 	}
 
-	got, err := RenderAnalysisReport(report, testTime)
+	got, err := RenderAnalysisReport(report, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -212,7 +217,7 @@ func TestRenderAnalysisReport_EvidenceDeduplication(t *testing.T) {
 		},
 	}
 
-	got, err := RenderAnalysisReport(report, testTime)
+	got, err := RenderAnalysisReport(report, testTime, rcaReportTemplate(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

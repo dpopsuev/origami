@@ -5,14 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"log/slog"
 	"strings"
-	"sync"
 
 	framework "github.com/dpopsuev/origami"
 	cal "github.com/dpopsuev/origami/calibrate"
 	"github.com/dpopsuev/origami/dispatch"
-	"github.com/dpopsuev/origami/logging"
 
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
@@ -44,6 +42,7 @@ type RunConfig struct {
 
 	GapConfidentThreshold    float64 // convergence >= this → confident (no gap brief); 0 uses default 0.80
 	GapInconclusiveThreshold float64 // convergence < this → inconclusive (gap brief required); 0 uses default 0.50
+	CircuitData              []byte  // circuit definition YAML; required
 }
 
 // DefaultRunConfig returns defaults for calibration.
@@ -78,9 +77,10 @@ func (c RunConfig) ResolvedGapInconclusiveThreshold() float64 {
 	return DefaultGapInconclusiveThreshold
 }
 
-// RunCalibration executes the full calibration loop.
-// For each run: create a fresh store, run all cases through the circuit, score.
-// The context enables cancellation of in-flight work across all goroutines.
+// RunCalibration executes the full calibration loop using the generic
+// calibrate.Run() harness with RCA adapters. This is a compatibility
+// wrapper — new code should use calibrate.Run() with RCACalibrationAdapter
+// directly.
 func RunCalibration(ctx context.Context, cfg RunConfig) (*CalibrationReport, error) {
 	if cfg.BasePath == "" {
 		cfg.BasePath = DefaultBasePath
@@ -89,233 +89,55 @@ func RunCalibration(ctx context.Context, cfg RunConfig) (*CalibrationReport, err
 		return nil, fmt.Errorf("RunConfig.ScoreCard is required (set it directly or declare scorecard: in your circuit YAML)")
 	}
 
-	report := &CalibrationReport{
-		CalibrationReport: cal.CalibrationReport{
-			Scenario:    cfg.Scenario.Name,
-			Transformer: cfg.TransformerName,
-			Runs:        cfg.Runs,
-		},
-		BasePath: cfg.BasePath,
-		Dataset:  buildDatasetHealth(cfg.Scenario),
+	adapter := &RCACalibrationAdapter{
+		Scenario:     cfg.Scenario,
+		Components:   cfg.Components,
+		IDMapper:     cfg.IDMapper,
+		BasePath:     cfg.BasePath,
+		Thresholds:   cfg.Thresholds,
+		ScoreCard:    cfg.ScoreCard,
+		TokenTracker: cfg.TokenTracker,
 	}
 
-	var allRunMetrics []MetricSet
-
-	logger := logging.New("calibrate")
-
-	for run := 0; run < cfg.Runs; run++ {
-		logger.Info("starting run", "run", run+1, "total", cfg.Runs)
-
-		results, suiteID, err := runSingleCalibration(ctx, cfg)
-		if err != nil {
-			return nil, fmt.Errorf("run %d: %w", run+1, err)
-		}
-
-		report.SuiteID = suiteID // keep last run's suite ID
-
-		if run == cfg.Runs-1 {
-			report.CaseResults = results
-		}
-
-		// Attach token summary if tracker was present — must happen
-		// BEFORE computeMetrics so M18 sees real token counts.
-		if cfg.TokenTracker != nil {
-			ts := cfg.TokenTracker.Summary()
-			report.Tokens = &ts
-
-			target := report.CaseResults
-			if run < cfg.Runs-1 {
-				target = results
-			}
-			for i := range target {
-				cid := target[i].CaseID
-				if cs, ok := ts.PerCase[cid]; ok {
-					target[i].PromptTokensTotal = cs.PromptTokens
-					target[i].ArtifactTokensTotal = cs.ArtifactTokens
-					target[i].StepCount = cs.Steps
-					target[i].WallClockMs = cs.WallClockMs
-				}
-			}
-		}
-
-		metrics := computeMetrics(cfg.Scenario, results, cfg.ScoreCard)
-		allRunMetrics = append(allRunMetrics, metrics)
+	def, err := LoadCircuitDef(cfg.CircuitData, cfg.Thresholds)
+	if err != nil {
+		return nil, fmt.Errorf("load circuit def: %w", err)
 	}
 
-	if len(allRunMetrics) == 1 {
-		report.Metrics = allRunMetrics[0]
-	} else {
-		report.RunMetrics = allRunMetrics
-		report.Metrics = aggregateRunMetrics(allRunMetrics, cfg.ScoreCard)
+	genReport, err := cal.Run(ctx, cal.HarnessConfig{
+		Loader:         adapter,
+		Collector:      adapter,
+		CircuitDef:     def,
+		ScoreCard:      cfg.ScoreCard,
+		Scenario:       cfg.Scenario.Name,
+		Transformer:    cfg.TransformerName,
+		Runs:           cfg.Runs,
+		Parallel:       cfg.Parallel,
+		OnCaseComplete: adapter.OnCaseComplete(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	report := adapter.RCAReport(genReport)
+
+	// Apply domain-specific metric post-processing.
+	ApplyDryCaps(&report.Metrics, cfg.Scenario.DryCappedMetrics)
+
+	m20def := cfg.ScoreCard.FindDef("M20")
+	if m20def != nil {
+		if cfg.Runs == 1 {
+			report.Metrics.Metrics = append(report.Metrics.Metrics,
+				m20def.ToMetric(0, "single run"))
+		} else {
+			report.Metrics = AggregateRunMetrics(
+				report.RunMetrics, cfg.ScoreCard,
+			)
+			ApplyDryCaps(&report.Metrics, cfg.Scenario.DryCappedMetrics)
+		}
 	}
 
 	return report, nil
-}
-
-// runSingleCalibration runs one complete calibration pass: all cases, fresh store.
-// Returns the case results and the suite ID used for artifact directories.
-// When cfg.Parallel > 1, cases are processed concurrently via errgroup.
-func runSingleCalibration(ctx context.Context, cfg RunConfig) ([]CaseResult, int64, error) {
-	st, err := store.OpenMemory()
-	if err != nil {
-		return nil, 0, fmt.Errorf("open memory store: %w", err)
-	}
-
-	suite := &store.InvestigationSuite{Name: cfg.Scenario.Name, Status: "active"}
-	suiteID, err := st.CreateSuite(suite)
-	if err != nil {
-		return nil, 0, fmt.Errorf("create suite: %w", err)
-	}
-
-	versionMap := make(map[string]int64)
-	for _, c := range cfg.Scenario.Cases {
-		if _, exists := versionMap[c.Version]; !exists {
-			v := &store.Version{Label: c.Version}
-			vid, err := st.CreateVersion(v)
-			if err != nil {
-				return nil, suiteID, fmt.Errorf("create version %s: %w", c.Version, err)
-			}
-			versionMap[c.Version] = vid
-		}
-	}
-
-	circuitMap := make(map[pipeKey]int64)
-	jobMap := make(map[pipeKey]int64)
-	launchMap := make(map[pipeKey]int64)
-
-	for _, c := range cfg.Scenario.Cases {
-		pk := pipeKey{c.Version, c.Job}
-		if _, exists := circuitMap[pk]; !exists {
-			pipe := &store.Circuit{
-				SuiteID: suiteID, VersionID: versionMap[c.Version],
-				Name: fmt.Sprintf("CI %s %s", c.Version, c.Job), Status: "complete",
-			}
-			pipeID, err := st.CreateCircuit(pipe)
-			if err != nil {
-				return nil, suiteID, fmt.Errorf("create circuit: %w", err)
-			}
-			circuitMap[pk] = pipeID
-
-		launch := &store.Launch{
-			CircuitID: pipeID, SourceRunID: "",
-			Name: fmt.Sprintf("Launch %s %s", c.Version, c.Job), Status: "complete",
-		}
-			launchID, err := st.CreateLaunch(launch)
-			if err != nil {
-				return nil, suiteID, fmt.Errorf("create launch: %w", err)
-			}
-			launchMap[pk] = launchID
-
-			job := &store.Job{
-				LaunchID: launchID,
-				Name:     c.Job, Status: "complete",
-			}
-			jobID, err := st.CreateJob(job)
-			if err != nil {
-				return nil, suiteID, fmt.Errorf("create job: %w", err)
-			}
-			jobMap[pk] = jobID
-		}
-	}
-
-	idMapper, hasIDMap := cfg.IDMapper, cfg.IDMapper != nil
-	logger := logging.New("calibrate")
-
-	type caseEntry struct {
-		gtCase   GroundTruthCase
-		caseData *store.Case
-		caseDir  string
-	}
-	entries := make([]caseEntry, len(cfg.Scenario.Cases))
-	batchCases := make([]framework.BatchCase, len(cfg.Scenario.Cases))
-	catalog := ScenarioToCatalog(cfg.Scenario.SourcePack)
-
-	for i, gtCase := range cfg.Scenario.Cases {
-		pk := pipeKey{gtCase.Version, gtCase.Job}
-		caseData := &store.Case{
-			JobID:        jobMap[pk],
-			LaunchID:     launchMap[pk],
-			SourceItemID: strconv.Itoa(i + 1),
-			Name:         gtCase.TestName,
-			Status:       "open",
-			ErrorMessage: gtCase.ErrorMessage,
-			LogSnippet:   gtCase.LogSnippet,
-		}
-		caseID, err := st.CreateCase(caseData)
-		if err != nil {
-			return nil, suiteID, fmt.Errorf("create case %s: %w", gtCase.ID, err)
-		}
-		caseData.ID = caseID
-
-		env := &rcatype.Envelope{
-			Name:        caseData.Name,
-			FailureList: []rcatype.FailureItem{{Name: caseData.Name}},
-		}
-		caseDir, _ := EnsureCaseDir(cfg.BasePath, suiteID, caseData.ID)
-
-		storeComp := &framework.Component{
-			Namespace: "store",
-			Name:      "rca-store-hooks",
-			Hooks:     StoreHooks(st, caseData),
-		}
-		injectComp := &framework.Component{
-			Namespace: "inject",
-			Name:      "rca-inject-hooks",
-			Hooks:     InjectHooks(st, caseData, env, catalog, caseDir),
-		}
-
-		entries[i] = caseEntry{gtCase: gtCase, caseData: caseData, caseDir: caseDir}
-
-		adapters := make([]*framework.Component, len(cfg.Components), len(cfg.Components)+2)
-		copy(adapters, cfg.Components)
-		adapters = append(adapters, storeComp, injectComp)
-
-		batchCases[i] = framework.BatchCase{
-			ID: gtCase.ID,
-			Context: map[string]any{
-				KeyCaseData:  caseData,
-				KeyEnvelope:  env,
-				KeyCaseDir:   caseDir,
-				KeyCaseLabel: gtCase.ID,
-			},
-			Components: adapters,
-		}
-	}
-
-	def, err := AsteriskCircuitDef(cfg.Thresholds)
-	if err != nil {
-		return nil, suiteID, fmt.Errorf("load circuit def: %w", err)
-	}
-
-	var mu sync.Mutex
-	batchResults := framework.BatchWalk(ctx, framework.BatchWalkConfig{
-		Def:      def,
-		Shared:   framework.GraphRegistries{},
-		Cases:    batchCases,
-		Parallel: cfg.Parallel,
-		OnCaseComplete: func(i int, _ framework.BatchWalkResult) {
-			if hasIDMap {
-				mu.Lock()
-				updateIDMaps(idMapper, st, entries[i].caseData, entries[i].gtCase, cfg.Scenario)
-				mu.Unlock()
-			}
-		},
-	})
-
-	results := make([]CaseResult, len(entries))
-	for i, br := range batchResults {
-		entry := entries[i]
-		logger.Info("processed case",
-			"case_id", entry.gtCase.ID, "index", i+1, "total", len(entries), "test", entry.gtCase.TestName)
-
-		results[i] = collectCaseResult(br, entry.gtCase, entry.caseData, entry.caseDir, suiteID, st, cfg)
-	}
-
-	for i := range results {
-		scoreCaseResult(&results[i], cfg.Scenario)
-	}
-
-	return results, suiteID, nil
 }
 
 // scoreCaseResult sets the DefectTypeCorrect, PathCorrect, and ComponentCorrect
@@ -377,14 +199,13 @@ func collectCaseResult(
 	}
 
 	for _, nodeName := range br.Path {
-		result.ActualPath = append(result.ActualPath, stepName(NodeNameToStep(nodeName)))
+		result.ActualPath = append(result.ActualPath, nodeName)
 	}
 
 	for nodeName, art := range br.StepArtifacts {
-		step := NodeNameToStep(nodeName)
-		extractStepMetrics(&result, step, art.Raw(), gtCase)
-		if err := WriteArtifact(caseDir, ArtifactFilename(step), art.Raw()); err != nil {
-			logging.New("calibrate").Warn("write artifact", "step", step, "error", err)
+		extractStepMetrics(&result, nodeName, art.Raw(), gtCase)
+		if err := WriteArtifact(caseDir, NodeArtifactFilename(nodeName), art.Raw()); err != nil {
+			slog.Warn("write artifact", "component", "calibrate", "node", nodeName, "error", err)
 		}
 	}
 
@@ -393,7 +214,7 @@ func collectCaseResult(
 		history := make([]StepRecord, 0, len(ws.History))
 		for _, h := range ws.History {
 			history = append(history, StepRecord{
-				Step:        NodeNameToStep(h.Node),
+				Step:        h.Node,
 				Outcome:     h.Outcome,
 				HeuristicID: h.EdgeID,
 				Timestamp:   h.Timestamp,
@@ -402,13 +223,13 @@ func collectCaseResult(
 		caseState := &CaseState{
 			CaseID:      caseData.ID,
 			SuiteID:     suiteID,
-			CurrentStep: NodeNameToStep(ws.CurrentNode),
+			CurrentStep: ws.CurrentNode,
 			Status:      ws.Status,
 			LoopCounts:  ws.LoopCounts,
 			History:     history,
 		}
 		if err := WriteArtifact(caseDir, "state.json", caseState); err != nil {
-			logging.New("calibrate").Warn("save final state", "error", err)
+			slog.Warn("save final state", "component", "calibrate", "error", err)
 		}
 		result.ActualLoops = ws.LoopCounts["investigate"]
 	}
@@ -432,50 +253,56 @@ func collectCaseResult(
 
 
 // extractStepMetrics populates CaseResult fields from per-step artifacts.
-func extractStepMetrics(result *CaseResult, step CircuitStep, artifact any, gt GroundTruthCase) {
-	switch step {
-	case StepF0Recall:
-		if r, ok := artifact.(*RecallResult); ok && r != nil {
-			result.ActualRecallHit = r.Match && r.Confidence >= 0.80
+func extractStepMetrics(result *CaseResult, nodeName string, artifact any, gt GroundTruthCase) {
+	m := asMap(artifact)
+	if m == nil {
+		return
+	}
+	switch nodeName {
+	case "recall":
+		result.ActualRecallHit = mapBool(m, "match") && mapFloat(m, "confidence") >= 0.80
+	case "triage":
+		result.ActualCategory = mapStr(m, "symptom_category")
+		cat := mapStr(m, "symptom_category")
+		result.ActualSkip = mapBool(m, "skip_investigation") ||
+			cat == "infra" || cat == "flake"
+		result.ActualCascade = mapBool(m, "cascade_suspected")
+		if hyp := mapStr(m, "defect_type_hypothesis"); hyp != "" && result.ActualDefectType == "" {
+			result.ActualDefectType = hyp
 		}
-	case StepF1Triage:
-		if r, ok := artifact.(*TriageResult); ok && r != nil {
-			result.ActualCategory = r.SymptomCategory
-		result.ActualSkip = r.SkipInvestigation ||
-			r.SymptomCategory == "infra" || r.SymptomCategory == "flake"
-		result.ActualCascade = r.CascadeSuspected
-		// Always capture triage hypothesis as fallback defect type.
-		// Investigation (F3) overwrites this if it produces a defect type.
-		// This ensures cases that skip investigation via heuristics (e.g. infra/flake
-		// routed F1→F5 by H14) still get credit for correct classification.
-		if r.DefectTypeHypothesis != "" && result.ActualDefectType == "" {
-			result.ActualDefectType = r.DefectTypeHypothesis
+		candidates := mapStrSlice(m, "candidate_repos")
+		if len(candidates) == 1 && !mapBool(m, "skip_investigation") {
+			result.ActualSelectedRepos = append(result.ActualSelectedRepos, candidates[0])
 		}
-			// When H7 fires (single candidate repo), F2 is skipped but the repo is
-			// effectively selected by triage. Capture it for repo selection metrics.
-			if len(r.CandidateRepos) == 1 && !r.SkipInvestigation {
-				result.ActualSelectedRepos = append(result.ActualSelectedRepos, r.CandidateRepos[0])
+	case "resolve":
+		result.ActualSelectedRepos = result.ActualSelectedRepos[:0]
+		for _, r := range mapSlice(m, "selected_repos") {
+			if rm, ok := r.(map[string]any); ok {
+				if name := mapStr(rm, "name"); name != "" {
+					result.ActualSelectedRepos = append(result.ActualSelectedRepos, name)
+				}
 			}
 		}
-	case StepF2Resolve:
-		if r, ok := artifact.(*ResolveResult); ok && r != nil {
-			result.ActualSelectedRepos = result.ActualSelectedRepos[:0]
-			for _, repo := range r.SelectedRepos {
-				result.ActualSelectedRepos = append(result.ActualSelectedRepos, repo.Name)
-			}
+	case "investigate":
+		result.ActualDefectType = mapStr(m, "defect_type")
+		result.ActualRCAMessage = mapStr(m, "rca_message")
+		result.ActualEvidenceRefs = mapStrSlice(m, "evidence_refs")
+		result.ActualConvergence = mapFloat(m, "convergence_score")
+		if comp := mapStr(m, "component"); comp != "" {
+			result.ActualComponent = comp
 		}
-	case StepF3Invest:
-		if r, ok := artifact.(*InvestigateArtifact); ok && r != nil {
-			result.ActualDefectType = r.DefectType
-			result.ActualRCAMessage = r.RCAMessage
-			result.ActualEvidenceRefs = r.EvidenceRefs
-			result.ActualConvergence = r.ConvergenceScore
-			if r.Component != "" {
-				result.ActualComponent = r.Component
-			}
-			if r.GapBrief != nil {
-				result.VerdictConfidence = r.GapBrief.Verdict
-				result.EvidenceGaps = r.GapBrief.GapItems
+		if gb := mapMap(m, "gap_brief"); gb != nil {
+			result.VerdictConfidence = mapStr(gb, "verdict")
+			for _, item := range mapSlice(gb, "gap_items") {
+				if eg, ok := item.(map[string]any); ok {
+					result.EvidenceGaps = append(result.EvidenceGaps, EvidenceGap{
+						Category:    mapStr(eg, "category"),
+						Description: mapStr(eg, "description"),
+						WouldHelp:   mapStr(eg, "would_help"),
+						Source:      mapStr(eg, "source"),
+						Blocked:     mapStr(eg, "blocked"),
+					})
+				}
 			}
 		}
 	}
@@ -569,23 +396,6 @@ func updateIDMaps(mapper IDMappable, st store.Store, caseData *store.Case, gtCas
 // pipeKey uniquely identifies a (version, job) combination for circuit/launch/job mapping.
 type pipeKey struct{ version, job string }
 
-// stepName returns the short machine code (F0, F1, ...) for internal path tracking.
-// Use vocabName() or vocabStagePath() to humanize for output.
-func stepName(s CircuitStep) string {
-	m := map[CircuitStep]string{
-		StepF0Recall:    "F0",
-		StepF1Triage:    "F1",
-		StepF2Resolve:   "F2",
-		StepF3Invest:    "F3",
-		StepF4Correlate: "F4",
-		StepF5Review:    "F5",
-		StepF6Report:    "F6",
-	}
-	if n, ok := m[s]; ok {
-		return n
-	}
-	return string(s)
-}
 
 func parseJSON[T any](data json.RawMessage) (*T, error) {
 	cleaned := cleanJSON(data)

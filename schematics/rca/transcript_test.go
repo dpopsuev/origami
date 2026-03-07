@@ -29,6 +29,7 @@ func TestWeaveTranscripts_StubTransformer(t *testing.T) {
 		Thresholds:  rca.DefaultThresholds(),
 		BasePath:    tmpDir,
 		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)
@@ -101,6 +102,7 @@ func TestWeaveTranscripts_GroupsByRCA(t *testing.T) {
 		Thresholds:  rca.DefaultThresholds(),
 		BasePath:    tmpDir,
 		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)
@@ -163,7 +165,7 @@ func TestRenderRCATranscript_ReverseOrder(t *testing.T) {
 		},
 	}
 
-	md, err := rca.RenderTranscript(tr)
+	md, err := rca.RenderTranscript(tr, readTestdata(t, "reports/transcript-report.yaml"))
 	if err != nil {
 		t.Fatalf("RenderTranscript: %v", err)
 	}
@@ -208,7 +210,7 @@ func TestRenderRCATranscript_IncludesPromptWhenAvailable(t *testing.T) {
 		},
 	}
 
-	md, err := rca.RenderTranscript(tr)
+	md, err := rca.RenderTranscript(tr, readTestdata(t, "reports/transcript-report.yaml"))
 	if err != nil {
 		t.Fatalf("RenderTranscript: %v", err)
 	}
@@ -238,7 +240,7 @@ func TestRenderTranscript_OmitsPromptWhenEmpty(t *testing.T) {
 		},
 	}
 
-	md, err := rca.RenderTranscript(tr)
+	md, err := rca.RenderTranscript(tr, readTestdata(t, "reports/transcript-report.yaml"))
 	if err != nil {
 		t.Fatalf("RenderTranscript: %v", err)
 	}
@@ -286,6 +288,7 @@ func TestWeaveTranscripts_WritesToDisk(t *testing.T) {
 		Thresholds:  rca.DefaultThresholds(),
 		BasePath:    tmpDir,
 		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)
@@ -305,7 +308,7 @@ func TestWeaveTranscripts_WritesToDisk(t *testing.T) {
 
 	for i := range transcripts {
 		slug := rca.TranscriptSlug(&transcripts[i])
-		md, renderErr := rca.RenderTranscript(&transcripts[i])
+		md, renderErr := rca.RenderTranscript(&transcripts[i], readTestdata(t, "reports/transcript-report.yaml"))
 		if renderErr != nil {
 			t.Fatalf("RenderTranscript %s: %v", slug, renderErr)
 		}

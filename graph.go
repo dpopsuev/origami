@@ -1,5 +1,7 @@
 package framework
 
+// Category: Core Primitives
+
 import (
 	"context"
 	"fmt"
@@ -189,7 +191,7 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 
 		exitMeta := map[string]any{}
 		if ca, ok := artifact.(CountableArtifact); ok {
-			exitMeta["snr"] = EvidenceSNR(ca.InputCount(), ca.OutputCount())
+			exitMeta["snr"] = evidenceSNR(ca.InputCount(), ca.OutputCount())
 		}
 		emitEvent(obs, WalkEvent{Type: EventNodeExit, Node: node.Name(), Walker: walkerName, Artifact: artifact, Elapsed: nodeElapsed, Metadata: exitMeta})
 
@@ -388,7 +390,7 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 
 		teamExitMeta := map[string]any{}
 		if ca, ok := artifact.(CountableArtifact); ok {
-			teamExitMeta["snr"] = EvidenceSNR(ca.InputCount(), ca.OutputCount())
+			teamExitMeta["snr"] = evidenceSNR(ca.InputCount(), ca.OutputCount())
 		}
 		emitEvent(obs, WalkEvent{
 			Type:     EventNodeExit,
@@ -500,4 +502,13 @@ func composeObservers(a, b WalkObserver) WalkObserver {
 		return a
 	}
 	return MultiObserver{a, b}
+}
+
+// evidenceSNR computes signal-to-noise ratio: outputItems / inputItems.
+// Returns 0 when inputItems <= 0 (no signal to measure).
+func evidenceSNR(inputItems, outputItems int) float64 {
+	if inputItems <= 0 {
+		return 0
+	}
+	return float64(outputItems) / float64(inputItems)
 }

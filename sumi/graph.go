@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 	"github.com/dpopsuev/origami/view"
 	"github.com/charmbracelet/lipgloss"
 )
 
 func resolveApproachToElement(approach string) string {
-	e, _ := framework.ResolveApproach(strings.ToLower(approach))
+	e, _ := element.ResolveApproach(strings.ToLower(approach))
 	return string(e)
 }
 

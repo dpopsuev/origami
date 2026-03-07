@@ -1,5 +1,7 @@
 package framework
 
+// Category: Core Primitives
+
 // Edge is a conditional connection between two Nodes.
 // It maps to orchestrate.HeuristicRule: the Evaluate function is the
 // edge weight function that determines whether this transition fires.

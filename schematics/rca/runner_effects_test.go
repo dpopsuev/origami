@@ -12,8 +12,8 @@ func TestStoreEffects_F0Recall_NoMatch(t *testing.T) {
 	st := store.NewMemStore()
 	caseData := createTestCase(t, st)
 
-	artifact := &RecallResult{Match: false, Confidence: 0.1}
-	err := applyStoreEffects(st, caseData, StepF0Recall, artifact)
+	artifact := map[string]any{"match": false, "confidence": 0.1}
+	err := applyStoreEffects(st, caseData, "recall", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -48,8 +48,8 @@ func TestStoreEffects_F0Recall_Match(t *testing.T) {
 		t.Fatalf("save rca: %v", err)
 	}
 
-	artifact := &RecallResult{Match: true, PriorRCAID: rcaID, SymptomID: symID, Confidence: 0.85}
-	err = applyStoreEffects(st, caseData, StepF0Recall, artifact)
+	artifact := map[string]any{"match": true, "prior_rca_id": float64(rcaID), "symptom_id": float64(symID), "confidence": 0.85}
+	err = applyStoreEffects(st, caseData, "recall", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -66,13 +66,13 @@ func TestStoreEffects_F1Triage(t *testing.T) {
 	st := store.NewMemStore()
 	caseData := createTestCase(t, st)
 
-	artifact := &TriageResult{
-		SymptomCategory:      "product",
-		Severity:             "high",
-		DefectTypeHypothesis: "pb001",
-		CandidateRepos:       []string{"linuxptp-daemon"},
+	artifact := map[string]any{
+		"symptom_category":       "product",
+		"severity":               "high",
+		"defect_type_hypothesis": "pb001",
+		"candidate_repos":        []any{"linuxptp-daemon"},
 	}
-	err := applyStoreEffects(st, caseData, StepF1Triage, artifact)
+	err := applyStoreEffects(st, caseData, "triage", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -96,14 +96,14 @@ func TestStoreEffects_F3Investigate(t *testing.T) {
 	symID, _ := st.CreateSymptom(sym)
 	caseData.SymptomID = symID
 
-	artifact := &InvestigateArtifact{
-		RCAMessage:       "PTP clock offset exceeded threshold",
-		DefectType:       "pb001",
-		Component:        "linuxptp-daemon",
-		ConvergenceScore: 0.85,
-		EvidenceRefs:     []string{"src/ptp.c"},
+	artifact := map[string]any{
+		"rca_message":        "PTP clock offset exceeded threshold",
+		"defect_type":        "pb001",
+		"component":          "linuxptp-daemon",
+		"convergence_score":  0.85,
+		"evidence_refs":      []any{"src/ptp.c"},
 	}
-	err := applyStoreEffects(st, caseData, StepF3Invest, artifact)
+	err := applyStoreEffects(st, caseData, "investigate", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -142,12 +142,12 @@ func TestStoreEffects_F4Correlate_Duplicate(t *testing.T) {
 	rca := &store.RCA{Title: "existing rca", Status: "open"}
 	rcaID, _ := st.SaveRCA(rca)
 
-	artifact := &CorrelateResult{
-		IsDuplicate: true,
-		LinkedRCAID: rcaID,
-		Confidence:  0.90,
+	artifact := map[string]any{
+		"is_duplicate":   true,
+		"linked_rca_id":  float64(rcaID),
+		"confidence":     0.90,
 	}
-	err := applyStoreEffects(st, caseData, StepF4Correlate, artifact)
+	err := applyStoreEffects(st, caseData, "correlate", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -161,8 +161,8 @@ func TestStoreEffects_F4Correlate_NotDuplicate(t *testing.T) {
 	st := store.NewMemStore()
 	caseData := createTestCase(t, st)
 
-	artifact := &CorrelateResult{IsDuplicate: false}
-	err := applyStoreEffects(st, caseData, StepF4Correlate, artifact)
+	artifact := map[string]any{"is_duplicate": false}
+	err := applyStoreEffects(st, caseData, "correlate", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -176,8 +176,8 @@ func TestStoreEffects_F5Review_Approve(t *testing.T) {
 	st := store.NewMemStore()
 	caseData := createTestCase(t, st)
 
-	artifact := &ReviewDecision{Decision: "approve"}
-	err := applyStoreEffects(st, caseData, StepF5Review, artifact)
+	artifact := map[string]any{"decision": "approve"}
+	err := applyStoreEffects(st, caseData, "review", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -196,14 +196,14 @@ func TestStoreEffects_F5Review_Overturn(t *testing.T) {
 	rcaID, _ := st.SaveRCA(rca)
 	caseData.RCAID = rcaID
 
-	artifact := &ReviewDecision{
-		Decision: "overturn",
-		HumanOverride: &HumanOverride{
-			DefectType: "au001",
-			RCAMessage: "human corrected: automation issue",
+	artifact := map[string]any{
+		"decision": "overturn",
+		"human_override": map[string]any{
+			"defect_type": "au001",
+			"rca_message": "human corrected: automation issue",
 		},
 	}
-	err := applyStoreEffects(st, caseData, StepF5Review, artifact)
+	err := applyStoreEffects(st, caseData, "review", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -229,8 +229,8 @@ func TestStoreEffects_F2Resolve_NoOp(t *testing.T) {
 	st := store.NewMemStore()
 	caseData := createTestCase(t, st)
 
-	artifact := &ResolveResult{SelectedRepos: []RepoSelection{{Name: "repo"}}}
-	err := applyStoreEffects(st, caseData, StepF2Resolve, artifact)
+	artifact := map[string]any{"selected_repos": []any{map[string]any{"name": "repo"}}}
+	err := applyStoreEffects(st, caseData, "resolve", artifact)
 	if err != nil {
 		t.Fatalf("applyStoreEffects: %v", err)
 	}
@@ -242,7 +242,7 @@ func TestStoreEffects_NilArtifact(t *testing.T) {
 	caseData := createTestCase(t, st)
 
 	// nil artifact should be safely handled
-	err := applyStoreEffects(st, caseData, StepF0Recall, nil)
+	err := applyStoreEffects(st, caseData, "recall", nil)
 	if err != nil {
 		t.Fatalf("expected nil artifact to be safe, got: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestStoreEffects_WrongType(t *testing.T) {
 	caseData := createTestCase(t, st)
 
 	// Wrong artifact type should be silently ignored
-	err := applyStoreEffects(st, caseData, StepF0Recall, "not a recall result")
+	err := applyStoreEffects(st, caseData, "recall", "not a recall result")
 	if err != nil {
 		t.Fatalf("expected wrong type to be safe, got: %v", err)
 	}

@@ -1,8 +1,8 @@
 package scenarios
 
 import (
-	"embed"
 	"fmt"
+	"io/fs"
 	"sort"
 	"strings"
 
@@ -11,15 +11,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed *.yaml
-var scenarioFS embed.FS
-
-// LoadScenario reads a scenario by name from the embedded YAML files.
-func LoadScenario(name string) (*rca.Scenario, error) {
-	data, err := scenarioFS.ReadFile(name + ".yaml")
+// LoadScenario reads a scenario by name from the given filesystem.
+func LoadScenario(fsys fs.FS, name string) (*rca.Scenario, error) {
+	data, err := fs.ReadFile(fsys, name+".yaml")
 	if err != nil {
 		return nil, fmt.Errorf("scenario %q not found (available: %s): %w",
-			name, strings.Join(ListScenarios(), ", "), err)
+			name, strings.Join(ListScenarios(fsys), ", "), err)
 	}
 	var s rca.Scenario
 	if err := yaml.Unmarshal(data, &s); err != nil {
@@ -28,9 +25,9 @@ func LoadScenario(name string) (*rca.Scenario, error) {
 	return &s, nil
 }
 
-// ListScenarios returns the names of all embedded scenarios, sorted.
-func ListScenarios() []string {
-	entries, _ := scenarioFS.ReadDir(".")
+// ListScenarios returns the names of all scenarios in the given filesystem, sorted.
+func ListScenarios(fsys fs.FS) []string {
+	entries, _ := fs.ReadDir(fsys, ".")
 	var names []string
 	for _, e := range entries {
 		if strings.HasSuffix(e.Name(), ".yaml") {

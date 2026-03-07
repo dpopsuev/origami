@@ -20,7 +20,7 @@ func newTestHeuristic(t *testing.T, repos []string) (*heuristicTransformer, stor
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
-	return NewHeuristicTransformer(st, repos), st
+	return NewHeuristicTransformer(st, repos, readInternalTestdata(t, "heuristics.yaml")), st
 }
 
 // ---------------------------------------------------------------------------
@@ -385,11 +385,11 @@ func TestBuildRecall_NoMatch(t *testing.T) {
 	ht, _ := newTestHeuristic(t, nil)
 	fp := failureInfo{name: "test", errorMessage: "error"}
 	result := ht.buildRecall(fp)
-	if result.Match {
+	if mapBool(result, "match") {
 		t.Error("expected no match for empty store")
 	}
-	if result.Confidence != 0.0 {
-		t.Errorf("confidence = %f, want 0.0", result.Confidence)
+	if mapFloat(result, "confidence") != 0.0 {
+		t.Errorf("confidence = %f, want 0.0", mapFloat(result, "confidence"))
 	}
 }
 
@@ -404,14 +404,14 @@ func TestBuildRecall_SymptomHit_NoRCA(t *testing.T) {
 	}
 
 	result := ht.buildRecall(fp)
-	if !result.Match {
+	if !mapBool(result, "match") {
 		t.Error("expected match")
 	}
-	if result.Confidence != 0.60 {
-		t.Errorf("confidence = %f, want 0.60", result.Confidence)
+	if mapFloat(result, "confidence") != 0.60 {
+		t.Errorf("confidence = %f, want 0.60", mapFloat(result, "confidence"))
 	}
-	if result.PriorRCAID != 0 {
-		t.Errorf("expected no prior RCA, got %d", result.PriorRCAID)
+	if mapFloat(result, "prior_rca_id") != 0 {
+		t.Errorf("expected no prior RCA, got %v", result["prior_rca_id"])
 	}
 }
 
@@ -437,14 +437,14 @@ func TestBuildRecall_SymptomHit_WithRCA(t *testing.T) {
 	}
 
 	result := ht.buildRecall(fp)
-	if !result.Match {
+	if !mapBool(result, "match") {
 		t.Error("expected match")
 	}
-	if result.Confidence != 0.85 {
-		t.Errorf("confidence = %f, want 0.85", result.Confidence)
+	if mapFloat(result, "confidence") != 0.85 {
+		t.Errorf("confidence = %f, want 0.85", mapFloat(result, "confidence"))
 	}
-	if result.PriorRCAID != rcaID {
-		t.Errorf("PriorRCAID = %d, want %d", result.PriorRCAID, rcaID)
+	if mapInt64(result, "prior_rca_id") != rcaID {
+		t.Errorf("prior_rca_id = %d, want %d", mapInt64(result, "prior_rca_id"), rcaID)
 	}
 }
 
@@ -459,29 +459,31 @@ func TestBuildTriage(t *testing.T) {
 	t.Run("product with known component", func(t *testing.T) {
 		fp := failureInfo{name: "phc2sys offset test", errorMessage: "phc2sys offset exceeded"}
 		result := ht.buildTriage(fp)
-		if result.SymptomCategory != "product" {
-			t.Errorf("category = %q, want product", result.SymptomCategory)
+		if mapStr(result, "symptom_category") != "product" {
+			t.Errorf("category = %q, want product", mapStr(result, "symptom_category"))
 		}
-		if result.SkipInvestigation {
+		if mapBool(result, "skip_investigation") {
 			t.Error("product should not skip investigation")
 		}
-		if len(result.CandidateRepos) != 1 || result.CandidateRepos[0] != "linuxptp-daemon" {
-			t.Errorf("repos = %v, want [linuxptp-daemon]", result.CandidateRepos)
+		repos := mapStrSlice(result, "candidate_repos")
+		if len(repos) != 1 || repos[0] != "linuxptp-daemon" {
+			t.Errorf("repos = %v, want [linuxptp-daemon]", repos)
 		}
 	})
 
 	t.Run("unknown component uses all repos", func(t *testing.T) {
 		fp := failureInfo{name: "random test", errorMessage: "random error"}
 		result := ht.buildTriage(fp)
-		if len(result.CandidateRepos) != 2 {
-			t.Errorf("expected 2 repos, got %d", len(result.CandidateRepos))
+		repos := mapStrSlice(result, "candidate_repos")
+		if len(repos) != 2 {
+			t.Errorf("expected 2 repos, got %d", len(repos))
 		}
 	})
 
 	t.Run("cascade suspected", func(t *testing.T) {
 		fp := failureInfo{name: "test", errorMessage: "aftereach cleanup failed"}
 		result := ht.buildTriage(fp)
-		if !result.CascadeSuspected {
+		if !mapBool(result, "cascade_suspected") {
 			t.Error("expected cascade for aftereach keyword")
 		}
 	})
@@ -489,8 +491,8 @@ func TestBuildTriage(t *testing.T) {
 	t.Run("severity always medium", func(t *testing.T) {
 		fp := failureInfo{name: "test", errorMessage: "error"}
 		result := ht.buildTriage(fp)
-		if result.Severity != "medium" {
-			t.Errorf("severity = %q, want medium", result.Severity)
+		if mapStr(result, "severity") != "medium" {
+			t.Errorf("severity = %q, want medium", mapStr(result, "severity"))
 		}
 	})
 }
@@ -506,19 +508,22 @@ func TestBuildResolve(t *testing.T) {
 	t.Run("known component — single repo", func(t *testing.T) {
 		fp := failureInfo{name: "phc2sys test", errorMessage: "phc2sys error"}
 		result := ht.buildResolve(fp)
-		if len(result.SelectedRepos) != 1 {
-			t.Fatalf("expected 1 repo, got %d", len(result.SelectedRepos))
+		repos := mapSlice(result, "selected_repos")
+		if len(repos) != 1 {
+			t.Fatalf("expected 1 repo, got %d", len(repos))
 		}
-		if result.SelectedRepos[0].Name != "linuxptp-daemon" {
-			t.Errorf("repo = %q, want linuxptp-daemon", result.SelectedRepos[0].Name)
+		rm := repos[0].(map[string]any)
+		if mapStr(rm, "name") != "linuxptp-daemon" {
+			t.Errorf("repo = %q, want linuxptp-daemon", mapStr(rm, "name"))
 		}
 	})
 
 	t.Run("unknown component — all repos", func(t *testing.T) {
 		fp := failureInfo{name: "random", errorMessage: "nothing"}
 		result := ht.buildResolve(fp)
-		if len(result.SelectedRepos) != 2 {
-			t.Errorf("expected 2 repos, got %d", len(result.SelectedRepos))
+		repos := mapSlice(result, "selected_repos")
+		if len(repos) != 2 {
+			t.Errorf("expected 2 repos, got %d", len(repos))
 		}
 	})
 }
@@ -533,16 +538,17 @@ func TestBuildInvestigate(t *testing.T) {
 	t.Run("constructs rca message from parts", func(t *testing.T) {
 		fp := failureInfo{name: "TestClock", errorMessage: "phc2sys offset exceeded"}
 		result := ht.buildInvestigate(fp)
-		if result.Component != "linuxptp-daemon" {
-			t.Errorf("component = %q, want linuxptp-daemon", result.Component)
+		if mapStr(result, "component") != "linuxptp-daemon" {
+			t.Errorf("component = %q, want linuxptp-daemon", mapStr(result, "component"))
 		}
-		if !strings.Contains(result.RCAMessage, "phc2sys offset exceeded") {
+		msg := mapStr(result, "rca_message")
+		if !strings.Contains(msg, "phc2sys offset exceeded") {
 			t.Error("rca message should contain error message")
 		}
-		if !strings.Contains(result.RCAMessage, "TestClock") {
+		if !strings.Contains(msg, "TestClock") {
 			t.Error("rca message should contain test name")
 		}
-		if !strings.Contains(result.RCAMessage, "Suspected component") {
+		if !strings.Contains(msg, "Suspected component") {
 			t.Error("rca message should mention suspected component")
 		}
 	})
@@ -550,23 +556,23 @@ func TestBuildInvestigate(t *testing.T) {
 	t.Run("empty case — fallback message", func(t *testing.T) {
 		fp := failureInfo{}
 		result := ht.buildInvestigate(fp)
-		if result.RCAMessage != "investigation pending (no error message available)" {
-			t.Errorf("unexpected fallback message: %q", result.RCAMessage)
+		if mapStr(result, "rca_message") != "investigation pending (no error message available)" {
+			t.Errorf("unexpected fallback message: %q", mapStr(result, "rca_message"))
 		}
 	})
 
 	t.Run("convergence score populated", func(t *testing.T) {
 		fp := failureInfo{name: "test", errorMessage: "phc2sys ptp4l ocpbugs-123"}
 		result := ht.buildInvestigate(fp)
-		if result.ConvergenceScore < 0.70 {
-			t.Errorf("convergence = %f, expected >= 0.70", result.ConvergenceScore)
+		if mapFloat(result, "convergence_score") < 0.70 {
+			t.Errorf("convergence = %f, expected >= 0.70", mapFloat(result, "convergence_score"))
 		}
 	})
 
 	t.Run("evidence refs populated", func(t *testing.T) {
 		fp := failureInfo{name: "test", errorMessage: "OCPBUGS-555 in phc2sys"}
 		result := ht.buildInvestigate(fp)
-		if len(result.EvidenceRefs) == 0 {
+		if len(mapStrSlice(result, "evidence_refs")) == 0 {
 			t.Error("expected evidence refs")
 		}
 	})
@@ -580,7 +586,7 @@ func TestBuildCorrelate_EmptyStore(t *testing.T) {
 	ht, _ := newTestHeuristic(t, nil)
 	fp := failureInfo{errorMessage: "some error"}
 	result := ht.buildCorrelate(fp)
-	if result.IsDuplicate {
+	if mapBool(result, "is_duplicate") {
 		t.Error("expected no duplicate for empty store")
 	}
 }
@@ -593,7 +599,7 @@ func TestBuildCorrelate_EmptyErrorMessage(t *testing.T) {
 	}
 	fp := failureInfo{errorMessage: ""}
 	result := ht.buildCorrelate(fp)
-	if result.IsDuplicate {
+	if mapBool(result, "is_duplicate") {
 		t.Error("expected no duplicate for empty error message")
 	}
 }
@@ -607,14 +613,14 @@ func TestBuildCorrelate_Match(t *testing.T) {
 	}
 	fp := failureInfo{errorMessage: "phc2sys offset too large"}
 	result := ht.buildCorrelate(fp)
-	if !result.IsDuplicate {
+	if !mapBool(result, "is_duplicate") {
 		t.Error("expected duplicate match")
 	}
-	if result.LinkedRCAID != rcaID {
-		t.Errorf("LinkedRCAID = %d, want %d", result.LinkedRCAID, rcaID)
+	if mapInt64(result, "linked_rca_id") != rcaID {
+		t.Errorf("linked_rca_id = %d, want %d", mapInt64(result, "linked_rca_id"), rcaID)
 	}
-	if result.Confidence != 0.75 {
-		t.Errorf("confidence = %f, want 0.75", result.Confidence)
+	if mapFloat(result, "confidence") != 0.75 {
+		t.Errorf("confidence = %f, want 0.75", mapFloat(result, "confidence"))
 	}
 }
 
@@ -626,7 +632,7 @@ func TestBuildCorrelate_NoMatch(t *testing.T) {
 	}
 	fp := failureInfo{errorMessage: "phc2sys offset exceeded"}
 	result := ht.buildCorrelate(fp)
-	if result.IsDuplicate {
+	if mapBool(result, "is_duplicate") {
 		t.Error("expected no match for unrelated RCA")
 	}
 }

@@ -65,22 +65,22 @@ func (t *rcaTransformer) Name() string        { return "rca" }
 func (t *rcaTransformer) Deterministic() bool { return false }
 
 func (t *rcaTransformer) Transform(ctx context.Context, tc *framework.TransformerContext) (any, error) {
-	step := NodeNameToStep(tc.NodeName)
-	if step == "" {
-		return nil, fmt.Errorf("rca transformer: unknown node %q", tc.NodeName)
+	nodeName := tc.NodeName
+	if nodeName == "" {
+		return nil, fmt.Errorf("rca transformer: empty node name")
 	}
 
 	params := ParamsFromContext(tc.WalkerState.Context)
-	params.StepName = string(step)
+	params.StepName = nodeName
 
 	templatePath := tc.Prompt
 	if templatePath == "" {
-		return nil, fmt.Errorf("rca transformer: node %q has no prompt: field", tc.NodeName)
+		return nil, fmt.Errorf("rca transformer: node %q has no prompt: field", nodeName)
 	}
 
 	prompt, err := FillTemplateFS(t.promptFS, templatePath, params)
 	if err != nil {
-		return nil, fmt.Errorf("rca transformer: fill template for %s: %w", step, err)
+		return nil, fmt.Errorf("rca transformer: fill template for %s: %w", nodeName, err)
 	}
 	prompt = calibrationPreamble + prompt
 
@@ -89,12 +89,12 @@ func (t *rcaTransformer) Transform(ctx context.Context, tc *framework.Transforme
 		caseDir = os.TempDir()
 	}
 
-	promptFile := filepath.Join(caseDir, fmt.Sprintf("prompt-%s.md", step.Family()))
+	promptFile := filepath.Join(caseDir, NodePromptFilename(nodeName, 0))
 	if err := os.WriteFile(promptFile, []byte(prompt), 0644); err != nil {
 		return nil, fmt.Errorf("rca transformer: write prompt: %w", err)
 	}
 
-	artifactFile := filepath.Join(caseDir, ArtifactFilename(step))
+	artifactFile := filepath.Join(caseDir, NodeArtifactFilename(nodeName))
 
 	caseLabel, _ := tc.WalkerState.Context[KeyCaseLabel].(string)
 	if caseLabel == "" {
@@ -102,16 +102,16 @@ func (t *rcaTransformer) Transform(ctx context.Context, tc *framework.Transforme
 	}
 
 	data, err := t.dispatcher.Dispatch(dispatch.DispatchContext{
-		CaseID: caseLabel, Step: string(step),
+		CaseID: caseLabel, Step: nodeName,
 		PromptPath: promptFile, ArtifactPath: artifactFile,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("rca transformer: dispatch %s/%s: %w", caseLabel, step, err)
+		return nil, fmt.Errorf("rca transformer: dispatch %s/%s: %w", caseLabel, nodeName, err)
 	}
 
 	if f := dispatch.UnwrapFinalizer(t.dispatcher); f != nil {
 		f.MarkDone(artifactFile)
 	}
 
-	return parseTypedArtifact(step, json.RawMessage(data))
+	return parseArtifact(json.RawMessage(data))
 }

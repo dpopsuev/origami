@@ -40,12 +40,28 @@ func (t *investigateHeuristic) Transform(_ context.Context, tc *framework.Transf
 	convergence := t.ht.computeConvergence(text, component)
 	gapBrief := t.ht.buildGapBrief(fp, text, component, defectType, convergence)
 
-	return &InvestigateArtifact{
-		RCAMessage:       rcaMessage,
-		DefectType:       defectType,
-		Component:        component,
-		ConvergenceScore: convergence,
-		EvidenceRefs:     evidenceRefs,
-		GapBrief:         gapBrief,
-	}, nil
+	m := map[string]any{
+		"rca_message":       rcaMessage,
+		"defect_type":       defectType,
+		"component":         component,
+		"convergence_score": convergence,
+		"evidence_refs":     evidenceRefs,
+	}
+	if gapBrief != nil {
+		gapItems := make([]any, 0, len(gapBrief.GapItems))
+		for _, g := range gapBrief.GapItems {
+			gapItems = append(gapItems, map[string]any{
+				"category":    g.Category,
+				"description": g.Description,
+				"would_help":  g.WouldHelp,
+				"source":      g.Source,
+				"blocked":     g.Blocked,
+			})
+		}
+		m["gap_brief"] = map[string]any{
+			"verdict":   gapBrief.Verdict,
+			"gap_items": gapItems,
+		}
+	}
+	return m, nil
 }

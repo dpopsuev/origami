@@ -8,7 +8,5 @@ provides:
 requires:
   origami: ">=0.3.0"
 satisfies:
-  - socket: code
-    factory: NewCodeReader
   - socket: git
-    factory: NewGitDriver
+    factory: DefaultGitDriver

@@ -1,10 +1,11 @@
 package framework
+// Category: Processing & Support
 
-// IsCircuitDeterministic returns true if every node in the circuit that
+// isCircuitDeterministic returns true if every node in the circuit that
 // references a transformer resolves to a deterministic transformer.
 // Nodes without a transformer field (e.g., custom nodes)
 // are skipped. Returns false if any transformer is unresolvable or stochastic.
-func IsCircuitDeterministic(def *CircuitDef, reg TransformerRegistry) bool {
+func isCircuitDeterministic(def *CircuitDef, reg TransformerRegistry) bool {
 	if reg == nil {
 		return false
 	}

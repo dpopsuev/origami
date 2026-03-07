@@ -1,7 +1,8 @@
 name: debug-skill
-version: "1.0"
+version: "1.1"
 dimensions: [speed, shortcut_affinity, convergence_threshold]
 category: SKILL
+difficulty: medium
 
 poles:
   methodical:
@@ -33,3 +34,23 @@ generator_instructions: |
   2. A subtle root cause with progressive degradation
   3. A deployment event that correlates with the onset
   Ask the subject to identify the root cause, provide evidence, and explain rejected hypotheses.
+
+gold_answer: |
+  Root cause: goroutine leak from unclosed channel in async notification handler.
+  Evidence: deployment v2.14 at 14:23 correlates with error onset at 14:25.
+  Goroutine count rises linearly post-deploy while request latency increases.
+  Red herring: memory at 78% is within normal operating range for this service
+  and does not correlate with the error timeline.
+
+gold_signals:
+  methodical: ["root cause", "deployment", "correlat", "red herring", "not the root cause", "goroutine", "progressive"]
+  reactive: ["memory", "OOM", "restart", "high memory"]
+
+output_format: |
+  ROOT_CAUSE: <one-line diagnosis>
+  EVIDENCE:
+  - <evidence item 1>
+  - <evidence item 2>
+  REJECTED_HYPOTHESES:
+  - <rejected hypothesis with reasoning>
+  CONFIDENCE: <0.0-1.0>

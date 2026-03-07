@@ -3,7 +3,7 @@ package rca
 import "testing"
 
 func TestDefaultQuickWins(t *testing.T) {
-	qws := DefaultQuickWins()
+	qws := LoadQuickWins(readInternalTestdata(t, "tuning-quickwins.yaml"))
 	if len(qws) != 4 {
 		t.Fatalf("expected 4 quick wins, got %d", len(qws))
 	}
@@ -25,15 +25,15 @@ func TestDefaultQuickWins(t *testing.T) {
 }
 
 func TestTuningRunner_SkeletonAllSkipped(t *testing.T) {
-	qws := DefaultQuickWins()
+	qws := LoadQuickWins(readInternalTestdata(t, "tuning-quickwins.yaml"))
 	runner := NewTuningRunner(RunConfig{}, qws)
 	report := runner.Run(0.83)
 
-	if report.BaselineM19 != 0.83 {
-		t.Errorf("BaselineM19 = %f, want 0.83", report.BaselineM19)
+	if report.BaselineVal != 0.83 {
+		t.Errorf("BaselineVal = %f, want 0.83", report.BaselineVal)
 	}
-	if report.FinalM19 != 0.83 {
-		t.Errorf("FinalM19 = %f, want 0.83 (no QWs applied)", report.FinalM19)
+	if report.FinalVal != 0.83 {
+		t.Errorf("FinalVal = %f, want 0.83 (no QWs applied)", report.FinalVal)
 	}
 	if report.QWsApplied != 0 {
 		t.Errorf("QWsApplied = %d, want 0", report.QWsApplied)
@@ -53,8 +53,8 @@ func TestTuningRunner_SkeletonAllSkipped(t *testing.T) {
 
 func TestTuningRunner_StopsAtTarget(t *testing.T) {
 	qws := []QuickWin{
-		{ID: "T1", Apply: func(cfg *RunConfig) error { return nil }},
-		{ID: "T2", Apply: func(cfg *RunConfig) error { return nil }},
+		{ID: "T1", Apply: func() error { return nil }},
+		{ID: "T2", Apply: func() error { return nil }},
 	}
 	runner := &TuningRunner{
 		QuickWins:    qws,
@@ -63,7 +63,7 @@ func TestTuningRunner_StopsAtTarget(t *testing.T) {
 	}
 
 	report := runner.Run(0.95)
-	if report.StopReason != "target M19 0.90 reached" {
+	if report.StopReason != "target 0.90 reached" {
 		t.Errorf("StopReason = %q, want target reached", report.StopReason)
 	}
 	if len(report.Results) != 0 {

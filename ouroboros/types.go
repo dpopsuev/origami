@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 )
 
 // ---------------------------------------------------------------------------
@@ -24,6 +25,11 @@ const (
 	DimGBWP                 Dimension = "gbwp"
 )
 
+// StepDimensionMap maps circuit step names to the behavioral dimensions
+// that matter for that step. Consumers (e.g., RCA schematic) provide this
+// mapping; Ouroboros itself is domain-agnostic.
+type StepDimensionMap map[string][]Dimension
+
 // AllDimensions returns the seven behavioral dimensions in canonical order.
 func AllDimensions() []Dimension {
 	return []Dimension{
@@ -40,8 +46,8 @@ type ModelProfile struct {
 	BatteryVersion    string                         `json:"battery_version"`
 	Timestamp         time.Time                      `json:"timestamp"`
 	Dimensions        map[Dimension]float64          `json:"dimensions"`
-	ElementMatch      framework.Element              `json:"element_match"`
-	ElementScores     map[framework.Element]float64  `json:"element_scores"`
+	ElementMatch      element.Element              `json:"element_match"`
+	ElementScores     map[element.Element]float64  `json:"element_scores"`
 	SuggestedPersonas []string                       `json:"suggested_personas,omitempty"`
 	OffsetPreamble    string                         `json:"offset_preamble,omitempty"`
 	CostProfile       framework.CostProfile          `json:"cost_profile"`
@@ -86,6 +92,8 @@ type ProbeResult struct {
 	DimensionScores map[Dimension]float64 `json:"dimension_scores,omitempty"`
 	Elapsed         time.Duration        `json:"elapsed_ns"`
 	TokensUsed      int                  `json:"tokens_used,omitempty"`
+	Difficulty      string               `json:"difficulty,omitempty"`
+	GoldSignalScore float64              `json:"gold_signal_score,omitempty"`
 }
 
 // DiscoveryResult records one iteration of the negation discovery loop.

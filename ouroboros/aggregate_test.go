@@ -15,28 +15,36 @@ func approxEqual(a, b, eps float64) bool {
 }
 
 func TestProfileFromPoleResults_Aggregation(t *testing.T) {
-	results := []PoleResult{
+	results := []SeedResult{
 		{
-			SelectedPole: "systematic",
-			Confidence:   0.9,
-			DimensionScores: map[Dimension]float64{
-				DimSpeed:         0.3,
-				DimEvidenceDepth: 0.9,
+			Name:       "probe-a",
+			Difficulty: DifficultyEasy,
+			Result: PoleResult{
+				SelectedPole: "systematic",
+				Confidence:   0.9,
+				DimensionScores: map[Dimension]float64{
+					DimSpeed:         0.3,
+					DimEvidenceDepth: 0.9,
+				},
 			},
 		},
 		{
-			SelectedPole: "methodical",
-			Confidence:   0.8,
-			DimensionScores: map[Dimension]float64{
-				DimSpeed:         0.5,
-				DimEvidenceDepth: 0.7,
-				DimPersistence:   0.8,
+			Name:       "probe-b",
+			Difficulty: DifficultyEasy,
+			Result: PoleResult{
+				SelectedPole: "methodical",
+				Confidence:   0.8,
+				DimensionScores: map[Dimension]float64{
+					DimSpeed:         0.5,
+					DimEvidenceDepth: 0.7,
+					DimPersistence:   0.8,
+				},
 			},
 		},
 	}
 
 	model := framework.ModelIdentity{ModelName: "test-model", Provider: "test"}
-	profile := ProfileFromPoleResults(model, results, []string{"probe-a", "probe-b"})
+	profile := ProfileFromPoleResults(model, results)
 
 	if profile.BatteryVersion != SeedBatteryVersion {
 		t.Errorf("battery version = %q, want %q", profile.BatteryVersion, SeedBatteryVersion)
@@ -61,24 +69,59 @@ func TestProfileFromPoleResults_Aggregation(t *testing.T) {
 	}
 }
 
-func TestProfileFromPoleResults_ElementMatchWorks(t *testing.T) {
-	results := []PoleResult{
+func TestProfileFromPoleResults_DifficultyWeighting(t *testing.T) {
+	results := []SeedResult{
 		{
-			SelectedPole: "deep",
-			Confidence:   0.9,
-			DimensionScores: map[Dimension]float64{
-				DimSpeed:                0.2,
-				DimPersistence:          1.0,
-				DimConvergenceThreshold: 0.85,
-				DimShortcutAffinity:     0.1,
-				DimEvidenceDepth:        0.8,
-				DimFailureMode:          0.5,
+			Name:       "easy-probe",
+			Difficulty: DifficultyEasy,
+			Result: PoleResult{
+				SelectedPole:    "a",
+				Confidence:      0.9,
+				DimensionScores: map[Dimension]float64{DimSpeed: 0.0},
+			},
+		},
+		{
+			Name:       "hard-probe",
+			Difficulty: DifficultyHard,
+			Result: PoleResult{
+				SelectedPole:    "b",
+				Confidence:      0.9,
+				DimensionScores: map[Dimension]float64{DimSpeed: 1.0},
+			},
+		},
+	}
+
+	model := framework.ModelIdentity{ModelName: "test", Provider: "test"}
+	profile := ProfileFromPoleResults(model, results)
+
+	// easy weight=1, hard weight=3: weighted avg = (0*1 + 1*3) / (1+3) = 0.75
+	want := 0.75
+	if !approxEqual(profile.Dimensions[DimSpeed], want, 0.01) {
+		t.Errorf("speed = %v, want %v (hard should weigh 3x)", profile.Dimensions[DimSpeed], want)
+	}
+}
+
+func TestProfileFromPoleResults_ElementMatchWorks(t *testing.T) {
+	results := []SeedResult{
+		{
+			Name: "deep-probe",
+			Result: PoleResult{
+				SelectedPole: "deep",
+				Confidence:   0.9,
+				DimensionScores: map[Dimension]float64{
+					DimSpeed:                0.2,
+					DimPersistence:          1.0,
+					DimConvergenceThreshold: 0.85,
+					DimShortcutAffinity:     0.1,
+					DimEvidenceDepth:        0.8,
+					DimFailureMode:          0.5,
+				},
 			},
 		},
 	}
 
 	model := framework.ModelIdentity{ModelName: "deep-thinker", Provider: "test"}
-	profile := ProfileFromPoleResults(model, results, []string{"deep-probe"})
+	profile := ProfileFromPoleResults(model, results)
 
 	if profile.ElementMatch == "" {
 		t.Fatal("ElementMatch is empty")
@@ -95,31 +138,37 @@ func TestProfileFromPoleResults_ElementMatchWorks(t *testing.T) {
 }
 
 func TestProfileFromPoleResults_DeriveStepAffinityWorks(t *testing.T) {
-	results := []PoleResult{
+	results := []SeedResult{
 		{
-			SelectedPole: "systematic",
-			Confidence:   0.9,
-			DimensionScores: map[Dimension]float64{
-				DimSpeed:                0.4,
-				DimPersistence:          0.6,
-				DimConvergenceThreshold: 0.7,
-				DimShortcutAffinity:     0.3,
-				DimEvidenceDepth:        0.8,
-				DimFailureMode:          0.5,
+			Name: "balanced-probe",
+			Result: PoleResult{
+				SelectedPole: "systematic",
+				Confidence:   0.9,
+				DimensionScores: map[Dimension]float64{
+					DimSpeed:                0.4,
+					DimPersistence:          0.6,
+					DimConvergenceThreshold: 0.7,
+					DimShortcutAffinity:     0.3,
+					DimEvidenceDepth:        0.8,
+					DimFailureMode:          0.5,
+				},
 			},
 		},
 	}
 
 	model := framework.ModelIdentity{ModelName: "balanced", Provider: "test"}
-	profile := ProfileFromPoleResults(model, results, []string{"balanced-probe"})
+	profile := ProfileFromPoleResults(model, results)
 
-	affinity := DeriveStepAffinity(profile)
+	stepDims := StepDimensionMap{
+		"recall":      {DimSpeed, DimShortcutAffinity},
+		"investigate": {DimEvidenceDepth, DimPersistence, DimConvergenceThreshold},
+	}
+	affinity := DeriveStepAffinity(profile, stepDims)
 	if len(affinity) == 0 {
 		t.Fatal("DeriveStepAffinity returned empty map")
 	}
 
-	expectedSteps := []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
-	for _, step := range expectedSteps {
+	for step := range stepDims {
 		if _, ok := affinity[step]; !ok {
 			t.Errorf("missing step affinity for %q", step)
 		}
@@ -138,10 +187,11 @@ func TestPoleResultToProbeResult_Fields(t *testing.T) {
 			DimSpeed:         0.3,
 			DimEvidenceDepth: 0.9,
 		},
-		Reasoning: "Shows thorough analysis",
+		Reasoning:       "Shows thorough analysis",
+		GoldSignalScore: 0.75,
 	}
 
-	result := PoleResultToProbeResult("test-seed", pr, 0)
+	result := PoleResultToProbeResult("test-seed", pr, 0, DifficultyMedium)
 	if result.ProbeID != "test-seed" {
 		t.Errorf("ProbeID = %q, want test-seed", result.ProbeID)
 	}
@@ -150,5 +200,11 @@ func TestPoleResultToProbeResult_Fields(t *testing.T) {
 	}
 	if result.RawOutput != "Shows thorough analysis" {
 		t.Errorf("RawOutput = %q, want reasoning text", result.RawOutput)
+	}
+	if result.Difficulty != DifficultyMedium {
+		t.Errorf("Difficulty = %q, want %q", result.Difficulty, DifficultyMedium)
+	}
+	if result.GoldSignalScore != 0.75 {
+		t.Errorf("GoldSignalScore = %v, want 0.75", result.GoldSignalScore)
 	}
 }

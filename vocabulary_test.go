@@ -68,7 +68,7 @@ func TestChainVocabulary(t *testing.T) {
 	stages := NewMapVocabulary().Register("F0", "Recall")
 	defects := NewMapVocabulary().Register("pb001", "Product Bug")
 
-	chain := ChainVocabulary{stages, defects}
+	chain := chainVocabulary{stages, defects}
 
 	tests := []struct {
 		code, want string
@@ -79,7 +79,7 @@ func TestChainVocabulary(t *testing.T) {
 	}
 	for _, tt := range tests {
 		if got := chain.Name(tt.code); got != tt.want {
-			t.Errorf("ChainVocabulary.Name(%q) = %q, want %q", tt.code, got, tt.want)
+			t.Errorf("chainVocabulary.Name(%q) = %q, want %q", tt.code, got, tt.want)
 		}
 	}
 }
@@ -88,7 +88,7 @@ func TestChainVocabulary_FirstWins(t *testing.T) {
 	first := NewMapVocabulary().Register("X", "First")
 	second := NewMapVocabulary().Register("X", "Second")
 
-	chain := ChainVocabulary{first, second}
+	chain := chainVocabulary{first, second}
 	if got := chain.Name("X"); got != "First" {
 		t.Errorf("chain should pick first match: got %q, want First", got)
 	}
@@ -191,7 +191,7 @@ func TestRichChainVocabulary(t *testing.T) {
 	stages := NewRichMapVocabulary().RegisterEntry("F0", VocabEntry{Short: "F0", Long: "Recall", Description: "Recall step"})
 	defects := NewRichMapVocabulary().RegisterEntry("pb001", VocabEntry{Short: "PB", Long: "Product Bug", Description: "Product defect"})
 
-	chain := RichChainVocabulary{stages, defects}
+	chain := richChainVocabulary{stages, defects}
 
 	tests := []struct {
 		code      string
@@ -225,7 +225,7 @@ func TestRichChainVocabulary_FirstWins(t *testing.T) {
 	first := NewRichMapVocabulary().RegisterEntry("X", VocabEntry{Long: "First"})
 	second := NewRichMapVocabulary().RegisterEntry("X", VocabEntry{Long: "Second"})
 
-	chain := RichChainVocabulary{first, second}
+	chain := richChainVocabulary{first, second}
 	if got := chain.Name("X"); got != "First" {
 		t.Errorf("chain should pick first match: got %q, want First", got)
 	}
@@ -233,6 +233,6 @@ func TestRichChainVocabulary_FirstWins(t *testing.T) {
 
 func TestRichMapVocabulary_BackwardCompat_WithNarration(t *testing.T) {
 	v := NewRichMapVocabulary().RegisterEntry("F0", VocabEntry{Short: "F0", Long: "Recall"})
-	obs := NewNarrationObserver(WithVocabulary(v), WithSink(func(string) {}))
+	obs := newNarrationObserver(withVocabulary(v), withSink(func(string) {}))
 	obs.OnEvent(WalkEvent{Type: EventNodeEnter, Node: "F0"})
 }

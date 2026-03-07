@@ -7,41 +7,78 @@ import (
 	"time"
 
 	framework "github.com/dpopsuev/origami"
+	"log/slog"
+
 	"github.com/dpopsuev/origami/dispatch"
-	"github.com/dpopsuev/origami/logging"
 	fwmcp "github.com/dpopsuev/origami/mcp"
 	"github.com/dpopsuev/origami/ouroboros"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
+const probeCircuitPath = "ouroboros/circuits/ouroboros-probe.yaml"
+
 // NewSeedProfileConfig returns a CircuitConfig for seed-based model profiling.
-// Instead of the discovery loop, this walks the ouroboros-probe circuit for
-// each seed, using PoleResult scoring instead of keyword matching.
+// Step schemas and the terminal node are derived from the circuit definition
+// so that renaming/adding nodes in the YAML is the single source of truth.
 func NewSeedProfileConfig() fwmcp.CircuitConfig {
+	circuitData, err := framework.ResolveCircuitPath(probeCircuitPath)
+	if err != nil {
+		panic(fmt.Sprintf("resolve ouroboros circuit: %v", err))
+	}
+	def, err := framework.LoadCircuit(circuitData)
+	if err != nil {
+		panic(fmt.Sprintf("load ouroboros circuit: %v", err))
+	}
+
+	schemas := stepSchemasFromDef(*def)
+
 	return fwmcp.CircuitConfig{
-		Name:    "ouroboros-seed",
-		Version: "dev",
-		StepSchemas: []fwmcp.StepSchema{
-			{Name: "generate", Fields: map[string]string{"response": "raw LLM response"}},
-			{Name: "subject", Fields: map[string]string{"response": "raw LLM response"}},
-			{Name: "judge", Fields: map[string]string{"response": "raw LLM response"}},
-		},
+		Name:        "ouroboros-seed",
+		Version:     "dev",
+		StepSchemas: schemas,
 		WorkerPreamble: `You are an Ouroboros seed probe worker. For each step you receive a prompt.
 Send it to the target model and return the raw response as {"response": "<text>"}.`,
 		DefaultGetNextStepTimeout: 60000,
 		DefaultSessionTTL:         600000,
 		CreateSession: func(ctx context.Context, params fwmcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
-			return createSeedSession(params, disp, bus)
+			return createSeedSession(params, disp, bus, *def)
 		},
 		FormatReport: formatSeedReport,
 	}
+}
+
+func stepSchemasFromDef(def framework.CircuitDef) []fwmcp.StepSchema {
+	var schemas []fwmcp.StepSchema
+	for _, node := range def.Nodes {
+		if node.Name == def.Done || node.Name == "" {
+			continue
+		}
+		schemas = append(schemas, fwmcp.StepSchema{
+			Name:   node.Name,
+			Fields: map[string]string{"response": "raw LLM response"},
+		})
+	}
+	return schemas
+}
+
+// terminalNode returns the last node before the done sentinel by walking
+// edges backward from def.Done.
+func terminalNode(def framework.CircuitDef) string {
+	for _, edge := range def.Edges {
+		if edge.To == def.Done {
+			return edge.From
+		}
+	}
+	return ""
 }
 
 func createSeedSession(
 	params fwmcp.StartParams,
 	disp *dispatch.MuxDispatcher,
 	bus *dispatch.SignalBus,
+	def framework.CircuitDef,
 ) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
-	seedPath, _ := params.Extra["seed_path"].(string)
+	seedPath := toolkit.MapStr(params.Extra, "seed_path")
 	if seedPath == "" {
 		return nil, fwmcp.SessionMeta{}, fmt.Errorf("seed_path is required in extra params")
 	}
@@ -57,13 +94,13 @@ func createSeedSession(
 	}
 
 	runFn := func(ctx context.Context) (any, error) {
-		return runSeedCircuit(ctx, seed, disp, bus)
+		return runSeedCircuit(ctx, seed, disp, bus, def)
 	}
 
 	return runFn, meta, nil
 }
 
-type seedArtifact struct {
+type dispatchResponse struct {
 	Response string `json:"response"`
 }
 
@@ -72,8 +109,9 @@ func runSeedCircuit(
 	seed *ouroboros.Seed,
 	disp *dispatch.MuxDispatcher,
 	bus *dispatch.SignalBus,
+	def framework.CircuitDef,
 ) (*ouroboros.PoleResult, error) {
-	log := logging.New("ouroboros-seed")
+	log := slog.Default().With("component", "ouroboros-seed")
 
 	dispatcher := func(ctx context.Context, nodeName string, prompt string) (string, error) {
 		artifactBytes, err := disp.Dispatch(dispatch.DispatchContext{
@@ -85,7 +123,7 @@ func runSeedCircuit(
 			return "", err
 		}
 
-		var art seedArtifact
+		var art dispatchResponse
 		if err := json.Unmarshal(artifactBytes, &art); err != nil {
 			return "", fmt.Errorf("parse %s artifact: %w", nodeName, err)
 		}
@@ -93,16 +131,6 @@ func runSeedCircuit(
 	}
 
 	nodes := ouroboros.CircuitNodes(seed, dispatcher)
-
-	circuitData, err := framework.ResolveCircuitPath("ouroboros/circuits/ouroboros-probe.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("resolve circuit: %w", err)
-	}
-
-	def, err := framework.LoadCircuit(circuitData)
-	if err != nil {
-		return nil, fmt.Errorf("load circuit: %w", err)
-	}
 
 	g, err := def.BuildGraph(framework.GraphRegistries{Nodes: nodes})
 	if err != nil {
@@ -119,17 +147,22 @@ func runSeedCircuit(
 	elapsed := time.Since(start)
 	log.Info("seed circuit completed", "seed", seed.Name, "elapsed", elapsed)
 
-	judgeArtifact := walker.State().Outputs["judge"]
-	if judgeArtifact == nil {
-		return nil, fmt.Errorf("judge node produced no artifact")
+	lastNode := terminalNode(def)
+	if lastNode == "" {
+		return nil, fmt.Errorf("circuit has no edge to %s", def.Done)
 	}
 
-	result, ok := judgeArtifact.Raw().(*ouroboros.PoleResult)
+	finalArtifact := walker.State().Outputs[lastNode]
+	if finalArtifact == nil {
+		return nil, fmt.Errorf("%s node produced no artifact", lastNode)
+	}
+
+	result, ok := finalArtifact.Raw().(*ouroboros.PoleResult)
 	if !ok {
-		return nil, fmt.Errorf("judge artifact type %T, expected *PoleResult", judgeArtifact.Raw())
+		return nil, fmt.Errorf("%s artifact type %T, expected *PoleResult", lastNode, finalArtifact.Raw())
 	}
 
-	bus.Emit("seed_completed", "server", seed.Name, "judge", map[string]string{
+	bus.Emit("seed_completed", "server", seed.Name, lastNode, map[string]string{
 		"selected_pole": result.SelectedPole,
 		"confidence":    fmt.Sprintf("%.2f", result.Confidence),
 	})

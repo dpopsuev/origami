@@ -1,5 +1,7 @@
 package framework
 
+// Category: DSL & Build
+
 import (
 	"fmt"
 	"strings"
@@ -47,11 +49,14 @@ func buildWalker(d WalkerDef) (*ProcessWalker, error) {
 	id := AgentIdentity{}
 
 	if d.Persona != "" {
-		persona, ok := PersonaByName(d.Persona)
+		if DefaultPersonaResolver == nil {
+			return nil, fmt.Errorf("persona %q requested but no persona resolver registered (import _ \"github.com/dpopsuev/origami/persona\")", d.Persona)
+		}
+		p, ok := DefaultPersonaResolver(d.Persona)
 		if !ok {
 			return nil, fmt.Errorf("unknown persona %q", d.Persona)
 		}
-		id = persona.Identity
+		id = p.Identity
 	}
 
 	if d.Approach != "" {

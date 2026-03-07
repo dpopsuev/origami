@@ -9,8 +9,6 @@ func TestParseManifest_Minimal(t *testing.T) {
 name: test-tool
 description: A test tool
 version: "1.0"
-imports:
-  - origami.schematics.rca
 `)
 	m, err := ParseManifest(data)
 	if err != nil {
@@ -22,126 +20,28 @@ imports:
 	if m.Version != "1.0" {
 		t.Errorf("version = %q, want 1.0", m.Version)
 	}
-	if len(m.Imports) != 1 {
-		t.Fatalf("imports = %d, want 1", len(m.Imports))
-	}
-	if m.Imports[0] != "origami.schematics.rca" {
-		t.Errorf("imports[0] = %q", m.Imports[0])
-	}
 }
 
-func TestParseManifest_Full(t *testing.T) {
+func TestParseManifest_DomainServe(t *testing.T) {
 	data := []byte(`
 name: asterisk
-description: Evidence-based RCA for ReportPortal test failures
 version: "1.0"
-
-imports:
-  - origami.schematics.rca
-  - origami.connectors.rp
-  - origami.connectors.sqlite
-
-embed:
-  - circuits/
-  - scenarios/
-  - prompts/
-
-cli:
-  global_flags:
-    - {name: log-level, type: string, default: info}
-    - {name: log-format, type: string, default: text}
-  analyze:
-    provider: schematics.rca.AnalyzeFunc
-  calibrate:
-    provider: schematics.rca.CalibrateRunner
-  consume:
-    circuit: circuits/ingest.yaml
-
-serve:
-  provider: schematics.rca.ServeConfig
-
-demo:
-  provider: schematics.rca.DemoConfig
+domain_serve:
+  port: 9300
+  embed: internal/
 `)
 	m, err := ParseManifest(data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.Name != "asterisk" {
-		t.Errorf("name = %q", m.Name)
+	if m.DomainServe == nil {
+		t.Fatal("domain_serve is nil")
 	}
-	if len(m.Imports) != 3 {
-		t.Errorf("imports = %d, want 3", len(m.Imports))
+	if m.DomainServe.Port != 9300 {
+		t.Errorf("port = %d, want 9300", m.DomainServe.Port)
 	}
-	if len(m.Embed) != 3 {
-		t.Errorf("embed = %d, want 3", len(m.Embed))
-	}
-	if m.CLI.Analyze == nil || m.CLI.Analyze.Provider != "schematics.rca.AnalyzeFunc" {
-		t.Error("CLI.Analyze not parsed correctly")
-	}
-	if m.CLI.Calibrate == nil || m.CLI.Calibrate.Provider != "schematics.rca.CalibrateRunner" {
-		t.Error("CLI.Calibrate not parsed correctly")
-	}
-	if m.CLI.Consume == nil || m.CLI.Consume.Circuit != "circuits/ingest.yaml" {
-		t.Error("CLI.Consume not parsed correctly")
-	}
-	if m.Serve == nil || m.Serve.Provider != "schematics.rca.ServeConfig" {
-		t.Error("Serve not parsed correctly")
-	}
-	if m.Demo == nil || m.Demo.Provider != "schematics.rca.DemoConfig" {
-		t.Error("Demo not parsed correctly")
-	}
-}
-
-func TestParseManifest_DeployContainer(t *testing.T) {
-	data := []byte(`
-name: myapp
-imports:
-  - origami.schematics.rca
-deploy:
-  knowledge:
-    mode: container
-    image: "ghcr.io/origami/knowledge:latest"
-`)
-	m, err := ParseManifest(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	dc := m.Deploy["knowledge"]
-	if dc == nil {
-		t.Fatal("deploy.knowledge is nil")
-	}
-	if dc.Mode != "container" {
-		t.Errorf("mode = %q, want container", dc.Mode)
-	}
-	if dc.Image != "ghcr.io/origami/knowledge:latest" {
-		t.Errorf("image = %q", dc.Image)
-	}
-}
-
-func TestParseManifest_DeployRemote(t *testing.T) {
-	data := []byte(`
-name: myapp
-imports:
-  - origami.schematics.rca
-deploy:
-  knowledge:
-    mode: remote
-    endpoint: "http://localhost:9100/mcp"
-`)
-	m, err := ParseManifest(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	dc := m.Deploy["knowledge"]
-	if dc == nil {
-		t.Fatal("deploy.knowledge is nil")
-	}
-	if dc.Mode != "remote" {
-		t.Errorf("mode = %q, want remote", dc.Mode)
-	}
-	if dc.Endpoint != "http://localhost:9100/mcp" {
-		t.Errorf("endpoint = %q", dc.Endpoint)
+	if m.DomainServe.Embed != "internal/" {
+		t.Errorf("embed = %q, want internal/", m.DomainServe.Embed)
 	}
 }
 

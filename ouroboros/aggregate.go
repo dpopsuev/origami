@@ -4,27 +4,40 @@ import (
 	"time"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 )
 
 const BatteryVersion = "ouroboros-v1"
 const SeedBatteryVersion = "ouroboros-seed-v1"
 
-// aggregateDimensions averages dimension scores across all probe results.
-// Each dimension's final score is the mean of all probes that measured it.
+// difficultyWeight maps difficulty tiers to aggregation weights.
+// Hard probes count 3x, medium 2x, easy 1x. Unset difficulty defaults to 1.0.
+var difficultyWeight = map[string]float64{
+	DifficultyEasy:   1.0,
+	DifficultyMedium: 2.0,
+	DifficultyHard:   3.0,
+}
+
+// aggregateDimensions computes a weighted average of dimension scores.
+// Probes with a difficulty tier receive proportionally more weight.
 func aggregateDimensions(profile *ModelProfile) {
-	sums := make(map[Dimension]float64)
-	counts := make(map[Dimension]int)
+	weightedSums := make(map[Dimension]float64)
+	totalWeights := make(map[Dimension]float64)
 
 	for _, result := range profile.RawResults {
+		w := difficultyWeight[result.Difficulty]
+		if w == 0 {
+			w = 1.0
+		}
 		for dim, score := range result.DimensionScores {
-			sums[dim] += score
-			counts[dim]++
+			weightedSums[dim] += score * w
+			totalWeights[dim] += w
 		}
 	}
 
 	for _, dim := range AllDimensions() {
-		if counts[dim] > 0 {
-			profile.Dimensions[dim] = sums[dim] / float64(counts[dim])
+		if totalWeights[dim] > 0 {
+			profile.Dimensions[dim] = weightedSums[dim] / totalWeights[dim]
 		}
 	}
 }
@@ -32,38 +45,41 @@ func aggregateDimensions(profile *ModelProfile) {
 // PoleResultToProbeResult converts a judge-produced PoleResult into a
 // ProbeResult suitable for dimension aggregation. This bridges the seed
 // circuit output into the existing ModelProfile aggregation path.
-func PoleResultToProbeResult(seedName string, pr *PoleResult, elapsed time.Duration) ProbeResult {
+func PoleResultToProbeResult(seedName string, pr *PoleResult, elapsed time.Duration, difficulty string) ProbeResult {
 	return ProbeResult{
 		ProbeID:         seedName,
 		RawOutput:       pr.Reasoning,
 		DimensionScores: pr.DimensionScores,
 		Elapsed:         elapsed,
+		Difficulty:      difficulty,
+		GoldSignalScore: pr.GoldSignalScore,
 	}
 }
 
+// SeedResult pairs a PoleResult with seed metadata for aggregation.
+type SeedResult struct {
+	Name       string
+	Difficulty string
+	Result     PoleResult
+}
+
 // ProfileFromPoleResults aggregates multiple seed circuit PoleResults into
-// a ModelProfile, using the same dimension averaging as the v1 runner.
-// This replaces RunOuroboros for seed-circuit workflows.
+// a ModelProfile, using difficulty-weighted dimension averaging.
 func ProfileFromPoleResults(
 	model framework.ModelIdentity,
-	results []PoleResult,
-	seedNames []string,
+	results []SeedResult,
 ) ModelProfile {
 	profile := ModelProfile{
 		Model:          model,
 		BatteryVersion: SeedBatteryVersion,
 		Timestamp:      time.Now(),
 		Dimensions:     make(map[Dimension]float64),
-		ElementScores:  make(map[framework.Element]float64),
+		ElementScores:  make(map[element.Element]float64),
 	}
 
-	for i, pr := range results {
-		name := ""
-		if i < len(seedNames) {
-			name = seedNames[i]
-		}
+	for _, sr := range results {
 		profile.RawResults = append(profile.RawResults,
-			PoleResultToProbeResult(name, &pr, 0))
+			PoleResultToProbeResult(sr.Name, &sr.Result, 0, sr.Difficulty))
 	}
 
 	aggregateDimensions(&profile)

@@ -2,15 +2,22 @@ package rca_test
 
 import (
 	"context"
+	"io/fs"
 	"math"
+	"os"
 	"testing"
 
 	cal "github.com/dpopsuev/origami/calibrate"
 	framework "github.com/dpopsuev/origami"
 
-	"github.com/dpopsuev/origami/schematics/rca/scenarios"
 	"github.com/dpopsuev/origami/schematics/rca"
+	"github.com/dpopsuev/origami/schematics/rca/scenarios"
 )
+
+func testCircuitData(t *testing.T) []byte {
+	t.Helper()
+	return readTestdata(t, "circuit_rca.yaml")
+}
 
 func loadTestScoreCard(t *testing.T) *cal.ScoreCard {
 	t.Helper()
@@ -21,9 +28,14 @@ func loadTestScoreCard(t *testing.T) *cal.ScoreCard {
 	return sc
 }
 
+func scenarioFS() fs.FS {
+	sub, _ := fs.Sub(os.DirFS(testdataDir()), "scenarios")
+	return sub
+}
+
 func mustLoadScenario(t *testing.T, name string) *rca.Scenario {
 	t.Helper()
-	s, err := scenarios.LoadScenario(name)
+	s, err := scenarios.LoadScenario(scenarioFS(), name)
 	if err != nil {
 		t.Fatalf("LoadScenario(%q): %v", name, err)
 	}
@@ -46,6 +58,7 @@ func TestStubCalibration_AllMetricsPass(t *testing.T) {
 		Thresholds:  rca.DefaultThresholds(),
 		BasePath:    tmpDir,
 		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)
@@ -123,6 +136,7 @@ func TestStubCalibration_MultiRun(t *testing.T) {
 		Thresholds:  rca.DefaultThresholds(),
 		BasePath:    tmpDir,
 		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)
@@ -155,13 +169,14 @@ func TestFormatReport(t *testing.T) {
 	cfg.Thresholds = rca.DefaultThresholds()
 	cfg.BasePath = tmpDir
 	cfg.ScoreCard = loadTestScoreCard(t)
+	cfg.CircuitData = testCircuitData(t)
 
 	report, err := rca.RunCalibration(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("RunCalibration: %v", err)
 	}
 
-	output, renderErr := rca.RenderCalibrationReport(report)
+	output, renderErr := rca.RenderCalibrationReport(report, readTestdata(t, "reports/calibration-report.yaml"))
 	if renderErr != nil {
 		t.Fatalf("RenderCalibrationReport: %v", renderErr)
 	}
@@ -203,6 +218,7 @@ func TestStubCalibration_DaemonMock(t *testing.T) {
 		Thresholds:  rca.DefaultThresholds(),
 		BasePath:    tmpDir,
 		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)
@@ -255,6 +271,7 @@ func TestStubCalibration_PTPReal(t *testing.T) {
 		Thresholds:  rca.DefaultThresholds(),
 		BasePath:    tmpDir,
 		ScoreCard:   loadTestScoreCard(t),
+		CircuitData: testCircuitData(t),
 	}
 
 	report, err := rca.RunCalibration(context.Background(), cfg)

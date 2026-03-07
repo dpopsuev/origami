@@ -1,6 +1,10 @@
 package scenarios_test
 
 import (
+	"io/fs"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/dpopsuev/origami/schematics/rca/scenarios"
@@ -8,10 +12,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func scenarioTestFS() fs.FS {
+	_, f, _, _ := runtime.Caller(0)
+	return os.DirFS(filepath.Join(filepath.Dir(f), "testdata"))
+}
+
 func TestLoadScenario_AllValid(t *testing.T) {
-	for _, name := range scenarios.ListScenarios() {
+	fsys := scenarioTestFS()
+	for _, name := range scenarios.ListScenarios(fsys) {
 		t.Run(name, func(t *testing.T) {
-			s, err := scenarios.LoadScenario(name)
+			s, err := scenarios.LoadScenario(fsys, name)
 			if err != nil {
 				t.Fatalf("LoadScenario(%q): %v", name, err)
 			}
@@ -29,7 +39,7 @@ func TestLoadScenario_AllValid(t *testing.T) {
 }
 
 func TestListScenarios(t *testing.T) {
-	names := scenarios.ListScenarios()
+	names := scenarios.ListScenarios(scenarioTestFS())
 	if len(names) != 4 {
 		t.Fatalf("expected 4 scenarios, got %d: %v", len(names), names)
 	}
@@ -40,7 +50,7 @@ func TestListScenarios(t *testing.T) {
 }
 
 func TestLoadScenario_NotFound(t *testing.T) {
-	_, err := scenarios.LoadScenario("nonexistent")
+	_, err := scenarios.LoadScenario(scenarioTestFS(), "nonexistent")
 	if err == nil {
 		t.Fatal("expected error for nonexistent scenario")
 	}

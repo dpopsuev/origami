@@ -1,5 +1,7 @@
 package framework
 
+// Category: Core Primitives
+
 import "context"
 
 // Node is a processing stage in a circuit graph.
@@ -16,6 +18,17 @@ type Artifact interface {
 	Type() string
 	Confidence() float64
 	Raw() any
+}
+
+// CountableArtifact is an optional extension of Artifact for nodes that
+// process discrete items. When an artifact implements this interface, the
+// walk loop auto-computes signal-to-noise ratio and emits it as "snr"
+// metadata on EventNodeExit. Artifacts where item counts don't apply
+// (classifications, verdicts, etc.) should not implement this.
+type CountableArtifact interface {
+	Artifact
+	InputCount() int
+	OutputCount() int
 }
 
 // NodeContext is the input to a Node's Process method: the accumulated

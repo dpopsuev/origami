@@ -86,9 +86,9 @@ func TestIsCircuitDeterministic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			def := &CircuitDef{Nodes: tt.nodes}
-			got := IsCircuitDeterministic(def, reg)
+			got := isCircuitDeterministic(def, reg)
 			if got != tt.want {
-				t.Errorf("IsCircuitDeterministic() = %v, want %v", got, tt.want)
+				t.Errorf("isCircuitDeterministic() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -96,7 +96,7 @@ func TestIsCircuitDeterministic(t *testing.T) {
 
 func TestIsCircuitDeterministic_NilRegistry(t *testing.T) {
 	def := &CircuitDef{Nodes: []NodeDef{{Name: "a", Transformer: "core.jq"}}}
-	if IsCircuitDeterministic(def, nil) {
+	if isCircuitDeterministic(def, nil) {
 		t.Error("expected false with nil registry")
 	}
 }

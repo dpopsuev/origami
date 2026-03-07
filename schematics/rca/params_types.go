@@ -1,5 +1,15 @@
 package rca
 
+import "github.com/dpopsuev/origami/schematics/toolkit"
+
+// ResolutionStatus is the RCA-specific alias for toolkit.ResolutionStatus.
+type ResolutionStatus = toolkit.ResolutionStatus
+
+const (
+	Resolved    = toolkit.Resolved
+	Unavailable = toolkit.Unavailable
+)
+
 // TemplateParams holds all parameter groups injected into prompt templates.
 // Templates use {{.Group.Field}} to access values.
 type TemplateParams struct {
@@ -66,13 +76,8 @@ type SiblingParams struct {
 	Status string
 }
 
-// ResolutionStatus indicates whether a source field was successfully resolved.
-type ResolutionStatus string
-
-const (
-	Resolved    ResolutionStatus = "resolved"
-	Unavailable ResolutionStatus = "unavailable"
-)
+// ResolutionStatus, Resolved, and Unavailable are defined above as
+// aliases to toolkit.ResolutionStatus for backward compatibility.
 
 // SourceParams holds repo list, launch attributes, Jira links, and always-read sources.
 type SourceParams struct {
@@ -121,12 +126,14 @@ type AlwaysReadSource struct {
 }
 
 // PriorParams holds prior stage artifacts for context injection.
+// Each field is a map[string]any deserialized from the step's JSON artifact.
+// Templates access fields via {{.Prior.Triage.symptom_category}} etc.
 type PriorParams struct {
-	RecallResult      *RecallResult
-	TriageResult      *TriageResult
-	ResolveResult     *ResolveResult
-	InvestigateResult *InvestigateArtifact
-	CorrelateResult   *CorrelateResult
+	Recall      map[string]any
+	Triage      map[string]any
+	Resolve     map[string]any
+	Investigate map[string]any
+	Correlate   map[string]any
 }
 
 // HistoryParams holds historical data from the Store.

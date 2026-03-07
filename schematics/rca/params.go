@@ -5,15 +5,15 @@ import (
 
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
-	"github.com/dpopsuev/origami/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
-func buildSourceParams(env *rcatype.Envelope, catalog *knowledge.KnowledgeSourceCatalog) *SourceParams {
+func buildSourceParams(env *rcatype.Envelope, catalog toolkit.SourceCatalog) *SourceParams {
 	wsp := &SourceParams{}
 
-	if catalog != nil && len(catalog.Sources) > 0 {
+	if catalog != nil && len(catalog.Sources()) > 0 {
 		wsp.ReposStatus = Resolved
-		for _, s := range catalog.Sources {
+		for _, s := range catalog.Sources() {
 			wsp.Repos = append(wsp.Repos, RepoParams{
 				Name:    s.Name,
 				Path:    s.URI,
@@ -64,19 +64,26 @@ func buildSourceParams(env *rcatype.Envelope, catalog *knowledge.KnowledgeSource
 }
 
 func loadPriorArtifacts(caseDir string) *PriorParams {
-	if caseDir == "" {
+	priorNodes := []string{"recall", "triage", "resolve", "investigate", "correlate"}
+	loaded := toolkit.LoadPriorArtifacts(caseDir, priorNodes, func(name string) string {
+		return NodeArtifactFilename(name)
+	})
+	if loaded == nil {
 		return nil
 	}
-	prior := &PriorParams{}
-	prior.RecallResult, _ = ReadArtifact[RecallResult](caseDir, ArtifactFilename(StepF0Recall))
-	prior.TriageResult, _ = ReadArtifact[TriageResult](caseDir, ArtifactFilename(StepF1Triage))
-	prior.ResolveResult, _ = ReadArtifact[ResolveResult](caseDir, ArtifactFilename(StepF2Resolve))
-	prior.InvestigateResult, _ = ReadArtifact[InvestigateArtifact](caseDir, ArtifactFilename(StepF3Invest))
-	prior.CorrelateResult, _ = ReadArtifact[CorrelateResult](caseDir, ArtifactFilename(StepF4Correlate))
-	return prior
+	return &PriorParams{
+		Recall:      loaded["recall"],
+		Triage:      loaded["triage"],
+		Resolve:     loaded["resolve"],
+		Investigate: loaded["investigate"],
+		Correlate:   loaded["correlate"],
+	}
 }
 
-func loadAlwaysReadSources(catalog *knowledge.KnowledgeSourceCatalog) []AlwaysReadSource {
+func loadAlwaysReadSources(catalog toolkit.SourceCatalog) []AlwaysReadSource {
+	if catalog == nil {
+		return nil
+	}
 	alwaysSources := catalog.AlwaysReadSources()
 	if len(alwaysSources) == 0 {
 		return nil

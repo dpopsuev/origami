@@ -8,8 +8,8 @@ import (
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	kn "github.com/dpopsuev/origami/knowledge"
 	skn "github.com/dpopsuev/origami/schematics/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
 type mockToolCaller struct {
@@ -33,13 +33,13 @@ func (m *mockToolCaller) CallTool(_ context.Context, name string, args map[strin
 	case "knowledge_ensure":
 		text = "ok"
 	case "knowledge_search":
-		results := []kn.SearchResult{{Source: "test", Path: "main.go", Line: 1, Snippet: "func main()"}}
+		results := []toolkit.SearchResult{{Source: "test", Path: "main.go", Line: 1, Snippet: "func main()"}}
 		data, _ := json.Marshal(results)
 		text = string(data)
 	case "knowledge_read":
 		text = "file content here"
 	case "knowledge_list":
-		entries := []kn.ContentEntry{{Path: "src/", IsDir: true}, {Path: "main.go", Size: 42}}
+		entries := []toolkit.ContentEntry{{Path: "src/", IsDir: true}, {Path: "main.go", Size: 42}}
 		data, _ := json.Marshal(entries)
 		text = string(data)
 	}
@@ -49,9 +49,9 @@ func (m *mockToolCaller) CallTool(_ context.Context, name string, args map[strin
 	}, nil
 }
 
-var testSource = kn.Source{
+var testSource = toolkit.Source{
 	Name: "test-repo",
-	Kind: kn.SourceKindRepo,
+	Kind: toolkit.SourceKindRepo,
 	URI:  "https://github.com/example/test",
 }
 

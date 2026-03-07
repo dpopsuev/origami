@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/dpopsuev/origami/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
 // Analyzer runs investigation: envelope → cases + artifact. Mock implementation only.
@@ -29,7 +29,7 @@ func Analyze(src EnvelopeSource, launchID int, artifactPath string) error {
 
 // AnalyzeWithCatalog is like Analyze but accepts an optional knowledge source catalog.
 // When non-nil, catalog is available for downstream (e.g. prompts).
-func AnalyzeWithCatalog(src EnvelopeSource, launchID int, artifactPath string, cat *knowledge.KnowledgeSourceCatalog) error {
+func AnalyzeWithCatalog(src EnvelopeSource, launchID int, artifactPath string, cat toolkit.SourceCatalog) error {
 	env, err := src.Get(launchID)
 	if err != nil {
 		return err

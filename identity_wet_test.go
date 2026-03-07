@@ -1,23 +1,16 @@
 //go:build wet
 
-package framework
+package framework_test
 
 import (
 	"encoding/json"
 	"os"
 	"testing"
+
+	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/models"
 )
 
-// TestWetIdentityProbe_CheckRegistry validates that a live probe result
-// reports a foundation model (not a wrapper) and matches KnownModels.
-//
-// Run with: go test -tags wet -run TestWetIdentityProbe ./internal/framework/...
-//
-// The probe result is supplied via:
-//   - IDENTITY_PROBE_JSON env var (raw JSON string), OR
-//   - testdata/probe_result.json fixture file
-//
-// When the test fails, it prints the exact identity to add to known_models.go.
 func TestWetIdentityProbe_CheckRegistry(t *testing.T) {
 	raw := os.Getenv("IDENTITY_PROBE_JSON")
 	if raw == "" {
@@ -28,7 +21,7 @@ func TestWetIdentityProbe_CheckRegistry(t *testing.T) {
 		raw = string(data)
 	}
 
-	var mi ModelIdentity
+	var mi framework.ModelIdentity
 	if err := json.Unmarshal([]byte(raw), &mi); err != nil {
 		t.Fatalf("failed to parse probe result: %v\nraw: %s", err, raw)
 	}
@@ -38,7 +31,7 @@ func TestWetIdentityProbe_CheckRegistry(t *testing.T) {
 	t.Logf("String: %s", mi.String())
 	t.Logf("Tag:    %s", mi.Tag())
 
-	if IsWrapperName(mi.ModelName) {
+	if models.IsWrapperName(mi.ModelName) {
 		t.Fatalf("WRAPPER DETECTED as model_name: %q\n\n"+
 			"The probe returned a wrapper identity, not the foundation model.\n"+
 			"The probe prompt needs further hardening, or the model can't self-identify.\n"+
@@ -50,14 +43,14 @@ func TestWetIdentityProbe_CheckRegistry(t *testing.T) {
 		t.Log("WARNING: wrapper field is empty — model may not know it's wrapped")
 	}
 
-	if !IsKnownModel(mi) {
+	if !models.IsKnownModel(mi) {
 		t.Fatalf("UNKNOWN FOUNDATION MODEL detected: %s\n\n"+
-			"Add this entry to known_models.go:\n\n"+
+			"Add this entry to models/registry.go:\n\n"+
 			"\t%q: {ModelName: %q, Provider: %q, Version: %q},\n",
 			mi.String(), mi.ModelName, mi.ModelName, mi.Provider, mi.Version)
 	}
 
-	known, _ := LookupModel(mi.ModelName)
+	known, _ := models.LookupModel(mi.ModelName)
 	if known.Provider != mi.Provider {
 		t.Errorf("provider mismatch: registry has %q, probe returned %q",
 			known.Provider, mi.Provider)
@@ -69,10 +62,8 @@ func TestWetIdentityProbe_CheckRegistry(t *testing.T) {
 	t.Logf("Foundation model %s is registered and verified", mi.String())
 }
 
-// TestWetIdentityProbe_RegistryNotEmpty ensures someone has populated the
-// registry. If it's empty, the wet test is meaningless.
 func TestWetIdentityProbe_RegistryNotEmpty(t *testing.T) {
-	if len(DefaultModelRegistry().Models()) == 0 {
+	if len(models.DefaultModelRegistry().Models()) == 0 {
 		t.Fatal("model registry is empty -- run a live probe first and populate it")
 	}
 }

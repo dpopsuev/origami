@@ -29,20 +29,52 @@ func NewContainerRuntime(runtime string) *ContainerRuntime {
 	return &ContainerRuntime{Runtime: runtime}
 }
 
+// RunOptions configures a container run with environment variables,
+// command arguments, and network settings beyond the basic port mapping.
+type RunOptions struct {
+	Name          string
+	Image         string
+	HostPort      int
+	ContainerPort int
+	Env           []string // KEY=VALUE pairs
+	Args          []string // appended after the image
+	Network       string   // e.g. "host" or a custom network name
+}
+
 // Run starts a container and returns its ID. The container binds to
 // 127.0.0.1 only and maps hostPort to containerPort.
 func (cr *ContainerRuntime) Run(ctx context.Context, name, image string, hostPort, containerPort int) (string, error) {
-	args := []string{
-		"run", "-d",
-		"--name", name,
-		"-p", fmt.Sprintf("127.0.0.1:%d:%d", hostPort, containerPort),
-		image,
+	return cr.RunWithOptions(ctx, RunOptions{
+		Name:          name,
+		Image:         image,
+		HostPort:      hostPort,
+		ContainerPort: containerPort,
+	})
+}
+
+// RunWithOptions starts a container with full configuration and returns its ID.
+func (cr *ContainerRuntime) RunWithOptions(ctx context.Context, opts RunOptions) (string, error) {
+	args := []string{"run", "-d", "--name", opts.Name}
+
+	if opts.HostPort > 0 && opts.ContainerPort > 0 {
+		args = append(args, "-p", fmt.Sprintf("127.0.0.1:%d:%d", opts.HostPort, opts.ContainerPort))
 	}
+
+	for _, e := range opts.Env {
+		args = append(args, "-e", e)
+	}
+
+	if opts.Network != "" {
+		args = append(args, "--network", opts.Network)
+	}
+
+	args = append(args, opts.Image)
+	args = append(args, opts.Args...)
 
 	cmd := exec.CommandContext(ctx, cr.Runtime, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("start container %q: %s: %w", name, strings.TrimSpace(string(output)), err)
+		return "", fmt.Errorf("start container %q: %s: %w", opts.Name, strings.TrimSpace(string(output)), err)
 	}
 	return strings.TrimSpace(string(output)), nil
 }
@@ -56,6 +88,16 @@ func (cr *ContainerRuntime) Stop(ctx context.Context, id string) error {
 	output, err := rm.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("remove container %s: %s: %w", id, strings.TrimSpace(string(output)), err)
+	}
+	return nil
+}
+
+// WaitContainer blocks until the container exits.
+func (cr *ContainerRuntime) WaitContainer(ctx context.Context, id string) error {
+	cmd := exec.CommandContext(ctx, cr.Runtime, "wait", id)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("wait container %s: %s: %w", id, strings.TrimSpace(string(output)), err)
 	}
 	return nil
 }

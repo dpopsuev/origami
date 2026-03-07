@@ -81,33 +81,40 @@ func SummarizePrompt() string {
 }
 
 // ScoreSummarize maps summarization output to behavioral dimension scores.
-//
-// Scoring signals:
-//   - Number of distinct changes identified (4 expected)
-//   - Correct categorization of each change type
-//   - Risk assessment present
-//   - Verbosity penalty: overly long = lower failure-mode resilience
+// Prefers structured output (CHANGES/OVERALL_RISK/REVIEW_FOCUS fields)
+// with keyword fallback for unstructured responses.
 func ScoreSummarize(raw string) map[ouroboros.Dimension]float64 {
 	lower := strings.ToLower(raw)
+	parsed := ParseStructured(raw)
 
 	changesFound := 0
-	changeSignals := []struct{ keywords []string }{
-		{[]string{"fetchusermetrics", "user metrics", "new method", "new function", "feature"}},
-		{[]string{"fetchall", "signature", "return error", "refactor"}},
-		{[]string{"error handling", "geterror", "http.error", "bug", "bugfix", "fix"}},
-		{[]string{"rlock", "read lock", "mutex", "performance", "cache"}},
-	}
-	for _, cs := range changeSignals {
-		for _, kw := range cs.keywords {
-			if strings.Contains(lower, kw) {
-				changesFound++
-				break
+	if parsed.ListLen("CHANGES") > 0 {
+		changesFound = parsed.ListLen("CHANGES")
+		if changesFound > 4 {
+			changesFound = 4
+		}
+	} else {
+		changeSignals := []struct{ keywords []string }{
+			{[]string{"fetchusermetrics", "user metrics", "new method", "new function", "feature"}},
+			{[]string{"fetchall", "signature", "return error", "refactor"}},
+			{[]string{"error handling", "geterror", "http.error", "bug", "bugfix", "fix"}},
+			{[]string{"rlock", "read lock", "mutex", "performance", "cache"}},
+		}
+		for _, cs := range changeSignals {
+			for _, kw := range cs.keywords {
+				if strings.Contains(lower, kw) {
+					changesFound++
+					break
+				}
 			}
 		}
 	}
 
-	hasCategories := containsAny(lower, "feature", "refactor", "bugfix", "bug fix", "performance")
-	hasRisk := containsAny(lower, "risk", "low", "medium", "high")
+	hasCategories := parsed.HasField("OVERALL_RISK") ||
+		containsAny(lower, "feature", "refactor", "bugfix", "bug fix", "performance")
+	hasRisk := parsed.HasField("OVERALL_RISK") ||
+		containsAny(lower, "risk", "low", "medium", "high")
+	hasReviewFocus := parsed.HasField("REVIEW_FOCUS")
 
 	evidenceDepth := float64(changesFound) * 0.2
 	if hasCategories {
@@ -128,6 +135,9 @@ func ScoreSummarize(raw string) map[ouroboros.Dimension]float64 {
 		failureMode = 0.7
 	} else {
 		failureMode = 0.3
+	}
+	if hasReviewFocus {
+		failureMode += 0.1
 	}
 
 	return map[ouroboros.Dimension]float64{

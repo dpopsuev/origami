@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/dpopsuev/origami/logging"
 )
 
 // FileDispatcherConfig configures the FileDispatcher behavior.
@@ -71,7 +69,7 @@ func NewFileDispatcher(cfg FileDispatcherConfig) *FileDispatcher {
 	}
 	l := cfg.Logger
 	if l == nil {
-		l = logging.New("file-dispatch")
+		l = slog.Default().With("component", "file-dispatch")
 	}
 	return &FileDispatcher{cfg: cfg, log: l}
 }
@@ -151,23 +149,27 @@ func (d *FileDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 
 		dl.Debug("poll: artifact file found", "poll", pollCount, "bytes", len(data))
 
-		// Parse the wrapper to check dispatch_id
+		// Parse the wrapper to check dispatch_id.
+		// Invalid JSON is treated as transient (partial write from a concurrent
+		// writer) and counts toward the stale tolerance, same as a dispatch_id
+		// mismatch. This avoids hard-failing on a race between os.WriteFile in
+		// the responder and os.ReadFile here.
 		var wrapper ArtifactWrapper
 		if err := json.Unmarshal(data, &wrapper); err != nil {
-			dl.Debug("poll: invalid JSON on first read, retrying", "poll", pollCount, "err", err)
-			time.Sleep(d.cfg.PollInterval)
-			data, err = os.ReadFile(ctx.ArtifactPath)
-			if err != nil {
-				dl.Debug("poll: artifact disappeared on retry", "poll", pollCount, "err", err)
-				continue
-			}
-			if err := json.Unmarshal(data, &wrapper); err != nil {
-				dl.Debug("poll: invalid JSON on retry — failing", "poll", pollCount, "err", err)
+			staleCount++
+			dl.Debug("poll: invalid JSON (possible partial write)",
+				"poll", pollCount, "err", err,
+				"bad_read_streak", staleCount, "max", d.cfg.MaxStaleRejects)
+			if staleCount >= d.cfg.MaxStaleRejects {
 				sig.Status = "error"
-				sig.Error = fmt.Sprintf("invalid JSON in artifact: %v", err)
+				sig.Error = fmt.Sprintf("stale artifact tolerance exceeded: %d consecutive unusable reads (last: invalid JSON: %v)",
+					staleCount, err)
 				_ = WriteSignal(signalPath, &sig)
-				return nil, fmt.Errorf("invalid JSON in %s: %w", ctx.ArtifactPath, err)
+				return nil, fmt.Errorf("stale artifact tolerance exceeded: %d consecutive unusable reads at %s (last: invalid JSON: %v)",
+					staleCount, ctx.ArtifactPath, err)
 			}
+			time.Sleep(d.cfg.PollInterval)
+			continue
 		}
 
 		// Reject stale artifacts deterministically by dispatch_id

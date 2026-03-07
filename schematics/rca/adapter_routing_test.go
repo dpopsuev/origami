@@ -74,7 +74,7 @@ func TestRoutingRecorder_LogsEntries(t *testing.T) {
 	if byCase.Len() != 3 {
 		t.Errorf("ForCase(C1).Len() = %d, want 3", byCase.Len())
 	}
-	byStep := log.ForStep(string(StepF0Recall))
+	byStep := log.ForStep("recall")
 	if byStep.Len() != 1 {
 		t.Errorf("ForStep(F0_RECALL).Len() = %d, want 1", byStep.Len())
 	}

@@ -2,7 +2,6 @@ package rca
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 // WalkerContextKeys used by RCA transformers and hooks to read runtime
@@ -17,26 +16,15 @@ const (
 	KeyPromptFS  = "rca.prompt_fs"
 )
 
-// parseTypedArtifact parses a JSON response into the appropriate typed artifact
-// based on the circuit step. Uses parseJSON (from cal_runner.go) which handles
-// JSON cleaning (stripping markdown fences, etc.).
-func parseTypedArtifact(step CircuitStep, data json.RawMessage) (any, error) {
-	switch step {
-	case StepF0Recall:
-		return parseJSON[RecallResult](data)
-	case StepF1Triage:
-		return parseJSON[TriageResult](data)
-	case StepF2Resolve:
-		return parseJSON[ResolveResult](data)
-	case StepF3Invest:
-		return parseJSON[InvestigateArtifact](data)
-	case StepF4Correlate:
-		return parseJSON[CorrelateResult](data)
-	case StepF5Review:
-		return parseJSON[ReviewDecision](data)
-	case StepF6Report:
-		return parseJSON[map[string]any](data)
-	default:
-		return nil, fmt.Errorf("unknown step %s", step)
+// parseArtifact parses a JSON response into map[string]any.
+// Uses cleanJSON (from cal_runner.go) to strip markdown fences, etc.
+func parseArtifact(data json.RawMessage) (map[string]any, error) {
+	result, err := parseJSON[map[string]any](data)
+	if err != nil {
+		return nil, err
 	}
+	if result == nil {
+		return nil, nil
+	}
+	return *result, nil
 }

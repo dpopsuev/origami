@@ -22,7 +22,7 @@
 
 **Case:** #8  
 **Test:** OCP-49734 NTP sync validation  
-**Step:** F0_RECALL
+**Step:** recall
 
 ---
 
@@ -57,6 +57,9 @@ These RCAs were discovered from other cases in the current calibration run. If t
 |--------|-----------|-------------|---------|
 | #1 | test-component | pb001 | root cause from subagent-0 |
 | #2 | test-component | pb001 | root cause from subagent-1 |
+| #3 | test-component | pb001 | root cause from subagent-0 |
+| #4 | test-component | pb001 | root cause from subagent-1 |
+| #5 | test-component | pb001 | root cause from subagent-0 |
 
 
 

@@ -1,5 +1,7 @@
 package framework
 
+// Category: Execution
+
 import (
 	"sync"
 	"time"
@@ -11,15 +13,15 @@ type NodeCache interface {
 	Set(key string, art Artifact, ttl time.Duration)
 }
 
-// CachePolicy configures caching behavior for a node via the DSL.
-type CachePolicy struct {
+// cachePolicy configures caching behavior for a node via the DSL.
+type cachePolicy struct {
 	TTL    time.Duration `yaml:"ttl,omitempty"`
 	KeyFunc func(NodeContext) string `yaml:"-"`
 }
 
-// EventNodeCacheHit is emitted when a cached artifact is returned instead of
+// eventNodeCacheHit is emitted when a cached artifact is returned instead of
 // processing the node.
-const EventNodeCacheHit WalkEventType = "node_cache_hit"
+const eventNodeCacheHit WalkEventType = "node_cache_hit"
 
 // InMemoryCache is a thread-safe in-memory NodeCache with TTL-based lazy eviction.
 type InMemoryCache struct {

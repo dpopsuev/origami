@@ -15,13 +15,12 @@ type fullCircuitTransformer struct{}
 
 func (f *fullCircuitTransformer) Name() string { return "test-full" }
 func (f *fullCircuitTransformer) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
-	step := NodeNameToStep(tc.NodeName)
-	switch step {
-	case StepF0Recall:
-		return &RecallResult{Match: true, Confidence: 0.95, Reasoning: "known failure"}, nil
-	case StepF5Review:
-		return &ReviewDecision{Decision: "approve"}, nil
-	case StepF6Report:
+	switch tc.NodeName {
+	case "recall":
+		return map[string]any{"match": true, "confidence": 0.95, "reasoning": "known failure"}, nil
+	case "review":
+		return map[string]any{"decision": "approve"}, nil
+	case "report":
 		return map[string]any{"summary": "done"}, nil
 	default:
 		return map[string]any{}, nil
@@ -37,12 +36,14 @@ func TestWalkCase_RecallHitPath(t *testing.T) {
 		Hooks: StoreHooks(ms, c),
 	}
 	transComp := TransformerComponent(&fullCircuitTransformer{})
+	circuitData := readInternalTestdata(t, "circuit_rca.yaml")
 
 	result, err := WalkCase(context.Background(), WalkConfig{
-		Store:    ms,
-		CaseData: c,
-		CaseLabel: "T1",
-		Components: []*framework.Component{transComp, storeComp},
+		Store:       ms,
+		CaseData:    c,
+		CaseLabel:   "T1",
+		CircuitData: circuitData,
+		Components:  []*framework.Component{transComp, storeComp},
 	})
 	if err != nil {
 		t.Fatalf("WalkCase: %v", err)
@@ -76,19 +77,18 @@ type triageInvestigateTransformer struct{}
 
 func (f *triageInvestigateTransformer) Name() string { return "test-triage" }
 func (f *triageInvestigateTransformer) Transform(_ context.Context, tc *framework.TransformerContext) (any, error) {
-	step := NodeNameToStep(tc.NodeName)
-	switch step {
-	case StepF0Recall:
-		return &RecallResult{Match: false, Confidence: 0.1}, nil
-	case StepF1Triage:
-		return &TriageResult{SymptomCategory: "product_bug", CandidateRepos: []string{"repo-a"}}, nil
-	case StepF3Invest:
-		return &InvestigateArtifact{ConvergenceScore: 0.8, EvidenceRefs: []string{"commit-abc"}, DefectType: "product_bug"}, nil
-	case StepF4Correlate:
-		return &CorrelateResult{IsDuplicate: false, Confidence: 0.3}, nil
-	case StepF5Review:
-		return &ReviewDecision{Decision: "approve"}, nil
-	case StepF6Report:
+	switch tc.NodeName {
+	case "recall":
+		return map[string]any{"match": false, "confidence": 0.1}, nil
+	case "triage":
+		return map[string]any{"symptom_category": "product_bug", "candidate_repos": []any{"repo-a"}}, nil
+	case "investigate":
+		return map[string]any{"convergence_score": 0.8, "evidence_refs": []any{"commit-abc"}, "defect_type": "product_bug"}, nil
+	case "correlate":
+		return map[string]any{"is_duplicate": false, "confidence": 0.3}, nil
+	case "review":
+		return map[string]any{"decision": "approve"}, nil
+	case "report":
 		return map[string]any{"summary": "done"}, nil
 	default:
 		return map[string]any{}, nil
@@ -104,12 +104,14 @@ func TestWalkCase_TriageInvestigatePath(t *testing.T) {
 		Hooks: StoreHooks(ms, c),
 	}
 	transComp := TransformerComponent(&triageInvestigateTransformer{})
+	circuitData := readInternalTestdata(t, "circuit_rca.yaml")
 
 	result, err := WalkCase(context.Background(), WalkConfig{
-		Store:    ms,
-		CaseData: c,
-		CaseLabel: "T2",
-		Components: []*framework.Component{transComp, storeComp},
+		Store:       ms,
+		CaseData:    c,
+		CaseLabel:   "T2",
+		CircuitData: circuitData,
+		Components:  []*framework.Component{transComp, storeComp},
 	})
 	if err != nil {
 		t.Fatalf("WalkCase: %v", err)
@@ -129,16 +131,17 @@ func TestWalkCase_TriageInvestigatePath(t *testing.T) {
 func TestWalkCase_HITL_Fallback(t *testing.T) {
 	hitlComp := HITLComponent()
 	th := DefaultThresholds()
-	runner, err := BuildRunner(th, hitlComp)
+	circuitData := readInternalTestdata(t, "circuit_rca.yaml")
+	runner, err := BuildRunner(circuitData, th, hitlComp)
 	if err != nil {
 		t.Fatalf("BuildRunner: %v", err)
 	}
 
 	walker := framework.NewProcessWalker("test")
 
-	def, err := AsteriskCircuitDef(th)
+	def, err := LoadCircuitDef(circuitData, th)
 	if err != nil {
-		t.Fatalf("AsteriskCircuitDef: %v", err)
+		t.Fatalf("LoadCircuitDef: %v", err)
 	}
 
 	err = runner.Walk(context.Background(), walker, def.Start)

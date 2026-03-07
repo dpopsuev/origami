@@ -6,11 +6,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dpopsuev/origami/knowledge"
-	skn "github.com/dpopsuev/origami/schematics/knowledge"
+	"github.com/dpopsuev/origami/schematics/toolkit"
 )
 
-// GitDriver implements knowledge.Driver for git repositories. It wraps the
+// GitDriver implements toolkit.Driver for git repositories. It wraps the
 // existing RepoCache for shallow cloning and the ripgrep-based search.
 type GitDriver struct {
 	cache *RepoCache
@@ -19,27 +18,48 @@ type GitDriver struct {
 	localPaths map[string]string // uri -> local path
 }
 
-var _ skn.Driver = (*GitDriver)(nil)
+var _ toolkit.Driver = (*GitDriver)(nil)
+
+// GitDriverOption configures a GitDriver.
+type GitDriverOption func(*GitDriver)
+
+// WithRepoCache injects a pre-built RepoCache, useful for testing
+// without requiring real git/ripgrep binaries.
+func WithRepoCache(c *RepoCache) GitDriverOption {
+	return func(d *GitDriver) { d.cache = c }
+}
+
+// DefaultGitDriver creates a GitDriver with default token resolution
+// ($GITHUB_TOKEN env var, then .github-token file). This zero-arg factory
+// is used by codegen for secondary schematic binding construction.
+func DefaultGitDriver() (*GitDriver, error) {
+	return NewGitDriver("")
+}
 
 // NewGitDriver creates a GitDriver backed by a shallow-clone cache.
 // tokenSource is the path to a GitHub token file; if empty, standard
 // resolution ($GITHUB_TOKEN, then .github-token) is used.
-func NewGitDriver(tokenSource string) (*GitDriver, error) {
+// Options are applied after default construction.
+func NewGitDriver(tokenSource string, opts ...GitDriverOption) (*GitDriver, error) {
 	token, err := ResolveToken(tokenSource)
 	if err != nil {
 		return nil, err
 	}
-	return &GitDriver{
+	d := &GitDriver{
 		cache:      NewRepoCache(DefaultCacheDir(), token),
 		localPaths: make(map[string]string),
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d, nil
 }
 
-func (d *GitDriver) Handles() knowledge.SourceKind {
-	return knowledge.SourceKindRepo
+func (d *GitDriver) Handles() toolkit.SourceKind {
+	return toolkit.SourceKindRepo
 }
 
-func (d *GitDriver) Ensure(ctx context.Context, src knowledge.Source) error {
+func (d *GitDriver) Ensure(ctx context.Context, src toolkit.Source) error {
 	org, repo, err := parseGitURI(src.URI)
 	if err != nil {
 		return err
@@ -56,7 +76,7 @@ func (d *GitDriver) Ensure(ctx context.Context, src knowledge.Source) error {
 	return nil
 }
 
-func (d *GitDriver) Search(ctx context.Context, src knowledge.Source, query string, maxResults int) ([]knowledge.SearchResult, error) {
+func (d *GitDriver) Search(ctx context.Context, src toolkit.Source, query string, maxResults int) ([]toolkit.SearchResult, error) {
 	localPath, err := d.resolvePath(ctx, src)
 	if err != nil {
 		return nil, err
@@ -72,12 +92,12 @@ func (d *GitDriver) Search(ctx context.Context, src knowledge.Source, query stri
 		return nil, err
 	}
 
-	results := make([]knowledge.SearchResult, 0, len(localResults))
+	results := make([]toolkit.SearchResult, 0, len(localResults))
 	for _, r := range localResults {
 		if len(results) >= maxResults {
 			break
 		}
-		results = append(results, knowledge.SearchResult{
+		results = append(results, toolkit.SearchResult{
 			Source:  src.Name,
 			Path:    r.File,
 			Line:    r.Line,
@@ -87,7 +107,7 @@ func (d *GitDriver) Search(ctx context.Context, src knowledge.Source, query stri
 	return results, nil
 }
 
-func (d *GitDriver) Read(ctx context.Context, src knowledge.Source, path string) ([]byte, error) {
+func (d *GitDriver) Read(ctx context.Context, src toolkit.Source, path string) ([]byte, error) {
 	localPath, err := d.resolvePath(ctx, src)
 	if err != nil {
 		return nil, err
@@ -95,7 +115,7 @@ func (d *GitDriver) Read(ctx context.Context, src knowledge.Source, path string)
 	return ReadFile(ctx, localPath, path)
 }
 
-func (d *GitDriver) List(ctx context.Context, src knowledge.Source, root string, maxDepth int) ([]knowledge.ContentEntry, error) {
+func (d *GitDriver) List(ctx context.Context, src toolkit.Source, root string, maxDepth int) ([]toolkit.ContentEntry, error) {
 	localPath, err := d.resolvePath(ctx, src)
 	if err != nil {
 		return nil, err
@@ -106,12 +126,12 @@ func (d *GitDriver) List(ctx context.Context, src knowledge.Source, root string,
 		return nil, err
 	}
 
-	entries := make([]knowledge.ContentEntry, 0, len(localEntries))
+	entries := make([]toolkit.ContentEntry, 0, len(localEntries))
 	for _, e := range localEntries {
 		if root != "" && root != "." && !strings.HasPrefix(e.Path, root) {
 			continue
 		}
-		entries = append(entries, knowledge.ContentEntry{
+		entries = append(entries, toolkit.ContentEntry{
 			Path:  e.Path,
 			IsDir: e.IsDir,
 		})
@@ -119,7 +139,7 @@ func (d *GitDriver) List(ctx context.Context, src knowledge.Source, root string,
 	return entries, nil
 }
 
-func (d *GitDriver) resolvePath(ctx context.Context, src knowledge.Source) (string, error) {
+func (d *GitDriver) resolvePath(ctx context.Context, src toolkit.Source) (string, error) {
 	d.mu.RLock()
 	lp, ok := d.localPaths[src.URI]
 	d.mu.RUnlock()

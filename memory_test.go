@@ -294,21 +294,21 @@ func TestWithTaggedMemory_RunOption(t *testing.T) {
 func TestMemoryHelpers(t *testing.T) {
 	store := NewInMemoryStore()
 
-	SetFact(store, "w1", "preference", "dark")
+	setFact(store, "w1", "preference", "dark")
 	v, ok := store.GetNS(NamespaceSemantic, "w1", "preference")
 	if !ok || v != "dark" {
-		t.Errorf("SetFact: got %v", v)
+		t.Errorf("setFact: got %v", v)
 	}
 
-	RecordEpisode(store, "w1", "walk-001", "analyzed 5 failures")
+	recordEpisode(store, "w1", "walk-001", "analyzed 5 failures")
 	v, ok = store.GetNS(NamespaceEpisodic, "w1", "walk-001")
 	if !ok || v != "analyzed 5 failures" {
-		t.Errorf("RecordEpisode: got %v", v)
+		t.Errorf("recordEpisode: got %v", v)
 	}
 
-	UpdateInstruction(store, "w1", "greeting", "be concise")
+	updateInstruction(store, "w1", "greeting", "be concise")
 	v, ok = store.GetNS(NamespaceProcedural, "w1", "greeting")
 	if !ok || v != "be concise" {
-		t.Errorf("UpdateInstruction: got %v", v)
+		t.Errorf("updateInstruction: got %v", v)
 	}
 }

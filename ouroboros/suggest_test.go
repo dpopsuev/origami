@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/element"
 )
 
 func TestElementMatch_FastModel_MapsToFireOrLightning(t *testing.T) {
@@ -20,7 +20,7 @@ func TestElementMatch_FastModel_MapsToFireOrLightning(t *testing.T) {
 	}
 
 	match := ElementMatch(profile)
-	if match != framework.ElementFire && match != framework.ElementLightning {
+	if match != element.ElementFire && match != element.ElementLightning {
 		t.Errorf("expected fire or lightning for fast model, got %s", match)
 	}
 }
@@ -38,7 +38,7 @@ func TestElementMatch_ThoroughModel_MapsToEarthOrWater(t *testing.T) {
 	}
 
 	match := ElementMatch(profile)
-	if match != framework.ElementEarth && match != framework.ElementWater {
+	if match != element.ElementEarth && match != element.ElementWater {
 		t.Errorf("expected earth or water for thorough model, got %s", match)
 	}
 }
@@ -57,7 +57,7 @@ func TestElementScores_SumPositive(t *testing.T) {
 
 	scores := ElementScores(profile)
 
-	for _, e := range framework.AllElements() {
+	for _, e := range element.AllElements() {
 		s, ok := scores[e]
 		if !ok {
 			t.Errorf("missing score for element %s", e)
@@ -102,6 +102,18 @@ func TestSuggestPersona_ReturnsTwoSuggestions(t *testing.T) {
 	}
 }
 
+// testRCAStepDims provides a sample step-dimension mapping for tests.
+// This is the kind of mapping a consumer (e.g., Asterisk/RCA) would supply.
+var testRCAStepDims = StepDimensionMap{
+	"recall":      {DimSpeed, DimShortcutAffinity},
+	"triage":      {DimSpeed, DimConvergenceThreshold},
+	"resolve":     {DimEvidenceDepth, DimConvergenceThreshold},
+	"investigate": {DimEvidenceDepth, DimPersistence, DimConvergenceThreshold},
+	"correlate":   {DimPersistence, DimEvidenceDepth},
+	"review":      {DimConvergenceThreshold, DimFailureMode},
+	"report":      {DimSpeed, DimEvidenceDepth},
+}
+
 func TestDeriveStepAffinity_AllStepsPresent(t *testing.T) {
 	profile := ModelProfile{
 		Dimensions: map[Dimension]float64{
@@ -114,10 +126,9 @@ func TestDeriveStepAffinity_AllStepsPresent(t *testing.T) {
 		},
 	}
 
-	affinity := DeriveStepAffinity(profile)
+	affinity := DeriveStepAffinity(profile, testRCAStepDims)
 
-	expectedSteps := []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report"}
-	for _, step := range expectedSteps {
+	for step := range testRCAStepDims {
 		v, ok := affinity[step]
 		if !ok {
 			t.Errorf("missing affinity for step %s", step)
@@ -126,6 +137,15 @@ func TestDeriveStepAffinity_AllStepsPresent(t *testing.T) {
 		if v < 0 || v > 1.0 {
 			t.Errorf("affinity[%s] = %f, want [0, 1.0]", step, v)
 		}
+	}
+}
+
+func TestDeriveStepAffinity_NilMap_ReturnsNil(t *testing.T) {
+	profile := ModelProfile{
+		Dimensions: map[Dimension]float64{DimSpeed: 0.5},
+	}
+	if result := DeriveStepAffinity(profile, nil); result != nil {
+		t.Errorf("expected nil for nil stepDims, got %v", result)
 	}
 }
 
@@ -141,7 +161,7 @@ func TestDeriveStepAffinity_FastModel_HighRecall(t *testing.T) {
 		},
 	}
 
-	affinity := DeriveStepAffinity(profile)
+	affinity := DeriveStepAffinity(profile, testRCAStepDims)
 
 	if affinity["recall"] < affinity["investigate"] {
 		t.Errorf("fast model should have higher recall (%f) than investigate (%f)",
@@ -161,7 +181,7 @@ func TestDeriveStepAffinity_DeepModel_HighInvestigate(t *testing.T) {
 		},
 	}
 
-	affinity := DeriveStepAffinity(profile)
+	affinity := DeriveStepAffinity(profile, testRCAStepDims)
 
 	if affinity["investigate"] < affinity["recall"] {
 		t.Errorf("deep model should have higher investigate (%f) than recall (%f)",

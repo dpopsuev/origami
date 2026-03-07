@@ -72,9 +72,10 @@ func TestRunAnalysis_HeuristicTransformer(t *testing.T) {
 	}
 
 	cfg := rca.AnalysisConfig{
-		Components:   []*framework.Component{rca.HeuristicComponent(st, []string{"linuxptp-daemon", "cloud-event-proxy"})},
-		Thresholds: rca.DefaultThresholds(),
-		BasePath:   tmpDir,
+		Components:  []*framework.Component{rca.HeuristicComponent(st, []string{"linuxptp-daemon", "cloud-event-proxy"}, readTestdata(t, "heuristics.yaml"))},
+		Thresholds:  rca.DefaultThresholds(),
+		BasePath:    tmpDir,
+		CircuitData: readTestdata(t, "circuit_rca.yaml"),
 	}
 
 	report, err := rca.RunAnalysis(st, storeCases, suiteID, cfg)
@@ -111,9 +112,10 @@ func TestRunAnalysis_EmptyCases(t *testing.T) {
 	st := store.NewMemStore()
 
 	cfg := rca.AnalysisConfig{
-		Components:   []*framework.Component{rca.HeuristicComponent(st, nil)},
-		Thresholds: rca.DefaultThresholds(),
-		BasePath:   tmpDir,
+		Components:  []*framework.Component{rca.HeuristicComponent(st, nil, nil)},
+		Thresholds:  rca.DefaultThresholds(),
+		BasePath:    tmpDir,
+		CircuitData: readTestdata(t, "circuit_rca.yaml"),
 	}
 
 	report, err := rca.RunAnalysis(st, nil, 1, cfg)
