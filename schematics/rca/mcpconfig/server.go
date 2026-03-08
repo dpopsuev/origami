@@ -129,6 +129,16 @@ func (s *Server) Shutdown() {
 	s.CircuitServer.Shutdown()
 }
 
+func (s *Server) loadScorecard(path, projectRoot string) (*cal.ScoreCard, error) {
+	if s.DomainFS != nil {
+		data, err := fs.ReadFile(s.DomainFS, path)
+		if err == nil {
+			return cal.ParseScoreCard(data)
+		}
+	}
+	return cal.LoadScoreCard(filepath.Join(projectRoot, path))
+}
+
 func (s *Server) readDomainCircuit() []byte {
 	if s.DomainFS == nil {
 		return nil
@@ -321,7 +331,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	if scorecardPath == "" {
 		scorecardPath = "internal/scorecards/rca.yaml"
 	}
-	sc, err := cal.LoadScoreCard(filepath.Join(root, scorecardPath))
+	sc, err := s.loadScorecard(scorecardPath, root)
 	if err != nil {
 		return nil, fwmcp.SessionMeta{}, fmt.Errorf("load scorecard: %w", err)
 	}
