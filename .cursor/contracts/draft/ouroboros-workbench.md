@@ -1,7 +1,7 @@
 # Contract — ouroboros-workbench
 
 **Status:** draft  
-**Goal:** Ouroboros probe transcripts are reviewable in a mail-like Web UI where a human and AI agent co-assess results, score roles, and tune prompts.  
+**Goal:** Ouroboros probe transcripts are reviewable in a mail-like Web UI where a human reviewer, assisted by an AI co-pilot, assesses results, scores roles, and tunes prompts. The AI cross-references code and proposes changes; the human signs every review for accountability.  
 **Serves:** Containerized Runtime (Ouroboros enrichment)
 
 ## Contract rules
@@ -54,7 +54,7 @@ flowchart LR
     Workbench -->|"POST selection"| Agent
 ```
 
-Third mode: Workbench. The AI agent sees what the human sees via `review_get_current_view` MCP tool and can highlight exchanges, propose scores, and suggest prompt tuning — all through the existing Demiurge channels.
+Third mode: Workbench. The AI co-pilot sees what the human sees via `review_get_current_view` MCP tool and can highlight exchanges, cross-reference source code, discuss whether the issue is the tested agent or the code itself, and suggest prompt tuning — all through the existing Demiurge channels. The AI proposes; the human decides and signs.
 
 ## FSC artifacts
 
@@ -151,10 +151,12 @@ The contract delivers the React frontend in layers, from data display to interac
 - And the inbox row transitions from yellow to green without a page reload
 
 **AI Co-browsing:**
-- Given the AI agent calls `review_get_current_view` via MCP
+- Given the AI co-pilot calls `review_get_current_view` via MCP
 - Then it receives `{run_id, exchange_index, model}` matching what the human sees
-- Given the AI agent sends `review_highlight_exchange` with `{index: 2}`
+- Given the AI co-pilot sends `review_highlight_exchange` with `{index: 2}`
 - Then the Judge exchange card in the browser gets a visible highlight effect
+- Given the AI co-pilot proposes a score or tuning change
+- Then the proposal appears in the UI as a suggestion — the human accepts, modifies, or rejects before signing
 
 ## Security assessment
 

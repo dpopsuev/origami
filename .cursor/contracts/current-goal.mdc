@@ -61,6 +61,7 @@ Phase 4 — Vision
 ├── delegate-node (P1-P4 ✓, P5-P6 deferred)
 ├── agent-roles (P1-P2 ✓, P3-P6 deferred)
 ├── operator-reconciliation (P1-P3 + P6 ✓, P4-P5 + P7 deferred)
+├── ouroboros-probe-extensions (Tracks A-D ✓, C7 deferred)
 └── finding-router
 
 Asterisk pivot (post-Origami containerization)
@@ -77,12 +78,12 @@ Asterisk pivot (post-Origami containerization)
 | `delegate-node` | 4 | P1-P4 complete (interface, sub-walk, DSL, topology). P5-P6 deferred. |
 | `agent-roles` | 4 | P1-P2 complete (Role type, DSL extension). P3-P6 deferred. |
 | `operator-reconciliation` | 4 | P1-P3 + P6 complete (types, Operator interface, RunOperator loop, InMemoryContainer, StubOperator). P4-P5 + P7 deferred. |
+| `ouroboros-probe-extensions` | 4 | Tracks A-D complete. Timed handicap, scaffolded prompt-chain, transcript persistence + review API (store + Kami HTTP + MCP), 21 behavioral probe seeds (73 total). C7 (frontend mode detection) deferred to ouroboros-workbench. |
 
 ## Draft Contracts
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
-| `ouroboros-probe-extensions` | next-milestone | — | Timed handicap, scaffolded prompt-chain, transcript persistence + review API. |
 | `ouroboros-workbench` | next-milestone | — | Mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
 | `finding-router` | vision | 4 | Enforcer feedback routing by severity/domain. Veto mechanism. Three enforcement patterns. Depends on agent-roles. |

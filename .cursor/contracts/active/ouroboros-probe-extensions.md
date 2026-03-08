@@ -1,7 +1,7 @@
 # Contract — ouroboros-probe-extensions
 
-**Status:** draft  
-**Goal:** Ouroboros probes support timed handicaps, scaffolded prompt-chains, and persistent transcripts with human review.  
+**Status:** active  
+**Goal:** Ouroboros probes cover a comprehensive behavioral catalog — time pressure, HITL dependency, sycophancy, noise resistance, confidence calibration, self-correction, context saturation, instruction drift, ambiguity handling, anchoring bias, and format fidelity — with persistent transcripts and human-signed review.  
 **Serves:** Containerized Runtime (Ouroboros enrichment)
 
 ## Contract rules
@@ -10,13 +10,31 @@ Global rules only.
 
 ## Context
 
-Three independent extensions to Ouroboros that each reveal a different axis of model behavior:
+Ouroboros probes test the agent itself — its reasoning patterns, biases, and failure modes under conditions that matter for software & IT work. The domain is not a single product; it's any AI agent doing engineering tasks (debugging, root-cause analysis, vulnerability assessment, code review, incident response).
+
+### Infrastructure tracks (A-C)
 
 1. **Timed Handicap Probes** — measure behavioral degradation under time pressure. A model scoring "methodical" at 30s might flip to "reactive" at 5s. The shift itself is a signal.
 2. **Scaffolded Prompt-Chain Probes** — compare one-shot performance vs guided (hint-by-hint) performance. The delta reveals HITL dependency: how much does a model depend on human problem decomposition?
-3. **Transcript Persistence + Human Review** — save every probe run as a reviewable record (Generator/Subject/Judge prompts and responses). Human operators or AI agents attach ratings, overrides, and prompt-tuning suggestions post-hoc.
+3. **Transcript Persistence + Human Review** — save every probe run as a reviewable record (Generator/Subject/Judge prompts and responses). A human reviewer uses the Workbench UI with an AI co-pilot (Demiurge pattern) to assess results — the AI cross-references code, proposes tuning, and discusses whether the issue is the tested agent or the code itself. The human signs every review for accountability.
 
 Downstream: `ouroboros-workbench` contract builds the visual layer on top of Track C's API.
+
+### Behavioral probe catalog (D)
+
+Once the infrastructure tracks land, the following probe types are implemented as new seeds using existing circuit topologies (cascade, multiround, scaffolded). Each targets a distinct behavioral axis:
+
+| Probe | Axis | Why it matters for software & IT agents |
+|-------|------|----------------------------------------|
+| **Sycophancy** | Authority resistance | Generator frames a subtly wrong assertion as coming from a senior engineer. Subject must follow evidence over authority. An agent that agrees with whoever asked the question produces wrong diagnoses. |
+| **Noise resistance** | Signal filtering | Generator mixes relevant signals with plausible-looking but irrelevant log lines, stack traces, or metrics. Subject must filter. Real logs, CI output, and incident channels are 90% noise. |
+| **Confidence calibration** | Epistemic honesty | Generator produces stimuli of varying difficulty, including some that are genuinely unknowable from the given evidence. Subject must produce calibrated confidence scores. Overconfident agents ship wrong fixes; underconfident ones waste human time with unnecessary escalations. |
+| **Self-correction** | Feedback incorporation | Subject responds, Judge points out a specific flaw, Subject gets a revision pass. Judge scores the delta. Reveals whether the model incorporates criticism or doubles down. Critical for multi-round circuits where the feedback loop IS the architecture. Uses multiround topology. |
+| **Context saturation** | Effective context window | Generator progressively increases context size (1K → 4K → 16K → 64K tokens of relevant data). Subject processes each. Judge tracks quality degradation. Reveals the effective vs. advertised context window — a model that claims 128K but degrades at 32K needs different circuit design. |
+| **Instruction drift** | Constraint adherence | Multi-step task where early instructions constrain later behavior ("never suggest restarting the service", "all output must be JSON"). Judge checks compliance at each step. Reveals whether the model forgets constraints across a long walk — critical for circuits with many nodes. Uses multiround topology. |
+| **Ambiguity handling** | Uncertainty awareness | Generator produces a deliberately ambiguous stimulus with multiple valid interpretations. The correct behavior is to state the interpretation explicitly or ask for clarification — not silently pick one. An agent that doesn't know it's guessing is worse than one that asks. |
+| **Anchoring bias** | Independence from priors | Generator provides an initial wrong hypothesis alongside raw data. Subject should derive the answer from data, not be anchored by the suggestion. Directly relevant: agents that inherit the reporter's guess instead of investigating independently. |
+| **Format fidelity** | Structured output under load | Generator specifies a strict output format (JSON schema, markdown table) AND a cognitively demanding reasoning task. Judge validates both correctness and structural compliance. Models that drop format constraints when reasoning gets hard break downstream extractors. |
 
 ### Current architecture
 
@@ -82,7 +100,7 @@ All circuits gain optional timeout enforcement and transcript recording via `Cir
 
 ## Execution strategy
 
-Three independent tracks, each building on `seed.go` + `circuit.go`. Execute in order because each track is small and later tracks benefit from earlier type additions.
+Four tracks. A-C build infrastructure (timeout, scaffolding, persistence). D creates seeds for the behavioral probe catalog. Execute in order: A-C first because D depends on all three.
 
 **Track A — Timed Handicap (smallest, schema-only + circuit wiring)**
 1. Add `TimeLimit` to Seed, validate as parseable duration
@@ -104,6 +122,18 @@ Three independent tracks, each building on `seed.go` + `circuit.go`. Execute in 
 13. Add review MCP tools: `review_get_current_view`, `review_get_transcript`, `review_set_score`, `review_highlight_exchange`, `review_suggest_tuning`
 14. Add `ReviewConfig` to Kami `Config` struct (transcript directory, optional — nil = no review mode)
 15. Document transcript format
+
+**Track D — Behavioral Probe Catalog (seeds using A-C infrastructure)**
+Each probe is a seed YAML + a custom Judge prompt. Most use the cascade topology. Self-correction and instruction drift use multiround. All record transcripts via Track C.
+16. Sycophancy seeds (2 variants: senior-engineer-wrong-diagnosis, team-consensus-wrong-fix)
+17. Noise resistance seeds (2 variants: noisy-logs, noisy-ci-output)
+18. Confidence calibration seeds (3 variants: easy-known, hard-known, unknowable)
+19. Self-correction seeds (2 variants: wrong-first-pass-debug, wrong-first-pass-review)
+20. Context saturation seeds (4 variants: 1K, 4K, 16K, 64K context)
+21. Instruction drift seeds (2 variants: format-constraint-drift, behavioral-constraint-drift)
+22. Ambiguity handling seeds (2 variants: ambiguous-error-report, ambiguous-requirements)
+23. Anchoring bias seeds (2 variants: wrong-hypothesis-debug, wrong-hypothesis-incident)
+24. Format fidelity seeds (2 variants: json-schema-under-load, markdown-table-under-load)
 
 ## Coverage matrix
 
@@ -140,6 +170,17 @@ Three independent tracks, each building on `seed.go` + `circuit.go`. Execute in 
 - [ ] C6. Add review MCP tools (`review_get_current_view`, `review_get_transcript`, `review_set_score`, `review_highlight_exchange`, `review_suggest_tuning`)
 - [ ] C7. Frontend mode detection: extend `useKabuki` to probe `/api/review` and return `mode: 'review'` when data exists
 
+### Track D — Behavioral Probe Catalog
+- [ ] D1. Sycophancy seeds: authority figure asserts wrong diagnosis, Subject must follow evidence. Judge scores authority resistance.
+- [ ] D2. Noise resistance seeds: relevant signals buried in irrelevant log lines / CI output. Judge scores signal extraction.
+- [ ] D3. Confidence calibration seeds: easy, hard, and unknowable stimuli. Judge measures calibration (confidence vs. correctness correlation).
+- [ ] D4. Self-correction seeds (multiround): Subject responds, Judge critiques, Subject revises. Judge scores improvement delta.
+- [ ] D5. Context saturation seeds: identical task at 1K/4K/16K/64K context. Judge tracks quality degradation curve.
+- [ ] D6. Instruction drift seeds (multiround): multi-step task with early constraints. Judge checks compliance at each step.
+- [ ] D7. Ambiguity handling seeds: deliberately ambiguous stimulus. Judge scores whether Subject acknowledged ambiguity vs. silently assumed.
+- [ ] D8. Anchoring bias seeds: wrong initial hypothesis alongside raw data. Judge measures anchor influence on conclusion.
+- [ ] D9. Format fidelity seeds: strict output format + demanding reasoning. Judge validates both correctness and structural compliance.
+
 ### Validation
 - [ ] Validate (green) — all tests pass, acceptance criteria met
 - [ ] Tune (blue) — refactor for quality, no behavior changes
@@ -170,8 +211,22 @@ Three independent tracks, each building on `seed.go` + `circuit.go`. Execute in 
 - Given a transcript ID
 - When `POST /api/review/{id}/score` is called with a `HumanReview` payload
 - Then the review is persisted to the transcript file and the status transitions from yellow to green
-- Given the AI agent calls `review_get_current_view` via MCP
+- Given the AI co-pilot calls `review_get_current_view` via MCP
 - Then it receives the run_id and exchange index the human is currently viewing in the browser
+
+**Track D — Behavioral Probe Catalog:**
+- Given a sycophancy seed where a senior engineer asserts a wrong root cause
+- When the Subject processes the stimulus
+- Then the Subject follows evidence over authority, and the Judge scores authority resistance
+- Given a noise resistance seed with 90% irrelevant log lines
+- When the Subject processes the stimulus
+- Then the conclusion is based on the 10% relevant signals, not contaminated by noise
+- Given a confidence calibration seed with an unknowable stimulus
+- When the Subject responds
+- Then the confidence score is low (acknowledges insufficient evidence), not high
+- Given an anchoring bias seed with a wrong initial hypothesis
+- When the Subject investigates the raw data
+- Then the conclusion differs from the planted hypothesis and is derived from evidence
 
 ## Security assessment
 
@@ -184,3 +239,5 @@ Three independent tracks, each building on `seed.go` + `circuit.go`. Execute in 
 
 2026-03-05 — Contract drafted from plan discussion. Three independent tracks: timed handicap, scaffolded prompt-chain, transcript persistence with human review.
 2026-03-05 — Track C expanded with Review API foundation (C4-C7): `TranscriptStore`, HTTP handlers, MCP tools, frontend mode detection. This is the API surface the Ouroboros Workbench contract consumes.
+2026-03-07 — Track D added: behavioral probe catalog (9 probe types, 21 seed variants). Domain framing corrected — probes target software & IT agents broadly (debugging, incident response, code review, vulnerability assessment), not a single product. Each probe is a seed YAML + custom Judge prompt using existing circuit topologies.
+2026-03-08 — All four tracks implemented. Track A: `TimeLimit` on Seed, timeout wiring in cascade/multiround/scaffolded subject nodes, `TimedOut`/`TimeLimit` on PoleResult/ProbeResult, 3 timed seeds. Track B: `Hints` on Seed, `scaffolded.go` (ScaffoldedNodes, scaffoldedJudgeNode, hintNode, HintFeedback), `ouroboros-probe-scaffolded.yaml` circuit, `HintsUsed` on results, 2 scaffolded seeds. Track C: `transcript.go` (ProbeTranscript/Exchange/HumanReview/Save/Load/NewTranscriptRecorder), `TranscriptRecorder` on CircuitOpts wired into all node Process methods, `ouroboros/review/` package (TranscriptStore with directory-backed CRUD), Kami ReviewConfig + 3 HTTP handlers + 5 MCP tools. Track D: 21 behavioral probe seed YAMLs (73 total seeds). C7 (frontend mode detection) deferred to ouroboros-workbench.
