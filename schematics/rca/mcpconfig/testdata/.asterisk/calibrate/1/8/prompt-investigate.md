@@ -35,7 +35,7 @@ Note: Timestamps may originate from different clock planes (executor, test node,
 ## Failure under investigation
 
 **Test name:** `OCP-49734 NTP sync validation`  
-**Status:** triaged
+**Status:** open
 
 **Error message:**
 ```

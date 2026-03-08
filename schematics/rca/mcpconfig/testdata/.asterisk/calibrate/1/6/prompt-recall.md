@@ -53,20 +53,9 @@ FAIL: Expected clock state to be LOCKED
 | Name | OCP-83297 PTP sync stability |
 | Status | active |
 | Occurrences | 1 |
-| First seen | 2026-03-08T08:57:18Z |
-| Last seen | 2026-03-08T08:57:18Z |
+| First seen | 2026-03-08T09:38:20Z |
+| Last seen | 2026-03-08T09:38:20Z |
 
-
-
-
-## Prior RCAs linked to this symptom
-
-| Field | Value |
-|-------|-------|
-| RCA #2 | root cause from subagent-1 |
-| Defect type | pb001 |
-| Status | open |
-| Affected versions |  |
 
 
 
@@ -78,9 +67,8 @@ These RCAs were discovered from other cases in the current calibration run. If t
 
 | RCA ID | Component | Defect Type | Summary |
 |--------|-----------|-------------|---------|
-| #1 | test-component | pb001 | root cause from subagent-0 |
-| #2 | test-component | pb001 | root cause from subagent-1 |
-| #3 | test-component | pb001 | root cause from subagent-0 |
+| #1 | test-component | pb001 | root cause from subagent-1 |
+| #2 | test-component | pb001 | root cause from subagent-0 |
 
 
 

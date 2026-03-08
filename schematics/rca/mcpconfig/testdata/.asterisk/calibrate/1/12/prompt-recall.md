@@ -49,21 +49,6 @@ FAIL: Cascade failure from stale CRD (related to OCP-83299)
 
 
 
-## All known RCAs in this run
-
-These RCAs were discovered from other cases in the current calibration run. If the current failure's error pattern matches any of these, set `match: true` with the matching RCA ID and high confidence.
-
-| RCA ID | Component | Defect Type | Summary |
-|--------|-----------|-------------|---------|
-| #1 | test-component | pb001 | root cause from subagent-0 |
-| #2 | test-component | pb001 | root cause from subagent-1 |
-| #3 | test-component | pb001 | root cause from subagent-0 |
-| #4 | test-component | pb001 | root cause from subagent-0 |
-| #5 | test-component | pb001 | root cause from subagent-1 |
-| #6 | test-component | pb001 | root cause from subagent-0 |
-| #7 | test-component | pb001 | root cause from subagent-1 |
-| #8 | test-component | pb001 | root cause from subagent-0 |
-
 
 
 ## Guards
