@@ -46,42 +46,7 @@ FAIL: Stale CRD
 
 
 
-## Known symptom
 
-| Field | Value |
-|-------|-------|
-| Name | OCP-83300 PTP config cleanup |
-| Status | active |
-| Occurrences | 1 |
-| First seen | 2026-03-08T09:38:20Z |
-| Last seen | 2026-03-08T09:38:20Z |
-
-
-
-
-## Prior RCAs linked to this symptom
-
-| Field | Value |
-|-------|-------|
-| RCA #3 | root cause from subagent-0 |
-| Defect type | pb001 |
-| Status | open |
-| Affected versions |  |
-
-
-
-
-
-## All known RCAs in this run
-
-These RCAs were discovered from other cases in the current calibration run. If the current failure's error pattern matches any of these, set `match: true` with the matching RCA ID and high confidence.
-
-| RCA ID | Component | Defect Type | Summary |
-|--------|-----------|-------------|---------|
-| #1 | test-component | pb001 | root cause from subagent-1 |
-| #2 | test-component | pb001 | root cause from subagent-0 |
-| #3 | test-component | pb001 | root cause from subagent-0 |
-| #4 | test-component | pb001 | root cause from subagent-1 |
 
 
 
