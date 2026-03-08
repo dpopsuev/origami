@@ -4,5 +4,6 @@
 (No directories)
 
 ## Files
+- `manifest-as-map.md` — Manifest-as-Map — `origami.yaml` as explicit table of contents with keyed `assets:` section, multi-file embed codegen, key-based domainserve resolution. Eliminates wrapper directory.
 - `ouroboros-workbench.md` — Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode.
 - `washi.md` — Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.

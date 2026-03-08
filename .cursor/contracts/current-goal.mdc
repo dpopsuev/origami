@@ -85,6 +85,7 @@ Asterisk pivot (post-Origami containerization)
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
+| `manifest-as-map` | gate | — | `origami.yaml` as explicit table of contents with keyed `assets:` section, multi-file embed codegen, key-based domainserve resolution. Eliminates `internal/` wrapper directory. |
 | `ouroboros-workbench` | next-milestone | — | Mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
 
