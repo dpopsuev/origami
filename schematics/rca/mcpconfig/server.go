@@ -30,7 +30,8 @@ var (
 type Server struct {
 	*fwmcp.CircuitServer
 	ProductName     string
-	ProjectRoot     string
+	ProjectRoot     string // source tree root for reading domain data (scorecard, datasets)
+	StateDir        string // writable root for runtime artifacts (calibrate, investigations)
 	ReaderFactory   rca.SourceReaderFactory
 	StoreFactory    rca.StoreFactory
 	KnowledgeReader toolkit.SourceReader
@@ -67,11 +68,38 @@ func WithDomainFS(fsys fs.FS) ServerOption {
 	return func(s *Server) { s.DomainFS = fsys }
 }
 
+// WithStateDir overrides the runtime state directory used for calibration
+// sessions, investigation artifacts, and other writable output.
+func WithStateDir(dir string) ServerOption {
+	return func(s *Server) { s.StateDir = dir }
+}
+
+// defaultStateDir returns $XDG_STATE_HOME/<product>, falling back to
+// ~/.local/state/<product> per the XDG Base Directory Specification.
+func defaultStateDir(product string) string {
+	if xdg := os.Getenv("XDG_STATE_HOME"); xdg != "" {
+		return filepath.Join(xdg, product)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join("."+product, "state")
+	}
+	return filepath.Join(home, ".local", "state", product)
+}
+
 // NewServer creates an RCA MCP server. The productName identifies the consumer
 // (e.g. "asterisk"). Pass it from the consumer's manifest or CLI config.
+//
+// ProjectRoot defaults to cwd (for reading domain data like scorecards).
+// StateDir defaults to $XDG_STATE_HOME/<product> (for writing runtime
+// artifacts like calibration sessions and investigations).
 func NewServer(productName string, opts ...ServerOption) *Server {
 	cwd, _ := os.Getwd()
-	s := &Server{ProductName: productName, ProjectRoot: cwd}
+	s := &Server{
+		ProductName: productName,
+		ProjectRoot: cwd,
+		StateDir:    defaultStateDir(productName),
+	}
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -219,7 +247,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 
 	root := s.ProjectRoot
 	promptFS := s.DomainFS
-	basePath := filepath.Join(root, ".asterisk/calibrate")
+	basePath := filepath.Join(s.StateDir, "calibrate")
 
 	tokenTracker := dispatch.NewTokenTracker()
 	tracked := dispatch.NewTokenTrackingDispatcher(disp, tokenTracker)

@@ -50,7 +50,8 @@ type ConsumeFunc func(ctx context.Context, lookbackDays int, datasetDir, candida
 
 // AdminToolOpts configures the admin MCP tools.
 type AdminToolOpts struct {
-	ProjectRoot  string
+	ProjectRoot  string // source tree root for curated data (datasets, candidates)
+	StateDir     string // writable root for runtime artifacts (investigations)
 	DatasetDir   string
 	CandidateDir string
 	BasePath     string
@@ -74,9 +75,9 @@ func (o AdminToolOpts) candidateDir() string {
 
 func (o AdminToolOpts) basePath() string {
 	if o.BasePath != "" {
-		return filepath.Join(o.ProjectRoot, o.BasePath)
+		return filepath.Join(o.StateDir, o.BasePath)
 	}
-	return filepath.Join(o.ProjectRoot, rca.DefaultBasePath)
+	return filepath.Join(o.StateDir, "investigations")
 }
 
 // --- investigation_status ---

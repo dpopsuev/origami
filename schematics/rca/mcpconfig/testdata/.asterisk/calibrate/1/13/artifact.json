@@ -1,9 +1,0 @@
-{
-  "component": "cloud-event-proxy",
-  "convergence_score": 0.8,
-  "defect_type": "pb001",
-  "evidence_refs": [
-    "redhat-cne/cloud-event-proxy#458"
-  ],
-  "rca_message": "PTP Events and Metrics - interface down"
-}

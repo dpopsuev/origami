@@ -105,6 +105,7 @@ func TestDomainIntegration_StubCalibrationOverMCP(t *testing.T) {
 
 	engineSrv := mcpserver.NewServer("test-rca",
 		mcpserver.WithDomainFS(remoteFS),
+		mcpserver.WithStateDir(t.TempDir()),
 	)
 	engineSrv.ProjectRoot = projectRoot(t)
 	t.Cleanup(engineSrv.Shutdown)

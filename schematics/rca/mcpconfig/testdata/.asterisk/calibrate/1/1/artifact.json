@@ -1,9 +1,0 @@
-{
-  "component": "test-component",
-  "convergence_score": 0.85,
-  "defect_type": "pb001",
-  "evidence_refs": [
-    "ref-1"
-  ],
-  "rca_message": "root cause from subagent-1"
-}

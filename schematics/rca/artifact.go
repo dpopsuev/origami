@@ -2,8 +2,9 @@ package rca
 
 import "github.com/dpopsuev/origami/schematics/toolkit"
 
-// DefaultBasePath is the default root directory for investigation data.
-const DefaultBasePath = ".asterisk/investigations"
+// DefaultBasePath is the default subdirectory under StateDir for
+// investigation data. Consumers resolve this relative to their StateDir.
+const DefaultBasePath = "investigations"
 
 // rcaNodeArtifacts maps all known RCA node names to their artifact filenames.
 // Unknown nodes return "". Nodes with standard naming use the convention.

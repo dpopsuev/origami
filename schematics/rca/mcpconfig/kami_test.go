@@ -17,7 +17,10 @@ import (
 
 func newTestServerWithKami(t *testing.T) (*mcpserver.Server, string) {
 	t.Helper()
-	srv := mcpserver.NewServer("test-rca", mcpserver.WithDomainFS(testDomainFS(t)))
+	srv := mcpserver.NewServer("test-rca",
+		mcpserver.WithDomainFS(testDomainFS(t)),
+		mcpserver.WithStateDir(t.TempDir()),
+	)
 	srv.ProjectRoot = projectRoot(t)
 
 	bridge := kami.NewEventBridge(nil)

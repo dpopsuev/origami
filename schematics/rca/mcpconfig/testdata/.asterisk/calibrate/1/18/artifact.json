@@ -1,9 +1,0 @@
-{
-  "component": "cnf-features-deploy",
-  "convergence_score": 0.8,
-  "defect_type": "pb001",
-  "evidence_refs": [
-    "openshift-kni/cnf-features-deploy#2177"
-  ],
-  "rca_message": "OCPBUGS-49372: [4.17] remove phc2sys `-w` option PHC2SYSY process not found From linuxptp daemon log:"
-}

@@ -33,26 +33,33 @@ func dumpGoroutines(t *testing.T) {
 	t.Logf("=== GOROUTINE DUMP ===\n%s", buf[:n])
 }
 
+// projectRoot returns a temp directory seeded with read-only fixtures
+// from testdata/ that the server needs at ProjectRoot (e.g. scorecard).
+// All writes (.asterisk/calibrate/, datasets/, candidates/) go to temp
+// and are cleaned up automatically.
 func projectRoot(t *testing.T) string {
 	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("os.Getwd: %v", err)
+	tmp := t.TempDir()
+	_, f, _, _ := runtime.Caller(0)
+	src := filepath.Join(filepath.Dir(f), "testdata")
+
+	seedPaths := []string{
+		"internal/scorecards/rca.yaml",
 	}
-	td := filepath.Join(dir, "testdata")
-	if _, err := os.Stat(td); err == nil {
-		return td
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
+	for _, rel := range seedPaths {
+		data, err := os.ReadFile(filepath.Join(src, rel))
+		if err != nil {
+			t.Fatalf("seed projectRoot: read %s: %v", rel, err)
 		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("could not find project root (go.mod)")
+		dst := filepath.Join(tmp, rel)
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			t.Fatalf("seed projectRoot: mkdir %s: %v", filepath.Dir(dst), err)
 		}
-		dir = parent
+		if err := os.WriteFile(dst, data, 0o644); err != nil {
+			t.Fatalf("seed projectRoot: write %s: %v", dst, err)
+		}
 	}
+	return tmp
 }
 
 func testDomainFS(t *testing.T) fs.FS {
@@ -63,7 +70,10 @@ func testDomainFS(t *testing.T) fs.FS {
 
 func newTestServer(t *testing.T) *mcpserver.Server {
 	t.Helper()
-	srv := mcpserver.NewServer("test-rca", mcpserver.WithDomainFS(testDomainFS(t)))
+	srv := mcpserver.NewServer("test-rca",
+		mcpserver.WithDomainFS(testDomainFS(t)),
+		mcpserver.WithStateDir(t.TempDir()),
+	)
 	srv.ProjectRoot = projectRoot(t)
 	t.Cleanup(srv.Shutdown)
 	return srv
