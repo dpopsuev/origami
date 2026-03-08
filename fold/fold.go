@@ -476,8 +476,11 @@ func copyEmbedFiles(ds *DomainServeConfig, manifestDir, tmpDir string, verbose b
 		paths = append(paths, ds.Store.Schema)
 	}
 	for _, p := range paths {
-		srcPath := filepath.Join(manifestDir, p)
 		dstPath := filepath.Join(tmpDir, p)
+		if _, err := os.Stat(dstPath); err == nil {
+			continue // already placed by copyDomainFiles
+		}
+		srcPath := filepath.Join(manifestDir, p)
 		if err := copyFile(srcPath, dstPath); err != nil {
 			return fmt.Errorf("copy asset %q: %w", p, err)
 		}
