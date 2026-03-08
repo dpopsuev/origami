@@ -63,6 +63,8 @@
 //   - [Cache], [InMemoryCache]     — node result caching with TTL (cache.go)
 //   - [Memory], [MemoryStore]      — persistent walker memory (memory.go)
 //   - [BatchWalk]    — walk a circuit across multiple inputs (batch_walk.go)
+//   - [Operator], [RunOperator]    — reconciliation loop: observe → evaluate → reconcile → walk (operator.go)
+//   - [CircuitContainer], [InMemoryContainer] — circuit lifecycle management (operator.go)
 //   - [FanOut]       — parallel node execution (fanout.go)
 //   - [Team]         — multi-walker collaborative execution (team.go)
 //   - WithThermalBudget — cumulative latency budget enforcement (thermal.go)
