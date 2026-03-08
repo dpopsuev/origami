@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -55,6 +56,8 @@ type Seed struct {
 	Difficulty            string              `yaml:"difficulty,omitempty"`
 	OutputFormat          string              `yaml:"output_format,omitempty"`
 	Rounds                int                 `yaml:"rounds,omitempty"`
+	TimeLimit             string              `yaml:"time_limit,omitempty"`
+	Hints                 []string            `yaml:"hints,omitempty"`
 	Verify                *SeedVerify         `yaml:"verify,omitempty"`
 }
 
@@ -112,6 +115,9 @@ type PoleResult struct {
 	GoldSignalScore  float64                 `json:"gold_signal_score,omitempty" yaml:"gold_signal_score,omitempty"`
 	MechanicalVerify *MechanicalVerifyResult `json:"mechanical_verify,omitempty" yaml:"mechanical_verify,omitempty"`
 	SelfVerifyScore  float64                 `json:"self_verify_score,omitempty" yaml:"self_verify_score,omitempty"`
+	TimedOut         bool                    `json:"timed_out,omitempty" yaml:"timed_out,omitempty"`
+	TimeLimit        time.Duration           `json:"time_limit,omitempty" yaml:"time_limit,omitempty"`
+	HintsUsed        int                     `json:"hints_used,omitempty" yaml:"hints_used,omitempty"`
 }
 
 // LoadSeed reads a seed YAML file and validates its structure.
@@ -173,6 +179,16 @@ func (s *Seed) Validate() error {
 	}
 	if s.Rounds < 0 {
 		return fmt.Errorf("seed validation: rounds must be non-negative")
+	}
+	if s.TimeLimit != "" {
+		if _, err := time.ParseDuration(s.TimeLimit); err != nil {
+			return fmt.Errorf("seed validation: invalid time_limit %q: %w", s.TimeLimit, err)
+		}
+	}
+	for i, h := range s.Hints {
+		if h == "" {
+			return fmt.Errorf("seed validation: hints[%d] is empty", i)
+		}
 	}
 	return nil
 }

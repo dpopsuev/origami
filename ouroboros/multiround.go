@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/element"
@@ -30,9 +31,14 @@ func MultiRoundNodesWithOpts(seed *Seed, dispatch ProbeDispatcher, opts CircuitO
 		currentRound: 0,
 	}
 
+	var tl time.Duration
+	if seed.TimeLimit != "" {
+		tl, _ = time.ParseDuration(seed.TimeLimit)
+	}
+
 	return framework.NodeRegistry{
 		"ouroboros-generate": func(_ framework.NodeDef) framework.Node {
-			return &generateNode{seed: seed, dispatch: dispatch}
+			return &generateNode{seed: seed, dispatch: dispatch, recorder: opts.Recorder}
 		},
 		"ouroboros-subject-multiround": func(_ framework.NodeDef) framework.Node {
 			return &multiRoundSubjectNode{
@@ -40,6 +46,8 @@ func MultiRoundNodesWithOpts(seed *Seed, dispatch ProbeDispatcher, opts CircuitO
 				outputFormat: seed.OutputFormat,
 				verifyHint:   seed.Verify != nil,
 				tracker:      roundState,
+				timeLimit:    tl,
+				recorder:     opts.Recorder,
 			}
 		},
 		"ouroboros-judge-multiround": func(_ framework.NodeDef) framework.Node {
@@ -49,6 +57,7 @@ func MultiRoundNodesWithOpts(seed *Seed, dispatch ProbeDispatcher, opts CircuitO
 				tracker:    roundState,
 				verifier:   opts.Verifier,
 				selfVerify: opts.SelfVerify,
+				recorder:   opts.Recorder,
 			}
 		},
 	}
@@ -76,6 +85,8 @@ type multiRoundSubjectNode struct {
 	outputFormat string
 	verifyHint   bool
 	tracker      *roundTracker
+	timeLimit    time.Duration
+	recorder     TranscriptRecorder
 }
 
 func (n *multiRoundSubjectNode) Name() string                       { return "subject" }
@@ -111,15 +122,34 @@ Please improve your answer based on the feedback above.`,
 		prompt += selfVerifyHint
 	}
 
-	response, err := n.dispatch(ctx, "subject", prompt)
-	if err != nil {
+	dispatchCtx := ctx
+	if n.timeLimit > 0 {
+		var cancel context.CancelFunc
+		dispatchCtx, cancel = context.WithTimeout(ctx, n.timeLimit)
+		defer cancel()
+	}
+
+	start := time.Now()
+	response, err := n.dispatch(dispatchCtx, "subject", prompt)
+	elapsed := time.Since(start)
+
+	if n.recorder != nil && err == nil {
+		n.recorder("subject", prompt, response, elapsed)
+	}
+
+	timedOut := dispatchCtx.Err() == context.DeadlineExceeded
+	if err != nil && !timedOut {
 		return nil, fmt.Errorf("multiround subject dispatch: %w", err)
+	}
+	if timedOut && response == "" {
+		response = "[timed out]"
 	}
 
 	return &seedArtifact{
 		typeName:   "subject-response",
 		confidence: 1.0,
 		raw:        response,
+		metadata:   map[string]any{"timed_out": timedOut, "time_limit": n.timeLimit},
 	}, nil
 }
 
@@ -133,6 +163,7 @@ type multiRoundJudgeNode struct {
 	tracker    *roundTracker
 	verifier   CodeVerifier
 	selfVerify SelfVerifyScorer
+	recorder   TranscriptRecorder
 }
 
 func (n *multiRoundJudgeNode) Name() string                       { return "judge" }
@@ -177,9 +208,15 @@ func (n *multiRoundJudgeNode) Process(ctx context.Context, nc framework.NodeCont
 	}
 
 	prompt := buildJudgePrompt(n.seed, subjectResponse, mvr)
+	start := time.Now()
 	raw, err := n.dispatch(ctx, "judge", prompt)
+	elapsed := time.Since(start)
 	if err != nil {
 		return nil, fmt.Errorf("multiround judge dispatch: %w", err)
+	}
+
+	if n.recorder != nil {
+		n.recorder("judge", prompt, raw, elapsed)
 	}
 
 	result, err := parseJudgeOutput(raw, n.seed)
@@ -203,6 +240,15 @@ func (n *multiRoundJudgeNode) Process(ctx context.Context, nc framework.NodeCont
 	if n.selfVerify != nil {
 		result.SelfVerifyScore = n.selfVerify(subjectResponse)
 		applySlefVerifyAdjustments(result)
+	}
+
+	if sa, ok := nc.PriorArtifact.(*seedArtifact); ok && sa.metadata != nil {
+		if to, ok := sa.metadata["timed_out"].(bool); ok && to {
+			result.TimedOut = true
+		}
+		if tl, ok := sa.metadata["time_limit"].(time.Duration); ok {
+			result.TimeLimit = tl
+		}
 	}
 
 	return &seedArtifact{

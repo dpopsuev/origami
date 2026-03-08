@@ -94,6 +94,8 @@ type ProbeResult struct {
 	TokensUsed      int                  `json:"tokens_used,omitempty"`
 	Difficulty      string               `json:"difficulty,omitempty"`
 	GoldSignalScore float64              `json:"gold_signal_score,omitempty"`
+	TimedOut        bool                 `json:"timed_out,omitempty"`
+	HintsUsed       int                  `json:"hints_used,omitempty"`
 }
 
 // DiscoveryResult records one iteration of the negation discovery loop.

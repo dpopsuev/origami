@@ -53,6 +53,8 @@ func PoleResultToProbeResult(seedName string, pr *PoleResult, elapsed time.Durat
 		Elapsed:         elapsed,
 		Difficulty:      difficulty,
 		GoldSignalScore: pr.GoldSignalScore,
+		TimedOut:        pr.TimedOut,
+		HintsUsed:       pr.HintsUsed,
 	}
 }
 

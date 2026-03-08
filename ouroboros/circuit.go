@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/element"
@@ -46,17 +47,24 @@ type seedArtifact struct {
 	typeName   string
 	confidence float64
 	raw        any
+	metadata   map[string]any
 }
 
 func (a *seedArtifact) Type() string       { return a.typeName }
 func (a *seedArtifact) Confidence() float64 { return a.confidence }
 func (a *seedArtifact) Raw() any            { return a.raw }
+func (a *seedArtifact) Meta() map[string]any { return a.metadata }
+
+// TranscriptRecorder captures each exchange during a probe walk.
+// Called by node Process methods after each dispatch call.
+type TranscriptRecorder func(role string, prompt string, response string, elapsed time.Duration)
 
 // CircuitOpts bundles optional callbacks for the probe circuit.
 // All fields are optional — nil means the feature is disabled.
 type CircuitOpts struct {
-	Verifier    CodeVerifier
-	SelfVerify  SelfVerifyScorer
+	Verifier   CodeVerifier
+	SelfVerify SelfVerifyScorer
+	Recorder   TranscriptRecorder
 }
 
 // CircuitNodes returns a NodeRegistry for the ouroboros-probe circuit.
@@ -68,15 +76,22 @@ func CircuitNodes(seed *Seed, dispatch ProbeDispatcher) framework.NodeRegistry {
 // CircuitNodesWithOpts returns a NodeRegistry with optional mechanical
 // verification and self-verification scoring injected into the Judge.
 func CircuitNodesWithOpts(seed *Seed, dispatch ProbeDispatcher, opts CircuitOpts) framework.NodeRegistry {
+	var tl time.Duration
+	if seed.TimeLimit != "" {
+		tl, _ = time.ParseDuration(seed.TimeLimit)
+	}
+
 	return framework.NodeRegistry{
 		"ouroboros-generate": func(_ framework.NodeDef) framework.Node {
-			return &generateNode{seed: seed, dispatch: dispatch}
+			return &generateNode{seed: seed, dispatch: dispatch, recorder: opts.Recorder}
 		},
 		"ouroboros-subject": func(_ framework.NodeDef) framework.Node {
 			return &subjectNode{
 				dispatch:     dispatch,
 				outputFormat: seed.OutputFormat,
 				verifyHint:   seed.Verify != nil,
+				timeLimit:    tl,
+				recorder:     opts.Recorder,
 			}
 		},
 		"ouroboros-judge": func(_ framework.NodeDef) framework.Node {
@@ -85,6 +100,7 @@ func CircuitNodesWithOpts(seed *Seed, dispatch ProbeDispatcher, opts CircuitOpts
 				dispatch:   dispatch,
 				verifier:   opts.Verifier,
 				selfVerify: opts.SelfVerify,
+				recorder:   opts.Recorder,
 			}
 		},
 	}
@@ -97,6 +113,7 @@ func CircuitNodesWithOpts(seed *Seed, dispatch ProbeDispatcher, opts CircuitOpts
 type generateNode struct {
 	seed     *Seed
 	dispatch ProbeDispatcher
+	recorder TranscriptRecorder
 }
 
 func (n *generateNode) Name() string                       { return "generate" }
@@ -104,9 +121,15 @@ func (n *generateNode) ElementAffinity() element.Element { return element.Elemen
 
 func (n *generateNode) Process(ctx context.Context, nc framework.NodeContext) (framework.Artifact, error) {
 	prompt := n.buildPrompt()
+	start := time.Now()
 	raw, err := n.dispatch(ctx, "generate", prompt)
+	elapsed := time.Since(start)
 	if err != nil {
 		return nil, fmt.Errorf("generate dispatch: %w", err)
+	}
+
+	if n.recorder != nil {
+		n.recorder("generate", prompt, raw, elapsed)
 	}
 
 	output, err := parseGeneratorOutput(raw, n.seed)
@@ -195,6 +218,8 @@ type subjectNode struct {
 	dispatch     ProbeDispatcher
 	outputFormat string
 	verifyHint   bool
+	timeLimit    time.Duration
+	recorder     TranscriptRecorder
 }
 
 func (n *subjectNode) Name() string                       { return "subject" }
@@ -218,15 +243,36 @@ func (n *subjectNode) Process(ctx context.Context, nc framework.NodeContext) (fr
 		prompt += selfVerifyHint
 	}
 
-	raw, err := n.dispatch(ctx, "subject", prompt)
-	if err != nil {
+	dispatchCtx := ctx
+	if n.timeLimit > 0 {
+		var cancel context.CancelFunc
+		dispatchCtx, cancel = context.WithTimeout(ctx, n.timeLimit)
+		defer cancel()
+	}
+
+	start := time.Now()
+	raw, err := n.dispatch(dispatchCtx, "subject", prompt)
+	elapsed := time.Since(start)
+
+	if n.recorder != nil && err == nil {
+		n.recorder("subject", prompt, raw, elapsed)
+	}
+
+	timedOut := dispatchCtx.Err() == context.DeadlineExceeded
+	if err != nil && !timedOut {
 		return nil, fmt.Errorf("subject dispatch: %w", err)
+	}
+	if timedOut {
+		if raw == "" {
+			raw = "[timed out]"
+		}
 	}
 
 	return &seedArtifact{
 		typeName:   "subject-response",
 		confidence: 1.0,
 		raw:        raw,
+		metadata:   map[string]any{"timed_out": timedOut, "time_limit": n.timeLimit},
 	}, nil
 }
 
@@ -247,6 +293,7 @@ type judgeNode struct {
 	dispatch   ProbeDispatcher
 	verifier   CodeVerifier
 	selfVerify SelfVerifyScorer
+	recorder   TranscriptRecorder
 }
 
 func (n *judgeNode) Name() string                       { return "judge" }
@@ -271,9 +318,15 @@ func (n *judgeNode) Process(ctx context.Context, nc framework.NodeContext) (fram
 	}
 
 	prompt := buildJudgePrompt(n.seed, subjectResponse, mvr)
+	start := time.Now()
 	raw, err := n.dispatch(ctx, "judge", prompt)
+	elapsed := time.Since(start)
 	if err != nil {
 		return nil, fmt.Errorf("judge dispatch: %w", err)
+	}
+
+	if n.recorder != nil {
+		n.recorder("judge", prompt, raw, elapsed)
 	}
 
 	result, err := parseJudgeOutput(raw, n.seed)
@@ -297,6 +350,15 @@ func (n *judgeNode) Process(ctx context.Context, nc framework.NodeContext) (fram
 	if n.selfVerify != nil {
 		result.SelfVerifyScore = n.selfVerify(subjectResponse)
 		applySlefVerifyAdjustments(result)
+	}
+
+	if sa, ok := nc.PriorArtifact.(*seedArtifact); ok && sa.metadata != nil {
+		if to, ok := sa.metadata["timed_out"].(bool); ok && to {
+			result.TimedOut = true
+		}
+		if tl, ok := sa.metadata["time_limit"].(time.Duration); ok {
+			result.TimeLimit = tl
+		}
 	}
 
 	return &seedArtifact{
