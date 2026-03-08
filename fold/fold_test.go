@@ -48,8 +48,7 @@ domain_serve:
 		t.Fatal(err)
 	}
 
-	domainBinary := output + "-domain-serve"
-	if _, err := os.Stat(domainBinary); err != nil {
+	if _, err := os.Stat(output); err != nil {
 		t.Fatalf("domain-serve binary not found: %v", err)
 	}
 }
