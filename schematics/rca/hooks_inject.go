@@ -365,8 +365,8 @@ func extractSearchKeywords(walkerCtx map[string]any) []string {
 		}
 	}
 	if prior, ok := walkerCtx[KeyParamsPrior].(*PriorParams); ok && prior != nil {
-		if prior.Triage != nil {
-			if repos, ok := prior.Triage["candidate_repos"].([]any); ok {
+		if triage := (*prior)["Triage"]; triage != nil {
+			if repos, ok := triage["candidate_repos"].([]any); ok {
 				for _, r := range repos {
 					if s, ok := r.(string); ok {
 						keywords = append(keywords, s)
@@ -374,8 +374,8 @@ func extractSearchKeywords(walkerCtx map[string]any) []string {
 				}
 			}
 		}
-		if prior.Resolve != nil {
-			if repos, ok := prior.Resolve["selected_repos"].([]any); ok {
+		if resolve := (*prior)["Resolve"]; resolve != nil {
+			if repos, ok := resolve["selected_repos"].([]any); ok {
 				for _, r := range repos {
 					if rm, ok := r.(map[string]any); ok {
 						if name, ok := rm["name"].(string); ok {

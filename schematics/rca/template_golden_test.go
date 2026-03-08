@@ -68,7 +68,7 @@ func goldenFixtureParams() *TemplateParams {
 			SourceItem:      "https://rp.example.com/items/7",
 		},
 		Prior: &PriorParams{
-			Recall: map[string]any{
+			"Recall": {
 				"match":         true,
 				"prior_rca_id":  float64(42),
 				"symptom_id":    float64(7),
@@ -76,7 +76,7 @@ func goldenFixtureParams() *TemplateParams {
 				"reasoning":     "Same holdover timeout pattern as RCA #42",
 				"is_regression": true,
 			},
-			Triage: map[string]any{
+			"Triage": {
 				"symptom_category":       "product",
 				"severity":               "high",
 				"defect_type_hypothesis": "pb001",
@@ -86,7 +86,7 @@ func goldenFixtureParams() *TemplateParams {
 				"cascade_suspected":      false,
 				"data_quality_notes":     "Log truncated at 4KB",
 			},
-			Resolve: map[string]any{
+			"Resolve": {
 				"selected_repos": []any{
 					map[string]any{
 						"name":        "linuxptp-daemon",
@@ -98,7 +98,7 @@ func goldenFixtureParams() *TemplateParams {
 				},
 				"cross_ref_strategy": "Check test assertion in cnf-gotests, then verify SUT behavior in linuxptp-daemon.",
 			},
-			Investigate: map[string]any{
+			"Investigate": {
 				"run_id":            "launch-42",
 				"case_ids":          []any{"7"},
 				"rca_message":       "Holdover timeout changed from 300s to 60s in commit abc1234, causing premature clock class transition to 248.",
@@ -118,7 +118,7 @@ func goldenFixtureParams() *TemplateParams {
 					},
 				},
 			},
-			Correlate: map[string]any{
+			"Correlate": {
 				"is_duplicate":        false,
 				"linked_rca_id":       float64(0),
 				"confidence":          0.3,

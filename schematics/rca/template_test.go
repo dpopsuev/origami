@@ -126,11 +126,11 @@ func TestFillTemplateString_PriorArtifacts(t *testing.T) {
 		CaseID:  1,
 		Failure: &FailureParams{TestName: "test"},
 		Prior: &PriorParams{
-			Triage: map[string]any{
+			"Triage": {
 				"symptom_category":       "assertion",
 				"defect_type_hypothesis": "pb001",
 			},
-			Investigate: map[string]any{
+			"Investigate": {
 				"rca_message":       "Root cause found",
 				"defect_type":       "pb001",
 				"convergence_score": 0.85,
@@ -276,26 +276,6 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 		"Env":            "env vars injected into context map, not referenced in templates",
 		"Failure.Path":   "file path used for Go-level routing, not in prompts",
 		"Envelope.Status": "launch status used for Go-level filtering, not in prompts",
-
-		"Prior.Triage.data_quality_notes":  "populated by triage but not consumed by downstream prompts",
-		"Prior.Triage.skip_investigation": "routing flag consumed by Go edge conditions, not prompts",
-
-		"Prior.Recall.reasoning": "LLM-generated explanation, not consumed by downstream templates",
-		"Prior.Recall.symptom_id": "numeric ID used for Go-level store lookup, not in prompts",
-
-		"Prior.Investigate.run_id":   "duplicates top-level SourceID; not repeated in prompts",
-		"Prior.Investigate.case_ids": "used for Go-level case grouping, not in prompts",
-		"Prior.Investigate.component": "used for Go-level scoring and dedup, not in prompts",
-
-		// gap_brief and its sub-fields — structured gap data scored by Go code.
-		"Prior.Investigate.gap_brief":                      "scored by Go, not template-rendered",
-		"Prior.Investigate.gap_brief.verdict":             "sub-field of excluded gap_brief",
-		"Prior.Investigate.gap_brief.gap_items":            "sub-field of excluded gap_brief",
-		"Prior.Investigate.gap_brief.gap_items.category":   "sub-field of excluded gap_brief",
-		"Prior.Investigate.gap_brief.gap_items.description": "sub-field of excluded gap_brief",
-		"Prior.Investigate.gap_brief.gap_items.would_help": "sub-field of excluded gap_brief",
-		"Prior.Investigate.gap_brief.gap_items.source":    "sub-field of excluded gap_brief",
-		"Prior.Investigate.gap_brief.gap_items.blocked":   "sub-field of excluded gap_brief",
 
 		"History.PriorRCAs.DaysSinceResolved": "available but not surfaced in current prompt templates",
 

@@ -99,12 +99,15 @@ Classify by **root cause domain** — where does the bug live?
 - `flake`: the failure is transient and non-reproducible — a timing window was missed, a race condition in the environment, or variance caused a threshold violation. Re-running would likely pass. Use `flake` only when there is no persistent root cause.
 
 Defect types:
-- pb001: Product Bug — defect in the product code (operator, daemon, proxy, etc.)
-- au001: Automation Bug — defect in test code, CI config, or test infrastructure
-- en001: Environment Issue — infrastructure/environment issue (node, network, cluster, NTP, etc.)
-- fw001: Firmware Issue — defect in firmware or hardware-adjacent code (NIC, FPGA, PHC)
-- nd001: No Defect — test is correct, product is correct, flaky/transient/expected behavior
-- ti001: To Investigate — insufficient data to classify; needs manual investigation
+- ab001: Automation Bug
+- au001: Automation Bug
+- en001: Environment Issue
+- fw001: Firmware Issue
+- ib003: Infrastructure Bug
+- nd001: No Defect
+- pb001: Product Bug
+- si001: System Issue
+- ti001: To Investigate
 
 ## Guards
 

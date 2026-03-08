@@ -1,6 +1,12 @@
 package rca
 
-import "github.com/dpopsuev/origami/schematics/toolkit"
+import (
+	"sort"
+	"strings"
+
+	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/schematics/toolkit"
+)
 
 // ResolutionStatus is the RCA-specific alias for toolkit.ResolutionStatus.
 type ResolutionStatus = toolkit.ResolutionStatus
@@ -126,15 +132,11 @@ type AlwaysReadSource struct {
 }
 
 // PriorParams holds prior stage artifacts for context injection.
-// Each field is a map[string]any deserialized from the step's JSON artifact.
-// Templates access fields via {{.Prior.Triage.symptom_category}} etc.
-type PriorParams struct {
-	Recall      map[string]any
-	Triage      map[string]any
-	Resolve     map[string]any
-	Investigate map[string]any
-	Correlate   map[string]any
-}
+// Keys are step names (e.g. "Recall", "Triage"), values are the
+// deserialized JSON artifact for that step. Templates access fields
+// via {{.Prior.Triage.symptom_category}} — Go's template engine
+// resolves map keys the same way it resolves struct fields.
+type PriorParams map[string]map[string]any
 
 // HistoryParams holds historical data from the Store.
 type HistoryParams struct {
@@ -221,15 +223,45 @@ type CodeFileParams struct {
 	Truncated bool   `json:"truncated,omitempty"`
 }
 
-// DefaultTaxonomy returns the standard defect type taxonomy.
+// DefaultTaxonomy builds the defect type taxonomy from the loaded vocabulary.
+// Falls back to an empty taxonomy if no vocabulary has been initialized.
 func DefaultTaxonomy() *TaxonomyParams {
-	return &TaxonomyParams{
-		DefectTypes: `Defect types:
-- pb001: Product Bug — defect in the product code (operator, daemon, proxy, etc.)
-- au001: Automation Bug — defect in test code, CI config, or test infrastructure
-- en001: Environment Issue — infrastructure/environment issue (node, network, cluster, NTP, etc.)
-- fw001: Firmware Issue — defect in firmware or hardware-adjacent code (NIC, FPGA, PHC)
-- nd001: No Defect — test is correct, product is correct, flaky/transient/expected behavior
-- ti001: To Investigate — insufficient data to classify; needs manual investigation`,
+	return TaxonomyFromDefectTypes(defaultDefectTypes)
+}
+
+// TaxonomyFromDefectTypes builds a TaxonomyParams from a set of defect type
+// entries. Each entry is rendered as "- code: Long Name" (with optional
+// description appended as " — description"). Used for prompt injection.
+func TaxonomyFromDefectTypes(types map[string]framework.VocabEntry) *TaxonomyParams {
+	if len(types) == 0 {
+		return &TaxonomyParams{}
 	}
+
+	codes := make([]string, 0, len(types))
+	for code := range types {
+		codes = append(codes, code)
+	}
+	sort.Strings(codes)
+
+	var b strings.Builder
+	b.WriteString("Defect types:")
+	for _, code := range codes {
+		e := types[code]
+		name := e.Long
+		if name == "" {
+			name = e.Short
+		}
+		if name == "" {
+			name = code
+		}
+		b.WriteString("\n- ")
+		b.WriteString(code)
+		b.WriteString(": ")
+		b.WriteString(name)
+		if e.Description != "" {
+			b.WriteString(" — ")
+			b.WriteString(e.Description)
+		}
+	}
+	return &TaxonomyParams{DefectTypes: b.String()}
 }

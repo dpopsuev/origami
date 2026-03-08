@@ -2,6 +2,7 @@ package rca
 
 import (
 	"os"
+	"strings"
 
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
@@ -71,13 +72,11 @@ func loadPriorArtifacts(caseDir string) *PriorParams {
 	if loaded == nil {
 		return nil
 	}
-	return &PriorParams{
-		Recall:      loaded["recall"],
-		Triage:      loaded["triage"],
-		Resolve:     loaded["resolve"],
-		Investigate: loaded["investigate"],
-		Correlate:   loaded["correlate"],
+	prior := make(PriorParams, len(loaded))
+	for k, v := range loaded {
+		prior[strings.ToUpper(k[:1])+k[1:]] = v
 	}
+	return &prior
 }
 
 func loadAlwaysReadSources(catalog toolkit.SourceCatalog) []AlwaysReadSource {

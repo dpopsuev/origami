@@ -68,12 +68,19 @@ func ClusterKey(v framework.Vocabulary, key string) string {
 	return strings.Join(parts, " / ")
 }
 
-var defaultVocab = NewVocabulary(nil)
+var (
+	defaultVocab       = NewVocabulary(nil)
+	defaultDefectTypes map[string]framework.VocabEntry
+)
 
 // InitVocab replaces the package-level vocabulary with one loaded from data.
 func InitVocab(data []byte) {
 	if data != nil {
 		defaultVocab = NewVocabulary(data)
+		var f vocabFile
+		if err := yaml.Unmarshal(data, &f); err == nil {
+			defaultDefectTypes = f.DefectTypes
+		}
 	}
 }
 
