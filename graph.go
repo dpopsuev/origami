@@ -545,6 +545,12 @@ func (g *DefaultGraph) walkDelegate(ctx context.Context, walker Walker, obs Walk
 	subWalker := NewProcessWalker(walker.State().ID + ":delegate:" + dn.Name())
 	subWalker.SetIdentity(walker.Identity())
 
+	// Inherit parent walker context so sub-circuit nodes can read
+	// upstream data (e.g. params.failure, params.sources).
+	for k, v := range walker.State().Context {
+		subWalker.State().Context[k] = v
+	}
+
 	prefixObs := &delegateObserver{inner: obs, prefix: "delegate:" + dn.Name() + ":"}
 	if dg, ok := subGraph.(*DefaultGraph); ok {
 		dg.SetObserver(prefixObs)

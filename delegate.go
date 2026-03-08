@@ -105,6 +105,28 @@ func (n *dslDelegateNode) GenerateCircuit(ctx context.Context, nc NodeContext) (
 	}
 }
 
+// circuitRefNode is a DelegateNode that references a pre-loaded CircuitDef.
+// Unlike dslDelegateNode which generates circuits dynamically via a transformer,
+// circuitRefNode returns the stored CircuitDef directly — enabling static
+// circuit composition where any circuit can be a subgraph node in another.
+type circuitRefNode struct {
+	name       string
+	element    Element
+	circuitDef *CircuitDef
+	meta       map[string]any
+}
+
+func (n *circuitRefNode) Name() string            { return n.name }
+func (n *circuitRefNode) ElementAffinity() Element { return n.element }
+
+func (n *circuitRefNode) Process(ctx context.Context, nc NodeContext) (Artifact, error) {
+	return &DelegateArtifact{GeneratedCircuit: n.circuitDef, NodeCount: len(n.circuitDef.Nodes)}, nil
+}
+
+func (n *circuitRefNode) GenerateCircuit(_ context.Context, _ NodeContext) (*CircuitDef, error) {
+	return n.circuitDef, nil
+}
+
 func (a *DelegateArtifact) Type() string       { return "delegate" }
 func (a *DelegateArtifact) Confidence() float64 { return a.confidence() }
 func (a *DelegateArtifact) Raw() any            { return a.InnerArtifacts }

@@ -76,6 +76,7 @@ const (
 	HandlerTypeRenderer    = "renderer"
 	HandlerTypeNode        = "node"
 	HandlerTypeDelegate    = "delegate"
+	HandlerTypeCircuit     = "circuit"
 )
 
 // NodeDef declares a node in the circuit.
@@ -508,6 +509,7 @@ type GraphRegistries struct {
 	Transformers TransformerRegistry
 	Hooks        HookRegistry
 	Components   ComponentLoader
+	Circuits     map[string]*CircuitDef
 }
 
 // BuildGraph constructs a Graph from a CircuitDef using the full registries bundle.
@@ -754,6 +756,21 @@ func (def *CircuitDef) resolveHandler(nd NodeDef, reg GraphRegistries, elem Elem
 			gen:     gen,
 			config:  def.Vars,
 			meta:    nd.Meta,
+		}, nil
+
+	case HandlerTypeCircuit:
+		if reg.Circuits == nil {
+			return nil, fmt.Errorf("node %q: circuit handler %q not found (circuit registry is nil)", nd.Name, nd.Handler)
+		}
+		cd, ok := reg.Circuits[nd.Handler]
+		if !ok {
+			return nil, fmt.Errorf("node %q: circuit %q not found in circuit registry", nd.Name, nd.Handler)
+		}
+		return &circuitRefNode{
+			name:       nd.Name,
+			element:    elem,
+			circuitDef: cd,
+			meta:       nd.Meta,
 		}, nil
 
 	default:

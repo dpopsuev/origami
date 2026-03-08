@@ -363,3 +363,268 @@ func (n *testDelegateNode) Process(_ context.Context, _ NodeContext) (Artifact, 
 func (n *testDelegateNode) GenerateCircuit(_ context.Context, _ NodeContext) (*CircuitDef, error) {
 	return n.circuitDef, n.err
 }
+
+// --- circuitRefNode tests ---
+
+func TestCircuitRefNode_Interface(t *testing.T) {
+	n := &circuitRefNode{name: "sub", circuitDef: &CircuitDef{Circuit: "inner"}}
+	var _ DelegateNode = n
+	if n.Name() != "sub" {
+		t.Errorf("Name() = %q, want %q", n.Name(), "sub")
+	}
+}
+
+func TestCircuitRefNode_GenerateCircuit(t *testing.T) {
+	inner := &CircuitDef{Circuit: "knowledge", Start: "X", Done: "_done"}
+	n := &circuitRefNode{name: "gather", circuitDef: inner}
+
+	got, err := n.GenerateCircuit(context.Background(), NodeContext{})
+	if err != nil {
+		t.Fatalf("GenerateCircuit() error: %v", err)
+	}
+	if got != inner {
+		t.Error("GenerateCircuit() should return the stored CircuitDef pointer")
+	}
+}
+
+func TestBuildGraph_CircuitRefNode(t *testing.T) {
+	innerDef := &CircuitDef{
+		Circuit: "knowledge",
+		Start:   "K1",
+		Done:    "_done",
+		Nodes: []NodeDef{
+			{Name: "K1", HandlerType: HandlerTypeTransformer, Handler: "passthrough"},
+		},
+		Edges: []EdgeDef{
+			{ID: "k1-done", From: "K1", To: "_done"},
+		},
+	}
+
+	outerDef := &CircuitDef{
+		Circuit:     "rca",
+		Start:       "A",
+		Done:        "_done",
+		HandlerType: HandlerTypeTransformer,
+		Nodes: []NodeDef{
+			{Name: "A", Handler: "passthrough"},
+			{Name: "B", HandlerType: HandlerTypeCircuit, Handler: "knowledge"},
+			{Name: "C", Handler: "passthrough"},
+		},
+		Edges: []EdgeDef{
+			{ID: "a-b", From: "A", To: "B"},
+			{ID: "b-c", From: "B", To: "C"},
+			{ID: "c-done", From: "C", To: "_done"},
+		},
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{
+			"passthrough": &passthroughTransformer{},
+		},
+		Circuits: map[string]*CircuitDef{
+			"knowledge": innerDef,
+		},
+	}
+
+	g, err := outerDef.BuildGraph(reg)
+	if err != nil {
+		t.Fatalf("BuildGraph() error: %v", err)
+	}
+
+	node, ok := g.NodeByName("B")
+	if !ok {
+		t.Fatal("node B not found")
+	}
+	if _, ok := node.(DelegateNode); !ok {
+		t.Errorf("node B type = %T, want DelegateNode", node)
+	}
+}
+
+func TestWalk_CircuitRefNode_SubWalk(t *testing.T) {
+	innerDef := &CircuitDef{
+		Circuit: "knowledge",
+		Start:   "K1",
+		Done:    "_done",
+		Nodes: []NodeDef{
+			{Name: "K1", HandlerType: HandlerTypeTransformer, Handler: "passthrough"},
+		},
+		Edges: []EdgeDef{
+			{ID: "k1-done", From: "K1", To: "_done"},
+		},
+	}
+
+	outerDef := &CircuitDef{
+		Circuit:     "rca",
+		Start:       "A",
+		Done:        "_done",
+		HandlerType: HandlerTypeTransformer,
+		Nodes: []NodeDef{
+			{Name: "A", Handler: "passthrough"},
+			{Name: "B", HandlerType: HandlerTypeCircuit, Handler: "knowledge"},
+			{Name: "C", Handler: "passthrough"},
+		},
+		Edges: []EdgeDef{
+			{ID: "a-b", From: "A", To: "B"},
+			{ID: "b-c", From: "B", To: "C"},
+			{ID: "c-done", From: "C", To: "_done"},
+		},
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{
+			"passthrough": &passthroughTransformer{},
+		},
+		Circuits: map[string]*CircuitDef{
+			"knowledge": innerDef,
+		},
+	}
+
+	g, err := outerDef.BuildGraph(reg)
+	if err != nil {
+		t.Fatalf("BuildGraph() error: %v", err)
+	}
+
+	walker := NewProcessWalker("test")
+	if err := g.Walk(context.Background(), walker, "A"); err != nil {
+		t.Fatalf("Walk() error: %v", err)
+	}
+
+	// Delegate artifact present for node B.
+	da, ok := walker.State().Outputs["B"]
+	if !ok {
+		t.Fatal("delegate artifact missing from outputs")
+	}
+	delArt, ok := da.(*DelegateArtifact)
+	if !ok {
+		t.Fatalf("output type = %T, want *DelegateArtifact", da)
+	}
+	if delArt.GeneratedCircuit.Circuit != "knowledge" {
+		t.Errorf("inner circuit = %q, want %q", delArt.GeneratedCircuit.Circuit, "knowledge")
+	}
+
+	// Inner artifact namespaced into outer outputs.
+	if _, ok := walker.State().Outputs["delegate:B:K1"]; !ok {
+		t.Error("inner artifact delegate:B:K1 missing from outer outputs")
+	}
+
+	// Node C ran after the delegate.
+	if _, ok := walker.State().Outputs["C"]; !ok {
+		t.Error("node C output missing — walk did not continue after delegate")
+	}
+}
+
+func TestWalk_CircuitRefNode_ContextInheritance(t *testing.T) {
+	// Inner circuit has a transformer that reads a context key.
+	contextReader := TransformerFunc("ctx-reader", func(_ context.Context, tc *TransformerContext) (any, error) {
+		v, _ := tc.WalkerState.Context["test-key"]
+		return &testArtifact{raw: v}, nil
+	})
+
+	innerDef := &CircuitDef{
+		Circuit: "inner",
+		Start:   "R",
+		Done:    "_done",
+		Nodes: []NodeDef{
+			{Name: "R", HandlerType: HandlerTypeTransformer, Handler: "ctx-reader"},
+		},
+		Edges: []EdgeDef{
+			{ID: "r-done", From: "R", To: "_done"},
+		},
+	}
+
+	outerDef := &CircuitDef{
+		Circuit:     "outer",
+		Start:       "A",
+		Done:        "_done",
+		HandlerType: HandlerTypeTransformer,
+		Nodes: []NodeDef{
+			{Name: "A", Handler: "passthrough"},
+			{Name: "D", HandlerType: HandlerTypeCircuit, Handler: "inner"},
+		},
+		Edges: []EdgeDef{
+			{ID: "a-d", From: "A", To: "D"},
+			{ID: "d-done", From: "D", To: "_done"},
+		},
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{
+			"passthrough": &passthroughTransformer{},
+			"ctx-reader":  contextReader,
+		},
+		Circuits: map[string]*CircuitDef{
+			"inner": innerDef,
+		},
+	}
+
+	g, err := outerDef.BuildGraph(reg)
+	if err != nil {
+		t.Fatalf("BuildGraph() error: %v", err)
+	}
+
+	walker := NewProcessWalker("test")
+	walker.State().Context["test-key"] = "hello-from-parent"
+
+	if err := g.Walk(context.Background(), walker, "A"); err != nil {
+		t.Fatalf("Walk() error: %v", err)
+	}
+
+	// The inner node should have read the parent context key.
+	innerArt, ok := walker.State().Outputs["delegate:D:R"]
+	if !ok {
+		t.Fatal("inner artifact delegate:D:R missing")
+	}
+	inner, ok := innerArt.Raw().(*testArtifact)
+	if !ok {
+		t.Fatalf("inner artifact Raw() type = %T, want *testArtifact", innerArt.Raw())
+	}
+	if inner.raw != "hello-from-parent" {
+		t.Errorf("inner node read context = %v, want %q", inner.raw, "hello-from-parent")
+	}
+}
+
+func TestBuildGraph_CircuitRefNode_MissingCircuit(t *testing.T) {
+	def := &CircuitDef{
+		Circuit: "outer",
+		Start:   "A",
+		Done:    "_done",
+		Nodes: []NodeDef{
+			{Name: "A", HandlerType: HandlerTypeCircuit, Handler: "nonexistent"},
+		},
+		Edges: []EdgeDef{
+			{ID: "a-done", From: "A", To: "_done"},
+		},
+	}
+
+	_, err := def.BuildGraph(GraphRegistries{
+		Circuits: map[string]*CircuitDef{},
+	})
+	if err == nil {
+		t.Fatal("BuildGraph() should fail for missing circuit reference")
+	}
+	if !strings.Contains(err.Error(), "not found in circuit registry") {
+		t.Errorf("error = %q, want to contain 'not found in circuit registry'", err.Error())
+	}
+}
+
+func TestBuildGraph_CircuitRefNode_NilRegistry(t *testing.T) {
+	def := &CircuitDef{
+		Circuit: "outer",
+		Start:   "A",
+		Done:    "_done",
+		Nodes: []NodeDef{
+			{Name: "A", HandlerType: HandlerTypeCircuit, Handler: "something"},
+		},
+		Edges: []EdgeDef{
+			{ID: "a-done", From: "A", To: "_done"},
+		},
+	}
+
+	_, err := def.BuildGraph(GraphRegistries{})
+	if err == nil {
+		t.Fatal("BuildGraph() should fail when circuit registry is nil")
+	}
+	if !strings.Contains(err.Error(), "circuit registry is nil") {
+		t.Errorf("error = %q, want to contain 'circuit registry is nil'", err.Error())
+	}
+}

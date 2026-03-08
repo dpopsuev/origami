@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	framework "github.com/dpopsuev/origami"
+	"github.com/dpopsuev/origami/schematics/knowledge"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
 	"github.com/dpopsuev/origami/schematics/toolkit"
@@ -65,6 +66,10 @@ func InjectHooksWithOpts(opts InjectHookOpts) framework.HookRegistry {
 		reg.Register(newInjectCodeSearchHook(opts.KnowledgeReader, opts.Catalog))
 		reg.Register(newInjectCodeReadHook(opts.KnowledgeReader))
 	}
+
+	// Circuit-composition bridge hooks.
+	reg.Register(newInjectCodeKeywordsHook())
+	reg.Register(newBridgeCodeContextHook())
 
 	return reg
 }
@@ -314,11 +319,11 @@ func newInjectCodeReadHook(reader toolkit.SourceReader) framework.Hook {
 			if parts == nil {
 				continue
 			}
-		src := toolkit.Source{
-			Org:  parts[0],
-			Name: parts[1],
-			Kind: toolkit.SourceKindRepo,
-		}
+			src := toolkit.Source{
+				Org:  parts[0],
+				Name: parts[1],
+				Kind: toolkit.SourceKindRepo,
+			}
 			data, err := reader.Read(ctx, src, sr.File)
 			if err != nil {
 				continue
@@ -396,4 +401,77 @@ func splitRepoKey(key string) []string {
 		}
 	}
 	return nil
+}
+
+// Circuit-composition bridge hooks
+
+// newInjectCodeKeywordsHook creates a before-hook that extracts search
+// keywords from the walker context and writes them to
+// "knowledge.search_keywords" so the Knowledge sub-circuit can use them.
+func newInjectCodeKeywordsHook() framework.Hook {
+	return toolkit.NewContextInjector("inject.code-keywords", func(walkerCtx map[string]any) {
+		keywords := extractSearchKeywords(walkerCtx)
+		if len(keywords) > 0 {
+			walkerCtx["knowledge.search_keywords"] = keywords
+		}
+	})
+}
+
+// newBridgeCodeContextHook creates an after-hook that reads the Knowledge
+// circuit's output from delegate artifacts and converts it to *CodeParams
+// for consumption by downstream RCA nodes.
+func newBridgeCodeContextHook() framework.Hook {
+	return framework.NewHookFunc("bridge.code-context", func(ctx context.Context, _ string, art framework.Artifact) error {
+		ws := framework.WalkerStateFromContext(ctx)
+		if ws == nil {
+			return nil
+		}
+
+		da, ok := art.(*framework.DelegateArtifact)
+		if !ok || da == nil {
+			return nil
+		}
+
+		// Find the "read" node's artifact in the delegate's inner results.
+		readArt, ok := da.InnerArtifacts["read"]
+		if !ok || readArt == nil {
+			return nil
+		}
+
+		cc, ok := readArt.Raw().(*knowledge.CodeContext)
+		if !ok || cc == nil {
+			return nil
+		}
+
+		code := ensureCodeParams(ws.Context)
+		for _, tree := range cc.Trees {
+			var entries []TreeEntry
+			for _, e := range tree.Entries {
+				entries = append(entries, TreeEntry{Path: e.Path, IsDir: e.IsDir})
+			}
+			code.Trees = append(code.Trees, CodeTreeParams{
+				Repo:    tree.Repo,
+				Branch:  tree.Branch,
+				Entries: entries,
+			})
+		}
+		for _, hit := range cc.SearchResults {
+			code.SearchResults = append(code.SearchResults, CodeSearchResult{
+				Repo:    hit.Repo,
+				File:    hit.File,
+				Line:    hit.Line,
+				Snippet: hit.Snippet,
+			})
+		}
+		for _, f := range cc.Files {
+			code.Files = append(code.Files, CodeFileParams{
+				Repo:      f.Repo,
+				Path:      f.Path,
+				Content:   f.Content,
+				Truncated: f.Truncated,
+			})
+		}
+		code.Truncated = cc.Truncated
+		return nil
+	})
 }
