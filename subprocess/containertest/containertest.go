@@ -73,24 +73,67 @@ func (e *Env) BuildImageFromSource(ctx context.Context, dockerfile, tag, context
 	}
 }
 
+// BuildImageFromDockerfile builds an OCI image from a Dockerfile path
+// and build context directory.
+func (e *Env) BuildImageFromDockerfile(ctx context.Context, dockerfilePath, tag, contextDir string) {
+	e.t.Helper()
+	cmd := exec.CommandContext(ctx, "podman", "build", "-f", dockerfilePath, "-t", tag, contextDir)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		e.t.Fatalf("build image %s: %s: %v", tag, strings.TrimSpace(string(output)), err)
+	}
+}
+
 // StartService starts a container and waits for /healthz to return 200.
 func (e *Env) StartService(ctx context.Context, name, image string, port int, env []string) {
 	e.t.Helper()
+	e.StartServiceWithArgs(ctx, name, image, port, env, nil)
+}
+
+// ServiceConfig configures a container service start.
+type ServiceConfig struct {
+	Name    string
+	Image   string
+	Port    int
+	Env     []string
+	Args    []string
+	Network string
+}
+
+// StartServiceWithArgs starts a container with command-line args and waits
+// for /healthz to return 200.
+func (e *Env) StartServiceWithArgs(ctx context.Context, name, image string, port int, env, args []string) {
+	e.t.Helper()
+	e.StartServiceWithConfig(ctx, ServiceConfig{
+		Name: name, Image: image, Port: port, Env: env, Args: args,
+	})
+}
+
+// StartServiceWithConfig starts a container from a full ServiceConfig and
+// waits for /healthz to return 200.
+func (e *Env) StartServiceWithConfig(ctx context.Context, cfg ServiceConfig) {
+	e.t.Helper()
 	opts := subprocess.RunOptions{
-		Name:          name,
-		Image:         image,
-		HostPort:      port,
-		ContainerPort: port,
-		Env:           env,
+		Name:          cfg.Name,
+		Image:         cfg.Image,
+		HostPort:      cfg.Port,
+		ContainerPort: cfg.Port,
+		Env:           cfg.Env,
+		Args:          cfg.Args,
+		Network:       cfg.Network,
+	}
+	if cfg.Network == "host" {
+		opts.HostPort = 0
+		opts.ContainerPort = 0
 	}
 	id, err := e.runtime.RunWithOptions(ctx, opts)
 	if err != nil {
-		e.t.Fatalf("start service %s: %v", name, err)
+		e.t.Fatalf("start service %s: %v", cfg.Name, err)
 	}
 	e.ids = append(e.ids, id)
 
-	if err := e.waitHealthy(ctx, port, 30*time.Second); err != nil {
-		e.t.Fatalf("service %s did not become healthy: %v", name, err)
+	if err := e.waitHealthy(ctx, cfg.Port, 30*time.Second); err != nil {
+		e.t.Fatalf("service %s did not become healthy: %v", cfg.Name, err)
 	}
 }
 
