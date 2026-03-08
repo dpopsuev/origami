@@ -3,11 +3,23 @@
 // A topology declares the structural shape of a circuit graph: how many nodes
 // it may have, which positions (entry, intermediate, exit) exist, and what
 // input/output cardinality each position allows. Circuits declare their
-// topology via the `topology:` field in YAML; the framework validates the
+// topology via the topology: field in YAML; the framework validates the
 // graph against the declared topology at load time.
 //
-// Validation is opt-in: circuits without a `topology:` field skip validation
+// Validation is opt-in: circuits without a topology: field skip validation
 // and load normally (backward compatible).
+//
+// # Built-in primitives
+//
+//	cascade        A ──▶ B ──▶ C          linear pipeline
+//	fan-out        A ──▶ B, A ──▶ C       1-to-N scatter
+//	fan-in         A ──▶ C, B ──▶ C       N-to-1 gather
+//	feedback-loop  A ──▶ B ──▶ C ──back──▶ A   iterative refinement
+//	bridge         A1──▶B1, A2──▶B2, B1⇄B2    cross-pollinating paths
+//	delegate       A ──▶ D[sub-walk] ──▶ B     meta-circuit via sub-walk
+//
+// These are composable: a real circuit may be a cascade at the macro level
+// with fan-out/fan-in in the middle and a feedback loop on one leg.
 package topology
 
 import "fmt"
