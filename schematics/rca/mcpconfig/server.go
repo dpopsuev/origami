@@ -232,10 +232,17 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		if rpProject == "" {
 			return nil, fwmcp.SessionMeta{}, fmt.Errorf("rp_project is required when rp_base_url is set")
 		}
+		rpAPIKeyPath, _ := extra["rp_api_key_path"].(string)
+		if rpAPIKeyPath == "" {
+			rpAPIKeyPath = os.Getenv("ASTERISK_RP_API_KEY_PATH")
+		}
+		if rpAPIKeyPath == "" {
+			rpAPIKeyPath = ".rp-api-key"
+		}
 		if s.ReaderFactory == nil {
 			return nil, fwmcp.SessionMeta{}, fmt.Errorf("no source connector configured (ReaderFactory not set)")
 		}
-		source, err := s.ReaderFactory(rpBaseURL, ".rp-api-key", rpProject)
+		source, err := s.ReaderFactory(rpBaseURL, rpAPIKeyPath, rpProject)
 		if err != nil {
 			return nil, fwmcp.SessionMeta{}, fmt.Errorf("create source reader: %w", err)
 		}
