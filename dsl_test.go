@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"os"
 	"testing"
 )
@@ -821,4 +822,360 @@ func containsSubstr(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// stubTransformer is a no-op Transformer for testing handler resolution.
+type stubTransformer struct{ id string }
+
+func (s *stubTransformer) Name() string { return s.id }
+func (s *stubTransformer) Transform(_ context.Context, _ *TransformerContext) (any, error) {
+	return map[string]any{"stub": s.id}, nil
+}
+
+// TestResolveNode_LegacyFamily_FailsWithTransformerRegistry demonstrates the
+// latent bug: when a circuit uses `family: recall` but the consumer only
+// registers TransformerRegistry entries (not NodeRegistry), BuildGraph falls
+// through to the NodeRegistry lookup and fails.
+func TestResolveNode_LegacyFamily_FailsWithTransformerRegistry(t *testing.T) {
+	yaml := `
+circuit: bug-demo
+nodes:
+  - name: recall
+    family: recall
+    prompt: test.md
+edges:
+  - id: E1
+    from: recall
+    to: _done
+    when: "true"
+start: recall
+done: _done
+`
+	def, err := LoadCircuit([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{
+			"recall": &stubTransformer{id: "recall"},
+		},
+	}
+
+	_, err = def.BuildGraph(reg)
+	if err == nil {
+		t.Fatal("expected BuildGraph to fail with family: + TransformerRegistry, but it succeeded")
+	}
+	if !contains(err.Error(), "no node factory for family") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// TestResolveNode_Handler_ResolvesTransformer verifies that the new
+// handler + handler_type path correctly resolves a transformer.
+func TestResolveNode_Handler_ResolvesTransformer(t *testing.T) {
+	yaml := `
+circuit: handler-demo
+handler_type: transformer
+nodes:
+  - name: recall
+    handler: recall
+    prompt: test.md
+edges:
+  - id: E1
+    from: recall
+    to: _done
+    when: "true"
+start: recall
+done: _done
+`
+	def, err := LoadCircuit([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{
+			"recall": &stubTransformer{id: "recall"},
+		},
+	}
+
+	g, err := def.BuildGraph(reg)
+	if err != nil {
+		t.Fatalf("BuildGraph with handler: recall failed: %v", err)
+	}
+	node, ok := g.NodeByName("recall")
+	if !ok {
+		t.Fatal("expected node 'recall' to exist in graph")
+	}
+	if _, ok := node.(*transformerNode); !ok {
+		t.Errorf("expected *transformerNode, got %T", node)
+	}
+}
+
+// TestResolveNode_Handler_NodeType verifies handler_type: node.
+func TestResolveNode_Handler_NodeType(t *testing.T) {
+	yaml := `
+circuit: node-demo
+handler_type: node
+nodes:
+  - name: setup
+    handler: setup
+edges:
+  - id: E1
+    from: setup
+    to: _done
+    when: "true"
+start: setup
+done: _done
+`
+	def, err := LoadCircuit([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+
+	called := false
+	reg := GraphRegistries{
+		Nodes: NodeRegistry{
+			"setup": func(nd NodeDef) Node {
+				called = true
+				return &stubNode{name: nd.Name}
+			},
+		},
+	}
+
+	_, err = def.BuildGraph(reg)
+	if err != nil {
+		t.Fatalf("BuildGraph with handler_type: node failed: %v", err)
+	}
+	if !called {
+		t.Error("expected NodeRegistry factory to be called")
+	}
+}
+
+// TestResolveNode_Handler_DelegateType verifies handler_type: delegate.
+func TestResolveNode_Handler_DelegateType(t *testing.T) {
+	yaml := `
+circuit: delegate-demo
+nodes:
+  - name: plan
+    handler_type: delegate
+    handler: planner
+edges:
+  - id: E1
+    from: plan
+    to: _done
+    when: "true"
+start: plan
+done: _done
+`
+	def, err := LoadCircuit([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{
+			"planner": &stubTransformer{id: "planner"},
+		},
+	}
+
+	g, err := def.BuildGraph(reg)
+	if err != nil {
+		t.Fatalf("BuildGraph with handler_type: delegate failed: %v", err)
+	}
+	node, ok := g.NodeByName("plan")
+	if !ok {
+		t.Fatal("expected node 'plan' to exist in graph")
+	}
+	if _, ok := node.(*dslDelegateNode); !ok {
+		t.Errorf("expected *dslDelegateNode, got %T", node)
+	}
+}
+
+// TestResolveNode_Handler_MissingHandlerType verifies the error when handler
+// is set but handler_type is missing on both node and circuit.
+func TestResolveNode_Handler_MissingHandlerType(t *testing.T) {
+	yaml := `
+circuit: no-type
+nodes:
+  - name: recall
+    handler: recall
+edges:
+  - id: E1
+    from: recall
+    to: _done
+    when: "true"
+start: recall
+done: _done
+`
+	def, err := LoadCircuit([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{
+			"recall": &stubTransformer{id: "recall"},
+		},
+	}
+
+	_, err = def.BuildGraph(reg)
+	if err == nil {
+		t.Fatal("expected error when handler is set but handler_type is missing")
+	}
+	if !contains(err.Error(), "no handler_type") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// TestResolveNode_Handler_NodeOverridesCircuitDefault verifies node-level
+// handler_type takes precedence over circuit-level default.
+func TestResolveNode_Handler_NodeOverridesCircuitDefault(t *testing.T) {
+	yaml := `
+circuit: override-demo
+handler_type: transformer
+nodes:
+  - name: plan
+    handler_type: delegate
+    handler: planner
+  - name: recall
+    handler: recall
+    prompt: test.md
+edges:
+  - id: E1
+    from: plan
+    to: recall
+    when: "true"
+  - id: E2
+    from: recall
+    to: _done
+    when: "true"
+start: plan
+done: _done
+`
+	def, err := LoadCircuit([]byte(yaml))
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+
+	reg := GraphRegistries{
+		Transformers: TransformerRegistry{
+			"planner": &stubTransformer{id: "planner"},
+			"recall":  &stubTransformer{id: "recall"},
+		},
+	}
+
+	g, err := def.BuildGraph(reg)
+	if err != nil {
+		t.Fatalf("BuildGraph failed: %v", err)
+	}
+
+	planNode, ok := g.NodeByName("plan")
+	if !ok {
+		t.Fatal("expected node 'plan' to exist in graph")
+	}
+	if _, ok := planNode.(*dslDelegateNode); !ok {
+		t.Errorf("expected plan to be *dslDelegateNode, got %T", planNode)
+	}
+
+	recallNode, ok := g.NodeByName("recall")
+	if !ok {
+		t.Fatal("expected node 'recall' to exist in graph")
+	}
+	if _, ok := recallNode.(*transformerNode); !ok {
+		t.Errorf("expected recall to be *transformerNode, got %T", recallNode)
+	}
+}
+
+// TestEffectiveHandlerType verifies the EffectiveHandlerType helper.
+func TestEffectiveHandlerType(t *testing.T) {
+	tests := []struct {
+		name           string
+		nd             NodeDef
+		circuitDefault string
+		want           string
+	}{
+		{
+			name:           "node-level handler_type wins",
+			nd:             NodeDef{HandlerType: "extractor", Handler: "x"},
+			circuitDefault: "transformer",
+			want:           "extractor",
+		},
+		{
+			name:           "circuit default when node has handler but no type",
+			nd:             NodeDef{Handler: "x"},
+			circuitDefault: "transformer",
+			want:           "transformer",
+		},
+		{
+			name:           "legacy delegate",
+			nd:             NodeDef{Delegate: true, Generator: "g"},
+			circuitDefault: "",
+			want:           "delegate",
+		},
+		{
+			name:           "legacy transformer",
+			nd:             NodeDef{Transformer: "t"},
+			circuitDefault: "",
+			want:           "transformer",
+		},
+		{
+			name:           "legacy extractor",
+			nd:             NodeDef{Extractor: "e"},
+			circuitDefault: "",
+			want:           "extractor",
+		},
+		{
+			name:           "legacy renderer",
+			nd:             NodeDef{Renderer: "r"},
+			circuitDefault: "",
+			want:           "renderer",
+		},
+		{
+			name:           "legacy family falls back to node",
+			nd:             NodeDef{Family: "f"},
+			circuitDefault: "",
+			want:           "node",
+		},
+		{
+			name:           "empty returns empty",
+			nd:             NodeDef{},
+			circuitDefault: "",
+			want:           "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.nd.EffectiveHandlerType(tt.circuitDefault)
+			if got != tt.want {
+				t.Errorf("EffectiveHandlerType() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestEffectiveHandler verifies the EffectiveHandler helper.
+func TestEffectiveHandler(t *testing.T) {
+	tests := []struct {
+		name string
+		nd   NodeDef
+		want string
+	}{
+		{name: "new handler wins", nd: NodeDef{Handler: "x", Transformer: "old"}, want: "x"},
+		{name: "delegate+generator", nd: NodeDef{Delegate: true, Generator: "g"}, want: "g"},
+		{name: "legacy transformer", nd: NodeDef{Transformer: "t"}, want: "t"},
+		{name: "legacy extractor", nd: NodeDef{Extractor: "e"}, want: "e"},
+		{name: "legacy renderer", nd: NodeDef{Renderer: "r"}, want: "r"},
+		{name: "legacy family", nd: NodeDef{Family: "f"}, want: "f"},
+		{name: "falls back to name", nd: NodeDef{Name: "n"}, want: "n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.nd.EffectiveHandler()
+			if got != tt.want {
+				t.Errorf("EffectiveHandler() = %q, want %q", got, tt.want)
+			}
+		})
+	}
 }

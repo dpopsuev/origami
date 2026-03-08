@@ -262,6 +262,21 @@ func (r *StochasticTransformer) Check(ctx *LintContext) []Finding {
 
 	var out []Finding
 	for _, nd := range ctx.Def.Nodes {
+		ht := nd.EffectiveHandlerType(ctx.Def.HandlerType)
+		name := nd.EffectiveHandler()
+		if ht == framework.HandlerTypeTransformer && name != "" {
+			if isStochastic(name, reg) {
+				out = append(out, Finding{
+					RuleID:   r.ID(),
+					Severity: r.Severity(),
+					Message:  fmt.Sprintf("node %q uses stochastic transformer %q", nd.Name, name),
+					File:     ctx.File,
+					Line:     ctx.NodeLine(nd.Name),
+				})
+			}
+			continue
+		}
+		// Legacy path: only nd.Transformer set
 		if nd.Transformer == "" {
 			continue
 		}
@@ -305,11 +320,14 @@ func (r *StochasticSummary) Check(ctx *LintContext) []Finding {
 	totalWithTransformer := 0
 	var stochasticNames []string
 	for _, nd := range ctx.Def.Nodes {
-		if nd.Transformer == "" {
+		ht := nd.EffectiveHandlerType(ctx.Def.HandlerType)
+		name := nd.EffectiveHandler()
+		isTransformer := ht == framework.HandlerTypeTransformer || (ht == "" && nd.Transformer != "")
+		if !isTransformer || name == "" {
 			continue
 		}
 		totalWithTransformer++
-		if isStochastic(nd.Transformer, reg) {
+		if isStochastic(name, reg) {
 			stochasticNames = append(stochasticNames, nd.Name)
 		}
 	}

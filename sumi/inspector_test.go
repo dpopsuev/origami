@@ -65,7 +65,7 @@ func TestInspectorPanel_ShowsNodeDetails(t *testing.T) {
 
 	content := p.View(Rect{0, 0, 40, 30})
 
-	checks := []string{"recall", "rapid", "completed", "core.llm", "rca.recall", "rca", "✦", "analysis"}
+	checks := []string{"recall", "rapid", "completed", "core.llm", "transformer", "✦", "analysis"}
 	for _, want := range checks {
 		if !strings.Contains(content, want) {
 			t.Errorf("inspector should contain %q, got:\n%s", want, content)

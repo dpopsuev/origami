@@ -873,16 +873,15 @@ func (m Model) renderInspectorContent() string {
 	sb.WriteString(fmt.Sprintf("Name:    %s\n", nd.Name))
 	sb.WriteString(fmt.Sprintf("Approach: %s\n", nd.Approach))
 	sb.WriteString(fmt.Sprintf("State:   %s\n", ns.State))
-	if nd.Transformer != "" {
-		sb.WriteString(fmt.Sprintf("Xformer: %s\n", nd.Transformer))
+	handler := nd.EffectiveHandler()
+	ht := nd.EffectiveHandlerType(m.def.HandlerType)
+	if handler != "" && handler != nd.Name {
+		sb.WriteString(fmt.Sprintf("Handler: %s\n", handler))
 	}
-	if nd.Extractor != "" {
-		sb.WriteString(fmt.Sprintf("Extract: %s\n", nd.Extractor))
+	if ht != "" {
+		sb.WriteString(fmt.Sprintf("Type:    %s\n", ht))
 	}
-	if nd.Family != "" {
-		sb.WriteString(fmt.Sprintf("Family:  %s\n", nd.Family))
-	}
-	badge := DSBadge(nd.Transformer)
+	badge := DSBadge(handler)
 	if badge != "" {
 		sb.WriteString(fmt.Sprintf("D/S:     %s\n", badge))
 	}
@@ -1013,16 +1012,15 @@ func (m Model) renderInspector() string {
 	sb.WriteString(fmt.Sprintf("│ Name:        %-16s │\n", nd.Name))
 	sb.WriteString(fmt.Sprintf("│ Approach:    %-16s │\n", nd.Approach))
 	sb.WriteString(fmt.Sprintf("│ State:       %-16s │\n", ns.State))
-	if nd.Transformer != "" {
-		sb.WriteString(fmt.Sprintf("│ Transformer: %-16s │\n", nd.Transformer))
+	handler2 := nd.EffectiveHandler()
+	ht2 := nd.EffectiveHandlerType(m.def.HandlerType)
+	if handler2 != "" && handler2 != nd.Name {
+		sb.WriteString(fmt.Sprintf("│ Handler:     %-16s │\n", handler2))
 	}
-	if nd.Extractor != "" {
-		sb.WriteString(fmt.Sprintf("│ Extractor:   %-16s │\n", nd.Extractor))
+	if ht2 != "" {
+		sb.WriteString(fmt.Sprintf("│ Type:        %-16s │\n", ht2))
 	}
-	if nd.Family != "" {
-		sb.WriteString(fmt.Sprintf("│ Family:      %-16s │\n", nd.Family))
-	}
-	badge := DSBadge(nd.Transformer)
+	badge := DSBadge(handler2)
 	if badge != "" {
 		sb.WriteString(fmt.Sprintf("│ D/S:         %-16s │\n", badge))
 	}

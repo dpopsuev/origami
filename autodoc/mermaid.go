@@ -111,12 +111,14 @@ var knownStochastic = map[string]bool{
 func classifyNodes(def *framework.CircuitDef, opts *MermaidOptions) map[string]dsClass {
 	m := make(map[string]dsClass, len(def.Nodes))
 	for _, nd := range def.Nodes {
-		if nd.Transformer == "" {
+		ht := nd.EffectiveHandlerType(def.HandlerType)
+		name := nd.EffectiveHandler()
+		if ht != framework.HandlerTypeTransformer || name == "" {
 			m[nd.Name] = dsUnknown
 			continue
 		}
 		if opts != nil && opts.Registry != nil {
-			if t, err := opts.Registry.Get(nd.Transformer); err == nil {
+			if t, err := opts.Registry.Get(name); err == nil {
 				if framework.IsDeterministic(t) {
 					m[nd.Name] = dsDeterministic
 				} else {
@@ -125,7 +127,7 @@ func classifyNodes(def *framework.CircuitDef, opts *MermaidOptions) map[string]d
 				continue
 			}
 		}
-		if knownStochastic[nd.Transformer] {
+		if knownStochastic[name] {
 			m[nd.Name] = dsStochastic
 		} else {
 			m[nd.Name] = dsDeterministic

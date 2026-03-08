@@ -210,8 +210,8 @@ func loadTriageCircuit() *fw.CircuitDef {
 	fmt.Println()
 	fmt.Printf("  Nodes:\n")
 	for _, n := range def.Nodes {
-		fmt.Printf("    %s%-14s%s approach=%-12s family=%s\n",
-			elementColor(resolveNodeElement(n)), n.Name, reset, n.Approach, n.Family)
+		fmt.Printf("    %s%-14s%s approach=%-12s handler=%s\n",
+			elementColor(resolveNodeElement(n)), n.Name, reset, n.Approach, n.EffectiveHandler())
 	}
 
 	fmt.Println()

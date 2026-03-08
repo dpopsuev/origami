@@ -27,6 +27,7 @@ func structuralRules() []Rule {
 		&InvalidZoneDomain{},
 		&DelegateWithoutGenerator{},
 		&InvalidWalkerRole{},
+		&DeprecatedHandlerFields{},
 	}
 }
 

@@ -130,8 +130,9 @@ func computeHover(doc *document, pos protocol.Position, vocab framework.RichVoca
 				if n.Description != "" {
 					md += n.Description + "\n\n"
 				}
-				if n.Family != "" {
-					md += fmt.Sprintf("**Family:** %s\n\n", n.Family)
+				handler := n.EffectiveHandler()
+				if handler != "" && handler != n.Name {
+					md += fmt.Sprintf("**Handler:** %s\n\n", handler)
 				}
 				if n.Approach != "" {
 					emoji := element.ApproachEmoji(element.Approach(n.Approach))

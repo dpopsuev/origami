@@ -246,11 +246,11 @@ func drawNodes(c *canvas, def *framework.CircuitDef, layout view.CircuitLayout, 
 		}
 		ns := snap.Nodes[name]
 		x, y := cellOrigin(gc)
-		drawNode(c, x, y, nd, ns, snap, opts)
+		drawNode(c, x, y, nd, ns, snap, opts, def.HandlerType)
 	}
 }
 
-func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, snap view.CircuitSnapshot, opts RenderOpts) {
+func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, snap view.CircuitSnapshot, opts RenderOpts, circuitHandlerType string) {
 	selected := opts.SelectedNode == nd.Name
 	style := nodeStyle(ns, opts)
 	elemStyle := ElementFg(ns.Element)
@@ -267,7 +267,10 @@ func drawNode(c *canvas, x, y int, nd *framework.NodeDef, ns view.NodeState, sna
 		style = StyleSelected
 	}
 
-	badge := DSBadge(nd.Transformer)
+	badge := ""
+	if nd.EffectiveHandlerType(circuitHandlerType) == framework.HandlerTypeTransformer {
+		badge = DSBadge(nd.EffectiveHandler())
+	}
 	stateIcon := stateIndicator(ns.State, opts.AnimFrame)
 
 	walkerMark := ""

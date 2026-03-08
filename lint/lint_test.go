@@ -25,15 +25,16 @@ func minimalYAML() []byte {
 kind: circuit
 circuit: test
 description: a test circuit
+handler_type: transformer
 nodes:
   - name: recall
     approach: rapid
-    transformer: core.jq
+    handler: core.jq
     meta:
       expr: "input"
   - name: triage
     approach: methodical
-    transformer: core.jq
+    handler: core.jq
     meta:
       expr: "input"
 edges:
@@ -494,9 +495,9 @@ func TestFinding_String(t *testing.T) {
 
 func TestAllRules_Count(t *testing.T) {
 	rules := AllRules()
-	// 16 structural + 9 semantic + 11 best-practice + 1 prompt = 37
-	if len(rules) != 37 {
-		t.Errorf("expected 37 rules, got %d", len(rules))
+	// 17 structural + 9 semantic + 11 best-practice + 1 prompt = 38
+	if len(rules) != 38 {
+		t.Errorf("expected 38 rules, got %d", len(rules))
 	}
 
 	ids := make(map[string]bool)

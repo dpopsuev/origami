@@ -13,8 +13,8 @@ func RenderNodeTable(def *framework.CircuitDef, opts *MermaidOptions) string {
 	zoneOf := buildZoneMap(def)
 
 	var b strings.Builder
-	b.WriteString("| Node | Description | Zone | Family | Transformer | Element | Hooks | D/S |\n")
-	b.WriteString("|------|-------------|------|--------|-------------|---------|-------|-----|\n")
+	b.WriteString("| Node | Description | Zone | Handler | Type | Element | Hooks | D/S |\n")
+	b.WriteString("|------|-------------|------|---------|------|---------|-------|-----|\n")
 
 	for _, nd := range def.Nodes {
 		desc := nd.Description
@@ -25,13 +25,13 @@ func RenderNodeTable(def *framework.CircuitDef, opts *MermaidOptions) string {
 		if zone == "" {
 			zone = "-"
 		}
-		family := nd.Family
-		if family == "" {
-			family = "-"
+		handler := nd.EffectiveHandler()
+		if handler == "" {
+			handler = "-"
 		}
-		transformer := nd.Transformer
-		if transformer == "" {
-			transformer = "-"
+		handlerType := nd.EffectiveHandlerType(def.HandlerType)
+		if handlerType == "" {
+			handlerType = "-"
 		}
 		element := nd.Approach
 		if element == "" {
@@ -51,7 +51,7 @@ func RenderNodeTable(def *framework.CircuitDef, opts *MermaidOptions) string {
 		}
 
 		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %s |\n",
-			nd.Name, desc, zone, family, transformer, element, hooks, ds)
+			nd.Name, desc, zone, handler, handlerType, element, hooks, ds)
 	}
 
 	return b.String()

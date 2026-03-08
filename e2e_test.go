@@ -158,9 +158,10 @@ func TestE2E_RealYAML_RCAInvestigation(t *testing.T) {
 	families := make([]string, 0, len(def.Nodes))
 	seen := map[string]bool{}
 	for _, nd := range def.Nodes {
-		if nd.Family != "" && !seen[nd.Family] {
-			families = append(families, nd.Family)
-			seen[nd.Family] = true
+		h := nd.EffectiveHandler()
+		if h != "" && !seen[h] {
+			families = append(families, h)
+			seen[h] = true
 		}
 	}
 
@@ -196,9 +197,10 @@ func TestE2E_RealYAML_DefectDialectic(t *testing.T) {
 	families := make([]string, 0, len(def.Nodes))
 	seen := map[string]bool{}
 	for _, nd := range def.Nodes {
-		if nd.Family != "" && !seen[nd.Family] {
-			families = append(families, nd.Family)
-			seen[nd.Family] = true
+		h := nd.EffectiveHandler()
+		if h != "" && !seen[h] {
+			families = append(families, h)
+			seen[h] = true
 		}
 	}
 
@@ -231,9 +233,10 @@ func TestE2E_RealYAML_HierarchicalDelegation(t *testing.T) {
 	families := make([]string, 0, len(def.Nodes))
 	seen := map[string]bool{}
 	for _, nd := range def.Nodes {
-		if nd.Family != "" && !seen[nd.Family] {
-			families = append(families, nd.Family)
-			seen[nd.Family] = true
+		h := nd.EffectiveHandler()
+		if h != "" && !seen[h] {
+			families = append(families, h)
+			seen[h] = true
 		}
 	}
 
@@ -277,9 +280,10 @@ func TestE2E_RealYAML_IntentClassifier(t *testing.T) {
 	families := make([]string, 0, len(def.Nodes))
 	seen := map[string]bool{}
 	for _, nd := range def.Nodes {
-		if nd.Family != "" && !seen[nd.Family] {
-			families = append(families, nd.Family)
-			seen[nd.Family] = true
+		h := nd.EffectiveHandler()
+		if h != "" && !seen[h] {
+			families = append(families, h)
+			seen[h] = true
 		}
 	}
 

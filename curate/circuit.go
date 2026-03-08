@@ -46,7 +46,7 @@ func newCurationNode(def framework.NodeDef) framework.Node {
 	return &curationNode{
 		name:    def.Name,
 		element: resolveApproachElement(def.Approach),
-		family:  def.Family,
+		family:  def.EffectiveHandler(),
 	}
 }
 

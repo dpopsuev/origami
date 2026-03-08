@@ -127,16 +127,15 @@ func (p *InspectorPanel) renderContent(width int) string {
 	}
 	writeField("Zone", zone)
 
-	if nd.Transformer != "" {
-		writeField("Xformer", nd.Transformer)
+	handler := nd.EffectiveHandler()
+	ht := nd.EffectiveHandlerType(p.def.HandlerType)
+	if handler != "" && handler != nd.Name {
+		writeField("Handler", handler)
 	}
-	if nd.Extractor != "" {
-		writeField("Extract", nd.Extractor)
+	if ht != "" {
+		writeField("Type", ht)
 	}
-	if nd.Family != "" {
-		writeField("Family", nd.Family)
-	}
-	badge := DSBadge(nd.Transformer)
+	badge := DSBadge(handler)
 	if badge != "" {
 		writeField("D/S", badge)
 	}

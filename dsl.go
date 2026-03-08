@@ -16,6 +16,7 @@ type CircuitDef struct {
 	Circuit     string             `yaml:"circuit"`
 	Description string             `yaml:"description,omitempty"`
 	Topology    string             `yaml:"topology,omitempty"`
+	HandlerType string             `yaml:"handler_type,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
@@ -68,17 +69,35 @@ type ZoneDef struct {
 	ContextFilter *ContextFilterDef `yaml:"context_filter,omitempty"`
 }
 
+// HandlerType constants for the handler_type field.
+const (
+	HandlerTypeTransformer = "transformer"
+	HandlerTypeExtractor   = "extractor"
+	HandlerTypeRenderer    = "renderer"
+	HandlerTypeNode        = "node"
+	HandlerTypeDelegate    = "delegate"
+)
+
 // NodeDef declares a node in the circuit.
-// Resolution priority: Transformer > Extractor > NodeRegistry (Family/Name).
-// Transformer is the DSL-first path; Extractor and NodeRegistry are escape hatches.
+//
+// New-style resolution uses handler_type + handler (explicit, no cascade).
+// Old-style fields (family, transformer, extractor, renderer, delegate+generator)
+// are deprecated and trigger lint warnings; they remain for backward compat.
 type NodeDef struct {
 	Name        string          `yaml:"name"`
 	Description string          `yaml:"description,omitempty"`
 	Approach    string          `yaml:"approach,omitempty"`
+	HandlerType string          `yaml:"handler_type,omitempty"`
+	Handler     string          `yaml:"handler,omitempty"`
+
+	// Deprecated: use handler_type + handler instead.
 	Family      string          `yaml:"family,omitempty"`
 	Extractor   string          `yaml:"extractor,omitempty"`
 	Renderer    string          `yaml:"renderer,omitempty"`
 	Transformer string          `yaml:"transformer,omitempty"`
+	Delegate    bool            `yaml:"delegate,omitempty"`
+	Generator   string          `yaml:"generator,omitempty"`
+
 	Provider    string          `yaml:"provider,omitempty"`
 	Prompt      string          `yaml:"prompt,omitempty"`
 	Input       string          `yaml:"input,omitempty"`
@@ -87,8 +106,58 @@ type NodeDef struct {
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
 	Cache       *CacheDef       `yaml:"cache,omitempty"`
 	Meta        map[string]any  `yaml:"meta,omitempty"`
-	Delegate    bool            `yaml:"delegate,omitempty"`
-	Generator   string          `yaml:"generator,omitempty"`
+}
+
+// EffectiveHandlerType returns the handler type for this node, resolving
+// the node-level override, circuit-level default, or legacy field fallback.
+func (nd NodeDef) EffectiveHandlerType(circuitDefault string) string {
+	if nd.HandlerType != "" {
+		return nd.HandlerType
+	}
+	if nd.Handler != "" && circuitDefault != "" {
+		return circuitDefault
+	}
+	// Legacy fallback: infer from old fields
+	if nd.Delegate {
+		return HandlerTypeDelegate
+	}
+	if nd.Transformer != "" {
+		return HandlerTypeTransformer
+	}
+	if nd.Extractor != "" {
+		return HandlerTypeExtractor
+	}
+	if nd.Renderer != "" {
+		return HandlerTypeRenderer
+	}
+	if nd.Family != "" {
+		return HandlerTypeNode
+	}
+	return ""
+}
+
+// EffectiveHandler returns the handler name for this node, resolving
+// new-style handler field or legacy field fallback.
+func (nd NodeDef) EffectiveHandler() string {
+	if nd.Handler != "" {
+		return nd.Handler
+	}
+	if nd.Delegate && nd.Generator != "" {
+		return nd.Generator
+	}
+	if nd.Transformer != "" {
+		return nd.Transformer
+	}
+	if nd.Extractor != "" {
+		return nd.Extractor
+	}
+	if nd.Renderer != "" {
+		return nd.Renderer
+	}
+	if nd.Family != "" {
+		return nd.Family
+	}
+	return nd.Name
 }
 
 // CacheDef configures node-level caching via the DSL.
@@ -127,6 +196,7 @@ type rawCircuitDef struct {
 	Circuit     string             `yaml:"circuit"`
 	Description string             `yaml:"description,omitempty"`
 	Topology    string             `yaml:"topology,omitempty"`
+	HandlerType string             `yaml:"handler_type,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
@@ -186,6 +256,7 @@ func (raw *rawCircuitDef) normalize() (*CircuitDef, error) {
 		Circuit:     raw.Circuit,
 		Description: raw.Description,
 		Topology:    raw.Topology,
+		HandlerType: raw.HandlerType,
 		Imports:     raw.Imports,
 		Vars:        raw.Vars,
 		Extractors:  raw.Extractors,
@@ -590,11 +661,122 @@ func buildGraphShape(g *DefaultGraph, def *CircuitDef) GraphShape {
 	}
 }
 
-// resolveNode creates a Node from a NodeDef using the priority chain:
-// Transformer > Extractor > NodeRegistry (Family/Name).
+// resolveNode creates a Node from a NodeDef.
+//
+// New-style: handler + handler_type (explicit, no cascade).
+// Legacy fallback: Transformer > Extractor > Renderer > NodeRegistry (Family/Name).
 func (def *CircuitDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error) {
 	elem, _ := ResolveApproach(strings.ToLower(nd.Approach))
 
+	if nd.Handler != "" {
+		return def.resolveHandler(nd, reg, elem)
+	}
+	return def.resolveNodeLegacy(nd, reg, elem)
+}
+
+// resolveHandler resolves a node using the explicit handler + handler_type path.
+func (def *CircuitDef) resolveHandler(nd NodeDef, reg GraphRegistries, elem Element) (Node, error) {
+	ht := nd.HandlerType
+	if ht == "" {
+		ht = def.HandlerType
+	}
+	if ht == "" {
+		return nil, fmt.Errorf("node %q: handler %q specified but no handler_type on node or circuit", nd.Name, nd.Handler)
+	}
+
+	switch ht {
+	case HandlerTypeTransformer:
+		t, err := def.resolveTransformerByName(nd.Handler, nd.Name, reg)
+		if err != nil {
+			return nil, err
+		}
+		return &transformerNode{
+			name:     nd.Name,
+			element:  elem,
+			trans:    t,
+			prompt:   nd.Prompt,
+			input:    nd.Input,
+			provider: nd.Provider,
+			config:   def.Vars,
+			meta:     nd.Meta,
+		}, nil
+
+	case HandlerTypeExtractor:
+		ndCopy := nd
+		ndCopy.Extractor = nd.Handler
+		ext, err := def.resolveExtractor(ndCopy, reg)
+		if err != nil {
+			return nil, err
+		}
+		return &extractorNode{
+			name:    nd.Name,
+			element: elem,
+			ext:     ext,
+			meta:    nd.Meta,
+		}, nil
+
+	case HandlerTypeRenderer:
+		ndCopy := nd
+		ndCopy.Renderer = nd.Handler
+		rnd, err := def.resolveRenderer(ndCopy, reg)
+		if err != nil {
+			return nil, err
+		}
+		return &rendererNode{
+			name:    nd.Name,
+			element: elem,
+			rnd:     rnd,
+			meta:    nd.Meta,
+		}, nil
+
+	case HandlerTypeNode:
+		if reg.Nodes == nil {
+			return nil, fmt.Errorf("node %q: handler %q not found (node registry is nil)", nd.Name, nd.Handler)
+		}
+		factory, ok := reg.Nodes[nd.Handler]
+		if !ok {
+			return nil, fmt.Errorf("node %q: handler %q not found in node registry", nd.Name, nd.Handler)
+		}
+		return factory(nd), nil
+
+	case HandlerTypeDelegate:
+		if reg.Transformers == nil {
+			return nil, fmt.Errorf("node %q: delegate handler %q not found (transformer registry is nil)", nd.Name, nd.Handler)
+		}
+		gen, err := reg.Transformers.Get(nd.Handler)
+		if err != nil {
+			return nil, fmt.Errorf("node %q: delegate handler: %w", nd.Name, err)
+		}
+		return &dslDelegateNode{
+			name:    nd.Name,
+			element: elem,
+			gen:     gen,
+			config:  def.Vars,
+			meta:    nd.Meta,
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("node %q: unknown handler_type %q", nd.Name, ht)
+	}
+}
+
+// resolveTransformerByName resolves a transformer by name, checking builtins first.
+func (def *CircuitDef) resolveTransformerByName(name, nodeName string, reg GraphRegistries) (Transformer, error) {
+	switch name {
+	case BuiltinTransformerGoTemplate:
+		return &goTemplateTransformer{}, nil
+	case BuiltinTransformerPassthrough:
+		return &passthroughTransformer{}, nil
+	}
+	if reg.Transformers == nil {
+		return nil, fmt.Errorf("node %q: transformer %q not found (registry is nil)", nodeName, name)
+	}
+	return reg.Transformers.Get(name)
+}
+
+// resolveNodeLegacy is the deprecated resolution cascade.
+// Kept for backward compatibility; use handler + handler_type instead.
+func (def *CircuitDef) resolveNodeLegacy(nd NodeDef, reg GraphRegistries, elem Element) (Node, error) {
 	if nd.Delegate {
 		if nd.Generator == "" {
 			return nil, fmt.Errorf("node %q: delegate node requires a generator transformer", nd.Name)
@@ -616,21 +798,9 @@ func (def *CircuitDef) resolveNode(nd NodeDef, reg GraphRegistries) (Node, error
 	}
 
 	if nd.Transformer != "" {
-		var t Transformer
-		switch nd.Transformer {
-		case BuiltinTransformerGoTemplate:
-			t = &goTemplateTransformer{}
-		case BuiltinTransformerPassthrough:
-			t = &passthroughTransformer{}
-		default:
-			if reg.Transformers == nil {
-				return nil, fmt.Errorf("node %q: transformer %q not found (registry is nil)", nd.Name, nd.Transformer)
-			}
-			var err error
-			t, err = reg.Transformers.Get(nd.Transformer)
-			if err != nil {
-				return nil, fmt.Errorf("node %q: %w", nd.Name, err)
-			}
+		t, err := def.resolveTransformerByName(nd.Transformer, nd.Name, reg)
+		if err != nil {
+			return nil, fmt.Errorf("node %q: %w", nd.Name, err)
 		}
 		return &transformerNode{
 			name:     nd.Name,
