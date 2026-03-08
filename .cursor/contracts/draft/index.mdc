@@ -6,4 +6,3 @@
 ## Files
 - `ouroboros-workbench.md` — Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode.
 - `washi.md` — Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.
-- `finding-router.md` — Finding Router — Enforcer findings routed by severity and domain. Three enforcement patterns. Veto mechanism via confidence override.

@@ -8,3 +8,4 @@
 - `agent-roles.md` — Agent Roles — Role type (worker, manager, enforcer, broker) orthogonal to Persona. P1-P2 complete (type + DSL). P3-P6 deferred.
 - `operator-reconciliation.md` — Operator Reconciliation — Operator interface, RunOperator loop, InMemoryContainer, StubOperator. P1-P3 + P6 complete. P4-P5, P7 deferred.
 - `ouroboros-probe-extensions.md` — Ouroboros Probe Extensions — Tracks A-D complete: timed handicap, scaffolded prompt-chain, transcript persistence + review API, 21 behavioral probe seeds. C7 deferred.
+- `finding-router.md` — Finding Router — P1-P7 complete: Finding type, FindingRouter, SignalBus integration, edge condition helpers, VetoHook, parallel enforcement circuit.

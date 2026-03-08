@@ -1,6 +1,6 @@
 # Contract — finding-router
 
-**Status:** draft  
+**Status:** active  
 **Goal:** Enforcer findings route to the correct authority (Worker's Manager, or Broker) based on severity and domain. Findings can flag (soft), block (medium), or veto (hard) circuit execution. Three enforcement patterns are supported: inline (Hook-based), signal-based (async), and parallel circuit.  
 **Serves:** Containerized Runtime (vision)
 
@@ -224,3 +224,5 @@ Green-yellow-blue cycle.
 ## Notes
 
 2026-03-05 — Contract drafted from agentic hierarchy brainstorming session. The Enforcer is the most architecturally interesting role because it's lateral — it doesn't sit in the command chain, it observes it. Three enforcement patterns (Hook, Signal, Parallel Circuit) serve different needs: Hook for fast deterministic checks (lint), Signal for decoupled async audit, Parallel Circuit for deep analysis (security, architecture review). The veto mechanism integrates with existing dialectic machinery — confidence override is the bridge between the Enforcer and the walk engine. Depends on `agent-roles` (findings route based on role) and benefits from `operator-reconciliation` (Managers handle warnings, Brokers handle escalations).
+
+2026-03-08 — All seven phases implemented. P1: Finding/FindingSeverity/FindingCollector/InMemoryFindingCollector in `finding.go`, vetoArtifact + ErrFindingVeto sentinel. P2: FindingRouter with glob-based RouteRule, FindingHandlers callbacks, first-match routing, default severity→target mapping. P3: dispatch/signal_finding.go with EmitFinding/FindingsSince/DecodeFinding round-trip encoding on SignalBus. P4: ExprContext extended with SignalExprHelpers exposing `signals.HasFinding()`, `signals.FindingCount()`, `signals.FindingDomain()` to when: expressions via FindingCollectorKey in WalkerState.Context. P5: VetoHook returns ErrFindingVeto, hookingWalker in runner.go intercepts it and wraps artifact with Confidence() 0. P6: RunWithEnforcer runs work+enforcer circuits concurrently with shared FindingRouter and ArtifactStore, drain timeout for enforcer grace period. All tests pass with -race. doc.go updated.
