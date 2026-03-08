@@ -1,0 +1,16 @@
+# LLM Worker — MCP client that processes circuit steps via LLM.
+# Connects to the gateway and loops: get_next_step -> LLM -> submit_step.
+#
+# Build: docker build -t origami-llm-worker -f deploy/Dockerfile.llm-worker .
+# Run:   docker run -e GATEWAY_ENDPOINT=http://gateway:9000/mcp origami-llm-worker
+
+FROM golang:1.24 AS builder
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /llm-worker ./cmd/llm-worker
+
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /llm-worker /llm-worker
+ENTRYPOINT ["/llm-worker"]

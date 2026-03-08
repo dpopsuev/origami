@@ -47,6 +47,27 @@ vet:
 lint-pipelines:
     @for f in testdata/*.yaml testdata/**/*.yaml; do echo "lint: $f"; origami lint --profile strict "$f"; done
 
+# ─── Container Images ─────────────────────────────────────
+
+# Build all OCI images
+build-images: build-gateway build-rca build-knowledge build-llm-worker
+
+# Build gateway image
+build-gateway:
+    docker build -t origami-gateway -f deploy/Dockerfile.gateway .
+
+# Build RCA engine image
+build-rca:
+    docker build -t origami-rca -f deploy/Dockerfile.rca .
+
+# Build knowledge engine image
+build-knowledge:
+    docker build -t origami-knowledge -f deploy/Dockerfile.knowledge .
+
+# Build LLM worker image
+build-llm-worker:
+    docker build -t origami-llm-worker -f deploy/Dockerfile.llm-worker .
+
 # ─── Clean ────────────────────────────────────────────────
 
 # Remove build artifacts

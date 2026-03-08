@@ -62,6 +62,8 @@ func main() {
 		err = sumiCmd(os.Args[2:])
 	case "fold":
 		err = foldCmd(os.Args[2:])
+	case "serve":
+		err = serveCmd(os.Args[2:])
 	case "autodoc":
 		err = autodocCmd(os.Args[2:])
 	case "version":
@@ -94,6 +96,7 @@ Commands:
   component  Component management (list, inspect, validate)
   sumi       Terminal circuit viewer and debugger (TUI)
   fold       Compile a YAML manifest into a standalone binary
+  serve      Run the MCP gateway proxy (routes to backend engines)
   autodoc    Generate documentation tree from circuit YAML
   version    Print version`)
 }
