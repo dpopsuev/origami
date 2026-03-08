@@ -98,9 +98,10 @@ type NodeDef struct {
 	Delegate    bool            `yaml:"delegate,omitempty"`
 	Generator   string          `yaml:"generator,omitempty"`
 
-	Provider    string          `yaml:"provider,omitempty"`
-	Prompt      string          `yaml:"prompt,omitempty"`
-	Input       string          `yaml:"input,omitempty"`
+	Provider     string          `yaml:"provider,omitempty"`
+	Prompt       string          `yaml:"prompt,omitempty"`
+	OutputSchema string          `yaml:"output_schema,omitempty"`
+	Input        string          `yaml:"input,omitempty"`
 	Before      []string        `yaml:"before,omitempty"`
 	After       []string        `yaml:"after,omitempty"`
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`

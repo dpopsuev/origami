@@ -14,35 +14,42 @@ nodes:
   - name: recall
     handler: rca.recall
     prompt: prompts/recall/judge-similarity.md
+    output_schema: schemas/rca/F0_RECALL.yaml
     before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy, inject.history, inject.recall-digest]
     after: [store.recall]
   - name: triage
     handler: rca.triage
     prompt: prompts/triage/classify-symptoms.md
+    output_schema: schemas/rca/F1_TRIAGE.yaml
     before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy, inject.history]
     after: [store.triage]
   - name: resolve
     handler: rca.resolve
     prompt: prompts/resolve/select-repo.md
+    output_schema: schemas/rca/F2_RESOLVE.yaml
     before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
   - name: investigate
     handler: rca.investigate
     prompt: prompts/investigate/deep-rca.md
+    output_schema: schemas/rca/F3_INVESTIGATE.yaml
     before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
     after: [store.investigate]
   - name: correlate
     handler: rca.correlate
     prompt: prompts/correlate/match-cases.md
+    output_schema: schemas/rca/F4_CORRELATE.yaml
     before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
     after: [store.correlate]
   - name: review
     handler: rca.review
     prompt: prompts/review/present-findings.md
+    output_schema: schemas/rca/F5_REVIEW.yaml
     before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
     after: [store.review]
   - name: report
     handler: rca.report
     prompt: prompts/report/regression-table.md
+    output_schema: schemas/rca/F6_REPORT.yaml
     before: [inject.envelope, inject.failure, inject.sources, inject.prior, inject.taxonomy]
 
 edges:
