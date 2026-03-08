@@ -1,6 +1,6 @@
 # Contract — manifest-as-map
 
-**Status:** draft  
+**Status:** complete  
 **Goal:** `origami.yaml` is the single, explicit table of contents for a domain project — every file is declared by key, the embed directory wrapper is eliminated, and `fold` + `domainserve` resolve assets by manifest keys, not filesystem conventions.  
 **Serves:** 100% DSL — Zero Go
 
@@ -222,5 +222,13 @@ No trust boundaries affected. All changes are structural (manifest parsing, file
 | `circuit-dsl-shorthand` (Asterisk) | No direct dependency. Shorthand operates on circuit YAML syntax, not manifest schema. |
 
 ## Notes
+
+2026-03-08 — Contract complete. All 4 phases implemented:
+- P1: `AssetMap` type with `Files` catch-all (domain-agnostic, no `Vocabulary`/`Heuristics` named fields). Mutual exclusion validation. 11 unit tests.
+- P2: Multi-file `//go:embed` codegen, selective file copy, `AssetIndex` literal in generated main.go. Integration test confirms real binary build.
+- P3: `AssetIndex` type in domainserve, `Resolve()` method, `domain_resolve` MCP tool, `scanCircuits()` with asset map fallback. 15 tests.
+- P4: Asterisk `internal/` flattened to root, `origami.yaml` rewritten with `assets:` map, 3 cross-references fixed, justfile updated. `just build` produces working binary.
+
+Design note: `Vocabulary` and `Heuristics` were originally named fields on `AssetMap` but moved to generic `Files map[string]string` — these are domain-specific concepts that don't belong in framework types.
 
 2026-03-07 20:00 — Contract drafted. Root cause: `fold` only supports single-directory embed, forcing the `internal/` wrapper. The manifest-as-map approach makes the entrypoint YAML the explicit table of contents. Four phases: manifest schema → multi-file codegen → key-based resolution → Asterisk migration. Backward compatible throughout.

@@ -6,8 +6,10 @@ package domainserve
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"net/http"
+	"sort"
 	"strings"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -18,6 +20,35 @@ import (
 type Config struct {
 	Name    string
 	Version string
+	Assets  *AssetIndex // when non-nil, enables key-based asset resolution
+}
+
+// AssetIndex maps manifest sections and files for key-based resolution.
+// Sections maps section name (e.g. "circuits") to key-path pairs.
+// Files maps singleton asset names (e.g. "vocabulary") to paths.
+type AssetIndex struct {
+	Sections map[string]map[string]string
+	Files    map[string]string
+}
+
+// Resolve looks up a file path by section and key. For singleton files
+// (no key), pass an empty key and the section name is looked up in Files.
+func (idx *AssetIndex) Resolve(section, key string) (string, error) {
+	if key == "" {
+		if p, ok := idx.Files[section]; ok {
+			return p, nil
+		}
+		return "", fmt.Errorf("unknown file %q", section)
+	}
+	sec, ok := idx.Sections[section]
+	if !ok {
+		return "", fmt.Errorf("unknown section %q", section)
+	}
+	p, ok := sec[key]
+	if !ok {
+		return "", fmt.Errorf("unknown key %q in section %q", key, section)
+	}
+	return p, nil
 }
 
 // CircuitInfo describes one circuit found in the domain filesystem.
@@ -77,7 +108,7 @@ func registerTools(server *sdkmcp.Server, fsys fs.FS, cfg Config) {
 			info := DomainInfo{
 				Name:     cfg.Name,
 				Version:  cfg.Version,
-				Circuits: scanCircuits(fsys),
+				Circuits: scanCircuits(fsys, cfg.Assets),
 			}
 			data, err := json.Marshal(info)
 			if err != nil {
@@ -90,7 +121,7 @@ func registerTools(server *sdkmcp.Server, fsys fs.FS, cfg Config) {
 	server.AddTool(
 		&sdkmcp.Tool{
 			Name:        "domain_read",
-			Description: "Read a file from the domain filesystem",
+			Description: "Read a file from the domain filesystem by path",
 			InputSchema: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string","description":"File path to read"}},"required":["path"]}`),
 		},
 		func(_ context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
@@ -142,11 +173,74 @@ func registerTools(server *sdkmcp.Server, fsys fs.FS, cfg Config) {
 			return textResult(string(data)), nil
 		},
 	)
+
+	if cfg.Assets != nil {
+		server.AddTool(
+			&sdkmcp.Tool{
+				Name:        "domain_resolve",
+				Description: "Resolve a domain asset by section and key, returning its file content",
+				InputSchema: json.RawMessage(`{"type":"object","properties":{"section":{"type":"string","description":"Asset section (e.g. circuits, prompts) or file name (e.g. vocabulary)"},"key":{"type":"string","description":"Asset key within the section (omit for singleton files)"}},"required":["section"]}`),
+			},
+			func(_ context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
+				var args struct {
+					Section string `json:"section"`
+					Key     string `json:"key"`
+				}
+				if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+					return errResult("invalid arguments: " + err.Error()), nil
+				}
+				path, err := cfg.Assets.Resolve(args.Section, args.Key)
+				if err != nil {
+					return errResult(err.Error()), nil
+				}
+				data, err := fs.ReadFile(fsys, path)
+				if err != nil {
+					return errResult(err.Error()), nil
+				}
+				return textResult(string(data)), nil
+			},
+		)
+	}
 }
 
-// scanCircuits reads circuits/ directory and extracts metadata from
-// each YAML file. Returns nil (not error) when circuits/ doesn't exist.
-func scanCircuits(fsys fs.FS) []CircuitInfo {
+// scanCircuits discovers circuits either from the AssetIndex (preferred)
+// or by scanning the circuits/ directory (fallback).
+func scanCircuits(fsys fs.FS, assets *AssetIndex) []CircuitInfo {
+	if assets != nil {
+		if circuits, ok := assets.Sections["circuits"]; ok {
+			return circuitsFromMap(fsys, circuits)
+		}
+	}
+	return circuitsFromDir(fsys)
+}
+
+func circuitsFromMap(fsys fs.FS, circuits map[string]string) []CircuitInfo {
+	names := make([]string, 0, len(circuits))
+	for name := range circuits {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	result := make([]CircuitInfo, 0, len(circuits))
+	for _, name := range names {
+		ci := CircuitInfo{Name: name}
+		data, err := fs.ReadFile(fsys, circuits[name])
+		if err == nil {
+			var header struct {
+				Topology    string `yaml:"topology"`
+				Description string `yaml:"description"`
+			}
+			if yaml.Unmarshal(data, &header) == nil {
+				ci.Topology = header.Topology
+				ci.Description = header.Description
+			}
+		}
+		result = append(result, ci)
+	}
+	return result
+}
+
+func circuitsFromDir(fsys fs.FS) []CircuitInfo {
 	entries, err := fs.ReadDir(fsys, "circuits")
 	if err != nil {
 		return nil

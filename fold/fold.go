@@ -88,16 +88,9 @@ func buildDomainServe(m *Manifest, opts Options) error {
 	}
 
 	manifestDir := filepath.Dir(opts.ManifestPath)
-	embedDir := strings.TrimRight(m.DomainServe.Embed, "/")
-	srcEmbed := filepath.Join(manifestDir, embedDir)
-	dstEmbed := filepath.Join(tmpDir, embedDir)
 
-	if err := copyDir(srcEmbed, dstEmbed); err != nil {
-		return fmt.Errorf("copy embed dir %q: %w", embedDir, err)
-	}
-
-	if opts.Verbose {
-		fmt.Fprintf(os.Stderr, "copied embed dir: %s → %s\n", srcEmbed, dstEmbed)
+	if err := copyEmbedFiles(m.DomainServe, manifestDir, tmpDir, opts.Verbose); err != nil {
+		return err
 	}
 
 	resolver := opts.ModuleResolver
@@ -165,6 +158,52 @@ func createDomainServeBuildModule(tmpDir, name string, resolver ModuleResolver) 
 	}
 
 	return os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(buf.String()), 0644)
+}
+
+func copyEmbedFiles(ds *DomainServeConfig, manifestDir, tmpDir string, verbose bool) error {
+	if ds.Embed != "" {
+		embedDir := strings.TrimRight(ds.Embed, "/")
+		srcEmbed := filepath.Join(manifestDir, embedDir)
+		dstEmbed := filepath.Join(tmpDir, embedDir)
+		if err := copyDir(srcEmbed, dstEmbed); err != nil {
+			return fmt.Errorf("copy embed dir %q: %w", embedDir, err)
+		}
+		if verbose {
+			fmt.Fprintf(os.Stderr, "copied embed dir: %s -> %s\n", srcEmbed, dstEmbed)
+		}
+		return nil
+	}
+
+	paths := ds.Assets.AllPaths()
+	for _, p := range paths {
+		srcPath := filepath.Join(manifestDir, p)
+		dstPath := filepath.Join(tmpDir, p)
+		if err := copyFile(srcPath, dstPath); err != nil {
+			return fmt.Errorf("copy asset %q: %w", p, err)
+		}
+	}
+	if verbose {
+		fmt.Fprintf(os.Stderr, "copied %d asset files\n", len(paths))
+	}
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+	_, err = io.Copy(dstFile, srcFile)
+	return err
 }
 
 func copyDir(src, dst string) error {

@@ -1,7 +1,6 @@
 package domainserve_test
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -257,14 +256,133 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-func callToolCtx(ctx context.Context, t *testing.T, session *sdkmcp.ClientSession, name string, args map[string]any) *sdkmcp.CallToolResult {
+func setupWithAssets(t *testing.T, fsys fstest.MapFS, assets *domainserve.AssetIndex) *sdkmcp.ClientSession {
 	t.Helper()
-	result, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
-		Name:      name,
-		Arguments: args,
+	handler := domainserve.New(fsys, domainserve.Config{
+		Name:    "test-domain",
+		Version: "v0.1.0",
+		Assets:  assets,
 	})
+
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	ctx := t.Context()
+	transport := &sdkmcp.StreamableClientTransport{Endpoint: srv.URL + "/mcp"}
+	client := sdkmcp.NewClient(
+		&sdkmcp.Implementation{Name: "test-client", Version: "v0.1.0"},
+		nil,
+	)
+	session, err := client.Connect(ctx, transport, nil)
 	if err != nil {
-		t.Fatalf("CallTool(%s): %v", name, err)
+		t.Fatalf("connect: %v", err)
 	}
-	return result
+	t.Cleanup(func() { session.Close() })
+	return session
+}
+
+func TestDomainResolve_Section(t *testing.T) {
+	fsys := fstest.MapFS{
+		"prompts/recall/judge-similarity.md": &fstest.MapFile{Data: []byte("You are a recall judge.")},
+	}
+	assets := &domainserve.AssetIndex{
+		Sections: map[string]map[string]string{
+			"prompts": {"recall": "prompts/recall/judge-similarity.md"},
+		},
+	}
+
+	session := setupWithAssets(t, fsys, assets)
+	result := callTool(t, session, "domain_resolve", map[string]any{
+		"section": "prompts",
+		"key":     "recall",
+	})
+
+	if result.IsError {
+		t.Fatalf("domain_resolve error: %s", resultText(result))
+	}
+	if got := resultText(result); got != "You are a recall judge." {
+		t.Errorf("content = %q, want %q", got, "You are a recall judge.")
+	}
+}
+
+func TestDomainResolve_File(t *testing.T) {
+	fsys := fstest.MapFS{
+		"vocabulary.yaml": &fstest.MapFile{Data: []byte("defects:\n  pb001: product bug\n")},
+	}
+	assets := &domainserve.AssetIndex{
+		Files: map[string]string{"vocabulary": "vocabulary.yaml"},
+	}
+
+	session := setupWithAssets(t, fsys, assets)
+	result := callTool(t, session, "domain_resolve", map[string]any{
+		"section": "vocabulary",
+	})
+
+	if result.IsError {
+		t.Fatalf("domain_resolve error: %s", resultText(result))
+	}
+	if got := resultText(result); got != "defects:\n  pb001: product bug\n" {
+		t.Errorf("content = %q", got)
+	}
+}
+
+func TestDomainResolve_MissingSection(t *testing.T) {
+	assets := &domainserve.AssetIndex{
+		Sections: map[string]map[string]string{},
+	}
+	session := setupWithAssets(t, fstest.MapFS{}, assets)
+	result := callTool(t, session, "domain_resolve", map[string]any{
+		"section": "nonexistent",
+		"key":     "foo",
+	})
+	if !result.IsError {
+		t.Fatal("expected error for missing section")
+	}
+}
+
+func TestDomainResolve_MissingKey(t *testing.T) {
+	assets := &domainserve.AssetIndex{
+		Sections: map[string]map[string]string{
+			"prompts": {"recall": "prompts/recall.md"},
+		},
+	}
+	session := setupWithAssets(t, fstest.MapFS{}, assets)
+	result := callTool(t, session, "domain_resolve", map[string]any{
+		"section": "prompts",
+		"key":     "nonexistent",
+	})
+	if !result.IsError {
+		t.Fatal("expected error for missing key")
+	}
+}
+
+func TestDomainInfo_WithAssets(t *testing.T) {
+	fsys := fstest.MapFS{
+		"circuits/rca.yaml": &fstest.MapFile{
+			Data: []byte("topology: cascade\ndescription: RCA circuit\n"),
+		},
+	}
+	assets := &domainserve.AssetIndex{
+		Sections: map[string]map[string]string{
+			"circuits": {"rca": "circuits/rca.yaml"},
+		},
+	}
+
+	session := setupWithAssets(t, fsys, assets)
+	result := callTool(t, session, "domain_info", nil)
+
+	var info domainserve.DomainInfo
+	if err := json.Unmarshal([]byte(resultText(result)), &info); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if len(info.Circuits) != 1 {
+		t.Fatalf("circuits = %d, want 1", len(info.Circuits))
+	}
+	if info.Circuits[0].Name != "rca" {
+		t.Errorf("circuit name = %q, want rca", info.Circuits[0].Name)
+	}
+	if info.Circuits[0].Topology != "cascade" {
+		t.Errorf("topology = %q, want cascade", info.Circuits[0].Topology)
+	}
 }
