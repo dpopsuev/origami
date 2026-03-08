@@ -168,7 +168,7 @@ func loadHistory(st store.Store, symptomID int64) *HistoryParams {
 			Name:            sym.Name,
 			OccurrenceCount: sym.OccurrenceCount,
 			FirstSeen:       sym.FirstSeenAt,
-			LastSeen:         sym.LastSeenAt,
+			LastSeen:        sym.LastSeenAt,
 			Status:          sym.Status,
 		}
 	}
@@ -194,4 +194,3 @@ func loadHistory(st store.Store, symptomID int64) *HistoryParams {
 
 	return history
 }
-

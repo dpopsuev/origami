@@ -1,6 +1,6 @@
 # Contract — agent-roles
 
-**Status:** active  
+**Status:** complete (P3-P6 deferred)  
 **Goal:** Role (worker, manager, enforcer, broker) is a first-class type orthogonal to Persona. Artifact scope filtering restricts what each Walker can see based on its role. Roles are the semantic layer that gives the agentic hierarchy meaning.  
 **Serves:** Containerized Runtime (vision)
 

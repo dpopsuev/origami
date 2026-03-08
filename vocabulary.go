@@ -1,7 +1,11 @@
 package framework
 // Category: Processing & Support
 
-import "sync"
+import (
+	"sync"
+
+	"gopkg.in/yaml.v3"
+)
 
 // Vocabulary translates machine codes to human-readable names.
 // Implementations must be safe for concurrent use.
@@ -91,10 +95,22 @@ func (c chainVocabulary) Name(code string) string {
 
 // VocabEntry holds structured metadata for a machine code:
 // Short (abbreviation), Long (human name), and Description (tooltip/hover text).
+// Supports YAML shorthand: a plain string value is treated as the Long name.
 type VocabEntry struct {
-	Short       string
-	Long        string
-	Description string
+	Short       string `yaml:"short"`
+	Long        string `yaml:"long"`
+	Description string `yaml:"description"`
+}
+
+// UnmarshalYAML supports both map form ({short: X, long: Y}) and shorthand
+// string form ("Y") which sets Long only.
+func (e *VocabEntry) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind == yaml.ScalarNode {
+		e.Long = value.Value
+		return nil
+	}
+	type plain VocabEntry
+	return value.Decode((*plain)(e))
 }
 
 // RichVocabulary extends Vocabulary with structured metadata access.

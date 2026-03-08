@@ -57,12 +57,13 @@ Phase 3 — Deployment reshape                               ✓
 └── Root README.md                                           ✓
 
 Phase 4 — Vision
-├── washi
-├── delegate-node (P1-P4 ✓, P5-P6 deferred)
-├── agent-roles (P1-P2 ✓, P3-P6 deferred)
-├── operator-reconciliation (P1-P3 + P6 ✓, P4-P5 + P7 deferred)
-├── ouroboros-probe-extensions (Tracks A-D ✓, C7 deferred)
-└── finding-router (P1-P7 ✓)
+├── delegate-node                                          ✓ (P5-P6 deferred)
+├── agent-roles                                            ✓ (P3-P6 deferred)
+├── operator-reconciliation                                ✓ (P4-P5+P7 deferred)
+├── ouroboros-probe-extensions                             ✓ (C7 deferred)
+├── finding-router                                         ✓
+├── manifest-as-map                                        ✓
+└── washi                                                  draft
 
 Asterisk pivot (post-Origami containerization)
 ├── design-principle-deterministic                        ✓
@@ -73,25 +74,25 @@ Asterisk pivot (post-Origami containerization)
 
 ## Active Contracts
 
-| Contract | Phase | Status |
-|----------|-------|--------|
-| `delegate-node` | 4 | P1-P4 complete (interface, sub-walk, DSL, topology). P5-P6 deferred. |
-| `agent-roles` | 4 | P1-P2 complete (Role type, DSL extension). P3-P6 deferred. |
-| `operator-reconciliation` | 4 | P1-P3 + P6 complete (types, Operator interface, RunOperator loop, InMemoryContainer, StubOperator). P4-P5 + P7 deferred. |
-| `ouroboros-probe-extensions` | 4 | Tracks A-D complete. Timed handicap, scaffolded prompt-chain, transcript persistence + review API (store + Kami HTTP + MCP), 21 behavioral probe seeds (73 total). C7 (frontend mode detection) deferred to ouroboros-workbench. |
-| `finding-router` | 4 | P1-P7 complete. Finding type, FindingRouter (severity+domain routing), SignalBus integration, edge condition helpers, VetoHook, RunWithEnforcer (parallel enforcement). |
+(No active contracts)
 
 ## Draft Contracts
 
 | Contract | Tier | Phase | Scope |
 |----------|------|-------|-------|
-| `manifest-as-map` | gate | — | `origami.yaml` as explicit table of contents with keyed `assets:` section, multi-file embed codegen, key-based domainserve resolution. Eliminates `internal/` wrapper directory. |
 | `ouroboros-workbench` | next-milestone | — | Mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. |
 | `washi` | vision | 4 | Enterprise circuit management UI. Shared ODS with Kabuki. |
 
 ## Completed Work
 
-99 contracts across 13 phases — all complete. Recent completions:
+104 contracts across 14 phases — all complete. Recent completions:
+
+- `finding-router` — Finding type, FindingRouter (severity+domain routing), SignalBus integration, edge condition helpers, VetoHook, RunWithEnforcer (parallel enforcement). P1-P7 complete. **Complete.**
+- `delegate-node` — DelegateNode interface, meta-circuits (sub-walk execution, DSL extension, topology validation). P1-P4 complete. P5-P6 deferred. **Complete.**
+- `agent-roles` — Role type (worker/manager/enforcer/broker) orthogonal to Persona. DSL wiring. P1-P2 complete. P3-P6 deferred. **Complete.**
+- `operator-reconciliation` — Operator interface, RunOperator reconciliation loop, InMemoryContainer, StubOperator. P1-P3 + P6 complete. P4-P5 + P7 deferred. **Complete.**
+- `ouroboros-probe-extensions` — Timed handicap, scaffolded prompt-chain, transcript persistence + review API, 21 behavioral probe seeds (73 total). Tracks A-D complete. C7 deferred. **Complete.**
+- `manifest-as-map` — `origami.yaml` as explicit table of contents with keyed `assets:` section, multi-file embed codegen, key-based domainserve resolution. **Complete.**
 
 - `layering-purity` — Layering Purity: `logging` package deleted (9 consumers → `log/slog`), `Driver` to toolkit, `element/` + `models/` extracted, RCA domain decoupled (SessionObserver, ConsumeFunc, rpconv deleted). Root fan-out 2→1. Deferred: element alias removal, doc.go polish. **Complete.**
 

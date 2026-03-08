@@ -12,6 +12,7 @@ import (
 )
 
 // LoadScenario reads a scenario by name from the given filesystem.
+// Name is derived from the filename; a bare name: field in the YAML is optional.
 func LoadScenario(fsys fs.FS, name string) (*rca.Scenario, error) {
 	data, err := fs.ReadFile(fsys, name+".yaml")
 	if err != nil {
@@ -22,6 +23,10 @@ func LoadScenario(fsys fs.FS, name string) (*rca.Scenario, error) {
 	if err := yaml.Unmarshal(data, &s); err != nil {
 		return nil, fmt.Errorf("parse scenario %q: %w", name, err)
 	}
+	if s.Name == "" {
+		s.Name = name
+	}
+	s.ApplyDefaults()
 	return &s, nil
 }
 

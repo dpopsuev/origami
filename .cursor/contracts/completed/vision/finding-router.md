@@ -1,6 +1,6 @@
 # Contract — finding-router
 
-**Status:** active  
+**Status:** complete  
 **Goal:** Enforcer findings route to the correct authority (Worker's Manager, or Broker) based on severity and domain. Findings can flag (soft), block (medium), or veto (hard) circuit execution. Three enforcement patterns are supported: inline (Hook-based), signal-based (async), and parallel circuit.  
 **Serves:** Containerized Runtime (vision)
 

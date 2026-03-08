@@ -50,7 +50,9 @@ type Options struct {
 	ModuleResolver ModuleResolver
 }
 
-// Run loads the manifest, generates the domain-serve source, and compiles the binary.
+// Run loads the manifest, generates the appropriate binary, and compiles it.
+// When schematics are declared, it produces a unified wired binary with
+// connector binding. Otherwise it produces a domain-serve-only binary.
 func Run(opts Options) error {
 	m, err := LoadManifest(opts.ManifestPath)
 	if err != nil {
@@ -61,12 +63,216 @@ func Run(opts Options) error {
 		return fmt.Errorf("manifest must have a domain_serve section")
 	}
 
+	manifestDir := filepath.Dir(opts.ManifestPath)
+	if err := validateManifest(m, manifestDir, opts.Verbose); err != nil {
+		return err
+	}
+
+	if m.HasBindings() {
+		return buildWiredBinary(m, opts)
+	}
 	return buildDomainServe(m, opts)
 }
 
-const origamiModule = "github.com/dpopsuev/origami"
+// validateManifest runs manifest-level checks: domain directories, duplicate domains,
+// and output_schema path resolution.
+func validateManifest(m *Manifest, manifestDir string, verbose bool) error {
+	if err := validateNoDuplicateDomains(m); err != nil {
+		return err
+	}
+	if err := validateDomainDirs(m, manifestDir, verbose); err != nil {
+		return err
+	}
+	return validateAssetPaths(m, manifestDir)
+}
+
+func validateNoDuplicateDomains(m *Manifest) error {
+	seen := make(map[string]bool)
+	for _, d := range m.Domains {
+		if seen[d] {
+			return fmt.Errorf("manifest: duplicate domain %q", d)
+		}
+		seen[d] = true
+	}
+	return nil
+}
+
+func validateDomainDirs(m *Manifest, manifestDir string, verbose bool) error {
+	for _, d := range m.Domains {
+		dir := filepath.Join(manifestDir, "domains", d)
+		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+			return fmt.Errorf("domain %q declared in manifest but domains/%s/ not found", d, d)
+		}
+	}
+
+	domainsRoot := filepath.Join(manifestDir, "domains")
+	if _, err := os.Stat(domainsRoot); err != nil {
+		return nil
+	}
+
+	declared := make(map[string]bool)
+	for _, d := range m.Domains {
+		declared[d] = true
+	}
+
+	entries, _ := os.ReadDir(domainsRoot)
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		subEntries, _ := os.ReadDir(filepath.Join(domainsRoot, e.Name()))
+		for _, sub := range subEntries {
+			if !sub.IsDir() {
+				continue
+			}
+			path := e.Name() + "/" + sub.Name()
+			if !declared[path] && verbose {
+				fmt.Fprintf(os.Stderr, "warning: domains/%s/ exists but is not in manifest domains: list\n", path)
+			}
+		}
+	}
+	return nil
+}
+
+func validateAssetPaths(m *Manifest, manifestDir string) error {
+	if m.DomainServe == nil || m.DomainServe.Assets == nil {
+		return nil
+	}
+	paths := m.DomainServe.Assets.AllPaths()
+	if m.DomainServe.Store != nil && m.DomainServe.Store.Schema != "" {
+		paths = append(paths, m.DomainServe.Store.Schema)
+	}
+	for _, p := range paths {
+		full := filepath.Join(manifestDir, p)
+		if _, err := os.Stat(full); err != nil {
+			return fmt.Errorf("asset path %q not found on disk", p)
+		}
+	}
+	return nil
+}
+
+const (
+	origamiModule = "github.com/dpopsuev/origami"
+	mcpSDKModule  = "github.com/modelcontextprotocol/go-sdk"
+)
+
+func buildWiredBinary(m *Manifest, opts Options) error {
+	resolver := opts.ModuleResolver
+	if resolver == nil {
+		resolver = &DefaultModuleResolver{}
+	}
+
+	origamiRoot := resolver.FindLocalModule(origamiModule)
+	if origamiRoot == "" {
+		return fmt.Errorf("cannot find origami module on local filesystem")
+	}
+
+	manifestDir := filepath.Dir(opts.ManifestPath)
+	if err := m.MergeDiscoveredAssets(manifestDir); err != nil {
+		return fmt.Errorf("discover domain assets: %w", err)
+	}
+
+	g, err := Resolve(m, origamiRoot)
+	if err != nil {
+		return fmt.Errorf("resolve bindings: %w", err)
+	}
+
+	src, err := GenerateWiredBinary(m, g)
+	if err != nil {
+		return err
+	}
+
+	tmpDir, err := os.MkdirTemp("", "origami-fold-wired-*")
+	if err != nil {
+		return fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), src, 0644); err != nil {
+		return fmt.Errorf("write main.go: %w", err)
+	}
+
+	if opts.Verbose {
+		fmt.Fprintf(os.Stderr, "wired binary generated main.go (%d bytes)\n", len(src))
+		fmt.Fprintf(os.Stderr, "%s\n", string(src))
+	}
+
+	if err := copyDomainFiles(m, manifestDir, tmpDir, opts.Verbose); err != nil {
+		return err
+	}
+	if err := copyEmbedFiles(m.DomainServe, manifestDir, tmpDir, opts.Verbose); err != nil {
+		return err
+	}
+
+	if err := createWiredBuildModule(tmpDir, m.Name, resolver); err != nil {
+		return fmt.Errorf("create build module: %w", err)
+	}
+
+	tidy := exec.Command("go", "mod", "tidy")
+	tidy.Dir = tmpDir
+	tidy.Stdout = os.Stdout
+	tidy.Stderr = os.Stderr
+	tidy.Env = os.Environ()
+	if err := tidy.Run(); err != nil {
+		return fmt.Errorf("go mod tidy: %w", err)
+	}
+
+	output := opts.Output
+	if output == "" {
+		output = filepath.Join("bin", m.Name)
+	}
+	if !filepath.IsAbs(output) {
+		wd, _ := os.Getwd()
+		output = filepath.Join(wd, output)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(output), 0755); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
+	}
+
+	args := []string{"build", "-o", output}
+	args = append(args, opts.GoFlags...)
+	args = append(args, ".")
+
+	cmd := exec.Command("go", args...)
+	cmd.Dir = tmpDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+
+	if opts.Verbose {
+		fmt.Fprintf(os.Stderr, "running: go %s (in %s)\n", strings.Join(args, " "), tmpDir)
+	}
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("go build wired binary: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "built %s\n", output)
+	return nil
+}
+
+func createWiredBuildModule(tmpDir, name string, resolver ModuleResolver) error {
+	var buf strings.Builder
+	buf.WriteString(fmt.Sprintf("module %s-build\n\ngo 1.24\n\nrequire (\n", name))
+	buf.WriteString(fmt.Sprintf("\t%s v0.0.0\n", origamiModule))
+	buf.WriteString(fmt.Sprintf("\t%s v0.0.0\n", mcpSDKModule))
+	buf.WriteString(")\n\n")
+
+	localPath := resolver.FindLocalModule(origamiModule)
+	if localPath != "" {
+		buf.WriteString(fmt.Sprintf("replace %s => %s\n", origamiModule, localPath))
+	}
+
+	return os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(buf.String()), 0644)
+}
 
 func buildDomainServe(m *Manifest, opts Options) error {
+	manifestDir := filepath.Dir(opts.ManifestPath)
+	if err := m.MergeDiscoveredAssets(manifestDir); err != nil {
+		return fmt.Errorf("discover domain assets: %w", err)
+	}
+
 	src, err := GenerateDomainServe(m)
 	if err != nil {
 		return err
@@ -87,8 +293,9 @@ func buildDomainServe(m *Manifest, opts Options) error {
 		fmt.Fprintf(os.Stderr, "%s\n", string(src))
 	}
 
-	manifestDir := filepath.Dir(opts.ManifestPath)
-
+	if err := copyDomainFiles(m, manifestDir, tmpDir, opts.Verbose); err != nil {
+		return err
+	}
 	if err := copyEmbedFiles(m.DomainServe, manifestDir, tmpDir, opts.Verbose); err != nil {
 		return err
 	}
@@ -160,6 +367,25 @@ func createDomainServeBuildModule(tmpDir, name string, resolver ModuleResolver) 
 	return os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(buf.String()), 0644)
 }
 
+// copyDomainFiles copies files from domains/<path>/ into the build dir at
+// flat paths expected by the runtime (e.g., domains/ocp/ptp/scenarios/x.yaml -> scenarios/x.yaml).
+func copyDomainFiles(m *Manifest, manifestDir, tmpDir string, verbose bool) error {
+	mappings := m.domainPathMappings(manifestDir)
+	if len(mappings) == 0 {
+		return nil
+	}
+	for src, flatDst := range mappings {
+		dst := filepath.Join(tmpDir, flatDst)
+		if err := copyFile(src, dst); err != nil {
+			return fmt.Errorf("copy domain file %q: %w", flatDst, err)
+		}
+	}
+	if verbose {
+		fmt.Fprintf(os.Stderr, "copied %d domain files (flattened)\n", len(mappings))
+	}
+	return nil
+}
+
 func copyEmbedFiles(ds *DomainServeConfig, manifestDir, tmpDir string, verbose bool) error {
 	if ds.Embed != "" {
 		embedDir := strings.TrimRight(ds.Embed, "/")
@@ -175,6 +401,9 @@ func copyEmbedFiles(ds *DomainServeConfig, manifestDir, tmpDir string, verbose b
 	}
 
 	paths := ds.Assets.AllPaths()
+	if ds.Store != nil && ds.Store.Schema != "" {
+		paths = append(paths, ds.Store.Schema)
+	}
 	for _, p := range paths {
 		srcPath := filepath.Join(manifestDir, p)
 		dstPath := filepath.Join(tmpDir, p)

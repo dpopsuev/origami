@@ -1,8 +1,9 @@
 component: origami-rca
+module: github.com/dpopsuev/origami/schematics/rca/mcpconfig
 namespace: rca
 version: "1.0.0"
 description: RCA circuit plumbing for CI root-cause analysis
-serve: schematics/rca/cmd/serve
+factory: NewServer
 provides:
   transformers: [context-builder, prompt-filler]
   extractors: [recall, triage, resolve, investigate, correlate, review, report]
@@ -14,6 +15,7 @@ requires:
       type: store.Store
       option: WithStore
       description: Persistent storage backend (built-in SQLite default)
+      optional: true
     - name: source
       type: SourceReader
       option: WithSourceReader
@@ -22,10 +24,12 @@ requires:
       type: DefectWriter
       option: WithDefectWriter
       description: Writes RCA results back to the external tracker
+      optional: true
     - name: discoverer
       type: RunDiscoverer
       option: WithRunDiscoverer
       description: Discovers available CI runs and their failures
+      optional: true
     - name: knowledge
       type: knowledge.Reader
       option: WithKnowledgeReader

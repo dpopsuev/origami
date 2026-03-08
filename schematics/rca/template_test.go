@@ -71,7 +71,7 @@ func TestFillTemplateString_Guards(t *testing.T) {
 
 func TestFillTemplateString_Siblings(t *testing.T) {
 	params := &TemplateParams{
-		CaseID: 1,
+		CaseID:  1,
 		Failure: &FailureParams{TestName: "test1"},
 		Siblings: []SiblingParams{
 			{ID: "1", Name: "test1", Status: "FAILED"},
@@ -119,7 +119,6 @@ Test: {{.Failure.TestName}}`
 		t.Errorf("unexpected result: %s", result)
 	}
 }
-
 
 func TestFillTemplateString_PriorArtifacts(t *testing.T) {
 	params := &TemplateParams{
@@ -270,22 +269,22 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 	// Fields intentionally not used in prompt templates.
 	// These exist for Go-level consumption (linking, routing, scoring, etc.).
 	excluded := map[string]string{
-		"URLs":           "navigable links used in Go output, not in LLM prompts",
+		"URLs":                 "navigable links used in Go output, not in LLM prompts",
 		"URLs.SourceDashboard": "navigable links used in Go output, not in LLM prompts",
 		"URLs.SourceItem":      "navigable links used in Go output, not in LLM prompts",
-		"Env":            "env vars injected into context map, not referenced in templates",
-		"Failure.Path":   "file path used for Go-level routing, not in prompts",
-		"Envelope.Status": "launch status used for Go-level filtering, not in prompts",
+		"Env":                  "env vars injected into context map, not referenced in templates",
+		"Failure.Path":         "file path used for Go-level routing, not in prompts",
+		"Envelope.Status":      "launch status used for Go-level filtering, not in prompts",
 
 		"History.PriorRCAs.DaysSinceResolved": "available but not surfaced in current prompt templates",
 
-		"Code.Trees":                 "populated by inject.code.tree but not yet rendered in prompts",
-		"Code.Trees.Repo":            "sub-field of Code.Trees",
-		"Code.Trees.Branch":          "sub-field of Code.Trees",
-		"Code.Trees.Entries":         "sub-field of Code.Trees",
-		"Code.Trees.Entries.Path":    "sub-field of Code.Trees",
-		"Code.Trees.Entries.IsDir":   "sub-field of Code.Trees",
-		"Code.SearchResults.Score":   "used for ranking in Go, not rendered in prompts",
+		"Code.Trees":               "populated by inject.code.tree but not yet rendered in prompts",
+		"Code.Trees.Repo":          "sub-field of Code.Trees",
+		"Code.Trees.Branch":        "sub-field of Code.Trees",
+		"Code.Trees.Entries":       "sub-field of Code.Trees",
+		"Code.Trees.Entries.Path":  "sub-field of Code.Trees",
+		"Code.Trees.Entries.IsDir": "sub-field of Code.Trees",
+		"Code.SearchResults.Score": "used for ranking in Go, not rendered in prompts",
 	}
 
 	// Collect all field references across all embedded prompt templates.

@@ -153,7 +153,7 @@ func goldenFixtureParams() *TemplateParams {
 			{ID: 42, Component: "linuxptp-daemon", DefectType: "pb001", Summary: "Holdover timeout regression"},
 			{ID: 38, Component: "cloud-event-proxy", DefectType: "pb001", Summary: "GNSS sync state mapping error"},
 		},
-		Taxonomy:   DefaultTaxonomy(),
+		Taxonomy: DefaultTaxonomy(),
 		Timestamps: &TimestampParams{
 			ClockPlaneNote:   "Timestamps are in UTC. CI cluster uses chrony for NTP sync.",
 			ClockSkewWarning: "Detected 2.3s clock skew between worker nodes.",

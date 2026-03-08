@@ -1,4 +1,5 @@
 component: origami-docs
+module: github.com/dpopsuev/origami/connectors/docs
 namespace: docs
 version: "0.1.0"
 description: HTTP documentation driver — search and fetch web-based docs

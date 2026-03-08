@@ -1,6 +1,6 @@
 # Contract — operator-reconciliation
 
-**Status:** active  
+**Status:** complete (P4-P5 + P7 deferred)  
 **Goal:** The `Operator` interface (`Observe`, `Reconcile`, `Evaluate`) and `RunOperator` reconciliation loop drive dynamic circuit generation and goal convergence. `CircuitContainer` manages the lifecycle of generated circuit instances. This is the Kubernetes Operator pattern applied to AI agent orchestration.  
 **Serves:** Containerized Runtime (vision)
 

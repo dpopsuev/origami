@@ -7,19 +7,12 @@
 
 ## Active
 
-| Contract | Goal | Phase | Status |
-|----------|------|-------|--------|
-| `delegate-node.md` | DelegateNode — meta-circuits (circuits generating circuits). Sub-walk execution, DSL extension, topology validation. | 4 | P1-P4 complete, P5-P6 deferred |
-| `agent-roles.md` | Role type (worker/manager/enforcer/broker) orthogonal to Persona. DSL wiring. | 4 | P1-P2 complete, P3-P6 deferred |
-| `operator-reconciliation.md` | Operator interface + reconciliation loop + InMemoryContainer + StubOperator. K8s Operator pattern for AI agents. | 4 | P1-P3 + P6 complete, P4-P5 + P7 deferred |
-| `ouroboros-probe-extensions.md` | Ouroboros Probe Extensions — timed handicap, scaffolded prompt-chain, transcript persistence + review API, behavioral probe catalog (73 seeds). | 4 | Tracks A-D complete. C7 deferred. |
-| `finding-router.md` | Finding Router — Finding type, FindingRouter, SignalBus integration, edge helpers, VetoHook, parallel enforcement. | 4 | P1-P7 complete. |
+(No active contracts)
 
 ## Draft
 
 | Contract | Goal | Tier |
 |----------|------|------|
-| `manifest-as-map.md` | Manifest-as-Map: `origami.yaml` as explicit table of contents with keyed `assets:` section, multi-file embed codegen, key-based domainserve resolution. Eliminates wrapper directory. | gate |
 | `ouroboros-workbench.md` | Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing via Demiurge pattern, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. | next-milestone |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 
@@ -110,6 +103,15 @@
 
 - `completed/polishing/rich-vocabulary.md` — `RichVocabulary` interface + `RichMapVocabulary` + Kami/LSP/Kabuki wiring. Bundle 2: Rich Names. Complete.
 - `completed/polishing/thesis-antithesis-rename.md` — Rename Light/Shadow alignment to Thesis/Antithesis across Origami and Asterisk. Complete.
+
+### Vision phase (Phase 4)
+
+- `completed/vision/delegate-node.md` — DelegateNode interface, meta-circuits, sub-walk execution, DSL extension, topology validation. P1-P4 complete. P5-P6 deferred.
+- `completed/vision/agent-roles.md` — Role type (worker/manager/enforcer/broker) orthogonal to Persona. DSL wiring. P1-P2 complete. P3-P6 deferred.
+- `completed/vision/operator-reconciliation.md` — Operator interface, RunOperator reconciliation loop, InMemoryContainer, StubOperator. P1-P3 + P6 complete. P4-P5 + P7 deferred.
+- `completed/vision/ouroboros-probe-extensions.md` — Timed handicap, scaffolded prompt-chain, transcript persistence + review API, 21 behavioral probe seeds (73 total). Tracks A-D complete. C7 deferred.
+- `completed/vision/finding-router.md` — Finding type, FindingRouter (severity+domain routing), SignalBus integration, edge helpers, VetoHook, parallel enforcement. P1-P7 complete.
+- `completed/dsl/manifest-as-map.md` — `origami.yaml` as explicit table of contents with keyed `assets:` section, multi-file embed codegen, key-based domainserve resolution. Complete.
 
 ### Analysis (all done)
 

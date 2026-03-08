@@ -1,0 +1,11 @@
+# Index
+
+## Directories
+(No directories)
+
+## Files
+- `delegate-node.md` — DelegateNode interface enabling meta-circuits (sub-walk execution, DSL, topology). P1-P4 complete. P5-P6 deferred.
+- `agent-roles.md` — Role type (worker, manager, enforcer, broker) orthogonal to Persona. P1-P2 complete. P3-P6 deferred.
+- `operator-reconciliation.md` — Operator interface, RunOperator reconciliation loop, InMemoryContainer, StubOperator. P1-P3 + P6 complete. P4-P5 + P7 deferred.
+- `ouroboros-probe-extensions.md` — Timed handicap, scaffolded prompt-chain, transcript persistence + review API, 21 behavioral probe seeds (73 total). Tracks A-D complete. C7 deferred.
+- `finding-router.md` — Finding type, FindingRouter (severity+domain routing), SignalBus integration, edge helpers, VetoHook, parallel enforcement. P1-P7 complete.

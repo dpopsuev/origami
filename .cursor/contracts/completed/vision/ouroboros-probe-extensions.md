@@ -1,6 +1,6 @@
 # Contract — ouroboros-probe-extensions
 
-**Status:** active  
+**Status:** complete (C7 deferred to ouroboros-workbench)  
 **Goal:** Ouroboros probes cover a comprehensive behavioral catalog — time pressure, HITL dependency, sycophancy, noise resistance, confidence calibration, self-correction, context saturation, instruction drift, ambiguity handling, anchoring bias, and format fidelity — with persistent transcripts and human-signed review.  
 **Serves:** Containerized Runtime (Ouroboros enrichment)
 

@@ -1,6 +1,6 @@
 # Contract — delegate-node
 
-**Status:** active  
+**Status:** complete (P5-P6 deferred)  
 **Goal:** A circuit node can produce a `CircuitDef` as its artifact; the framework walks the generated circuit as a sub-walk and returns the aggregate result as the outer node's artifact. Enables meta-circuits — circuits generating circuits.  
 **Serves:** Containerized Runtime (vision)
 

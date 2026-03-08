@@ -140,6 +140,11 @@ func (s *Server) readDomainCircuit() []byte {
 func (s *Server) buildConfig() fwmcp.CircuitConfig {
 	schemas := s.StepSchemas
 	if len(schemas) == 0 && s.DomainFS != nil {
+		if data, err := fs.ReadFile(s.DomainFS, "llm-output-schemas/rca.yaml"); err == nil {
+			schemas, _ = LoadCollapsedSchemas(data)
+		}
+	}
+	if len(schemas) == 0 && s.DomainFS != nil {
 		if sub, err := fs.Sub(s.DomainFS, "schemas/rca"); err == nil {
 			schemas, _ = LoadStepSchemas(sub)
 		}
@@ -457,6 +462,31 @@ func (f *stepSchemaFile) resolveSchema() fwmcp.StepSchema {
 	}
 
 	return s
+}
+
+// collapsedSchemaFile represents a single YAML file with stages keyed by name.
+type collapsedSchemaFile struct {
+	Stages map[string]struct {
+		Fields map[string]any `yaml:"fields"`
+	} `yaml:"stages"`
+}
+
+// LoadCollapsedSchemas parses a multi-stage schema file (kind: artifact-schema)
+// where all stages are in a single file under the stages: key.
+func LoadCollapsedSchemas(data []byte) ([]fwmcp.StepSchema, error) {
+	var f collapsedSchemaFile
+	if err := yaml.Unmarshal(data, &f); err != nil {
+		return nil, fmt.Errorf("parse collapsed schema: %w", err)
+	}
+	if len(f.Stages) == 0 {
+		return nil, fmt.Errorf("collapsed schema: no stages found")
+	}
+	schemas := make([]fwmcp.StepSchema, 0, len(f.Stages))
+	for name, stage := range f.Stages {
+		sf := stepSchemaFile{Name: name, Fields: stage.Fields}
+		schemas = append(schemas, sf.resolveSchema())
+	}
+	return schemas, nil
 }
 
 // LoadStepSchemas reads step schema YAML files from fsys (e.g. "schemas/rca/")

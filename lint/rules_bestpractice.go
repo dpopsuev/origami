@@ -422,8 +422,8 @@ func findArrows(node *yaml.Node, file string, out *[]Finding) {
 
 // domainDirs are directory prefixes where YAML files are expected to have a kind field.
 var domainDirs = []string{
-	"circuits/", "schemas/", "scenarios/", "scorecards/",
-	"reports/", "sources/", "tuning/",
+	"circuits/", "schemas/", "llm-output-schemas/", "scenarios/", "scorecards/",
+	"reports/", "sources/", "tuning/", "domains/",
 }
 
 type MissingKindDomainPath struct{}

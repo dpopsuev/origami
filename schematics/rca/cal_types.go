@@ -4,6 +4,8 @@
 package rca
 
 import (
+	"reflect"
+
 	cal "github.com/dpopsuev/origami/calibrate"
 	"github.com/dpopsuev/origami/schematics/toolkit"
 )
@@ -18,12 +20,39 @@ type MetricSet = cal.MetricSet
 type Scenario struct {
 	Name             string               `json:"name" yaml:"name"`
 	Description      string               `json:"description" yaml:"description"`
+	Defaults         *GroundTruthCase     `json:"defaults,omitempty" yaml:"defaults,omitempty"`
 	RCAs             []GroundTruthRCA     `json:"rcas" yaml:"rcas"`
 	Symptoms         []GroundTruthSymptom `json:"symptoms" yaml:"symptoms"`
 	Cases            []GroundTruthCase    `json:"cases" yaml:"cases"`
 	Candidates       []GroundTruthCase    `json:"candidates,omitempty" yaml:"candidates,omitempty"` // unverified cases tracked for dataset growth, never scored
 	SourcePack       SourcePackConfig     `json:"source_pack" yaml:"source_pack"`
 	DryCappedMetrics []string             `json:"dry_capped_metrics,omitempty" yaml:"dry_capped_metrics,omitempty"` // metrics structurally unsolvable without real repo content
+}
+
+// ApplyDefaults merges Defaults into each Case, filling zero-value fields.
+func (s *Scenario) ApplyDefaults() {
+	if s.Defaults == nil {
+		return
+	}
+	for i := range s.Cases {
+		mergeDefaults(&s.Cases[i], s.Defaults)
+	}
+	for i := range s.Candidates {
+		mergeDefaults(&s.Candidates[i], s.Defaults)
+	}
+}
+
+// mergeDefaults copies non-zero fields from defaults into dst where dst has zero values.
+func mergeDefaults(dst, defaults *GroundTruthCase) {
+	dv := reflect.ValueOf(dst).Elem()
+	sv := reflect.ValueOf(defaults).Elem()
+	for i := 0; i < dv.NumField(); i++ {
+		df := dv.Field(i)
+		sf := sv.Field(i)
+		if df.IsZero() && !sf.IsZero() {
+			df.Set(sf)
+		}
+	}
 }
 
 // GroundTruthRCA is a known root cause for calibration scoring.

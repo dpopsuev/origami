@@ -134,3 +134,84 @@ func TestGenerateDomainServe_NeitherEmbedNorAssets(t *testing.T) {
 		t.Errorf("error = %q, want mention of embed or assets", err.Error())
 	}
 }
+
+func TestGenerateWiredBinary(t *testing.T) {
+	root := origamiRoot(t)
+
+	m := &Manifest{
+		Name:    "asterisk",
+		Version: "1.0",
+		DomainServe: &DomainServeConfig{
+			Port: 9300,
+			Assets: &AssetMap{
+				Circuits: map[string]string{"rca": "circuits/rca.yaml"},
+				Files:    map[string]string{"vocabulary": "vocabulary.yaml"},
+			},
+		},
+		Schematics: map[string]SchematicRef{
+			"rca": {
+				Path: "schematics/rca",
+				Bindings: map[string]string{
+					"source":    "reportportal",
+					"knowledge": "knowledge",
+				},
+			},
+			"knowledge": {
+				Path: "schematics/knowledge",
+				Bindings: map[string]string{
+					"git":  "github",
+					"docs": "docs",
+				},
+			},
+		},
+		Connectors: map[string]ConnectorRef{
+			"reportportal": {Path: "connectors/rp"},
+			"github":       {Path: "connectors/github"},
+			"docs":         {Path: "connectors/docs"},
+		},
+	}
+
+	g, err := Resolve(m, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src, err := GenerateWiredBinary(m, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := string(src)
+
+	for _, want := range []string{
+		"DO NOT EDIT",
+		"package main",
+		`"github.com/dpopsuev/origami/connectors/rp"`,
+		`"github.com/dpopsuev/origami/connectors/github"`,
+		`"github.com/dpopsuev/origami/connectors/docs"`,
+		`"github.com/dpopsuev/origami/schematics/knowledge"`,
+		`"github.com/dpopsuev/origami/schematics/rca/mcpconfig"`,
+		"github.DefaultGitDriver()",
+		"docs.DefaultDocsDriver()",
+		"knowledge.NewRouter(",
+		"knowledge.WithGitDriver(",
+		"knowledge.WithDocsDriver(",
+		"mcpconfig.NewServer(",
+		"mcpconfig.WithDomainFS(domainData)",
+		"mcpconfig.WithSourceReader(rp.NewSourceReader)",
+		"mcpconfig.WithKnowledgeReader(knowledgeInstance)",
+		"domainserve.New(domainData",
+		"NewStreamableHTTPHandler",
+		"server.CircuitServer.MCPServer",
+		"/mcp",
+		"/domain/",
+		"/healthz",
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("missing %q in generated code:\n%s", want, code)
+		}
+	}
+
+	if t.Failed() {
+		t.Logf("Full generated code:\n%s", code)
+	}
+}

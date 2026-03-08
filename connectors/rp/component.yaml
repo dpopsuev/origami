@@ -1,4 +1,5 @@
 component: origami-reportportal
+module: github.com/dpopsuev/origami/connectors/rp
 namespace: reportportal
 version: "1.0.0"
 description: ReportPortal connector — API client, envelope fetching, defect pushing, run discovery
@@ -10,7 +11,10 @@ requires:
 satisfies:
   - socket: source
     factory: NewSourceReader
+    wire: factory
   - socket: writer
     factory: NewDefectWriter
+    wire: factory
   - socket: discoverer
     factory: NewRunDiscoverer
+    wire: factory

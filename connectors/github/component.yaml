@@ -1,4 +1,5 @@
 component: origami-github
+module: github.com/dpopsuev/origami/connectors/github
 namespace: github
 version: "1.0.0"
 description: GitHub code access — shallow clone cache, local ripgrep search, file read

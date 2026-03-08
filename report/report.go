@@ -18,6 +18,9 @@ import (
 
 // ReportDef is a YAML-loadable report layout.
 type ReportDef struct {
+	Metadata struct {
+		Name string `yaml:"name"`
+	} `yaml:"metadata"`
 	Name     string       `yaml:"name"`
 	Format   string       `yaml:"format"`
 	Sections []SectionDef `yaml:"sections"`
@@ -45,10 +48,14 @@ func LoadReportDef(path string) (*ReportDef, error) {
 }
 
 // ParseReportDef parses raw YAML bytes into a ReportDef.
+// Name is resolved from the bare name: field, falling back to metadata.name.
 func ParseReportDef(data []byte) (*ReportDef, error) {
 	var def ReportDef
 	if err := yaml.Unmarshal(data, &def); err != nil {
 		return nil, fmt.Errorf("report: parse YAML: %w", err)
+	}
+	if def.Name == "" && def.Metadata.Name != "" {
+		def.Name = def.Metadata.Name
 	}
 	if def.Name == "" {
 		return nil, fmt.Errorf("report: missing name")
