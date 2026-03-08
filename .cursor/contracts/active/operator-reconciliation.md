@@ -1,6 +1,6 @@
 # Contract — operator-reconciliation
 
-**Status:** draft  
+**Status:** active  
 **Goal:** The `Operator` interface (`Observe`, `Reconcile`, `Evaluate`) and `RunOperator` reconciliation loop drive dynamic circuit generation and goal convergence. `CircuitContainer` manages the lifecycle of generated circuit instances. This is the Kubernetes Operator pattern applied to AI agent orchestration.  
 **Serves:** Containerized Runtime (vision)
 
@@ -235,3 +235,5 @@ Green-yellow-blue cycle.
 ## Notes
 
 2026-03-05 — Contract drafted from agentic hierarchy brainstorming session. The Operator pattern is the Kubernetes controller-runtime for AI agents. The key insight: `Reconcile()` returns a `*CircuitDef` — the plan IS a circuit. This makes plans observable, calibratable, auditable, and git-diffable. Depends on `delegate-node` (sub-walk execution) and `agent-roles` (role-aware scoping). The `CircuitContainer` abstraction bridges in-process execution (`InMemoryContainer`) and distributed execution (`SubprocessRuntime`), honoring BYOI.
+
+2026-03-07 — P1-P3, P6 implemented. All types, interfaces, and the reconciliation loop live in `operator.go` (framework root). Design simplifications vs original contract: `SystemState` is minimal (artifacts + iteration + elapsed, no Signals/Findings cross-imports), `Constraints` is `map[string]any` (framework doesn't evaluate them — Operator does), `CircuitContainer.Walk` takes `GraphRegistries` explicitly, `Pause`/`Resume` deferred. `RunOperator` uses `InMemoryContainer` internally. StubOperator + integration tests prove the full loop in `operator_test.go`. P4 (ContainerRuntime), P5 (Papercup extensions), P7 (validate/tune) remain deferred.

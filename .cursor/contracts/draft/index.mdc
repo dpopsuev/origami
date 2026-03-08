@@ -7,5 +7,4 @@
 - `ouroboros-probe-extensions.md` — Ouroboros Probe Extensions — timed handicap probes, scaffolded prompt-chain probes, transcript persistence with review API.
 - `ouroboros-workbench.md` — Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode.
 - `washi.md` — Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.
-- `operator-reconciliation.md` — Operator Reconciliation — Operator interface with reconciliation loop, CircuitContainer lifecycle, K8s Operator pattern for AI agents.
 - `finding-router.md` — Finding Router — Enforcer findings routed by severity and domain. Three enforcement patterns. Veto mechanism via confidence override.

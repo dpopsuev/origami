@@ -6,3 +6,4 @@
 ## Files
 - `delegate-node.md` — Delegate Node — DelegateNode interface enabling meta-circuits. P1-P4 complete (interface, sub-walk execution, DSL extension, topology). P5-P6 deferred.
 - `agent-roles.md` — Agent Roles — Role type (worker, manager, enforcer, broker) orthogonal to Persona. P1-P2 complete (type + DSL). P3-P6 deferred.
+- `operator-reconciliation.md` — Operator Reconciliation — Operator interface, RunOperator loop, InMemoryContainer, StubOperator. P1-P3 + P6 complete. P4-P5, P7 deferred.
