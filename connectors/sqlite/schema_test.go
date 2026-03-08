@@ -216,6 +216,61 @@ tables:
 	}
 }
 
+func TestParseSchema_ShorthandReferencesKeyword(t *testing.T) {
+	input := `
+version: 1
+tables:
+  - name: parent
+    columns:
+      - name: id
+        type: integer
+        primary_key: true
+      - label: text
+  - name: child
+    columns:
+      - name: id
+        type: integer
+        primary_key: true
+      - parent_id: integer not_null references parent
+      - custom_ref: integer references parent(custom_col)
+`
+	s, err := ParseSchema([]byte(input))
+	if err != nil {
+		t.Fatalf("ParseSchema: %v", err)
+	}
+	child := s.Tables[1]
+	if child.Columns[1].References != "parent(id)" {
+		t.Errorf("parent_id references = %q, want parent(id)", child.Columns[1].References)
+	}
+	if child.Columns[2].References != "parent(custom_col)" {
+		t.Errorf("custom_ref references = %q, want parent(custom_col)", child.Columns[2].References)
+	}
+}
+
+func TestParseSchema_EnvelopeFields(t *testing.T) {
+	input := `
+kind: store-schema
+version: 1
+metadata:
+  name: test-schema
+  description: "Test schema with envelope"
+tables:
+  - name: items
+    columns:
+      - label: text not_null
+`
+	s, err := ParseSchema([]byte(input))
+	if err != nil {
+		t.Fatalf("ParseSchema: %v", err)
+	}
+	if len(s.Tables) != 1 {
+		t.Fatalf("expected 1 table, got %d", len(s.Tables))
+	}
+	if s.Tables[0].Name != "items" {
+		t.Errorf("table name = %q, want items", s.Tables[0].Name)
+	}
+}
+
 func TestParseSchema_ShorthandPKAuto(t *testing.T) {
 	input := `
 version: 1

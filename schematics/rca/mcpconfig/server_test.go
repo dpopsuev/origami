@@ -1121,3 +1121,88 @@ func TestGetNextStep_OverPull_Draining(t *testing.T) {
 
 // Suppress unused import warning for dumpGoroutines.
 var _ = dumpGoroutines
+
+func TestLoadStepSchemas_LegacyFormat(t *testing.T) {
+	dir := t.TempDir()
+	data := []byte(`
+name: F0_RECALL
+fields:
+  match: "bool"
+  confidence: "float"
+defs:
+  - name: match
+    type: bool
+    required: true
+  - name: confidence
+    type: float
+    required: true
+`)
+	if err := os.WriteFile(filepath.Join(dir, "F0_RECALL.yaml"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+	schemas, err := mcpserver.LoadStepSchemas(os.DirFS(dir))
+	if err != nil {
+		t.Fatalf("LoadStepSchemas: %v", err)
+	}
+	if len(schemas) != 1 {
+		t.Fatalf("expected 1 schema, got %d", len(schemas))
+	}
+	if schemas[0].Name != "F0_RECALL" {
+		t.Errorf("name = %q, want F0_RECALL", schemas[0].Name)
+	}
+	if len(schemas[0].Fields) != 2 {
+		t.Errorf("expected 2 fields, got %d", len(schemas[0].Fields))
+	}
+	if len(schemas[0].Defs) != 2 {
+		t.Errorf("expected 2 defs, got %d", len(schemas[0].Defs))
+	}
+}
+
+func TestLoadStepSchemas_UnifiedFormat(t *testing.T) {
+	dir := t.TempDir()
+	data := []byte(`
+kind: artifact-schema
+version: v1
+metadata:
+  name: F0_RECALL
+  description: "Recall step"
+fields:
+  match:
+    type: bool
+    required: true
+  confidence:
+    type: float
+    required: true
+`)
+	if err := os.WriteFile(filepath.Join(dir, "F0_RECALL.yaml"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+	schemas, err := mcpserver.LoadStepSchemas(os.DirFS(dir))
+	if err != nil {
+		t.Fatalf("LoadStepSchemas: %v", err)
+	}
+	if len(schemas) != 1 {
+		t.Fatalf("expected 1 schema, got %d", len(schemas))
+	}
+	s := schemas[0]
+	if s.Name != "F0_RECALL" {
+		t.Errorf("name = %q, want F0_RECALL (from metadata)", s.Name)
+	}
+	if len(s.Fields) != 2 {
+		t.Errorf("expected 2 flat fields, got %d", len(s.Fields))
+	}
+	if s.Fields["match"] != "bool" {
+		t.Errorf("fields[match] = %q, want bool", s.Fields["match"])
+	}
+	if len(s.Defs) != 2 {
+		t.Errorf("expected 2 derived defs, got %d", len(s.Defs))
+	}
+	for _, d := range s.Defs {
+		if d.Type == "" {
+			t.Errorf("def %q has empty type", d.Name)
+		}
+		if !d.Required {
+			t.Errorf("def %q should be required", d.Name)
+		}
+	}
+}

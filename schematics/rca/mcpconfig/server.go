@@ -336,12 +336,23 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	return runFn, meta, nil
 }
 
-// rcaStepSchemas returns the F0-F6 step schemas for RCA calibration.
 // stepSchemaFile is the YAML representation of a StepSchema.
+// Supports two formats:
+//   - Legacy: flat fields (map[string]string) + separate defs list
+//   - Unified: structured fields (map[string]{type,required}) with no defs
+//
+// Envelope fields (kind, metadata) are accepted and used to resolve the name.
 type stepSchemaFile struct {
-	Name   string            `yaml:"name"`
-	Fields map[string]string `yaml:"fields"`
-	Defs   []fieldDefFile    `yaml:"defs"`
+	Kind     string            `yaml:"kind,omitempty"`
+	Metadata stepMetadata      `yaml:"metadata,omitempty"`
+	Name     string            `yaml:"name,omitempty"`
+	Fields   map[string]any    `yaml:"fields"`
+	Defs     []fieldDefFile    `yaml:"defs,omitempty"`
+}
+
+type stepMetadata struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
 }
 
 type fieldDefFile struct {
@@ -351,9 +362,72 @@ type fieldDefFile struct {
 	Desc     string `yaml:"desc,omitempty"`
 }
 
+func (f *stepSchemaFile) resolveName() string {
+	if f.Metadata.Name != "" {
+		return f.Metadata.Name
+	}
+	return f.Name
+}
+
+// resolveSchema converts the parsed stepSchemaFile into a StepSchema.
+// It detects whether fields use flat (string) or structured (map) format
+// and derives Defs from structured fields when no explicit Defs are present.
+func (f *stepSchemaFile) resolveSchema() fwmcp.StepSchema {
+	s := fwmcp.StepSchema{Name: f.resolveName()}
+
+	isStructured := false
+	for _, v := range f.Fields {
+		if _, ok := v.(string); !ok {
+			isStructured = true
+			break
+		}
+	}
+
+	if isStructured {
+		s.Fields = make(map[string]string, len(f.Fields))
+		for name, raw := range f.Fields {
+			m, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			typ, _ := m["type"].(string)
+			s.Fields[name] = typ
+			if len(f.Defs) == 0 {
+				req, _ := m["required"].(bool)
+				desc, _ := m["desc"].(string)
+				s.Defs = append(s.Defs, fwmcp.FieldDef{
+					Name:     name,
+					Type:     typ,
+					Required: req,
+					Desc:     desc,
+				})
+			}
+		}
+	} else {
+		s.Fields = make(map[string]string, len(f.Fields))
+		for name, v := range f.Fields {
+			s.Fields[name], _ = v.(string)
+		}
+	}
+
+	if len(f.Defs) > 0 {
+		for _, d := range f.Defs {
+			s.Defs = append(s.Defs, fwmcp.FieldDef{
+				Name:     d.Name,
+				Type:     d.Type,
+				Required: d.Required,
+				Desc:     d.Desc,
+			})
+		}
+	}
+
+	return s
+}
+
 // LoadStepSchemas reads step schema YAML files from fsys (e.g. "schemas/rca/")
 // and returns them as []fwmcp.StepSchema. Each .yaml file in the directory
-// defines one step.
+// defines one step. Supports both legacy (flat fields + defs) and unified
+// (structured fields) formats.
 func LoadStepSchemas(fsys fs.FS) ([]fwmcp.StepSchema, error) {
 	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
@@ -373,19 +447,7 @@ func LoadStepSchemas(fsys fs.FS) ([]fwmcp.StepSchema, error) {
 		if err := yaml.Unmarshal(data, &f); err != nil {
 			return nil, fmt.Errorf("parse step schema %q: %w", e.Name(), err)
 		}
-		s := fwmcp.StepSchema{
-			Name:   f.Name,
-			Fields: f.Fields,
-		}
-		for _, d := range f.Defs {
-			s.Defs = append(s.Defs, fwmcp.FieldDef{
-				Name:     d.Name,
-				Type:     d.Type,
-				Required: d.Required,
-				Desc:     d.Desc,
-			})
-		}
-		schemas = append(schemas, s)
+		schemas = append(schemas, f.resolveSchema())
 	}
 
 	if len(schemas) == 0 {
@@ -393,6 +455,8 @@ func LoadStepSchemas(fsys fs.FS) ([]fwmcp.StepSchema, error) {
 	}
 	return schemas, nil
 }
+
+// rcaStepSchemas returns the F0-F6 step schemas for RCA calibration.
 
 func rcaStepSchemas() []fwmcp.StepSchema {
 	return []fwmcp.StepSchema{

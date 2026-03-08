@@ -54,6 +54,9 @@ func bestPracticeRules() []Rule {
 		&ApproachAffinityChain{},
 		&StochasticTransformer{},
 		&StochasticSummary{},
+		&MissingKind{},
+		&DeprecatedArrow{},
+		&MissingKindDomainPath{},
 	}
 }
 

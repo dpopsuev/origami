@@ -51,6 +51,8 @@ type Index struct {
 
 // rawSchema is the parse-time representation that supports shorthand features.
 // It is normalized into a Schema before validation.
+// Note: Envelope is not embedded here because rawSchema.Version (int) conflicts
+// with Envelope.Version (string). Use framework.ParseEnvelope separately.
 type rawSchema struct {
 	Version int        `yaml:"version"`
 	Tables  []rawTable `yaml:"tables"`
@@ -139,9 +141,9 @@ func (c *Column) parseShorthand(name, spec string) error {
 			c.Autoincrement = true
 		case strings.HasPrefix(tok, "default="):
 			c.Default = strings.TrimPrefix(tok, "default=")
-		case tok == "->":
+		case tok == "->" || tok == "references":
 			if i+1 >= len(tokens) {
-				return fmt.Errorf("column %q: -> requires a table name", name)
+				return fmt.Errorf("column %q: %s requires a table name", name, tok)
 			}
 			i++
 			ref := tokens[i]

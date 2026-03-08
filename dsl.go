@@ -12,6 +12,7 @@ import (
 // CircuitDef is the top-level DSL structure for declaring a circuit graph.
 // Layout follows P3 (reading-first): circuit > zones > nodes > edges > start/done.
 type CircuitDef struct {
+	Envelope    `yaml:",inline"`
 	Circuit     string             `yaml:"circuit"`
 	Description string             `yaml:"description,omitempty"`
 	Topology    string             `yaml:"topology,omitempty"`

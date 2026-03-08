@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	framework "github.com/dpopsuev/origami"
+	"gopkg.in/yaml.v3"
 )
 
 // --- B1: prefer-when-over-condition ---
@@ -322,5 +323,122 @@ func (r *StochasticSummary) Check(ctx *LintContext) []Finding {
 		Severity: r.Severity(),
 		Message:  fmt.Sprintf("circuit has %d stochastic node(s) out of %d transformer-bound: %s", len(stochasticNames), totalWithTransformer, strings.Join(stochasticNames, ", ")),
 		File:     ctx.File,
+	}}
+}
+
+// --- B9: missing-kind ---
+
+type MissingKind struct{}
+
+func (r *MissingKind) ID() string          { return "B9/missing-kind" }
+func (r *MissingKind) Description() string { return "YAML file should have a top-level kind field" }
+func (r *MissingKind) Severity() Severity  { return SeverityWarning }
+func (r *MissingKind) Tags() []string      { return []string{"best-practice", "envelope"} }
+
+func (r *MissingKind) Check(ctx *LintContext) []Finding {
+	if ctx.yamlRoot == nil {
+		return nil
+	}
+	for i := 0; i+1 < len(ctx.yamlRoot.Content); i += 2 {
+		if ctx.yamlRoot.Content[i].Kind == yaml.ScalarNode && ctx.yamlRoot.Content[i].Value == "kind" {
+			val := ctx.yamlRoot.Content[i+1].Value
+			if val != "" && !framework.KnownKinds[val] {
+				return []Finding{{
+					RuleID:   r.ID(),
+					Severity: SeverityInfo,
+					Message:  fmt.Sprintf("unknown kind %q; known kinds: circuit, store-schema, scorecard, scenario, artifact-schema, report-template, vocabulary, heuristic-rules, source-pack, tuning", val),
+					File:     ctx.File,
+					Line:     ctx.yamlRoot.Content[i].Line,
+				}}
+			}
+			return nil
+		}
+	}
+	return []Finding{{
+		RuleID:   r.ID(),
+		Severity: r.Severity(),
+		Message:  "YAML file has no kind field; add kind: <type> for self-identification",
+		File:     ctx.File,
+		Line:     1,
+	}}
+}
+
+// --- B10: missing-kind-deprecated-arrow ---
+
+type DeprecatedArrow struct{}
+
+func (r *DeprecatedArrow) ID() string        { return "B10/deprecated-fk-arrow" }
+func (r *DeprecatedArrow) Description() string { return "use references instead of -> for foreign keys" }
+func (r *DeprecatedArrow) Severity() Severity  { return SeverityWarning }
+func (r *DeprecatedArrow) Tags() []string      { return []string{"best-practice", "schema", "envelope"} }
+
+func (r *DeprecatedArrow) Check(ctx *LintContext) []Finding {
+	if ctx.yamlRoot == nil {
+		return nil
+	}
+	var out []Finding
+	findArrows(ctx.yamlRoot, ctx.File, &out)
+	return out
+}
+
+func findArrows(node *yaml.Node, file string, out *[]Finding) {
+	if node == nil {
+		return
+	}
+	if node.Kind == yaml.ScalarNode && strings.Contains(node.Value, " -> ") {
+		*out = append(*out, Finding{
+			RuleID:       "B10/deprecated-fk-arrow",
+			Severity:     SeverityWarning,
+			Message:      fmt.Sprintf("deprecated -> syntax; use references instead: %s", node.Value),
+			File:         file,
+			Line:         node.Line,
+			FixAvailable: true,
+		})
+	}
+	for _, child := range node.Content {
+		findArrows(child, file, out)
+	}
+}
+
+// --- B11: missing-kind-domain-path ---
+
+// domainDirs are directory prefixes where YAML files are expected to have a kind field.
+var domainDirs = []string{
+	"circuits/", "schemas/", "scenarios/", "scorecards/",
+	"reports/", "sources/", "tuning/",
+}
+
+type MissingKindDomainPath struct{}
+
+func (r *MissingKindDomainPath) ID() string          { return "B11/missing-kind-domain-path" }
+func (r *MissingKindDomainPath) Description() string { return "YAML in a domain directory should have a kind field" }
+func (r *MissingKindDomainPath) Severity() Severity  { return SeverityWarning }
+func (r *MissingKindDomainPath) Tags() []string      { return []string{"best-practice", "envelope"} }
+
+func (r *MissingKindDomainPath) Check(ctx *LintContext) []Finding {
+	if ctx.yamlRoot == nil || ctx.File == "" {
+		return nil
+	}
+	isDomainPath := false
+	for _, dir := range domainDirs {
+		if strings.Contains(ctx.File, dir) {
+			isDomainPath = true
+			break
+		}
+	}
+	if !isDomainPath {
+		return nil
+	}
+	for i := 0; i+1 < len(ctx.yamlRoot.Content); i += 2 {
+		if ctx.yamlRoot.Content[i].Kind == yaml.ScalarNode && ctx.yamlRoot.Content[i].Value == "kind" {
+			return nil
+		}
+	}
+	return []Finding{{
+		RuleID:   r.ID(),
+		Severity: r.Severity(),
+		Message:  fmt.Sprintf("YAML file in domain directory (%s) has no kind field", ctx.File),
+		File:     ctx.File,
+		Line:     1,
 	}}
 }

@@ -22,6 +22,7 @@ func (t *testTransformer) Transform(_ context.Context, _ *framework.TransformerC
 
 func minimalYAML() []byte {
 	return []byte(`
+kind: circuit
 circuit: test
 description: a test circuit
 nodes:
@@ -493,9 +494,9 @@ func TestFinding_String(t *testing.T) {
 
 func TestAllRules_Count(t *testing.T) {
 	rules := AllRules()
-	// 16 structural + 9 semantic + 8 best-practice + 1 prompt = 34
-	if len(rules) != 34 {
-		t.Errorf("expected 34 rules, got %d", len(rules))
+	// 16 structural + 9 semantic + 11 best-practice + 1 prompt = 37
+	if len(rules) != 37 {
+		t.Errorf("expected 37 rules, got %d", len(rules))
 	}
 
 	ids := make(map[string]bool)
@@ -903,6 +904,151 @@ edges:
 	for _, f := range findings {
 		if f.RuleID == "P1/template-param-validity" {
 			t.Errorf("unexpected P1 finding without options: %+v", f)
+		}
+	}
+}
+
+// --- B9: missing-kind ---
+
+func TestB9_MissingKind_NoKind(t *testing.T) {
+	yaml := []byte(`
+name: something
+description: no kind field
+`)
+	findings, err := Run(yaml, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	var b9 []Finding
+	for _, f := range findings {
+		if f.RuleID == "B9/missing-kind" {
+			b9 = append(b9, f)
+		}
+	}
+	if len(b9) != 1 {
+		t.Fatalf("expected 1 B9 finding, got %d: %+v", len(b9), b9)
+	}
+	if b9[0].Severity != SeverityWarning {
+		t.Errorf("expected warning severity, got %v", b9[0].Severity)
+	}
+}
+
+func TestB9_MissingKind_WithKind(t *testing.T) {
+	yaml := []byte(`
+kind: scenario
+version: v1
+metadata:
+  name: test
+  description: test scenario
+`)
+	findings, err := Run(yaml, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, f := range findings {
+		if f.RuleID == "B9/missing-kind" {
+			t.Errorf("unexpected B9 finding for file with kind: %+v", f)
+		}
+	}
+}
+
+func TestB9_MissingKind_UnknownKind(t *testing.T) {
+	yaml := []byte(`
+kind: foobar
+version: v1
+`)
+	findings, err := Run(yaml, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	var b9 []Finding
+	for _, f := range findings {
+		if f.RuleID == "B9/missing-kind" {
+			b9 = append(b9, f)
+		}
+	}
+	if len(b9) != 1 {
+		t.Fatalf("expected 1 B9 info finding for unknown kind, got %d: %+v", len(b9), b9)
+	}
+	if b9[0].Severity != SeverityInfo {
+		t.Errorf("expected info severity for unknown kind, got %v", b9[0].Severity)
+	}
+}
+
+func TestB9_CircuitWithKind(t *testing.T) {
+	yaml := []byte(`
+kind: circuit
+version: v1
+metadata:
+  name: test
+  description: test circuit
+circuit: test
+description: test
+nodes:
+  - name: init
+    approach: analytical
+  - name: done
+    approach: analytical
+edges:
+  - id: e1
+    name: start
+    from: init
+    to: done
+    when: "true"
+`)
+	findings, err := Run(yaml, "test.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, f := range findings {
+		if f.RuleID == "B9/missing-kind" {
+			t.Errorf("unexpected B9 finding for circuit with kind: %+v", f)
+		}
+	}
+}
+
+// --- B10: deprecated-fk-arrow ---
+
+func TestB10_DeprecatedArrow(t *testing.T) {
+	yaml := []byte(`
+kind: store-schema
+version: 1
+tables:
+  - name: child
+    columns:
+      - parent_id: integer not_null -> parent
+`)
+	findings, err := Run(yaml, "schema.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	var b10 []Finding
+	for _, f := range findings {
+		if f.RuleID == "B10/deprecated-fk-arrow" {
+			b10 = append(b10, f)
+		}
+	}
+	if len(b10) != 1 {
+		t.Fatalf("expected 1 B10 finding, got %d: %+v", len(b10), b10)
+	}
+}
+
+func TestB10_NoArrowWithReferences(t *testing.T) {
+	yaml := []byte(`
+kind: store-schema
+version: 1
+tables:
+  - name: child
+    columns:
+      - parent_id: integer not_null references parent
+`)
+	findings, err := Run(yaml, "schema.yaml", WithProfile(ProfileStrict))
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, f := range findings {
+		if f.RuleID == "B10/deprecated-fk-arrow" {
+			t.Errorf("unexpected B10 finding for references syntax: %+v", f)
 		}
 	}
 }

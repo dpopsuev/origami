@@ -140,6 +140,25 @@ func NewLintContext(raw []byte, file string) (*LintContext, error) {
 	return ctx, nil
 }
 
+// NewGenericLintContext creates a LintContext from raw YAML bytes without
+// requiring circuit parsing. Only the raw yaml.Node tree is available;
+// Def is nil. Rules that need Def should check for nil and return early.
+func NewGenericLintContext(raw []byte, file string) (*LintContext, error) {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("parse YAML: %w", err)
+	}
+	ctx := &LintContext{
+		Raw:  raw,
+		File: file,
+	}
+	if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 {
+		ctx.yamlRoot = doc.Content[0]
+	}
+	ctx.fieldLineMap = buildFieldLineMap(ctx.yamlRoot)
+	return ctx, nil
+}
+
 // NewLintContextFromDef creates a LintContext from an already-parsed CircuitDef.
 // Line numbers are unavailable (all zero).
 func NewLintContextFromDef(def *framework.CircuitDef, file string) *LintContext {
@@ -375,12 +394,17 @@ func (r *Runner) Run(ctx *LintContext, opts ...Option) []Finding {
 		tagSet[t] = true
 	}
 
+	envelopeOnly := map[string]bool{"envelope": true}
+
 	var findings []Finding
 	for _, rule := range r.rules {
 		if rule.Severity() > maxSev {
 			continue
 		}
 		if len(tagSet) > 0 && !matchesTags(rule.Tags(), tagSet) {
+			continue
+		}
+		if ctx.Def == nil && !matchesTags(rule.Tags(), envelopeOnly) {
 			continue
 		}
 		findings = append(findings, rule.Check(ctx)...)
@@ -406,8 +430,25 @@ func matchesTags(ruleTags []string, want map[string]bool) bool {
 
 // Run is the package-level entry point for embedding.
 // It parses raw YAML, runs all built-in rules, and returns findings.
+// For circuit files (kind: circuit or no kind), all rules run.
+// For non-circuit YAML (kind is set but not "circuit"), only envelope rules run.
 func Run(raw []byte, file string, opts ...Option) ([]Finding, error) {
-	ctx, err := NewLintContext(raw, file)
+	env, _ := framework.ParseEnvelope(raw)
+	isCircuit := env == nil || env.Kind == "" || env.Kind == "circuit"
+
+	if isCircuit {
+		ctx, err := NewLintContext(raw, file)
+		if err != nil {
+			ctx, err = NewGenericLintContext(raw, file)
+			if err != nil {
+				return nil, err
+			}
+		}
+		runner := DefaultRunner()
+		return runner.Run(ctx, opts...), nil
+	}
+
+	ctx, err := NewGenericLintContext(raw, file)
 	if err != nil {
 		return nil, err
 	}
