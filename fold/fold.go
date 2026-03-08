@@ -47,6 +47,8 @@ type Options struct {
 	Output         string
 	GoFlags        []string
 	Verbose        bool
+	Container      bool // build an OCI image instead of a local binary
+	ImageName      string
 	ModuleResolver ModuleResolver
 }
 
@@ -339,7 +341,11 @@ func buildDomainServe(m *Manifest, opts Options) error {
 	cmd.Dir = tmpDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
+	env := os.Environ()
+	if opts.Container {
+		env = append(env, "CGO_ENABLED=0")
+	}
+	cmd.Env = env
 
 	if opts.Verbose {
 		fmt.Fprintf(os.Stderr, "running: go %s (in %s)\n", strings.Join(args, " "), tmpDir)
@@ -350,6 +356,71 @@ func buildDomainServe(m *Manifest, opts Options) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "built %s\n", output)
+
+	if opts.Container {
+		return buildContainerImage(m, output, opts)
+	}
+	return nil
+}
+
+const containerDockerfileTemplate = `FROM gcr.io/distroless/static-debian12
+COPY domain-serve /domain-serve
+ENTRYPOINT ["/domain-serve"]
+EXPOSE %d
+`
+
+func buildContainerImage(m *Manifest, binaryPath string, opts Options) error {
+	port := 9300
+	if m.DomainServe != nil && m.DomainServe.Port != 0 {
+		port = m.DomainServe.Port
+	}
+
+	imgName := opts.ImageName
+	if imgName == "" {
+		imgName = "origami-" + m.Name + "-domain"
+	}
+
+	imgDir, err := os.MkdirTemp("", "origami-fold-image-*")
+	if err != nil {
+		return fmt.Errorf("create image dir: %w", err)
+	}
+	defer os.RemoveAll(imgDir)
+
+	dockerfile := fmt.Sprintf(containerDockerfileTemplate, port)
+	if err := os.WriteFile(filepath.Join(imgDir, "Dockerfile"), []byte(dockerfile), 0644); err != nil {
+		return fmt.Errorf("write Dockerfile: %w", err)
+	}
+
+	src, err := os.Open(binaryPath)
+	if err != nil {
+		return fmt.Errorf("open binary: %w", err)
+	}
+	defer src.Close()
+
+	dst, err := os.OpenFile(filepath.Join(imgDir, "domain-serve"), os.O_CREATE|os.O_WRONLY, 0755)
+	if err != nil {
+		return fmt.Errorf("copy binary: %w", err)
+	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		return fmt.Errorf("copy binary: %w", err)
+	}
+	dst.Close()
+
+	dockerCmd := exec.Command("docker", "build", "-t", imgName, ".")
+	dockerCmd.Dir = imgDir
+	dockerCmd.Stdout = os.Stdout
+	dockerCmd.Stderr = os.Stderr
+
+	if opts.Verbose {
+		fmt.Fprintf(os.Stderr, "running: docker build -t %s . (in %s)\n", imgName, imgDir)
+	}
+
+	if err := dockerCmd.Run(); err != nil {
+		return fmt.Errorf("docker build: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "built image %s\n", imgName)
 	return nil
 }
 
