@@ -5,6 +5,7 @@ package framework
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
@@ -13,9 +14,10 @@ import (
 // ExprContext is the evaluation context passed to when: expressions.
 // Fields are lowercase to match YAML/expression conventions.
 type ExprContext struct {
-	Output map[string]any `expr:"output"`
-	State  ExprState      `expr:"state"`
-	Config map[string]any `expr:"config"`
+	Output  map[string]any   `expr:"output"`
+	State   ExprState        `expr:"state"`
+	Config  map[string]any   `expr:"config"`
+	Signals SignalExprHelpers `expr:"signals"`
 }
 
 // ExprState exposes walker state to expressions.
@@ -89,16 +91,20 @@ func runExprProgram(program *vm.Program, ctx ExprContext) (any, error) {
 
 // buildExprContext creates the evaluation context from artifact and walker state.
 // config is populated by circuit vars (C3); nil defaults to empty map.
+// If state.Context contains a FindingCollector under FindingCollectorKey,
+// the Signals helpers are populated for finding-aware edge conditions.
 func buildExprContext(artifact Artifact, state *WalkerState, config map[string]any) ExprContext {
 	output := artifactToMap(artifact)
 
 	loops := make(map[string]int)
 	current := ""
+	var collector FindingCollector
 	if state != nil {
 		for k, v := range state.LoopCounts {
 			loops[k] = v
 		}
 		current = state.CurrentNode
+		collector, _ = state.Context[FindingCollectorKey].(FindingCollector)
 	}
 
 	if config == nil {
@@ -106,10 +112,59 @@ func buildExprContext(artifact Artifact, state *WalkerState, config map[string]a
 	}
 
 	return ExprContext{
-		Output: output,
-		State:  ExprState{Loops: loops, Current: current},
-		Config: config,
+		Output:  output,
+		State:   ExprState{Loops: loops, Current: current},
+		Config:  config,
+		Signals: SignalExprHelpers{collector: collector},
 	}
+}
+
+// SignalExprHelpers exposes finding queries to when: expressions.
+// Methods are callable as signals.HasFinding("error"), etc.
+type SignalExprHelpers struct {
+	collector FindingCollector
+}
+
+// HasFinding returns true if any finding is at or above the given severity.
+func (h SignalExprHelpers) HasFinding(severity string) bool {
+	if h.collector == nil {
+		return false
+	}
+	threshold := FindingSeverity(severity)
+	for _, f := range h.collector.Findings() {
+		if SeverityAtOrAbove(f.Severity, threshold) {
+			return true
+		}
+	}
+	return false
+}
+
+// FindingCount returns the number of findings at or above the given severity.
+func (h SignalExprHelpers) FindingCount(severity string) int {
+	if h.collector == nil {
+		return 0
+	}
+	threshold := FindingSeverity(severity)
+	count := 0
+	for _, f := range h.collector.Findings() {
+		if SeverityAtOrAbove(f.Severity, threshold) {
+			count++
+		}
+	}
+	return count
+}
+
+// FindingDomain returns true if any finding matches the domain glob pattern.
+func (h SignalExprHelpers) FindingDomain(domain string) bool {
+	if h.collector == nil {
+		return false
+	}
+	for _, f := range h.collector.Findings() {
+		if matched, _ := path.Match(domain, f.Domain); matched {
+			return true
+		}
+	}
+	return false
 }
 
 // artifactToMap converts an Artifact's Raw() value to a map[string]any

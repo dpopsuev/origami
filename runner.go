@@ -227,6 +227,10 @@ func (hw *hookingWalker) Handle(ctx context.Context, node Node, nc NodeContext) 
 			continue
 		}
 		if hErr = hook.Run(hookCtx, node.Name(), artifact); hErr != nil {
+			if errors.Is(hErr, ErrFindingVeto) {
+				artifact = &vetoArtifact{inner: artifact}
+				continue
+			}
 			if hw.log != nil {
 				hw.log.Warn("hook error", slog.String("hook", name), slog.String("node", node.Name()), slog.String("error", hErr.Error()))
 			}

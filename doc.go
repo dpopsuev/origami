@@ -49,6 +49,10 @@
 //   - [Identity]     — walker identity (persona + element + role) (identity.go)
 //   - [IsDeterministic] — determinism analysis for nodes/circuits (determinism.go)
 //   - models/        — LLM model registry (models/registry.go)
+//   - [Finding], [FindingSeverity]       — typed enforcer observations (finding.go)
+//   - [FindingCollector], [InMemoryFindingCollector] — finding accumulation (finding.go)
+//   - [FindingRouter], [RouteRule]       — severity+domain routing to authorities (finding_router.go)
+//   - [VetoHook]     — after-hook that vetoes on FindingError (finding_hook.go)
 //   - [Errors]       — sentinel errors (errors.go)
 //   - [Extractors]   — built-in extractor implementations (extractors.go)
 //
@@ -68,6 +72,7 @@
 //   - [FanOut]       — parallel node execution (fanout.go)
 //   - [Team]         — multi-walker collaborative execution (team.go)
 //   - WithThermalBudget — cumulative latency budget enforcement (thermal.go)
+//   - [RunWithEnforcer] — parallel work + enforcer circuit execution (finding_parallel.go)
 //
 // ## Layer 5 — Circuit Features (sub-packages)
 //

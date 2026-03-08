@@ -24,4 +24,9 @@ var (
 	// ErrMaxIterations is returned by RunOperator when the iteration limit is reached
 	// without the goal being met.
 	ErrMaxIterations = errors.New("framework: operator max iterations exceeded")
+
+	// ErrFindingVeto is returned by VetoHook when a FindingError targets the
+	// current node. The hookingWalker intercepts this and wraps the artifact
+	// with Confidence() 0.
+	ErrFindingVeto = errors.New("framework: finding veto")
 )
