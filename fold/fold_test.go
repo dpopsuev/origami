@@ -1,6 +1,7 @@
 package fold
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -41,7 +42,7 @@ domain_serve:
 
 	output := filepath.Join(t.TempDir(), "test-domain")
 
-	err := Run(Options{
+	err := Run(context.Background(), Options{
 		ManifestPath: manifest,
 		Output:       output,
 		Verbose:      true,
@@ -100,7 +101,7 @@ domain_serve:
 
 	output := filepath.Join(t.TempDir(), "test-assets")
 
-	err := Run(Options{
+	err := Run(context.Background(), Options{
 		ManifestPath: manifest,
 		Output:       output,
 		Verbose:      true,
@@ -123,7 +124,7 @@ version: "1.0"
 		t.Fatal(err)
 	}
 
-	err := Run(Options{ManifestPath: manifest})
+	err := Run(context.Background(), Options{ManifestPath: manifest})
 	if err == nil {
 		t.Fatal("expected error for manifest without domain_serve")
 	}
@@ -211,7 +212,7 @@ func TestBuildContainerImage_RequiresDocker(t *testing.T) {
 		},
 	}
 
-	err := buildContainerImage(m, binaryPath, Options{Verbose: true})
+	err := buildContainerImage(context.Background(), m, binaryPath, Options{Verbose: true})
 	if err != nil {
 		t.Logf("docker build failed (expected in CI): %v", err)
 	}
@@ -291,7 +292,7 @@ domain_serve:
 
 	output := filepath.Join(t.TempDir(), "test-domains")
 
-	err := Run(Options{
+	err := Run(context.Background(), Options{
 		ManifestPath: manifest,
 		Output:       output,
 		Verbose:      true,

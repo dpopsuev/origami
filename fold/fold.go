@@ -1,6 +1,7 @@
 package fold
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
@@ -55,7 +56,9 @@ type Options struct {
 // Run loads the manifest, generates the appropriate binary, and compiles it.
 // When schematics are declared, it produces a unified wired binary with
 // connector binding. Otherwise it produces a domain-serve-only binary.
-func Run(opts Options) error {
+// The context controls cancellation and deadlines for all subprocess calls
+// (go mod tidy, go build, docker build).
+func Run(ctx context.Context, opts Options) error {
 	m, err := LoadManifest(opts.ManifestPath)
 	if err != nil {
 		return err
@@ -71,9 +74,9 @@ func Run(opts Options) error {
 	}
 
 	if m.HasBindings() {
-		return buildWiredBinary(m, opts)
+		return buildWiredBinary(ctx, m, opts)
 	}
-	return buildDomainServe(m, opts)
+	return buildDomainServe(ctx, m, opts)
 }
 
 // validateManifest runs manifest-level checks: domain directories, duplicate domains,
@@ -158,7 +161,7 @@ const (
 	mcpSDKModule  = "github.com/modelcontextprotocol/go-sdk"
 )
 
-func buildWiredBinary(m *Manifest, opts Options) error {
+func buildWiredBinary(ctx context.Context, m *Manifest, opts Options) error {
 	resolver := opts.ModuleResolver
 	if resolver == nil {
 		resolver = &DefaultModuleResolver{}
@@ -210,7 +213,7 @@ func buildWiredBinary(m *Manifest, opts Options) error {
 		return fmt.Errorf("create build module: %w", err)
 	}
 
-	tidy := exec.Command("go", "mod", "tidy")
+	tidy := exec.CommandContext(ctx, "go", "mod", "tidy")
 	tidy.Dir = tmpDir
 	tidy.Stdout = os.Stdout
 	tidy.Stderr = os.Stderr
@@ -236,7 +239,7 @@ func buildWiredBinary(m *Manifest, opts Options) error {
 	args = append(args, opts.GoFlags...)
 	args = append(args, ".")
 
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = tmpDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -269,7 +272,7 @@ func createWiredBuildModule(tmpDir, name string, resolver ModuleResolver) error 
 	return os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(buf.String()), 0644)
 }
 
-func buildDomainServe(m *Manifest, opts Options) error {
+func buildDomainServe(ctx context.Context, m *Manifest, opts Options) error {
 	manifestDir := filepath.Dir(opts.ManifestPath)
 	if err := m.MergeDiscoveredAssets(manifestDir); err != nil {
 		return fmt.Errorf("discover domain assets: %w", err)
@@ -311,7 +314,7 @@ func buildDomainServe(m *Manifest, opts Options) error {
 		return fmt.Errorf("create build module: %w", err)
 	}
 
-	tidy := exec.Command("go", "mod", "tidy")
+	tidy := exec.CommandContext(ctx, "go", "mod", "tidy")
 	tidy.Dir = tmpDir
 	tidy.Stdout = os.Stdout
 	tidy.Stderr = os.Stderr
@@ -337,7 +340,7 @@ func buildDomainServe(m *Manifest, opts Options) error {
 	args = append(args, opts.GoFlags...)
 	args = append(args, ".")
 
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = tmpDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -358,7 +361,7 @@ func buildDomainServe(m *Manifest, opts Options) error {
 	fmt.Fprintf(os.Stderr, "built %s\n", output)
 
 	if opts.Container {
-		return buildContainerImage(m, output, opts)
+		return buildContainerImage(ctx, m, output, opts)
 	}
 	return nil
 }
@@ -369,7 +372,7 @@ ENTRYPOINT ["/domain-serve"]
 EXPOSE %d
 `
 
-func buildContainerImage(m *Manifest, binaryPath string, opts Options) error {
+func buildContainerImage(ctx context.Context, m *Manifest, binaryPath string, opts Options) error {
 	port := 9300
 	if m.DomainServe != nil && m.DomainServe.Port != 0 {
 		port = m.DomainServe.Port
@@ -407,7 +410,7 @@ func buildContainerImage(m *Manifest, binaryPath string, opts Options) error {
 	}
 	dst.Close()
 
-	dockerCmd := exec.Command("docker", "build", "-t", imgName, ".")
+	dockerCmd := exec.CommandContext(ctx, "docker", "build", "-t", imgName, ".")
 	dockerCmd.Dir = imgDir
 	dockerCmd.Stdout = os.Stdout
 	dockerCmd.Stderr = os.Stderr
