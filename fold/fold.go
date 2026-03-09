@@ -52,6 +52,7 @@ type Options struct {
 	GoFlags        []string
 	Verbose        bool
 	Container      bool // build an OCI image instead of a local binary
+	DomainOnly     bool // force domain-serve build even when schematics are declared
 	ImageName      string
 	ModuleResolver ModuleResolver
 }
@@ -76,7 +77,7 @@ func Run(ctx context.Context, opts Options) error {
 		return err
 	}
 
-	if m.HasBindings() {
+	if m.HasBindings() && !opts.DomainOnly {
 		return buildWiredBinary(ctx, m, opts)
 	}
 	return buildDomainServe(ctx, m, opts)

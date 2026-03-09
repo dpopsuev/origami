@@ -429,3 +429,68 @@ domain_serve:
 		t.Fatalf("binary not found: %v", err)
 	}
 }
+
+func TestRun_DomainOnly_SkipsBindings(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test skipped in short mode")
+	}
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go toolchain not found")
+	}
+
+	tmpDir := t.TempDir()
+
+	writeFile := func(rel, content string) {
+		t.Helper()
+		p := filepath.Join(tmpDir, rel)
+		os.MkdirAll(filepath.Dir(p), 0755)
+		os.WriteFile(p, []byte(content), 0644)
+	}
+
+	writeFile("circuits/rca.yaml", "circuit: rca\ntopology: cascade\nnodes:\n  - name: a\n    approach: analytical\n")
+	writeFile("vocabulary.yaml", "metrics:\n  M1: accuracy\n")
+
+	manifest := filepath.Join(tmpDir, "origami.yaml")
+	os.WriteFile(manifest, []byte(`
+name: test-domain-only
+version: "0.1"
+schematics:
+  rca:
+    path: schematics/rca
+    bindings:
+      source: reportportal
+connectors:
+  reportportal:
+    path: connectors/rp
+domain_serve:
+  port: 9300
+  assets:
+    vocabulary: vocabulary.yaml
+    circuits:
+      rca: circuits/rca.yaml
+`), 0644)
+
+	m, err := LoadManifest(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.HasBindings() {
+		t.Fatal("manifest should have bindings for this test")
+	}
+
+	output := filepath.Join(t.TempDir(), "test-domain-only")
+
+	err = Run(context.Background(), Options{
+		ManifestPath: manifest,
+		Output:       output,
+		DomainOnly:   true,
+		Verbose:      true,
+	})
+	if err != nil {
+		t.Fatalf("fold with DomainOnly: %v", err)
+	}
+
+	if _, err := os.Stat(output); err != nil {
+		t.Fatalf("domain-serve binary not found: %v", err)
+	}
+}

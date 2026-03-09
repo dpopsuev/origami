@@ -12,6 +12,7 @@ func foldCmd(args []string) error {
 	fs := flag.NewFlagSet("fold", flag.ContinueOnError)
 	output := fs.String("output", "", "output binary path (default: bin/<name>-domain-serve)")
 	container := fs.Bool("container", false, "build an OCI container image after compiling")
+	domainOnly := fs.Bool("domain-only", false, "build domain-serve binary only (ignore schematics/connectors)")
 	imageName := fs.String("image", "", "container image name (default: origami-<name>-domain)")
 	verbose := fs.Bool("v", false, "verbose output")
 	if err := fs.Parse(args); err != nil {
@@ -27,6 +28,7 @@ func foldCmd(args []string) error {
 		ManifestPath: manifest,
 		Output:       *output,
 		Container:    *container,
+		DomainOnly:   *domainOnly,
 		ImageName:    *imageName,
 		Verbose:      *verbose,
 	})
