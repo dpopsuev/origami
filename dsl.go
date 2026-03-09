@@ -5,6 +5,7 @@ package framework
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -17,6 +18,7 @@ type CircuitDef struct {
 	Description string             `yaml:"description,omitempty"`
 	Topology    string             `yaml:"topology,omitempty"`
 	HandlerType string             `yaml:"handler_type,omitempty"`
+	Timeout     string             `yaml:"timeout,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
@@ -99,6 +101,7 @@ type NodeDef struct {
 	Delegate    bool            `yaml:"delegate,omitempty"`
 	Generator   string          `yaml:"generator,omitempty"`
 
+	Timeout      string          `yaml:"timeout,omitempty"`
 	Provider     string          `yaml:"provider,omitempty"`
 	Prompt       string          `yaml:"prompt,omitempty"`
 	OutputSchema string          `yaml:"output_schema,omitempty"`
@@ -162,6 +165,24 @@ func (nd NodeDef) EffectiveHandler() string {
 	return nd.Name
 }
 
+// EffectiveTimeout returns the timeout for this node, resolving the
+// node-level override against the circuit-level default. Returns 0 if
+// neither is set.
+func (nd NodeDef) EffectiveTimeout(circuitDefault string) (time.Duration, error) {
+	raw := nd.Timeout
+	if raw == "" {
+		raw = circuitDefault
+	}
+	if raw == "" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("node %q: invalid timeout %q: %w", nd.Name, raw, err)
+	}
+	return d, nil
+}
+
 // CacheDef configures node-level caching via the DSL.
 type CacheDef struct {
 	TTL string `yaml:"ttl,omitempty"`
@@ -199,6 +220,7 @@ type rawCircuitDef struct {
 	Description string             `yaml:"description,omitempty"`
 	Topology    string             `yaml:"topology,omitempty"`
 	HandlerType string             `yaml:"handler_type,omitempty"`
+	Timeout     string             `yaml:"timeout,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
@@ -259,6 +281,7 @@ func (raw *rawCircuitDef) normalize() (*CircuitDef, error) {
 		Description: raw.Description,
 		Topology:    raw.Topology,
 		HandlerType: raw.HandlerType,
+		Timeout:     raw.Timeout,
 		Imports:     raw.Imports,
 		Vars:        raw.Vars,
 		Extractors:  raw.Extractors,
@@ -581,7 +604,26 @@ func (def *CircuitDef) BuildGraph(reg GraphRegistries) (Graph, error) {
 		})
 	}
 
-	g, err := NewGraph(def.Circuit, fwNodes, fwEdges, fwZones, WithDoneNode(def.Done))
+	var timeouts map[string]time.Duration
+	for _, nd := range def.Nodes {
+		d, err := nd.EffectiveTimeout(def.Timeout)
+		if err != nil {
+			return nil, err
+		}
+		if d > 0 {
+			if timeouts == nil {
+				timeouts = make(map[string]time.Duration)
+			}
+			timeouts[nd.Name] = d
+		}
+	}
+
+	opts := []GraphOption{WithDoneNode(def.Done)}
+	if len(timeouts) > 0 {
+		opts = append(opts, WithNodeTimeouts(timeouts))
+	}
+
+	g, err := NewGraph(def.Circuit, fwNodes, fwEdges, fwZones, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -39,15 +39,16 @@ type Zone struct {
 // edges in maps for O(1) lookup while preserving edge definition order
 // for deterministic first-match evaluation.
 type DefaultGraph struct {
-	name       string
-	nodes      []Node
-	edges      []Edge
-	zones      []Zone
-	nodeIndex  map[string]Node
-	edgeIndex  map[string][]Edge // from-node -> edges in definition order
-	doneNode   string            // terminal pseudo-node name (walk stops here)
-	observer   WalkObserver      // graph-level observer, used by Walk and composed with team observer in WalkTeam
-	registries *GraphRegistries  // retained for DelegateNode sub-walk building
+	name         string
+	nodes        []Node
+	edges        []Edge
+	zones        []Zone
+	nodeIndex    map[string]Node
+	edgeIndex    map[string][]Edge     // from-node -> edges in definition order
+	nodeTimeouts map[string]time.Duration // per-node timeout (from DSL)
+	doneNode     string                // terminal pseudo-node name (walk stops here)
+	observer     WalkObserver          // graph-level observer, used by Walk and composed with team observer in WalkTeam
+	registries   *GraphRegistries      // retained for DelegateNode sub-walk building
 }
 
 // GraphOption configures a DefaultGraph during construction.
@@ -67,6 +68,15 @@ func WithDoneNode(name string) GraphOption {
 func WithObserver(obs WalkObserver) GraphOption {
 	return func(g *DefaultGraph) {
 		g.observer = obs
+	}
+}
+
+// WithNodeTimeouts sets per-node timeout durations. When a node with a timeout
+// is encountered during Walk, a derived context.WithTimeout is created so the
+// node's Process (or delegate sub-walk) is cancelled if it exceeds the budget.
+func WithNodeTimeouts(m map[string]time.Duration) GraphOption {
+	return func(g *DefaultGraph) {
+		g.nodeTimeouts = m
 	}
 }
 
@@ -165,13 +175,16 @@ func (g *DefaultGraph) Walk(ctx context.Context, walker Walker, startNode string
 			Meta:          make(map[string]any),
 		}
 
+		nodeCtx, nodeCancel := g.nodeCtx(ctx, node.Name())
+
 		var artifact Artifact
 		var err error
 		if dn, isDel := node.(DelegateNode); isDel {
-			artifact, err = g.walkDelegate(ctx, walker, obs, dn, nc)
+			artifact, err = g.walkDelegate(nodeCtx, walker, obs, dn, nc)
 		} else {
-			artifact, err = walker.Handle(ctx, node, nc)
+			artifact, err = walker.Handle(nodeCtx, node, nc)
 		}
+		nodeCancel()
 		nodeElapsed := time.Since(nodeStart)
 
 		if err != nil {
@@ -379,13 +392,16 @@ func (g *DefaultGraph) WalkTeam(ctx context.Context, team *Team, startNode strin
 			Meta:          make(map[string]any),
 		}
 
+		nodeCtx, nodeCancel := g.nodeCtx(ctx, node.Name())
+
 		var artifact Artifact
 		var err error
 		if dn, isDel := node.(DelegateNode); isDel {
-			artifact, err = g.walkDelegate(ctx, walker, obs, dn, nc)
+			artifact, err = g.walkDelegate(nodeCtx, walker, obs, dn, nc)
 		} else {
-			artifact, err = walker.Handle(ctx, node, nc)
+			artifact, err = walker.Handle(nodeCtx, node, nc)
 		}
+		nodeCancel()
 		nodeElapsed := time.Since(nodeStart)
 
 		if err != nil {
@@ -517,13 +533,23 @@ func composeObservers(a, b WalkObserver) WalkObserver {
 	return MultiObserver{a, b}
 }
 
+// nodeCtx returns a derived context with the node's timeout applied.
+// If the node has no timeout, returns the parent context and a no-op cancel.
+func (g *DefaultGraph) nodeCtx(parent context.Context, nodeName string) (context.Context, context.CancelFunc) {
+	if d, ok := g.nodeTimeouts[nodeName]; ok && d > 0 {
+		return context.WithTimeout(parent, d)
+	}
+	return parent, func() {}
+}
+
 // walkDelegate handles a DelegateNode encounter during Walk or WalkTeam.
-// It calls GenerateCircuit, builds and walks the sub-graph, and returns
-// a DelegateArtifact wrapping the inner walk's results.
+// It calls GenerateCircuit, builds the sub-graph via Runner (which provides
+// schema validation and hooks), walks it, and returns a DelegateArtifact
+// wrapping the inner walk's results.
 func (g *DefaultGraph) walkDelegate(ctx context.Context, walker Walker, obs WalkObserver, dn DelegateNode, nc NodeContext) (*DelegateArtifact, error) {
 	emitEvent(obs, WalkEvent{
-		Type: EventDelegateStart,
-		Node: dn.Name(),
+		Type:   EventDelegateStart,
+		Node:   dn.Name(),
 		Walker: walker.Identity().PersonaName,
 	})
 
@@ -537,27 +563,25 @@ func (g *DefaultGraph) walkDelegate(ctx context.Context, walker Walker, obs Walk
 		reg = *g.registries
 	}
 
-	subGraph, err := circuitDef.BuildGraph(reg)
+	runner, err := NewRunnerWith(circuitDef, reg)
 	if err != nil {
-		return nil, fmt.Errorf("delegate %s: build sub-graph: %w", dn.Name(), err)
+		return nil, fmt.Errorf("delegate %s: build runner: %w", dn.Name(), err)
 	}
 
 	subWalker := NewProcessWalker(walker.State().ID + ":delegate:" + dn.Name())
 	subWalker.SetIdentity(walker.Identity())
 
-	// Inherit parent walker context so sub-circuit nodes can read
-	// upstream data (e.g. params.failure, params.sources).
 	for k, v := range walker.State().Context {
 		subWalker.State().Context[k] = v
 	}
 
 	prefixObs := &delegateObserver{inner: obs, prefix: "delegate:" + dn.Name() + ":"}
-	if dg, ok := subGraph.(*DefaultGraph); ok {
+	if dg, ok := runner.Graph.(*DefaultGraph); ok {
 		dg.SetObserver(prefixObs)
 	}
 
 	start := time.Now()
-	walkErr := subGraph.Walk(ctx, subWalker, circuitDef.Start)
+	walkErr := runner.Walk(ctx, subWalker, circuitDef.Start)
 	elapsed := time.Since(start)
 
 	da := &DelegateArtifact{
@@ -568,7 +592,6 @@ func (g *DefaultGraph) walkDelegate(ctx context.Context, walker Walker, obs Walk
 		InnerError:       walkErr,
 	}
 
-	// Namespace inner artifacts into the outer walker's outputs.
 	outerState := walker.State()
 	if outerState.Outputs == nil {
 		outerState.Outputs = make(map[string]Artifact)

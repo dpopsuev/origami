@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestLoadCircuit_ValidYAML(t *testing.T) {
@@ -1152,6 +1153,76 @@ func TestEffectiveHandlerType(t *testing.T) {
 				t.Errorf("EffectiveHandlerType() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestEffectiveTimeout verifies node-level override > circuit-level default > none.
+func TestEffectiveTimeout(t *testing.T) {
+	tests := []struct {
+		name           string
+		nd             NodeDef
+		circuitDefault string
+		want           time.Duration
+		wantErr        bool
+	}{
+		{name: "no timeout set", nd: NodeDef{Name: "a"}, circuitDefault: "", want: 0},
+		{name: "circuit default only", nd: NodeDef{Name: "a"}, circuitDefault: "30s", want: 30 * time.Second},
+		{name: "node override", nd: NodeDef{Name: "a", Timeout: "2m"}, circuitDefault: "30s", want: 2 * time.Minute},
+		{name: "node override no circuit", nd: NodeDef{Name: "a", Timeout: "5s"}, circuitDefault: "", want: 5 * time.Second},
+		{name: "invalid node timeout", nd: NodeDef{Name: "bad", Timeout: "xyz"}, circuitDefault: "", wantErr: true},
+		{name: "invalid circuit default", nd: NodeDef{Name: "bad"}, circuitDefault: "nope", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.nd.EffectiveTimeout(tt.circuitDefault)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("EffectiveTimeout() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadCircuit_Timeout(t *testing.T) {
+	data := []byte(`
+circuit: timeout-test
+timeout: "30s"
+nodes:
+  - name: fast
+    family: fast
+  - name: slow
+    family: slow
+    timeout: "2m"
+edges:
+  - id: E1
+    from: fast
+    to: slow
+  - id: E2
+    from: slow
+    to: _done
+start: fast
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	if def.Timeout != "30s" {
+		t.Errorf("circuit timeout = %q, want %q", def.Timeout, "30s")
+	}
+	if def.Nodes[0].Timeout != "" {
+		t.Errorf("fast node timeout = %q, want empty", def.Nodes[0].Timeout)
+	}
+	if def.Nodes[1].Timeout != "2m" {
+		t.Errorf("slow node timeout = %q, want %q", def.Nodes[1].Timeout, "2m")
 	}
 }
 

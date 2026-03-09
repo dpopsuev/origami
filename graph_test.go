@@ -440,6 +440,83 @@ func TestWalk_CancelDuringNodeProcess(t *testing.T) {
 	}
 }
 
+func TestWalk_PerNodeTimeout_Enforced(t *testing.T) {
+	nodeA := &slowNode{name: "slow-a", duration: 2 * time.Second}
+	edges := []Edge{&stubEdge{id: "A-done", from: "slow-a", to: "_done"}}
+
+	g, err := NewGraph("per-node-timeout", []Node{nodeA}, edges, nil,
+		WithNodeTimeouts(map[string]time.Duration{
+			"slow-a": 100 * time.Millisecond,
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := &stubWalker{state: NewWalkerState("case-pnt")}
+	start := time.Now()
+	err = g.Walk(context.Background(), w, "slow-a")
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected DeadlineExceeded, got: %v", err)
+	}
+	if elapsed > 500*time.Millisecond {
+		t.Errorf("walk took %v, expected ~100ms abort", elapsed)
+	}
+}
+
+func TestWalk_PerNodeTimeout_FastNodeSucceeds(t *testing.T) {
+	nodeA := &stubNode{name: "fast", artifact: &stubArtifact{typ: "ok"}}
+	edges := []Edge{&stubEdge{id: "A-done", from: "fast", to: "_done"}}
+
+	g, err := NewGraph("fast-ok", []Node{nodeA}, edges, nil,
+		WithNodeTimeouts(map[string]time.Duration{
+			"fast": 5 * time.Second,
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := &stubWalker{state: NewWalkerState("case-fast")}
+	if err := g.Walk(context.Background(), w, "fast"); err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+	if w.state.Status != "done" {
+		t.Errorf("expected done, got %s", w.state.Status)
+	}
+}
+
+func TestWalk_PerNodeTimeout_OnlyAffectsTaggedNode(t *testing.T) {
+	nodeA := &stubNode{name: "A", artifact: &stubArtifact{typ: "a"}}
+	nodeB := &slowNode{name: "B", duration: 200 * time.Millisecond}
+	edges := []Edge{
+		&stubEdge{id: "A-B", from: "A", to: "B"},
+		&stubEdge{id: "B-done", from: "B", to: "_done"},
+	}
+
+	g, err := NewGraph("selective-timeout", []Node{nodeA, nodeB}, edges, nil,
+		WithNodeTimeouts(map[string]time.Duration{
+			"A": 50 * time.Millisecond,
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := &stubWalker{state: NewWalkerState("case-selective")}
+	if err := g.Walk(context.Background(), w, "A"); err != nil {
+		t.Fatalf("expected success (B has no timeout), got: %v", err)
+	}
+	if w.state.Status != "done" {
+		t.Errorf("expected done, got %s", w.state.Status)
+	}
+}
+
 func TestWalk_SNRAutoEmitted(t *testing.T) {
 	art := &countableStubArtifact{typ: "filtered", confidence: 0.9, inputN: 100, outputN: 30}
 	nodeA := &stubNode{name: "filter", artifact: art}

@@ -77,7 +77,10 @@ func (g *DefaultGraph) walkFanOut(
 				Meta:          make(map[string]any),
 			}
 
-			art, err := walker.Handle(egCtx, targetNode, nc)
+			branchCtx, branchCancel := g.nodeCtx(egCtx, targetNode.Name())
+			defer branchCancel()
+
+			art, err := walker.Handle(branchCtx, targetNode, nc)
 			elapsed := time.Since(start)
 
 			if err != nil {
