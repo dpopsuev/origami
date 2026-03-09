@@ -107,6 +107,11 @@ func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 	}
 
 	// Wait for the routed artifact
+	var timeoutCh <-chan time.Time
+	if ctx.Timeout > 0 {
+		timeoutCh = time.After(ctx.Timeout)
+	}
+
 	select {
 	case data, ok := <-responseCh:
 		if !ok {
@@ -121,6 +126,15 @@ func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 			slog.Int("artifact_bytes", len(data)),
 		)
 		return data, nil
+	case <-timeoutCh:
+		d.removePending(id)
+		d.log.Warn("dispatch timeout",
+			slog.Int64("dispatch_id", id),
+			slog.String("case_id", ctx.CaseID),
+			slog.String("step", ctx.Step),
+			slog.Duration("timeout", ctx.Timeout),
+		)
+		return nil, fmt.Errorf("dispatch timeout after %v for %s/%s", ctx.Timeout, ctx.CaseID, ctx.Step)
 	case <-d.ctx.Done():
 		d.removePending(id)
 		d.log.Warn("mux dispatch cancelled while waiting for artifact",

@@ -239,7 +239,14 @@ func (s *CircuitServer) handleStartCircuit(ctx context.Context, _ *sdkmcp.CallTo
 		Extra:    input.Extra,
 	}
 
-	runCtx, runCancel := context.WithCancel(context.Background())
+	var runCtx context.Context
+	var runCancel context.CancelFunc
+	if s.Config.MaxSessionDuration > 0 {
+		runCtx, runCancel = context.WithTimeout(context.Background(),
+			time.Duration(s.Config.MaxSessionDuration)*time.Millisecond)
+	} else {
+		runCtx, runCancel = context.WithCancel(context.Background())
+	}
 	bus := dispatch.NewSignalBus()
 	disp := dispatch.NewMuxDispatcher(runCtx, dispatch.WithMuxSignalBus(bus))
 

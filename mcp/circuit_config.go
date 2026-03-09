@@ -78,6 +78,11 @@ type CircuitConfig struct {
 	// Defaults to 300s (5min) if zero.
 	DefaultSessionTTL int // milliseconds
 
+	// MaxSessionDuration is the absolute maximum wall-clock duration for a
+	// session. When set, runCtx gets a deadline so sessions cannot run
+	// forever regardless of activity. Zero means no limit (backward compatible).
+	MaxSessionDuration int // milliseconds
+
 	// OnStepDispatched is called after a step is dispatched to a worker
 	// via get_next_step. Nil is safe (no-op).
 	OnStepDispatched func(caseID, step string)

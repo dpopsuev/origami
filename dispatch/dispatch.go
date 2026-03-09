@@ -37,13 +37,14 @@ type Dispatcher interface {
 // DispatchContext carries all the metadata a dispatcher needs to deliver
 // a prompt and collect an artifact.
 type DispatchContext struct {
-	DispatchID    int64  // unique ID assigned by the dispatcher for artifact routing
-	CaseID        string // ground-truth case ID, e.g. "C1"
-	Step          string // circuit step name, e.g. "F0_RECALL"
-	PromptPath    string // absolute path to the filled prompt file
-	PromptContent string // inline prompt text (preferred over PromptPath when set)
-	ArtifactPath  string // absolute path where artifact JSON should appear
-	Provider      string // optional LLM provider name for routing (e.g. "cursor", "codex")
+	DispatchID    int64         // unique ID assigned by the dispatcher for artifact routing
+	CaseID        string        // ground-truth case ID, e.g. "C1"
+	Step          string        // circuit step name, e.g. "F0_RECALL"
+	PromptPath    string        // absolute path to the filled prompt file
+	PromptContent string        // inline prompt text (preferred over PromptPath when set)
+	ArtifactPath  string        // absolute path where artifact JSON should appear
+	Provider      string        // optional LLM provider name for routing (e.g. "cursor", "codex")
+	Timeout       time.Duration // per-dispatch deadline; 0 = no limit (backward compatible)
 }
 
 // PullHints allows workers to declare preferences when pulling steps.
