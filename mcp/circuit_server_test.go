@@ -1323,6 +1323,204 @@ func TestSubmitStep_ZeroDispatchID(t *testing.T) {
 	}
 }
 
+// --- Timeout and fail-fast tests ---
+
+func TestSession_MaxDuration_AbortsCircuit(t *testing.T) {
+	cfg := mcp.CircuitConfig{
+		Name:               "test-circuit",
+		Version:            "dev",
+		StepSchemas:        testStepSchemas,
+		MaxSessionDuration: 200, // 200ms max
+		DefaultGetNextStepTimeout: 1000,
+		DefaultSessionTTL:         300000,
+		CreateSession: func(ctx context.Context, params mcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (mcp.RunFunc, mcp.SessionMeta, error) {
+			return func(ctx context.Context) (any, error) {
+				// RunFunc that sleeps for 2s — should be aborted by max duration
+				select {
+				case <-time.After(2 * time.Second):
+					return &testReport{CasesProcessed: 1}, nil
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				}
+			}, mcp.SessionMeta{TotalCases: 1, Scenario: "max-dur-test"}, nil
+		},
+		FormatReport: func(result any) (string, any, error) {
+			return "report", result, nil
+		},
+	}
+	srv := newTestServer(t, cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_circuit", map[string]any{})
+	sessionID := startResult["session_id"].(string)
+
+	// Poll get_next_step until done=true (session should abort within ~200ms)
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("session did not abort within expected time")
+		default:
+		}
+
+		res, err := callToolE(ctx, session, "get_next_step", map[string]any{
+			"session_id": sessionID,
+			"timeout_ms": 100,
+		})
+		if err != nil {
+			// Might get an error if the session is already torn down
+			break
+		}
+		if done, _ := res["done"].(bool); done {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	// get_report should show error status
+	time.Sleep(100 * time.Millisecond)
+	reportResult := callTool(t, ctx, session, "get_report", map[string]any{
+		"session_id": sessionID,
+	})
+	status, _ := reportResult["status"].(string)
+	if status != "error" {
+		t.Errorf("expected status=error after max duration abort, got %s", status)
+	}
+}
+
+func TestSession_MaxDuration_ZeroIsNoLimit(t *testing.T) {
+	cfg := mcp.CircuitConfig{
+		Name:               "test-circuit",
+		Version:            "dev",
+		StepSchemas:        testStepSchemas,
+		MaxSessionDuration: 0, // no limit
+		DefaultGetNextStepTimeout: 1000,
+		DefaultSessionTTL:         300000,
+		CreateSession: func(ctx context.Context, params mcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (mcp.RunFunc, mcp.SessionMeta, error) {
+			return func(ctx context.Context) (any, error) {
+				return &testReport{CasesProcessed: 1}, nil
+			}, mcp.SessionMeta{TotalCases: 1, Scenario: "no-limit-test"}, nil
+		},
+		FormatReport: func(result any) (string, any, error) {
+			return "report", result, nil
+		},
+	}
+	srv := newTestServer(t, cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_circuit", map[string]any{})
+	sessionID := startResult["session_id"].(string)
+
+	time.Sleep(300 * time.Millisecond)
+
+	res := callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+	})
+	done, _ := res["done"].(bool)
+	if !done {
+		t.Fatal("expected done=true for instant RunFunc with MaxSessionDuration=0")
+	}
+
+	reportResult := callTool(t, ctx, session, "get_report", map[string]any{
+		"session_id": sessionID,
+	})
+	status, _ := reportResult["status"].(string)
+	if status != "done" {
+		t.Errorf("expected status=done, got %s (session should run normally without max duration)", status)
+	}
+}
+
+func TestSession_MaxDuration_InteractionWithTTL(t *testing.T) {
+	cfg := mcp.CircuitConfig{
+		Name:               "test-circuit",
+		Version:            "dev",
+		StepSchemas:        testStepSchemas,
+		MaxSessionDuration: 5000, // 5s max (long)
+		DefaultGetNextStepTimeout: 1000,
+		DefaultSessionTTL:         200, // 200ms TTL (short — should win)
+		CreateSession: func(ctx context.Context, params mcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (mcp.RunFunc, mcp.SessionMeta, error) {
+			return stubRunFunc(disp, 3, 3, 1, []string{"STEP_A", "STEP_B", "STEP_C"}, ""),
+				mcp.SessionMeta{TotalCases: 3, Scenario: "ttl-vs-maxdur"}, nil
+		},
+		FormatReport: func(result any) (string, any, error) {
+			return "report", result, nil
+		},
+	}
+	srv := newTestServer(t, cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_circuit", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	// Pull one step to prove the session is running
+	step := callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+	})
+	if done, _ := step["done"].(bool); done {
+		t.Fatal("expected step, got done=true")
+	}
+
+	// Don't submit — let TTL expire (200ms)
+	time.Sleep(500 * time.Millisecond)
+
+	res := callTool(t, ctx, session, "get_next_step", map[string]any{
+		"session_id": sessionID,
+	})
+	done, _ := res["done"].(bool)
+	if !done {
+		t.Fatal("expected done=true after TTL abort (TTL should win over max duration)")
+	}
+}
+
+// TestGetReport_ContextCancellation verifies that get_report returns promptly when
+// the MCP handler context is cancelled.
+func TestGetReport_ContextCancellation(t *testing.T) {
+	cfg := newTestConfig(3, 3, "")
+	srv := newTestServer(t, cfg)
+	mainCtx, mainCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer mainCancel()
+
+	session := connectInMemory(t, mainCtx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, mainCtx, session, "start_circuit", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	// Call get_report with a short context — session is still running so it would block
+	shortCtx, shortCancel := context.WithTimeout(mainCtx, 100*time.Millisecond)
+	defer shortCancel()
+
+	start := time.Now()
+	_, err := callToolE(shortCtx, session, "get_report", map[string]any{
+		"session_id": sessionID,
+	})
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected error from cancelled context on get_report")
+	}
+	if elapsed > 1*time.Second {
+		t.Errorf("get_report took %v to fail, expected ~100ms abort", elapsed)
+	}
+	t.Logf("get_report cancelled in %v", elapsed)
+}
+
 func testFieldsForStep(step string) map[string]any {
 	switch step {
 	case "STEP_A":

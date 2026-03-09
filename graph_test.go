@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 )
 
 // --- test helpers ---
@@ -375,6 +376,69 @@ func (a *countableStubArtifact) InputCount() int     { return a.inputN }
 func (a *countableStubArtifact) OutputCount() int    { return a.outputN }
 
 var _ CountableArtifact = (*countableStubArtifact)(nil)
+
+func TestWalk_SlowNode_ContextDeadline(t *testing.T) {
+	nodeA := &slowNode{name: "slow", duration: 1 * time.Second}
+	edges := []Edge{&stubEdge{id: "A-done", from: "slow", to: "_done"}}
+
+	g, err := NewGraph("timeout-test", []Node{nodeA}, edges, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	w := &stubWalker{state: NewWalkerState("case-timeout")}
+	start := time.Now()
+	err = g.Walk(ctx, w, "slow")
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected context deadline error, got nil")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected DeadlineExceeded, got: %v", err)
+	}
+	if elapsed > 300*time.Millisecond {
+		t.Errorf("walk took %v, expected ~100ms abort", elapsed)
+	}
+	if w.state.Status != "error" {
+		t.Errorf("expected status 'error', got %q", w.state.Status)
+	}
+}
+
+func TestWalk_CancelDuringNodeProcess(t *testing.T) {
+	nodeA := &slowNode{name: "blocking", duration: 10 * time.Second}
+	edges := []Edge{&stubEdge{id: "A-done", from: "blocking", to: "_done"}}
+
+	g, err := NewGraph("cancel-test", []Node{nodeA}, edges, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	w := &stubWalker{state: NewWalkerState("case-cancel")}
+	start := time.Now()
+	err = g.Walk(ctx, w, "blocking")
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected context cancelled error, got nil")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected Canceled, got: %v", err)
+	}
+	if elapsed > 300*time.Millisecond {
+		t.Errorf("walk took %v, expected ~50ms abort", elapsed)
+	}
+}
 
 func TestWalk_SNRAutoEmitted(t *testing.T) {
 	art := &countableStubArtifact{typ: "filtered", confidence: 0.9, inputN: 100, outputN: 30}

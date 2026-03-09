@@ -2,7 +2,9 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 )
 
 type echoTransformer struct{}
@@ -548,6 +550,99 @@ func TestTransformerNode_WalkerStateReachesTransformer(t *testing.T) {
 	}
 	if captured.Context["injected"] != "hello" {
 		t.Errorf("Context[injected] = %v, want hello", captured.Context["injected"])
+	}
+}
+
+func TestTransformerNode_SlowTransform_ContextDeadline(t *testing.T) {
+	slowTrans := TransformerFunc("slow", func(ctx context.Context, tc *TransformerContext) (any, error) {
+		select {
+		case <-time.After(1 * time.Second):
+			return "done", nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	})
+
+	def := &CircuitDef{
+		Circuit: "timeout-test",
+		Nodes: []NodeDef{
+			{Name: "slow", Approach: "rapid", Transformer: "slow"},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "slow", To: "_done", When: "true"},
+		},
+		Start: "slow",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{
+		Transformers: TransformerRegistry{"slow": slowTrans},
+	})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	err = runner.Walk(ctx, nil, "slow")
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected context deadline error, got nil")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected DeadlineExceeded, got: %v", err)
+	}
+	if elapsed > 300*time.Millisecond {
+		t.Errorf("walk took %v, expected ~100ms abort", elapsed)
+	}
+}
+
+func TestTransformerNode_ContextCancellation_PropagatesError(t *testing.T) {
+	blockingTrans := TransformerFunc("blocking", func(ctx context.Context, tc *TransformerContext) (any, error) {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	def := &CircuitDef{
+		Circuit: "cancel-test",
+		Nodes: []NodeDef{
+			{Name: "block", Approach: "rapid", Transformer: "blocking"},
+		},
+		Edges: []EdgeDef{
+			{ID: "E1", Name: "done", From: "block", To: "_done", When: "true"},
+		},
+		Start: "block",
+		Done:  "_done",
+	}
+
+	runner, err := NewRunnerWith(def, GraphRegistries{
+		Transformers: TransformerRegistry{"blocking": blockingTrans},
+	})
+	if err != nil {
+		t.Fatalf("NewRunnerWith: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	start := time.Now()
+	err = runner.Walk(ctx, nil, "block")
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected context cancelled error, got nil")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected Canceled, got: %v", err)
+	}
+	if elapsed > 300*time.Millisecond {
+		t.Errorf("walk took %v, expected ~50ms abort", elapsed)
 	}
 }
 

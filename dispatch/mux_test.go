@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -733,6 +734,111 @@ func TestMux_WorkStealing_ZoneShiftSignal_NotEmittedOnMatch(t *testing.T) {
 		if s.Event == "zone_shift" {
 			t.Error("zone_shift should not be emitted on exact match")
 		}
+	}
+}
+
+func TestMux_PerDispatchTimeout(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+
+	// Drain prompts but never submit artifacts
+	go func() {
+		for {
+			if _, err := d.GetNextStep(ctx); err != nil {
+				return
+			}
+		}
+	}()
+
+	start := time.Now()
+	_, err := d.Dispatch(dispatch.DispatchContext{
+		CaseID:  "C1",
+		Step:    "F0_RECALL",
+		Timeout: 50 * time.Millisecond,
+	})
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if !strings.Contains(err.Error(), "dispatch timeout") {
+		t.Errorf("expected 'dispatch timeout' in error, got: %v", err)
+	}
+	if elapsed > 300*time.Millisecond {
+		t.Errorf("dispatch took %v, expected ~50ms", elapsed)
+	}
+	t.Logf("dispatch timed out in %v (timeout=50ms)", elapsed)
+}
+
+func TestMux_PerDispatchTimeout_ZeroIsNoLimit(t *testing.T) {
+	dispCtx, dispCancel := context.WithCancel(context.Background())
+	d := dispatch.NewMuxDispatcher(dispCtx)
+
+	// Drain prompts but never submit
+	go func() {
+		for {
+			if _, err := d.GetNextStep(dispCtx); err != nil {
+				return
+			}
+		}
+	}()
+
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := d.Dispatch(dispatch.DispatchContext{
+			CaseID:  "C1",
+			Step:    "F0_RECALL",
+			Timeout: 0, // zero = no per-dispatch timeout
+		})
+		errCh <- err
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	dispCancel()
+
+	select {
+	case err := <-errCh:
+		if err == nil {
+			t.Fatal("expected error after context cancel")
+		}
+		if strings.Contains(err.Error(), "dispatch timeout") {
+			t.Errorf("Timeout=0 should not trigger dispatch timeout, got: %v", err)
+		}
+		if !strings.Contains(err.Error(), "cancelled") {
+			t.Errorf("expected 'cancelled' in error, got: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("dispatch did not unblock after context cancel")
+	}
+}
+
+func TestMux_PerDispatchTimeout_SubmitBeforeDeadline(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	ctx := context.Background()
+	want := []byte(`{"ok":true}`)
+
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		dc, err := d.GetNextStep(ctx)
+		if err != nil {
+			t.Errorf("GetNextStep: %v", err)
+			return
+		}
+		if err := d.SubmitArtifact(ctx, dc.DispatchID, want); err != nil {
+			t.Errorf("SubmitArtifact: %v", err)
+		}
+	}()
+
+	got, err := d.Dispatch(dispatch.DispatchContext{
+		CaseID:  "C1",
+		Step:    "F0_RECALL",
+		Timeout: 500 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("got %s, want %s", got, want)
 	}
 }
 
