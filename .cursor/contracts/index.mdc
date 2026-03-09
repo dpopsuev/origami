@@ -13,6 +13,7 @@
 
 | Contract | Goal | Tier |
 |----------|------|------|
+| `llm-tie-up.md` | LLM Tie-Up — fix dispatch gap (late workers miss steps) and MCP routing gap (workers can't find gateway). 7 test-fix pairs. | gate |
 | `ouroboros-workbench.md` | Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing via Demiurge pattern, human+AI scoring. Third Kami mode. Depends on probe-extensions Track C. | next-milestone |
 | `washi.md` | Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared Origami Design System with Kabuki. Community + Enterprise editions. | vision |
 
