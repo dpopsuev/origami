@@ -4,7 +4,9 @@ package framework
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
+	"time"
 )
 
 // Transformer processes input data and produces structured output.
@@ -94,11 +96,14 @@ func (n *transformerNode) Name() string            { return n.name }
 func (n *transformerNode) ElementAffinity() Element { return n.element }
 
 func (n *transformerNode) Process(ctx context.Context, nc NodeContext) (Artifact, error) {
+	logger := slog.Default().With("component", "transformer")
 	var input any
 
 	if n.input != "" {
 		resolved, err := ResolveInput(n.input, nc.WalkerState.Outputs)
 		if err != nil {
+			logger.Warn("input resolution failed",
+				"node", n.name, "input_expr", n.input, "error", err.Error())
 			return nil, fmt.Errorf("node %s: resolve input: %w", n.name, err)
 		}
 		if resolved != nil {
@@ -150,10 +155,24 @@ func (n *transformerNode) Process(ctx context.Context, nc NodeContext) (Artifact
 		WalkerState: nc.WalkerState,
 	}
 
+	logger.Debug("transformer executing",
+		"node", n.name, "transformer", n.trans.Name(),
+		"has_input", input != nil, "has_prompt", prompt != "")
+
+	start := time.Now()
 	result, err := n.trans.Transform(ctx, tc)
+	elapsed := time.Since(start)
+
 	if err != nil {
+		logger.Error("transformer failed",
+			"node", n.name, "transformer", n.trans.Name(),
+			"error", err.Error(), "elapsed_ms", elapsed.Milliseconds())
 		return nil, fmt.Errorf("transformer %q (node %s): %w", n.trans.Name(), n.name, err)
 	}
+
+	logger.Debug("transformer completed",
+		"node", n.name, "transformer", n.trans.Name(),
+		"elapsed_ms", elapsed.Milliseconds())
 
 	return &transformerArtifact{
 		typeName:   n.trans.Name(),

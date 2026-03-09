@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 )
 
 var (
@@ -65,6 +66,8 @@ func NewMuxDispatcher(ctx context.Context, opts ...MuxOption) *MuxDispatcher {
 // and blocks until the matching SubmitArtifact delivers the response.
 // Satisfies the Dispatcher interface.
 func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
+	dispatchStart := time.Now()
+
 	d.mu.Lock()
 	d.nextID++
 	id := d.nextID
@@ -109,11 +112,13 @@ func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 		if !ok {
 			return nil, fmt.Errorf("mux dispatch aborted: %w", d.getAbortErr())
 		}
-		d.log.Debug("mux dispatch completed",
+		latency := time.Since(dispatchStart)
+		d.log.Info("dispatch round-trip",
 			slog.Int64("dispatch_id", id),
 			slog.String("case_id", ctx.CaseID),
 			slog.String("step", ctx.Step),
-			slog.Int("bytes", len(data)),
+			slog.Int64("latency_ms", latency.Milliseconds()),
+			slog.Int("artifact_bytes", len(data)),
 		)
 		return data, nil
 	case <-d.ctx.Done():

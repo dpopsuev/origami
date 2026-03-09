@@ -243,9 +243,13 @@ func (s *CircuitServer) handleStartCircuit(ctx context.Context, _ *sdkmcp.CallTo
 	bus := dispatch.NewSignalBus()
 	disp := dispatch.NewMuxDispatcher(runCtx, dispatch.WithMuxSignalBus(bus))
 
+	startTime := time.Now()
 	runFn, meta, err := s.Config.CreateSession(ctx, params, disp, bus)
 	if err != nil {
 		runCancel()
+		logger.Error("circuit session failed",
+			"error", err.Error(),
+			"elapsed_ms", time.Since(startTime).Milliseconds())
 		return nil, startCircuitOutput{}, fmt.Errorf("create session: %w", err)
 	}
 
@@ -277,10 +281,18 @@ func (s *CircuitServer) handleStartCircuit(ctx context.Context, _ *sdkmcp.CallTo
 		out.WorkerCount = sess.DesiredCapacity
 	}
 
+	logger.Info("circuit session started",
+		"session_id", sess.ID,
+		"scenario", sess.Scenario,
+		"total_cases", sess.TotalCases,
+		"parallel", parallel,
+		"elapsed_ms", time.Since(startTime).Milliseconds())
+
 	return nil, out, nil
 }
 
 func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToolRequest, input getNextStepInput) (*sdkmcp.CallToolResult, getNextStepOutput, error) {
+	logger := slog.Default().With("component", "circuit-session")
 	sess, err := s.getSession(input.SessionID)
 	if err != nil {
 		return nil, getNextStepOutput{}, err
@@ -305,6 +317,9 @@ func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToo
 	sess.PullerExit()
 
 	if err != nil {
+		logger.Warn("get_next_step error",
+			"session_id", input.SessionID,
+			"error", err.Error())
 		return nil, getNextStepOutput{}, fmt.Errorf("get_next_step: %w", err)
 	}
 
@@ -314,6 +329,7 @@ func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToo
 		if sessErr := sess.Err(); sessErr != nil {
 			out.Error = sessErr.Error()
 		}
+		logger.Info("circuit complete", "session_id", input.SessionID)
 		sess.Bus.Emit("circuit_done", "server", "", "", nil)
 		if s.Config.OnCircuitDone != nil {
 			s.Config.OnCircuitDone()
@@ -325,6 +341,12 @@ func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToo
 		sess.SetGateExempt()
 		return nil, getNextStepOutput{Done: false, Available: false}, nil
 	}
+
+	logger.Info("step dispatched to worker",
+		"session_id", input.SessionID,
+		"case_id", dc.CaseID,
+		"step", dc.Step,
+		"dispatch_id", dc.DispatchID)
 
 	sess.Bus.Emit("step_ready", "server", dc.CaseID, dc.Step, map[string]string{
 		"prompt_path": dc.PromptPath,
@@ -370,13 +392,16 @@ func (s *CircuitServer) handleGetNextStep(ctx context.Context, _ *sdkmcp.CallToo
 }
 
 func (s *CircuitServer) handleSubmitStep(ctx context.Context, _ *sdkmcp.CallToolRequest, input submitStepInput) (*sdkmcp.CallToolResult, submitStepOutput, error) {
+	logger := slog.Default().With("component", "circuit-session")
+	submitStart := time.Now()
+
 	sess, err := s.getSession(input.SessionID)
 	if err != nil {
 		return nil, submitStepOutput{}, err
 	}
 
 	if gateErr := sess.CheckCapacityGate(); gateErr != nil {
-		slog.Warn("capacity gate advisory on submit_step", "component", "circuit-session",
+		logger.Warn("capacity gate advisory on submit_step",
 			"session_id", input.SessionID, "dispatch_id", input.DispatchID, "detail", gateErr.Error())
 	}
 
@@ -390,10 +415,14 @@ func (s *CircuitServer) handleSubmitStep(ctx context.Context, _ *sdkmcp.CallTool
 
 	schema, err := s.Config.FindSchema(input.Step)
 	if err != nil {
+		logger.Warn("step schema validation failed",
+			"session_id", input.SessionID, "step", input.Step, "error", err.Error())
 		return nil, submitStepOutput{}, err
 	}
 
 	if err := schema.ValidateFields(input.Fields); err != nil {
+		logger.Warn("step schema validation failed",
+			"session_id", input.SessionID, "step", input.Step, "error", err.Error())
 		return nil, submitStepOutput{}, err
 	}
 
@@ -417,10 +446,17 @@ func (s *CircuitServer) handleSubmitStep(ctx context.Context, _ *sdkmcp.CallTool
 		s.Config.OnStepCompleted("", input.Step, input.DispatchID)
 	}
 
+	logger.Info("step artifact accepted",
+		"session_id", input.SessionID,
+		"dispatch_id", input.DispatchID,
+		"step", input.Step,
+		"elapsed_ms", time.Since(submitStart).Milliseconds())
+
 	return nil, submitStepOutput{OK: "step accepted"}, nil
 }
 
 func (s *CircuitServer) handleGetReport(ctx context.Context, _ *sdkmcp.CallToolRequest, input getReportInput) (*sdkmcp.CallToolResult, getReportOutput, error) {
+	logger := slog.Default().With("component", "circuit-session")
 	sess, err := s.getSession(input.SessionID)
 	if err != nil {
 		return nil, getReportOutput{}, err
@@ -433,6 +469,8 @@ func (s *CircuitServer) handleGetReport(ctx context.Context, _ *sdkmcp.CallToolR
 	}
 
 	if sessErr := sess.Err(); sessErr != nil {
+		logger.Warn("report generated with error",
+			"session_id", input.SessionID, "status", string(StateError))
 		return nil, getReportOutput{
 			Status: string(StateError),
 			Error:  sessErr.Error(),
@@ -445,6 +483,8 @@ func (s *CircuitServer) handleGetReport(ctx context.Context, _ *sdkmcp.CallToolR
 	}
 
 	if s.Config.FormatReport == nil {
+		logger.Info("report generated",
+			"session_id", input.SessionID, "status", string(StateDone))
 		return nil, getReportOutput{
 			Status:     string(StateDone),
 			Structured: result,
@@ -458,6 +498,9 @@ func (s *CircuitServer) handleGetReport(ctx context.Context, _ *sdkmcp.CallToolR
 			Error:  fmt.Sprintf("format report: %v", err),
 		}, nil
 	}
+
+	logger.Info("report generated",
+		"session_id", input.SessionID, "status", string(StateDone))
 
 	return nil, getReportOutput{
 		Status:     string(StateDone),

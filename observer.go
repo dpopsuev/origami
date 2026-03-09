@@ -2,6 +2,7 @@ package framework
 // Category: Processing & Support
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"time"
@@ -72,6 +73,12 @@ type logObserver struct {
 	Logger *slog.Logger
 }
 
+// NewLogObserver creates a WalkObserver that logs events using the given logger.
+// If logger is nil, slog.Default() is used.
+func NewLogObserver(logger *slog.Logger) WalkObserver {
+	return &logObserver{Logger: logger}
+}
+
 func (o *logObserver) OnEvent(e WalkEvent) {
 	logger := o.Logger
 	if logger == nil {
@@ -96,16 +103,16 @@ func (o *logObserver) OnEvent(e WalkEvent) {
 	if e.Error != nil {
 		attrs = append(attrs, slog.String("error", e.Error.Error()))
 	}
-
-	args := make([]any, len(attrs))
-	for i, a := range attrs {
-		args[i] = a
+	if e.Metadata != nil {
+		for k, v := range e.Metadata {
+			attrs = append(attrs, slog.Any("meta."+k, v))
+		}
 	}
 
 	if e.Error != nil {
-		logger.LogAttrs(nil, slog.LevelWarn, "walk", attrs...)
+		logger.LogAttrs(context.Background(), slog.LevelWarn, "walk", attrs...)
 	} else {
-		logger.LogAttrs(nil, slog.LevelInfo, "walk", attrs...)
+		logger.LogAttrs(context.Background(), slog.LevelInfo, "walk", attrs...)
 	}
 }
 
