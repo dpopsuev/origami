@@ -1,8 +1,0 @@
-# Index
-
-## Directories
-- `domain/` — Origami-specific rules (project standards, agent bus, DSL design)
-- `universal/` — generic IT engineering rules (testing, security, abstraction)
-
-## Files
-(No files — directories only)

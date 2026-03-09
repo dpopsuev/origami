@@ -1,9 +1,0 @@
-# Index
-
-## Directories
-(No directories)
-
-## Files
-- `case-study-omo-agentic-arms-race.md` — OmO multi-model agent orchestration analysis. Implementation extracted to `provider-resilience` + `ouroboros-seed-circuit`.
-- `case-study-crewai-crews-and-flows.md` — CrewAI Crews+Flows architecture analysis. Implementation extracted to `walker-experience`.
-- `case-study-cloud-native-circuit-tools.md` — CNCF tool analysis: Argo Workflows, Tekton, KEDA, Falco, CloudEvents vs Origami. Integration points and gaps.

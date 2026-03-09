@@ -1,5 +1,0 @@
-# Index
-
-## Files
-- `sumi-debug-eyes.md` — Sumi Debug Eyes — ring-buffer ViewRecorder + MCP `sumi_get_view` tool for agent TUI visibility. Complete.
-- `sumi-war-room.md` — Sumi War Room — ops-grade multi-panel TUI debugger. Mouse interaction, event timeline, worker selector, rich inspector, extension foundations.

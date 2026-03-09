@@ -1,9 +1,0 @@
-# Index
-
-## Directories
-(No directories)
-
-## Files
-- `llm-tie-up.md` — LLM Tie-Up — fix dispatch gap (late workers miss steps) and MCP routing gap (workers can't find gateway). 7 test-fix pairs.
-- `ouroboros-workbench.md` — Ouroboros Workbench — mail-like review UI for probe transcripts, AI co-browsing, human+AI scoring. Third Kami mode.
-- `washi.md` — Washi — enterprise circuit management UI. Drag-and-drop builder, bidirectional YAML sync, run management. Shared ODS with Kabuki.

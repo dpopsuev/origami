@@ -1,8 +1,0 @@
-# Index
-
-## Directories
-(No directories)
-
-## Files
-- `dev-flow.md` — Pre-implementation development flow (problem framing through implementation plan)
-- `test-matrix.mdc` — TDD test matrix per story (pointer to full testing methodology)
