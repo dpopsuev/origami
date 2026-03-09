@@ -44,7 +44,7 @@ func projectRoot(t *testing.T) string {
 	src := filepath.Join(filepath.Dir(f), "testdata")
 
 	seedPaths := []string{
-		"internal/scorecards/rca.yaml",
+		"scorecards/rca.yaml",
 	}
 	for _, rel := range seedPaths {
 		data, err := os.ReadFile(filepath.Join(src, rel))

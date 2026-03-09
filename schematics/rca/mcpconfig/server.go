@@ -329,7 +329,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	}
 	scorecardPath := circuitDef.Scorecard
 	if scorecardPath == "" {
-		scorecardPath = "internal/scorecards/rca.yaml"
+		scorecardPath = "scorecards/rca.yaml"
 	}
 	sc, err := s.loadScorecard(scorecardPath, root)
 	if err != nil {

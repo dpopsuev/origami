@@ -34,13 +34,13 @@ version: 1
 metrics: []
 `
 	tmpDir := t.TempDir()
-	scPath := filepath.Join(tmpDir, "internal", "scorecards", "rca.yaml")
+	scPath := filepath.Join(tmpDir, "scorecards", "rca.yaml")
 	os.MkdirAll(filepath.Dir(scPath), 0755)
 	os.WriteFile(scPath, []byte(scorecardYAML), 0644)
 
 	s := &Server{DomainFS: nil}
 
-	sc, err := s.loadScorecard("internal/scorecards/rca.yaml", tmpDir)
+	sc, err := s.loadScorecard("scorecards/rca.yaml", tmpDir)
 	if err != nil {
 		t.Fatalf("loadScorecard: %v", err)
 	}

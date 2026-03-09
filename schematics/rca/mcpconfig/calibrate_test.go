@@ -69,7 +69,7 @@ func TestCalibrate_PTPMock(t *testing.T) {
 		t.Fatalf("load circuit def: %v", err)
 	}
 
-	scorecardData, err := fs.ReadFile(domainFS, "internal/scorecards/rca.yaml")
+	scorecardData, err := fs.ReadFile(domainFS, "scorecards/rca.yaml")
 	if err != nil {
 		t.Fatalf("read scorecard: %v", err)
 	}
