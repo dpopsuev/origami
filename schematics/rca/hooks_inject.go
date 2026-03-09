@@ -2,7 +2,6 @@ package rca
 
 import (
 	"context"
-	"fmt"
 
 	framework "github.com/dpopsuev/origami"
 	"github.com/dpopsuev/origami/schematics/knowledge"
@@ -22,8 +21,6 @@ const (
 	KeyParamsTaxonomy = "params.taxonomy"
 	KeyParamsCode     = "params.code"
 )
-
-const maxCodeTokenBudget = 32000
 
 // InjectHookOpts configures the inject hook registry.
 type InjectHookOpts struct {
@@ -60,12 +57,6 @@ func InjectHooksWithOpts(opts InjectHookOpts) framework.HookRegistry {
 	reg.Register(newInjectSourcesHook(opts.Envelope, opts.Catalog))
 	reg.Register(newInjectPriorHook(opts.CaseDir))
 	reg.Register(newInjectTaxonomyHook())
-
-	if opts.KnowledgeReader != nil && opts.Catalog != nil {
-		reg.Register(newInjectCodeTreeHook(opts.KnowledgeReader, opts.Catalog))
-		reg.Register(newInjectCodeSearchHook(opts.KnowledgeReader, opts.Catalog))
-		reg.Register(newInjectCodeReadHook(opts.KnowledgeReader))
-	}
 
 	// Circuit-composition bridge hooks.
 	reg.Register(newInjectCodeKeywordsHook())
@@ -237,122 +228,6 @@ func injectTaxonomyData(walkerCtx map[string]any) {
 	walkerCtx[KeyParamsTaxonomy] = DefaultTaxonomy()
 }
 
-// Code injection hooks
-
-func newInjectCodeTreeHook(reader toolkit.SourceReader, catalog toolkit.SourceCatalog) framework.Hook {
-	return toolkit.NewContextInjectorErr("inject.code.tree", func(ctx context.Context, walkerCtx map[string]any) error {
-		code := ensureCodeParams(walkerCtx)
-		for _, src := range catalog.Sources() {
-			if src.Kind != toolkit.SourceKindRepo {
-				continue
-			}
-			if err := reader.Ensure(ctx, src); err != nil {
-				continue
-			}
-			entries, err := reader.List(ctx, src, "", 3)
-			if err != nil {
-				continue
-			}
-			var treeEntries []TreeEntry
-			for _, e := range entries {
-				treeEntries = append(treeEntries, TreeEntry{Path: e.Path, IsDir: e.IsDir})
-			}
-			code.Trees = append(code.Trees, CodeTreeParams{
-				Repo:    fmt.Sprintf("%s/%s", src.Org, src.Name),
-				Branch:  src.Branch,
-				Entries: treeEntries,
-			})
-		}
-		return nil
-	})
-}
-
-func newInjectCodeSearchHook(reader toolkit.SourceReader, catalog toolkit.SourceCatalog) framework.Hook {
-	return toolkit.NewContextInjectorErr("inject.code.search", func(ctx context.Context, walkerCtx map[string]any) error {
-		code := ensureCodeParams(walkerCtx)
-
-		keywords := extractSearchKeywords(walkerCtx)
-		if len(keywords) == 0 {
-			return nil
-		}
-
-		for _, src := range catalog.Sources() {
-			if src.Kind != toolkit.SourceKindRepo {
-				continue
-			}
-			query := keywords[0]
-			for _, kw := range keywords[1:] {
-				query += " " + kw
-			}
-			results, err := reader.Search(ctx, src, query, 20)
-			if err != nil {
-				continue
-			}
-			repoName := fmt.Sprintf("%s/%s", src.Org, src.Name)
-			for _, r := range results {
-				code.SearchResults = append(code.SearchResults, CodeSearchResult{
-					Repo:    repoName,
-					File:    r.Path,
-					Line:    r.Line,
-					Snippet: r.Snippet,
-				})
-			}
-		}
-		return nil
-	})
-}
-
-func newInjectCodeReadHook(reader toolkit.SourceReader) framework.Hook {
-	return toolkit.NewContextInjectorErr("inject.code.read", func(ctx context.Context, walkerCtx map[string]any) error {
-		code := ensureCodeParams(walkerCtx)
-
-		seen := make(map[string]bool)
-		budgetRemaining := maxCodeTokenBudget
-		for _, sr := range code.SearchResults {
-			fileKey := sr.Repo + ":" + sr.File
-			if seen[fileKey] {
-				continue
-			}
-			seen[fileKey] = true
-
-			parts := splitRepoKey(sr.Repo)
-			if parts == nil {
-				continue
-			}
-			src := toolkit.Source{
-				Org:  parts[0],
-				Name: parts[1],
-				Kind: toolkit.SourceKindRepo,
-			}
-			data, err := reader.Read(ctx, src, sr.File)
-			if err != nil {
-				continue
-			}
-
-			content := string(data)
-			truncated := false
-			if len(content) > budgetRemaining {
-				content = content[:budgetRemaining]
-				truncated = true
-			}
-			budgetRemaining -= len(content)
-
-			code.Files = append(code.Files, CodeFileParams{
-				Repo:      sr.Repo,
-				Path:      sr.File,
-				Content:   content,
-				Truncated: truncated,
-			})
-
-			if budgetRemaining <= 0 {
-				code.Truncated = true
-				break
-			}
-		}
-		return nil
-	})
-}
-
 func ensureCodeParams(walkerCtx map[string]any) *CodeParams {
 	if v, ok := walkerCtx[KeyParamsCode].(*CodeParams); ok {
 		return v
@@ -392,15 +267,6 @@ func extractSearchKeywords(walkerCtx map[string]any) []string {
 		}
 	}
 	return keywords
-}
-
-func splitRepoKey(key string) []string {
-	for i, c := range key {
-		if c == '/' {
-			return []string{key[:i], key[i+1:]}
-		}
-	}
-	return nil
 }
 
 // Circuit-composition bridge hooks

@@ -278,7 +278,7 @@ func TestTemplateParams_AllFieldsUsed(t *testing.T) {
 
 		"History.PriorRCAs.DaysSinceResolved": "available but not surfaced in current prompt templates",
 
-		"Code.Trees":               "populated by inject.code.tree but not yet rendered in prompts",
+		"Code.Trees":               "populated by Knowledge subgraph but not yet rendered in prompts",
 		"Code.Trees.Repo":          "sub-field of Code.Trees",
 		"Code.Trees.Branch":        "sub-field of Code.Trees",
 		"Code.Trees.Entries":       "sub-field of Code.Trees",
