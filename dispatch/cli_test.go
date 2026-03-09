@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,7 +61,7 @@ func TestCLIDispatcher_Dispatch_Echo(t *testing.T) {
 		t.Fatalf("cat should exist: %v", err)
 	}
 
-	result, err := d.Dispatch(DispatchContext{
+	result, err := d.Dispatch(context.Background(), DispatchContext{
 		DispatchID:   1,
 		CaseID:       "C01",
 		Step:         "F1_TRIAGE",
@@ -100,7 +101,7 @@ func TestCLIDispatcher_Dispatch_WithArgs(t *testing.T) {
 		t.Fatalf("tr should exist: %v", err)
 	}
 
-	result, err := d.Dispatch(DispatchContext{
+	result, err := d.Dispatch(context.Background(), DispatchContext{
 		DispatchID:   2,
 		CaseID:       "C02",
 		Step:         "F0_RECALL",
@@ -118,7 +119,7 @@ func TestCLIDispatcher_Dispatch_WithArgs(t *testing.T) {
 
 func TestCLIDispatcher_Dispatch_MissingPrompt(t *testing.T) {
 	d, _ := NewCLIDispatcher("cat")
-	_, err := d.Dispatch(DispatchContext{
+	_, err := d.Dispatch(context.Background(), DispatchContext{
 		PromptPath:   "/nonexistent/prompt.txt",
 		ArtifactPath: "/tmp/out.json",
 	})
@@ -140,7 +141,7 @@ func TestCLIDispatcher_Dispatch_CommandFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = d.Dispatch(DispatchContext{
+	_, err = d.Dispatch(context.Background(), DispatchContext{
 		PromptPath:   promptPath,
 		ArtifactPath: filepath.Join(dir, "out.json"),
 	})
@@ -165,7 +166,7 @@ func TestCLIDispatcher_Dispatch_Timeout(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = d.Dispatch(DispatchContext{
+	_, err = d.Dispatch(context.Background(), DispatchContext{
 		PromptPath:   promptPath,
 		ArtifactPath: filepath.Join(dir, "out.json"),
 	})
@@ -187,7 +188,7 @@ func TestCLIDispatcher_Dispatch_EmptyOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = d.Dispatch(DispatchContext{
+	_, err = d.Dispatch(context.Background(), DispatchContext{
 		PromptPath:   promptPath,
 		ArtifactPath: filepath.Join(dir, "out.json"),
 	})

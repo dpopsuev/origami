@@ -65,7 +65,7 @@ func NewMuxDispatcher(ctx context.Context, opts ...MuxOption) *MuxDispatcher {
 // Dispatch assigns a unique dispatch ID, sends the prompt to the agent side,
 // and blocks until the matching SubmitArtifact delivers the response.
 // Satisfies the Dispatcher interface.
-func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
+func (d *MuxDispatcher) Dispatch(ctx context.Context, dc DispatchContext) ([]byte, error) {
 	dispatchStart := time.Now()
 
 	d.mu.Lock()
@@ -76,31 +76,39 @@ func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 	pendingCount := len(d.pending)
 	d.mu.Unlock()
 
-	ctx.DispatchID = id
+	dc.DispatchID = id
 
 	d.log.Debug("mux dispatch registered",
 		slog.Int64("dispatch_id", id),
-		slog.String("case_id", ctx.CaseID),
-		slog.String("step", ctx.Step),
+		slog.String("case_id", dc.CaseID),
+		slog.String("step", dc.Step),
 		slog.Int("pending_count", pendingCount),
 	)
 
 	// Send prompt to the agent side
 	select {
-	case d.promptCh <- ctx:
+	case d.promptCh <- dc:
+	case <-ctx.Done():
+		d.removePending(id)
+		d.log.Warn("mux dispatch cancelled while sending prompt",
+			slog.String("case_id", dc.CaseID),
+			slog.String("step", dc.Step),
+			slog.Int64("dispatch_id", id),
+		)
+		return nil, fmt.Errorf("mux dispatch cancelled: %w", ctx.Err())
 	case <-d.ctx.Done():
 		d.removePending(id)
 		d.log.Warn("mux dispatch cancelled while sending prompt",
-			slog.String("case_id", ctx.CaseID),
-			slog.String("step", ctx.Step),
+			slog.String("case_id", dc.CaseID),
+			slog.String("step", dc.Step),
 			slog.Int64("dispatch_id", id),
 		)
 		return nil, fmt.Errorf("mux dispatch cancelled: %w", d.ctx.Err())
 	case <-d.abortCh:
 		d.removePending(id)
 		d.log.Warn("mux dispatch aborted while sending prompt",
-			slog.String("case_id", ctx.CaseID),
-			slog.String("step", ctx.Step),
+			slog.String("case_id", dc.CaseID),
+			slog.String("step", dc.Step),
 			slog.Int64("dispatch_id", id),
 		)
 		return nil, fmt.Errorf("mux dispatch aborted: %w", d.getAbortErr())
@@ -108,8 +116,8 @@ func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 
 	// Wait for the routed artifact
 	var timeoutCh <-chan time.Time
-	if ctx.Timeout > 0 {
-		timeoutCh = time.After(ctx.Timeout)
+	if dc.Timeout > 0 {
+		timeoutCh = time.After(dc.Timeout)
 	}
 
 	select {
@@ -120,8 +128,8 @@ func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 		latency := time.Since(dispatchStart)
 		d.log.Info("dispatch round-trip",
 			slog.Int64("dispatch_id", id),
-			slog.String("case_id", ctx.CaseID),
-			slog.String("step", ctx.Step),
+			slog.String("case_id", dc.CaseID),
+			slog.String("step", dc.Step),
 			slog.Int64("latency_ms", latency.Milliseconds()),
 			slog.Int("artifact_bytes", len(data)),
 		)
@@ -130,16 +138,24 @@ func (d *MuxDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
 		d.removePending(id)
 		d.log.Warn("dispatch timeout",
 			slog.Int64("dispatch_id", id),
-			slog.String("case_id", ctx.CaseID),
-			slog.String("step", ctx.Step),
-			slog.Duration("timeout", ctx.Timeout),
+			slog.String("case_id", dc.CaseID),
+			slog.String("step", dc.Step),
+			slog.Duration("timeout", dc.Timeout),
 		)
-		return nil, fmt.Errorf("dispatch timeout after %v for %s/%s", ctx.Timeout, ctx.CaseID, ctx.Step)
+		return nil, fmt.Errorf("dispatch timeout after %v for %s/%s", dc.Timeout, dc.CaseID, dc.Step)
+	case <-ctx.Done():
+		d.removePending(id)
+		d.log.Warn("mux dispatch cancelled while waiting for artifact",
+			slog.String("case_id", dc.CaseID),
+			slog.String("step", dc.Step),
+			slog.Int64("dispatch_id", id),
+		)
+		return nil, fmt.Errorf("mux dispatch cancelled: %w", ctx.Err())
 	case <-d.ctx.Done():
 		d.removePending(id)
 		d.log.Warn("mux dispatch cancelled while waiting for artifact",
-			slog.String("case_id", ctx.CaseID),
-			slog.String("step", ctx.Step),
+			slog.String("case_id", dc.CaseID),
+			slog.String("step", dc.Step),
 			slog.Int64("dispatch_id", id),
 		)
 		return nil, fmt.Errorf("mux dispatch cancelled: %w", d.ctx.Err())

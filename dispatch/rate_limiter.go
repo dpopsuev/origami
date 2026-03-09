@@ -45,17 +45,17 @@ func NewRateLimitDispatcher(inner Dispatcher, cfg RateLimitConfig) *RateLimitDis
 }
 
 // Dispatch waits for a rate limit token, then delegates to the inner dispatcher.
-func (d *RateLimitDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
+func (d *RateLimitDispatcher) Dispatch(ctx context.Context, dc DispatchContext) ([]byte, error) {
 	if !d.limiter.Allow() {
 		d.waits.Add(1)
 		if d.onLimit != nil {
 			d.onLimit()
 		}
-		if err := d.limiter.Wait(context.Background()); err != nil {
+		if err := d.limiter.Wait(ctx); err != nil {
 			return nil, err
 		}
 	}
-	return d.inner.Dispatch(ctx)
+	return d.inner.Dispatch(ctx, dc)
 }
 
 // Waits returns the total number of times a dispatch was delayed.

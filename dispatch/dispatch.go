@@ -30,8 +30,9 @@ func now() string {
 type Dispatcher interface {
 	// Dispatch delivers the prompt at PromptPath to the external agent and
 	// blocks until the artifact appears at ArtifactPath.
+	// The context controls cancellation and deadlines for this dispatch call.
 	// Returns the raw artifact bytes or an error (e.g. timeout).
-	Dispatch(ctx DispatchContext) ([]byte, error)
+	Dispatch(ctx context.Context, dc DispatchContext) ([]byte, error)
 }
 
 // DispatchContext carries all the metadata a dispatcher needs to deliver
@@ -141,7 +142,7 @@ func NewStdinDispatcherWithTemplate(t StdinTemplate) *StdinDispatcher {
 
 // Dispatch prints a banner with case/step/paths, blocks on stdin, then reads
 // and validates the artifact file.
-func (d *StdinDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
+func (d *StdinDispatcher) Dispatch(_ context.Context, ctx DispatchContext) ([]byte, error) {
 	fmt.Println()
 	fmt.Println("================================================================")
 	fmt.Printf("  Case: %-6s  Step: %s\n", ctx.CaseID, ctx.Step)

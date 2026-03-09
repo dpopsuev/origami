@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -68,45 +69,45 @@ func (r *ProviderRouter) Register(provider string, d Dispatcher) {
 
 // Dispatch selects the appropriate dispatcher and delegates.
 // On failure, iterates through the fallback chain if configured.
-func (r *ProviderRouter) Dispatch(ctx DispatchContext) ([]byte, error) {
-	if ctx.Provider == "" && r.StepProviderHints != nil {
-		if hint, ok := r.StepProviderHints[ctx.Step]; ok {
+func (r *ProviderRouter) Dispatch(ctx context.Context, dc DispatchContext) ([]byte, error) {
+	if dc.Provider == "" && r.StepProviderHints != nil {
+		if hint, ok := r.StepProviderHints[dc.Step]; ok {
 			if d, found := r.Routes[hint]; found {
 				r.Logger.Debug("provider router: auto-route from PersonaSheet",
 					slog.String("provider", hint),
-					slog.String("step", ctx.Step),
+					slog.String("step", dc.Step),
 				)
-				return r.dispatchWithFallback(hint, d, ctx)
+				return r.dispatchWithFallback(ctx, hint, d, dc)
 			}
 		}
 	}
 
-	if ctx.Provider == "" {
+	if dc.Provider == "" {
 		r.Logger.Debug("provider router: using default dispatcher",
-			slog.String("case_id", ctx.CaseID),
-			slog.String("step", ctx.Step),
+			slog.String("case_id", dc.CaseID),
+			slog.String("step", dc.Step),
 		)
-		return r.dispatchWithFallback("default", r.Default, ctx)
+		return r.dispatchWithFallback(ctx, "default", r.Default, dc)
 	}
 
-	d, ok := r.Routes[ctx.Provider]
+	d, ok := r.Routes[dc.Provider]
 	if !ok {
 		return nil, fmt.Errorf("dispatch/provider: unknown provider %q (registered: %v)",
-			ctx.Provider, r.providerNames())
+			dc.Provider, r.providerNames())
 	}
 
 	r.Logger.Debug("provider router: routing to provider",
-		slog.String("provider", ctx.Provider),
-		slog.String("case_id", ctx.CaseID),
-		slog.String("step", ctx.Step),
+		slog.String("provider", dc.Provider),
+		slog.String("case_id", dc.CaseID),
+		slog.String("step", dc.Step),
 	)
-	return r.dispatchWithFallback(ctx.Provider, d, ctx)
+	return r.dispatchWithFallback(ctx, dc.Provider, d, dc)
 }
 
 // dispatchWithFallback tries the primary dispatcher, then iterates through
 // fallbacks on failure. Returns the first successful result or an aggregated error.
-func (r *ProviderRouter) dispatchWithFallback(providerName string, primary Dispatcher, ctx DispatchContext) ([]byte, error) {
-	result, err := primary.Dispatch(ctx)
+func (r *ProviderRouter) dispatchWithFallback(ctx context.Context, providerName string, primary Dispatcher, dc DispatchContext) ([]byte, error) {
+	result, err := primary.Dispatch(ctx, dc)
 	if err == nil {
 		return result, nil
 	}
@@ -129,13 +130,13 @@ func (r *ProviderRouter) dispatchWithFallback(providerName string, primary Dispa
 		r.Logger.Info("provider router: fallback activated",
 			slog.String("primary", providerName),
 			slog.String("fallback", fb),
-			slog.String("step", ctx.Step),
+			slog.String("step", dc.Step),
 		)
 		if r.OnFallback != nil {
 			r.OnFallback(providerName, fb, err)
 		}
 
-		result, fbErr := d.Dispatch(ctx)
+		result, fbErr := d.Dispatch(ctx, dc)
 		if fbErr == nil {
 			return result, nil
 		}

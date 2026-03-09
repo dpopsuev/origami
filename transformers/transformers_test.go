@@ -209,7 +209,7 @@ type mockDispatcher struct {
 	err      error
 }
 
-func (m *mockDispatcher) Dispatch(ctx dispatch.DispatchContext) ([]byte, error) {
+func (m *mockDispatcher) Dispatch(_ context.Context, ctx dispatch.DispatchContext) ([]byte, error) {
 	return m.response, m.err
 }
 

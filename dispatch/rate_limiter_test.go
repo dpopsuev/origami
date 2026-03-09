@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -11,7 +12,7 @@ type countingDispatcher struct {
 	calls atomic.Int64
 }
 
-func (d *countingDispatcher) Dispatch(_ DispatchContext) ([]byte, error) {
+func (d *countingDispatcher) Dispatch(_ context.Context, _ DispatchContext) ([]byte, error) {
 	d.calls.Add(1)
 	return []byte(`ok`), nil
 }
@@ -25,7 +26,7 @@ func TestRateLimiter_BurstAllowed(t *testing.T) {
 
 	ctx := DispatchContext{Step: "test"}
 	for i := 0; i < 5; i++ {
-		_, err := rl.Dispatch(ctx)
+		_, err := rl.Dispatch(context.Background(), ctx)
 		if err != nil {
 			t.Fatalf("burst dispatch %d failed: %v", i, err)
 		}
@@ -55,7 +56,7 @@ func TestRateLimiter_DelaysBeyondBurst(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _ = rl.Dispatch(ctx)
+			_, _ = rl.Dispatch(context.Background(), ctx)
 		}()
 	}
 	wg.Wait()

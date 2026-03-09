@@ -10,7 +10,7 @@ import (
 
 type stubDispatcher struct{}
 
-func (stubDispatcher) Dispatch(dispatch.DispatchContext) ([]byte, error) {
+func (stubDispatcher) Dispatch(_ context.Context, _ dispatch.DispatchContext) ([]byte, error) {
 	return []byte(`{}`), nil
 }
 

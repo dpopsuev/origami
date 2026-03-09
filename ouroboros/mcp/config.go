@@ -148,7 +148,7 @@ func runDiscovery(
 			prompt = ouroboros.BuildFullPromptWith(seen, probes.RefactorPrompt())
 		}
 
-		artifactBytes, err := disp.Dispatch(dispatch.DispatchContext{
+		artifactBytes, err := disp.Dispatch(ctx, dispatch.DispatchContext{
 			CaseID:        fmt.Sprintf("iter-%d", i),
 			Step:          "discover",
 			PromptContent: prompt,

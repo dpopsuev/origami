@@ -88,7 +88,7 @@ func stubRunFunc(disp *dispatch.MuxDispatcher, nCases, nSteps, parallel int, ste
 						PromptPath:   promptPath,
 						ArtifactPath: fmt.Sprintf("/tmp/test_%s_%s.json", caseID, step),
 					}
-					if _, err := disp.Dispatch(dc); err != nil {
+					if _, err := disp.Dispatch(ctx, dc); err != nil {
 						errCh <- err
 						return
 					}

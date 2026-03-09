@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -56,7 +57,7 @@ type BatchResult struct {
 
 // DispatchBatch writes N signals, generates a manifest and briefing path,
 // then polls all N artifact paths concurrently.
-func (d *BatchFileDispatcher) DispatchBatch(ctxs []DispatchContext, phase string, briefingPath string) ([][]byte, []error) {
+func (d *BatchFileDispatcher) DispatchBatch(ctx context.Context, ctxs []DispatchContext, phase string, briefingPath string) ([][]byte, []error) {
 	n := len(ctxs)
 	if n == 0 {
 		return nil, nil
@@ -69,10 +70,10 @@ func (d *BatchFileDispatcher) DispatchBatch(ctxs []DispatchContext, phase string
 		"batch_id", bid, "signals", n, "phase", phase)
 
 	signals := make([]BatchSignalEntry, n)
-	for i, ctx := range ctxs {
-		sigDir := filepath.Dir(ctx.ArtifactPath)
+	for i, dc := range ctxs {
+		sigDir := filepath.Dir(dc.ArtifactPath)
 		signals[i] = BatchSignalEntry{
-			CaseID:     ctx.CaseID,
+			CaseID:     dc.CaseID,
 			SignalPath: filepath.Join(sigDir, "signal.json"),
 			Status:     "pending",
 		}
@@ -104,12 +105,12 @@ func (d *BatchFileDispatcher) DispatchBatch(ctxs []DispatchContext, phase string
 	results := make([]BatchResult, n)
 	var wg sync.WaitGroup
 
-	for i, ctx := range ctxs {
+	for i, dc := range ctxs {
 		wg.Add(1)
 		go func(idx int, dctx DispatchContext) {
 			defer wg.Done()
 			fd := NewFileDispatcher(d.cfg)
-			data, err := fd.Dispatch(dctx)
+			data, err := fd.Dispatch(ctx, dctx)
 			results[idx] = BatchResult{
 				Index: idx,
 				Data:  data,
@@ -120,7 +121,7 @@ func (d *BatchFileDispatcher) DispatchBatch(ctxs []DispatchContext, phase string
 			} else {
 				signals[idx].Status = "done"
 			}
-		}(i, ctx)
+		}(i, dc)
 	}
 
 	wg.Wait()
@@ -166,8 +167,8 @@ func (d *BatchFileDispatcher) DispatchBatch(ctxs []DispatchContext, phase string
 }
 
 // Dispatch implements the Dispatcher interface for single-signal compatibility.
-func (d *BatchFileDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
-	data, errs := d.DispatchBatch([]DispatchContext{ctx}, "single", "")
+func (d *BatchFileDispatcher) Dispatch(ctx context.Context, dc DispatchContext) ([]byte, error) {
+	data, errs := d.DispatchBatch(ctx, []DispatchContext{dc}, "single", "")
 	if len(errs) > 0 && errs[0] != nil {
 		return nil, errs[0]
 	}

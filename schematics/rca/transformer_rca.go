@@ -101,7 +101,7 @@ func (t *rcaTransformer) Transform(ctx context.Context, tc *framework.Transforme
 		caseLabel = tc.WalkerState.ID
 	}
 
-	data, err := t.dispatcher.Dispatch(dispatch.DispatchContext{
+	data, err := t.dispatcher.Dispatch(ctx, dispatch.DispatchContext{
 		CaseID: caseLabel, Step: nodeName,
 		PromptPath: promptFile, ArtifactPath: artifactFile,
 	})

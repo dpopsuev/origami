@@ -228,7 +228,7 @@ func (t *dispatchTransformer) Transform(ctx context.Context, tc *framework.Trans
 		Step:          tc.NodeName,
 		PromptContent: tc.Prompt,
 	}
-	artifact, err := t.disp.Dispatch(dc)
+	artifact, err := t.disp.Dispatch(ctx, dc)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +309,7 @@ func TestOllamaE2E_SimpleCircuit(t *testing.T) {
 					Step:          "ASK",
 					PromptContent: "What is 2+2? Reply with only the number.",
 				}
-				artifact, err := disp.Dispatch(dc)
+				artifact, err := disp.Dispatch(ctx, dc)
 				if err != nil {
 					return nil, err
 				}
@@ -393,7 +393,7 @@ func TestOllamaE2E_MultiStepCascade(t *testing.T) {
 						Step:          step,
 						PromptContent: prompts[step],
 					}
-					artifact, err := disp.Dispatch(dc)
+					artifact, err := disp.Dispatch(ctx, dc)
 					if err != nil {
 						return nil, err
 					}
@@ -617,7 +617,7 @@ func TestOllamaE2E_UnhappyPaths(t *testing.T) {
 						Step:          "VALIDATE",
 						PromptContent: "test",
 					}
-					_, err := disp.Dispatch(dc)
+					_, err := disp.Dispatch(ctx, dc)
 					return nil, err
 				}, mcp.SessionMeta{TotalCases: 1, Scenario: "unhappy"}, nil
 			},
@@ -684,7 +684,7 @@ func TestOllamaE2E_UnhappyPaths(t *testing.T) {
 						Step:          "KNOWN",
 						PromptContent: "test",
 					}
-					_, err := disp.Dispatch(dc)
+					_, err := disp.Dispatch(ctx, dc)
 					return nil, err
 				}, mcp.SessionMeta{TotalCases: 1, Scenario: "unhappy"}, nil
 			},
@@ -748,7 +748,7 @@ func TestOllamaE2E_UnhappyPaths(t *testing.T) {
 						Step:          "SLOW",
 						PromptContent: "Write a very long essay about the history of mathematics.",
 					}
-					_, err := disp.Dispatch(dc)
+					_, err := disp.Dispatch(ctx, dc)
 					return nil, err
 				}, mcp.SessionMeta{TotalCases: 1, Scenario: "timeout"}, nil
 			},

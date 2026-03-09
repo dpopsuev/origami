@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"testing"
@@ -13,7 +14,7 @@ type failingDispatcher struct {
 	mu      sync.Mutex
 }
 
-func (d *failingDispatcher) Dispatch(_ DispatchContext) ([]byte, error) {
+func (d *failingDispatcher) Dispatch(_ context.Context, _ DispatchContext) ([]byte, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.calls++
@@ -36,14 +37,14 @@ func TestCircuitBreaker_OpensAfterThreshold(t *testing.T) {
 
 	ctx := DispatchContext{Step: "test"}
 	for i := 0; i < 3; i++ {
-		_, _ = cb.Dispatch(ctx)
+		_, _ = cb.Dispatch(context.Background(), ctx)
 	}
 
 	if cb.State() != CircuitOpen {
 		t.Errorf("expected CircuitOpen after 3 failures, got %s", cb.State())
 	}
 
-	_, err := cb.Dispatch(ctx)
+	_, err := cb.Dispatch(context.Background(), ctx)
 	if !errors.Is(err, ErrCircuitOpen) {
 		t.Errorf("expected ErrCircuitOpen, got %v", err)
 	}
@@ -62,7 +63,7 @@ func TestCircuitBreaker_HalfOpenProbeSuccess(t *testing.T) {
 
 	ctx := DispatchContext{Step: "test"}
 	for i := 0; i < 3; i++ {
-		_, _ = cb.Dispatch(ctx)
+		_, _ = cb.Dispatch(context.Background(), ctx)
 	}
 
 	if cb.State() != CircuitOpen {
@@ -71,7 +72,7 @@ func TestCircuitBreaker_HalfOpenProbeSuccess(t *testing.T) {
 
 	time.Sleep(5 * time.Millisecond)
 
-	data, err := cb.Dispatch(ctx)
+	data, err := cb.Dispatch(context.Background(), ctx)
 	if err != nil {
 		t.Fatalf("half-open probe should succeed: %v", err)
 	}
@@ -92,12 +93,12 @@ func TestCircuitBreaker_HalfOpenProbeFailure(t *testing.T) {
 
 	ctx := DispatchContext{Step: "test"}
 	for i := 0; i < 2; i++ {
-		_, _ = cb.Dispatch(ctx)
+		_, _ = cb.Dispatch(context.Background(), ctx)
 	}
 
 	time.Sleep(5 * time.Millisecond)
 
-	_, err := cb.Dispatch(ctx)
+	_, err := cb.Dispatch(context.Background(), ctx)
 	if err == nil {
 		t.Fatal("expected failure on half-open probe")
 	}
@@ -111,7 +112,7 @@ func TestCircuitBreaker_ClosedOnSuccess(t *testing.T) {
 	cb := NewCircuitBreakerDispatcher(inner, CircuitBreakerConfig{Threshold: 5})
 
 	ctx := DispatchContext{Step: "test"}
-	data, err := cb.Dispatch(ctx)
+	data, err := cb.Dispatch(context.Background(), ctx)
 	if err != nil {
 		t.Fatalf("expected success: %v", err)
 	}
@@ -144,7 +145,7 @@ func TestCircuitBreaker_ConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _ = cb.Dispatch(ctx)
+			_, _ = cb.Dispatch(context.Background(), ctx)
 		}()
 	}
 	wg.Wait()

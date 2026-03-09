@@ -92,7 +92,7 @@ type chatChoice struct {
 	Message chatMessage `json:"message"`
 }
 
-func (d *HTTPDispatcher) Dispatch(dctx DispatchContext) ([]byte, error) {
+func (d *HTTPDispatcher) Dispatch(ctx context.Context, dctx DispatchContext) ([]byte, error) {
 	prompt, err := os.ReadFile(dctx.PromptPath)
 	if err != nil {
 		return nil, fmt.Errorf("dispatch/http: read prompt: %w", err)
@@ -115,7 +115,7 @@ func (d *HTTPDispatcher) Dispatch(dctx DispatchContext) ([]byte, error) {
 	}
 
 	url := d.BaseURL + "/v1/chat/completions"
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("dispatch/http: create request: %w", err)
 	}

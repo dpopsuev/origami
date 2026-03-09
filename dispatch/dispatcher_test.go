@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -89,7 +90,7 @@ func TestFileDispatcher_HappyPath(t *testing.T) {
 		_ = os.WriteFile(artifactPath, data, 0644)
 	}()
 
-	data, err := d.Dispatch(ctx)
+	data, err := d.Dispatch(context.Background(), ctx)
 	if err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
@@ -149,7 +150,7 @@ func TestFileDispatcher_Timeout(t *testing.T) {
 	}
 
 	// No artifact written — should timeout
-	_, err := d.Dispatch(ctx)
+	_, err := d.Dispatch(context.Background(), ctx)
 	if err == nil {
 		t.Fatal("expected timeout error, got nil")
 	}
@@ -197,7 +198,7 @@ func TestFileDispatcher_InvalidJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := d.Dispatch(ctx)
+	_, err := d.Dispatch(context.Background(), ctx)
 	if err == nil {
 		t.Fatal("expected invalid JSON error, got nil")
 	}
@@ -254,7 +255,7 @@ func TestFileDispatcher_SignalLifecycle(t *testing.T) {
 		}
 	}()
 
-	data, err := d.Dispatch(ctx)
+	data, err := d.Dispatch(context.Background(), ctx)
 	if err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
@@ -326,7 +327,7 @@ func TestFileDispatcher_RejectsStaleArtifactByDispatchID(t *testing.T) {
 		}
 	}()
 
-	data, err := d.Dispatch(ctx)
+	data, err := d.Dispatch(context.Background(), ctx)
 	if err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
@@ -387,7 +388,7 @@ func TestFileDispatcher_StaleToleranceExceeded(t *testing.T) {
 	defer func() { <-done }()
 
 	start := time.Now()
-	_, err := d.Dispatch(ctx)
+	_, err := d.Dispatch(context.Background(), ctx)
 	elapsed := time.Since(start)
 
 	if err == nil {
@@ -450,7 +451,7 @@ func TestFileDispatcher_ResponderErrorFailsFast(t *testing.T) {
 	}()
 
 	start := time.Now()
-	_, err := d.Dispatch(ctx)
+	_, err := d.Dispatch(context.Background(), ctx)
 	elapsed := time.Since(start)
 
 	if err == nil {
@@ -506,7 +507,7 @@ func TestFileDispatcher_MonotonicDispatchID(t *testing.T) {
 			}
 		}(i)
 
-		data, err := d.Dispatch(ctx)
+		data, err := d.Dispatch(context.Background(), ctx)
 		if err != nil {
 			t.Fatalf("dispatch #%d: %v", i, err)
 		}

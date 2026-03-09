@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -87,7 +88,7 @@ func (d *CircuitBreakerDispatcher) State() CircuitState {
 // Dispatch delegates to the inner dispatcher if the circuit is closed or
 // half-open (probe). Returns ErrCircuitOpen if the circuit is open and
 // cooldown has not elapsed.
-func (d *CircuitBreakerDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
+func (d *CircuitBreakerDispatcher) Dispatch(ctx context.Context, dc DispatchContext) ([]byte, error) {
 	d.mu.Lock()
 	switch d.state {
 	case CircuitOpen:
@@ -100,7 +101,7 @@ func (d *CircuitBreakerDispatcher) Dispatch(ctx DispatchContext) ([]byte, error)
 	}
 	d.mu.Unlock()
 
-	data, err := d.inner.Dispatch(ctx)
+	data, err := d.inner.Dispatch(ctx, dc)
 
 	d.mu.Lock()
 	defer d.mu.Unlock()

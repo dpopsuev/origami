@@ -69,19 +69,19 @@ func NewCLIDispatcher(command string, opts ...CLIOption) (*CLIDispatcher, error)
 
 // Dispatch reads the prompt from PromptPath, pipes it to the CLI command's
 // stdin, captures stdout as the artifact, and writes it to ArtifactPath.
-func (d *CLIDispatcher) Dispatch(dctx DispatchContext) ([]byte, error) {
+func (d *CLIDispatcher) Dispatch(ctx context.Context, dctx DispatchContext) ([]byte, error) {
 	prompt, err := os.ReadFile(dctx.PromptPath)
 	if err != nil {
 		return nil, fmt.Errorf("dispatch/cli: read prompt: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout)
+	cmdCtx, cancel := context.WithTimeout(ctx, d.Timeout)
 	defer cancel()
 
 	args := make([]string, len(d.Args))
 	copy(args, d.Args)
 
-	cmd := exec.CommandContext(ctx, d.Command, args...)
+	cmd := exec.CommandContext(cmdCtx, d.Command, args...)
 	cmd.Stdin = bytes.NewReader(prompt)
 
 	var stdout, stderr bytes.Buffer
@@ -97,7 +97,7 @@ func (d *CLIDispatcher) Dispatch(dctx DispatchContext) ([]byte, error) {
 	start := time.Now()
 	if err := cmd.Run(); err != nil {
 		stderrStr := stderr.String()
-		if ctx.Err() == context.DeadlineExceeded {
+		if cmdCtx.Err() == context.DeadlineExceeded {
 			return nil, fmt.Errorf("dispatch/cli: command timed out after %v (stderr: %s)", d.Timeout, stderrStr)
 		}
 		return nil, fmt.Errorf("dispatch/cli: command failed: %w (stderr: %s)", err, stderrStr)

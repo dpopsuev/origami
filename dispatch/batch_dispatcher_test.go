@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -77,7 +78,7 @@ func TestBatchFileDispatcher_AllComplete(t *testing.T) {
 		}
 	}()
 
-	results, errs := bd.DispatchBatch(cases, "triage", "")
+	results, errs := bd.DispatchBatch(context.Background(), cases, "triage", "")
 
 	for i, err := range errs {
 		if err != nil {
@@ -156,7 +157,7 @@ func TestBatchFileDispatcher_PartialFailure(t *testing.T) {
 		}
 	}()
 
-	_, errs := bd.DispatchBatch(cases, "triage", "")
+	_, errs := bd.DispatchBatch(context.Background(), cases, "triage", "")
 
 	if errs[0] != nil {
 		t.Errorf("case 0 should succeed, got: %v", errs[0])
@@ -237,7 +238,7 @@ func TestBatchFileDispatcher_ManifestLifecycle(t *testing.T) {
 		}
 	}()
 
-	_, errs := bd.DispatchBatch([]DispatchContext{ctx}, "triage", "")
+	_, errs := bd.DispatchBatch(context.Background(), []DispatchContext{ctx}, "triage", "")
 	if errs[0] != nil {
 		t.Errorf("dispatch error: %v", errs[0])
 	}
@@ -255,7 +256,7 @@ func TestBatchFileDispatcher_EmptyBatch(t *testing.T) {
 	bd := NewBatchFileDispatcher(BatchFileDispatcherConfig{
 		SuiteDir: t.TempDir(),
 	})
-	data, errs := bd.DispatchBatch(nil, "triage", "")
+	data, errs := bd.DispatchBatch(context.Background(), nil, "triage", "")
 	if data != nil || errs != nil {
 		t.Errorf("empty batch should return nil, nil; got %v, %v", data, errs)
 	}
@@ -309,7 +310,7 @@ func TestBatchFileDispatcher_SingleDispatchInterface(t *testing.T) {
 
 	// Use the Dispatcher interface
 	var d Dispatcher = bd
-	data, err := d.Dispatch(ctx)
+	data, err := d.Dispatch(context.Background(), ctx)
 	if err != nil {
 		t.Fatalf("Dispatch error: %v", err)
 	}

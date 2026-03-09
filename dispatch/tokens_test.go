@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -253,7 +254,7 @@ func TestTokenTrackingDispatcher_OnDispatchHook(t *testing.T) {
 		}{provider, step, err != nil})
 	})
 
-	_, _ = ttd.Dispatch(DispatchContext{
+	_, _ = ttd.Dispatch(context.Background(), DispatchContext{
 		CaseID:     "C1",
 		Step:       "recall",
 		PromptPath: "/dev/null",
@@ -275,7 +276,7 @@ type stubDispatcher struct {
 	err      error
 }
 
-func (s *stubDispatcher) Dispatch(_ DispatchContext) ([]byte, error) {
+func (s *stubDispatcher) Dispatch(_ context.Context, _ DispatchContext) ([]byte, error) {
 	return s.response, s.err
 }
 

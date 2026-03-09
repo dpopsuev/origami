@@ -76,7 +76,7 @@ func (t *LLMTransformer) Transform(ctx context.Context, tc *fw.TransformerContex
 		ArtifactPath: artifactPath,
 	}
 
-	data, err := t.dispatcher.Dispatch(dc)
+	data, err := t.dispatcher.Dispatch(ctx, dc)
 	if err != nil {
 		return nil, fmt.Errorf("dispatch %s: %w", tc.NodeName, err)
 	}

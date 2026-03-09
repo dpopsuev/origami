@@ -114,7 +114,7 @@ func runSeedCircuit(
 	log := slog.Default().With("component", "ouroboros-seed")
 
 	dispatcher := func(ctx context.Context, nodeName string, prompt string) (string, error) {
-		artifactBytes, err := disp.Dispatch(dispatch.DispatchContext{
+		artifactBytes, err := disp.Dispatch(ctx, dispatch.DispatchContext{
 			CaseID:        seed.Name,
 			Step:          nodeName,
 			PromptContent: prompt,

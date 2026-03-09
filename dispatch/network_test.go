@@ -58,7 +58,7 @@ func TestNetworkDispatch_SingleAgent(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		dispatchResult, dispatchErr = mux.Dispatch(DispatchContext{
+		dispatchResult, dispatchErr = mux.Dispatch(context.Background(), DispatchContext{
 			CaseID:       "C1",
 			Step:         "F0_RECALL",
 			PromptPath:   "/tmp/prompt.json",
@@ -126,7 +126,7 @@ func TestNetworkDispatch_TwoAgentsConcurrent(t *testing.T) {
 		dispatchWg.Add(1)
 		go func() {
 			defer dispatchWg.Done()
-			data, err := mux.Dispatch(DispatchContext{
+			data, err := mux.Dispatch(context.Background(), DispatchContext{
 				CaseID: fmt.Sprintf("C%d", i),
 				Step:   "F0",
 			})
@@ -161,7 +161,7 @@ func TestNetworkDispatch_ProtocolIdenticalToInProcess(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		mux.Dispatch(DispatchContext{
+		mux.Dispatch(context.Background(), DispatchContext{
 			CaseID:       "C1",
 			Step:         "TRIAGE",
 			PromptPath:   "/p/prompt.json",
@@ -197,7 +197,7 @@ func TestNetworkDispatch_InProcessModeUnchanged(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		data, err := mux.Dispatch(DispatchContext{CaseID: "C1", Step: "F0"})
+		data, err := mux.Dispatch(context.Background(), DispatchContext{CaseID: "C1", Step: "F0"})
 		if err != nil {
 			t.Errorf("Dispatch: %v", err)
 			return

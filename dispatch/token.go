@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
@@ -247,23 +248,23 @@ func (d *TokenTrackingDispatcher) OnDispatch(hook DispatchHook) {
 }
 
 // Dispatch delegates to the inner dispatcher while recording token metrics.
-func (d *TokenTrackingDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
+func (d *TokenTrackingDispatcher) Dispatch(ctx context.Context, dc DispatchContext) ([]byte, error) {
 	promptBytes := 0
-	if info, err := os.Stat(ctx.PromptPath); err == nil {
+	if info, err := os.Stat(dc.PromptPath); err == nil {
 		promptBytes = int(info.Size())
 	}
 
 	provider := d.provider
-	if ctx.Provider != "" {
-		provider = ctx.Provider
+	if dc.Provider != "" {
+		provider = dc.Provider
 	}
 
 	start := time.Now()
-	data, err := d.inner.Dispatch(ctx)
+	data, err := d.inner.Dispatch(ctx, dc)
 	elapsed := time.Since(start)
 
 	for _, h := range d.dispatchHooks {
-		h(provider, ctx.Step, elapsed, err)
+		h(provider, dc.Step, elapsed, err)
 	}
 
 	if err != nil {
@@ -273,8 +274,8 @@ func (d *TokenTrackingDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) 
 	artifactBytes := len(data)
 
 	d.tracker.Record(TokenRecord{
-		CaseID:         ctx.CaseID,
-		Step:           ctx.Step,
+		CaseID:         dc.CaseID,
+		Step:           dc.Step,
 		PromptBytes:    promptBytes,
 		ArtifactBytes:  artifactBytes,
 		PromptTokens:   EstimateTokens(promptBytes),

@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -42,7 +43,7 @@ func (d *StaticDispatcher) Set(caseID, step string, data json.RawMessage) {
 }
 
 // Dispatch returns the pre-authored artifact for the given case and step.
-func (d *StaticDispatcher) Dispatch(ctx DispatchContext) ([]byte, error) {
+func (d *StaticDispatcher) Dispatch(_ context.Context, ctx DispatchContext) ([]byte, error) {
 	key := staticKey(ctx.CaseID, ctx.Step)
 
 	if data, ok := d.artifacts[key]; ok {

@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ func TestStaticDispatcher_InMemory(t *testing.T) {
 	data := json.RawMessage(`{"category":"infra"}`)
 	d.Set("C1", "F0_RECALL", data)
 
-	got, err := d.Dispatch(DispatchContext{CaseID: "C1", Step: "F0_RECALL"})
+	got, err := d.Dispatch(context.Background(), DispatchContext{CaseID: "C1", Step: "F0_RECALL"})
 	if err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
@@ -31,7 +32,7 @@ func TestStaticDispatcher_InMemory(t *testing.T) {
 
 func TestStaticDispatcher_MissingArtifact(t *testing.T) {
 	d := NewStaticDispatcher("")
-	_, err := d.Dispatch(DispatchContext{CaseID: "C99", Step: "F0_RECALL"})
+	_, err := d.Dispatch(context.Background(), DispatchContext{CaseID: "C99", Step: "F0_RECALL"})
 	if err == nil {
 		t.Error("expected error for missing artifact")
 	}
@@ -51,7 +52,7 @@ func TestStaticDispatcher_FromDirectory(t *testing.T) {
 
 	d := NewStaticDispatcher(dir)
 
-	got, err := d.Dispatch(DispatchContext{CaseID: "C1", Step: "F1_TRIAGE"})
+	got, err := d.Dispatch(context.Background(), DispatchContext{CaseID: "C1", Step: "F1_TRIAGE"})
 	if err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
@@ -74,7 +75,7 @@ func TestStaticDispatcher_CaseInsensitiveFallback(t *testing.T) {
 
 	d := NewStaticDispatcher(dir)
 
-	got, err := d.Dispatch(DispatchContext{CaseID: "C2", Step: "F0_RECALL"})
+	got, err := d.Dispatch(context.Background(), DispatchContext{CaseID: "C2", Step: "F0_RECALL"})
 	if err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
@@ -96,7 +97,7 @@ func TestStaticDispatcher_InMemoryOverridesFile(t *testing.T) {
 	d := NewStaticDispatcher(dir)
 	d.Set("C1", "F0_RECALL", json.RawMessage(`{"from":"memory"}`))
 
-	got, err := d.Dispatch(DispatchContext{CaseID: "C1", Step: "F0_RECALL"})
+	got, err := d.Dispatch(context.Background(), DispatchContext{CaseID: "C1", Step: "F0_RECALL"})
 	if err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
