@@ -47,10 +47,19 @@ func connectMCP(ctx context.Context, endpoint, label string) *sdkmcp.ClientSessi
 
 func main() {
 	port := flag.Int("port", 9200, "HTTP port for the RCA MCP server")
+	healthz := flag.Bool("healthz", false, "probe /healthz and exit")
 	domainEndpoint := flag.String("domain-endpoint", envOr("DOMAIN_ENDPOINT", ""), "Domain data MCP endpoint (required)")
 	knowledgeEndpoint := flag.String("knowledge-endpoint", envOr("KNOWLEDGE_ENDPOINT", ""), "Knowledge MCP endpoint (optional)")
 	productName := flag.String("product", envOr("PRODUCT_NAME", "asterisk"), "Product name for state directory")
 	flag.Parse()
+
+	if *healthz {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", *port))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 
 	if *domainEndpoint == "" {
 		log.Fatal("--domain-endpoint is required")

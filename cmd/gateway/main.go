@@ -27,9 +27,18 @@ func (b *backendFlags) Set(val string) error {
 
 func main() {
 	port := flag.Int("port", 9000, "HTTP port for the gateway")
+	healthz := flag.Bool("healthz", false, "probe /healthz and exit")
 	var backends backendFlags
 	flag.Var(&backends, "backend", "Backend in name=url format (repeatable)")
 	flag.Parse()
+
+	if *healthz {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", *port))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 
 	if len(backends) == 0 {
 		log.Fatal("at least one --backend is required")

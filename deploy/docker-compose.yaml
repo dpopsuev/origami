@@ -22,7 +22,7 @@ services:
       - "9100:9100"
     command: ["--port", "9100", "--drivers", "git,docs"]
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/healthz"]
+      test: ["CMD", "/knowledge-serve", "--healthz"]
       interval: 5s
       timeout: 3s
       retries: 3
@@ -32,7 +32,7 @@ services:
     ports:
       - "9300:9300"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9300/healthz"]
+      test: ["CMD", "/domain-serve", "--healthz"]
       interval: 5s
       timeout: 3s
       retries: 3
@@ -57,7 +57,7 @@ services:
       asterisk:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9200/healthz"]
+      test: ["CMD", "/rca-serve", "--healthz"]
       interval: 5s
       timeout: 3s
       retries: 3
@@ -83,7 +83,7 @@ services:
       asterisk:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/healthz"]
+      test: ["CMD", "/gateway", "--healthz"]
       interval: 5s
       timeout: 3s
       retries: 3

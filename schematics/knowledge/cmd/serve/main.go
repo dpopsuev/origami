@@ -24,8 +24,17 @@ import (
 
 func main() {
 	port := flag.Int("port", 9100, "HTTP port for the MCP server")
+	healthz := flag.Bool("healthz", false, "probe /healthz and exit")
 	drivers := flag.String("drivers", "", "comma-separated driver names to register (e.g. git,docs)")
 	flag.Parse()
+
+	if *healthz {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", *port))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 
 	var opts []skn.RouterOption
 	if *drivers != "" {

@@ -303,6 +303,16 @@ import (
 var domainData embed.FS
 
 func main() {
+	for _, arg := range os.Args[1:] {
+		if arg == "--healthz" {
+			resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", {{ .Port }}))
+			if err != nil || resp.StatusCode != http.StatusOK {
+				os.Exit(1)
+			}
+			os.Exit(0)
+		}
+	}
+
 	handler := domainserve.New(domainData, domainserve.Config{
 		Name:    {{ printf "%q" .Name }},
 		Version: {{ printf "%q" .Version }},
