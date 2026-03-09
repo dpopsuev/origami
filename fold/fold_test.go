@@ -254,6 +254,130 @@ func TestContainerDockerfileTemplate(t *testing.T) {
 	}
 }
 
+func TestValidateCircuitRefs_ValidRef(t *testing.T) {
+	tmpDir := t.TempDir()
+	writeFile := func(rel, content string) {
+		t.Helper()
+		p := filepath.Join(tmpDir, rel)
+		os.MkdirAll(filepath.Dir(p), 0755)
+		os.WriteFile(p, []byte(content), 0644)
+	}
+
+	writeFile("circuits/rca.yaml", `
+nodes:
+  - name: gather-code
+    handler_type: circuit
+    handler: knowledge
+  - name: resolve
+    handler_type: transformer
+    handler: resolve
+`)
+	writeFile("circuits/knowledge.yaml", `
+nodes:
+  - name: tree
+    handler: knowledge.tree
+`)
+
+	m := &Manifest{
+		DomainServe: &DomainServeConfig{
+			Assets: &AssetMap{
+				Circuits: map[string]string{
+					"rca":       "circuits/rca.yaml",
+					"knowledge": "circuits/knowledge.yaml",
+				},
+			},
+		},
+	}
+
+	if err := validateCircuitRefs(m, tmpDir); err != nil {
+		t.Fatalf("valid circuit ref rejected: %v", err)
+	}
+}
+
+func TestValidateCircuitRefs_MissingRef(t *testing.T) {
+	tmpDir := t.TempDir()
+	p := filepath.Join(tmpDir, "circuits")
+	os.MkdirAll(p, 0755)
+	os.WriteFile(filepath.Join(p, "rca.yaml"), []byte(`
+nodes:
+  - name: gather-code
+    handler_type: circuit
+    handler: nonexistent
+`), 0644)
+
+	m := &Manifest{
+		DomainServe: &DomainServeConfig{
+			Assets: &AssetMap{
+				Circuits: map[string]string{"rca": "circuits/rca.yaml"},
+			},
+		},
+	}
+
+	err := validateCircuitRefs(m, tmpDir)
+	if err == nil {
+		t.Fatal("expected error for missing circuit ref")
+	}
+	if !strings.Contains(err.Error(), "nonexistent") || !strings.Contains(err.Error(), "not in assets.circuits") {
+		t.Errorf("error should mention missing circuit: %v", err)
+	}
+}
+
+func TestValidateCircuitRefs_CycleDetected(t *testing.T) {
+	tmpDir := t.TempDir()
+	writeFile := func(rel, content string) {
+		t.Helper()
+		p := filepath.Join(tmpDir, rel)
+		os.MkdirAll(filepath.Dir(p), 0755)
+		os.WriteFile(p, []byte(content), 0644)
+	}
+
+	writeFile("circuits/a.yaml", `
+nodes:
+  - name: call-b
+    handler_type: circuit
+    handler: b
+`)
+	writeFile("circuits/b.yaml", `
+nodes:
+  - name: call-a
+    handler_type: circuit
+    handler: a
+`)
+
+	m := &Manifest{
+		DomainServe: &DomainServeConfig{
+			Assets: &AssetMap{
+				Circuits: map[string]string{
+					"a": "circuits/a.yaml",
+					"b": "circuits/b.yaml",
+				},
+			},
+		},
+	}
+
+	err := validateCircuitRefs(m, tmpDir)
+	if err == nil {
+		t.Fatal("expected error for circuit cycle")
+	}
+	if !strings.Contains(err.Error(), "cycle") {
+		t.Errorf("error should mention cycle: %v", err)
+	}
+}
+
+func TestValidateCircuitRefs_NoCircuits(t *testing.T) {
+	m := &Manifest{DomainServe: &DomainServeConfig{Assets: &AssetMap{}}}
+	if err := validateCircuitRefs(m, t.TempDir()); err != nil {
+		t.Fatalf("empty circuits should pass: %v", err)
+	}
+}
+
+func TestValidateCircuitRefs_NilManifest(t *testing.T) {
+	m := &Manifest{}
+	if err := validateCircuitRefs(m, t.TempDir()); err != nil {
+		t.Fatalf("nil domain_serve should pass: %v", err)
+	}
+}
+
 func TestRun_IntegrationBuild_WithDomains(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test skipped in short mode")

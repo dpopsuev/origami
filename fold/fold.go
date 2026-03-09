@@ -8,7 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // ModuleResolver locates Go modules on the local filesystem.
@@ -88,7 +91,10 @@ func validateManifest(m *Manifest, manifestDir string, verbose bool) error {
 	if err := validateDomainDirs(m, manifestDir, verbose); err != nil {
 		return err
 	}
-	return validateAssetPaths(m, manifestDir)
+	if err := validateAssetPaths(m, manifestDir); err != nil {
+		return err
+	}
+	return validateCircuitRefs(m, manifestDir)
 }
 
 func validateNoDuplicateDomains(m *Manifest) error {
@@ -492,6 +498,109 @@ func copyEmbedFiles(ds *DomainServeConfig, manifestDir, tmpDir string, verbose b
 		fmt.Fprintf(os.Stderr, "copied %d asset files\n", len(paths))
 	}
 	return nil
+}
+
+// validateCircuitRefs checks that every node with handler_type: circuit
+// references a circuit name that exists in assets.circuits, and that the
+// circuit dependency graph is acyclic.
+func validateCircuitRefs(m *Manifest, manifestDir string) error {
+	if m.DomainServe == nil || m.DomainServe.Assets == nil {
+		return nil
+	}
+	circuits := m.DomainServe.Assets.Circuits
+	if len(circuits) == 0 {
+		return nil
+	}
+
+	deps := make(map[string][]string)
+	for name, path := range circuits {
+		refs, err := extractCircuitRefs(filepath.Join(manifestDir, path))
+		if err != nil {
+			return fmt.Errorf("circuit %q: %w", name, err)
+		}
+		for _, ref := range refs {
+			if _, ok := circuits[ref]; !ok {
+				return fmt.Errorf("circuit %q references circuit %q which is not in assets.circuits", name, ref)
+			}
+		}
+		deps[name] = refs
+	}
+
+	if cycle := detectCircuitCycle(deps); cycle != "" {
+		return fmt.Errorf("circuit dependency cycle detected: %s", cycle)
+	}
+	return nil
+}
+
+type circuitFileForValidation struct {
+	Nodes []struct {
+		Name        string `yaml:"name"`
+		HandlerType string `yaml:"handler_type"`
+		Handler     string `yaml:"handler"`
+	} `yaml:"nodes"`
+}
+
+func extractCircuitRefs(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read circuit: %w", err)
+	}
+	var cf circuitFileForValidation
+	if err := yaml.Unmarshal(data, &cf); err != nil {
+		return nil, fmt.Errorf("parse circuit: %w", err)
+	}
+	var refs []string
+	for _, n := range cf.Nodes {
+		if n.HandlerType == "circuit" && n.Handler != "" {
+			refs = append(refs, n.Handler)
+		}
+	}
+	return refs, nil
+}
+
+func detectCircuitCycle(deps map[string][]string) string {
+	const (
+		white = 0
+		gray  = 1
+		black = 2
+	)
+	color := make(map[string]int)
+	var path []string
+
+	var visit func(string) bool
+	visit = func(node string) bool {
+		color[node] = gray
+		path = append(path, node)
+		for _, dep := range deps[node] {
+			switch color[dep] {
+			case gray:
+				path = append(path, dep)
+				return true
+			case white:
+				if visit(dep) {
+					return true
+				}
+			}
+		}
+		path = path[:len(path)-1]
+		color[node] = black
+		return false
+	}
+
+	sorted := make([]string, 0, len(deps))
+	for k := range deps {
+		sorted = append(sorted, k)
+	}
+	sort.Strings(sorted)
+
+	for _, node := range sorted {
+		if color[node] == white {
+			if visit(node) {
+				return strings.Join(path, " → ")
+			}
+		}
+	}
+	return ""
 }
 
 func copyFile(src, dst string) error {
