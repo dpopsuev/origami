@@ -206,6 +206,12 @@ func (s *CircuitSession) WorkerPrompt(cfg *CircuitConfig) string {
 	}
 	sb.WriteString(preamble)
 	sb.WriteString(" Process circuit steps by calling MCP tools directly in a loop until the circuit is drained.\n\n")
+
+	if cfg.GatewayEndpoint != "" {
+		sb.WriteString("## Connection\n\n")
+		sb.WriteString(fmt.Sprintf("Connect to the MCP server at: %s\n\n", cfg.GatewayEndpoint))
+	}
+
 	sb.WriteString("## Protocol\n\nFollow this exact sequence:\n\n")
 
 	sb.WriteString(fmt.Sprintf(`1. Emit start signal:

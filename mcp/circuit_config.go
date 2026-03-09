@@ -100,6 +100,12 @@ type CircuitConfig struct {
 	// successful completion, abort, force-replace, or TTL expiry. Use it
 	// to clear stale walkers from the Kami store. Nil is safe.
 	OnSessionEnd func()
+
+	// GatewayEndpoint is the MCP gateway URL that workers connect to
+	// (e.g. "http://localhost:9000/mcp"). When set, WorkerPrompt()
+	// includes a Connection section so Task subagents — which don't
+	// inherit project-level MCP configs — know where to connect.
+	GatewayEndpoint string
 }
 
 // FindSchema returns the StepSchema for the given step name, or an error

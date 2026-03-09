@@ -873,3 +873,44 @@ func TestMux_MultipleSequentialRoundTrips(t *testing.T) {
 		}
 	}
 }
+
+func TestMux_LateConsumer_BlocksUntilReady(t *testing.T) {
+	d := dispatch.NewMuxDispatcher(context.Background())
+	want := []byte(`{"result":"late_ok"}`)
+
+	type dispatchResult struct {
+		data []byte
+		err  error
+	}
+	resultCh := make(chan dispatchResult, 1)
+
+	go func() {
+		data, err := d.Dispatch(context.Background(), dispatch.DispatchContext{
+			CaseID: "C1", Step: "F0_RECALL",
+		})
+		resultCh <- dispatchResult{data, err}
+	}()
+
+	// Simulate worker startup latency — consumer arrives 500ms after producer.
+	time.Sleep(500 * time.Millisecond)
+
+	dc, err := d.GetNextStep(context.Background())
+	if err != nil {
+		t.Fatalf("GetNextStep after 500ms delay: %v", err)
+	}
+	if err := d.SubmitArtifact(context.Background(), dc.DispatchID, want); err != nil {
+		t.Fatalf("SubmitArtifact: %v", err)
+	}
+
+	select {
+	case r := <-resultCh:
+		if r.err != nil {
+			t.Fatalf("Dispatch failed with late consumer: %v", r.err)
+		}
+		if string(r.data) != string(want) {
+			t.Errorf("got %s, want %s", r.data, want)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Dispatch did not complete within 5s")
+	}
+}

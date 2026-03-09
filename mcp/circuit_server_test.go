@@ -1546,3 +1546,240 @@ func testFieldsForStepWithWorker(step string, workerID int) map[string]any {
 		return map[string]any{"step": step, "worker": workerID}
 	}
 }
+
+// --- Gap 1: Dispatch gap — late worker tests ---
+
+func TestCircuitSession_LateWorker_StillGetsSteps(t *testing.T) {
+	ctx := context.Background()
+	runCtx, runCancel := context.WithCancel(ctx)
+
+	disp := dispatch.NewMuxDispatcher(runCtx, dispatch.WithMuxSignalBus(dispatch.NewSignalBus()))
+	bus := dispatch.NewSignalBus()
+
+	nCases, nSteps := 3, 1
+	steps := []string{"STEP_A"}
+	runFn := stubRunFunc(disp, nCases, nSteps, 1, steps, "")
+
+	sess := mcp.NewCircuitSession(runCtx, "test-late-worker",
+		mcp.SessionMeta{TotalCases: nCases, Scenario: "late-worker"},
+		1, disp, bus, runFn, runCancel)
+	sess.SetTTL(300 * time.Second)
+
+	// Simulate worker startup latency.
+	time.Sleep(2 * time.Second)
+
+	if state := sess.GetState(); state != mcp.StateRunning {
+		t.Fatalf("session state after 2s = %s; want running "+
+			"(session completed before workers could connect)", state)
+	}
+
+	for i := 0; i < nCases; i++ {
+		dc, done, avail, err := sess.GetNextStep(ctx, 5*time.Second)
+		if err != nil {
+			t.Fatalf("step %d: GetNextStep error: %v", i, err)
+		}
+		if done {
+			t.Fatalf("step %d: session done prematurely (dispatch gap)", i)
+		}
+		if !avail {
+			t.Fatalf("step %d: no step available", i)
+		}
+		fields := testFieldsForStep(dc.Step)
+		data, _ := json.Marshal(fields)
+		if err := sess.SubmitArtifact(ctx, dc.DispatchID, data); err != nil {
+			t.Fatalf("step %d: SubmitArtifact: %v", i, err)
+		}
+	}
+
+	select {
+	case <-sess.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("session did not complete after all steps submitted")
+	}
+
+	if sess.Err() != nil {
+		t.Fatalf("session error: %v", sess.Err())
+	}
+	if sess.Result() == nil {
+		t.Fatal("session result is nil")
+	}
+}
+
+func TestCircuitServer_MCP_LateWorkerEndToEnd(t *testing.T) {
+	cfg := newTestConfig(2, 1, "")
+	srv := newTestServer(t, cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_circuit", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	// Simulate worker startup latency.
+	time.Sleep(2 * time.Second)
+
+	stepsProcessed := 0
+	for {
+		res, err := callToolE(ctx, session, "get_next_step", map[string]any{
+			"session_id": sessionID,
+			"timeout_ms": 5000,
+		})
+		if err != nil {
+			t.Fatalf("get_next_step: %v", err)
+		}
+
+		if done, _ := res["done"].(bool); done {
+			break
+		}
+		if avail, _ := res["available"].(bool); !avail {
+			continue
+		}
+
+		dispatchID := int64(res["dispatch_id"].(float64))
+		step, _ := res["step"].(string)
+
+		_, err = callToolE(ctx, session, "submit_step", map[string]any{
+			"session_id":  sessionID,
+			"dispatch_id": dispatchID,
+			"step":        step,
+			"fields":      testFieldsForStep(step),
+		})
+		if err != nil {
+			t.Fatalf("submit_step: %v", err)
+		}
+		stepsProcessed++
+	}
+
+	if stepsProcessed != 2 {
+		t.Fatalf("processed %d steps, want 2 "+
+			"(0 means the dispatch gap caused instant completion)", stepsProcessed)
+	}
+}
+
+func TestCircuitServer_MCP_LateWorker_ReportProduced(t *testing.T) {
+	cfg := newTestConfig(3, 1, "")
+	srv := newTestServer(t, cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	session := connectInMemory(t, ctx, srv)
+	defer session.Close()
+
+	startResult := callTool(t, ctx, session, "start_circuit", map[string]any{
+		"parallel": 1,
+	})
+	sessionID := startResult["session_id"].(string)
+
+	time.Sleep(1 * time.Second)
+
+	for {
+		res, err := callToolE(ctx, session, "get_next_step", map[string]any{
+			"session_id": sessionID,
+			"timeout_ms": 5000,
+		})
+		if err != nil {
+			t.Fatalf("get_next_step: %v", err)
+		}
+
+		if done, _ := res["done"].(bool); done {
+			break
+		}
+		if avail, _ := res["available"].(bool); !avail {
+			continue
+		}
+
+		dispatchID := int64(res["dispatch_id"].(float64))
+		step, _ := res["step"].(string)
+
+		_, err = callToolE(ctx, session, "submit_step", map[string]any{
+			"session_id":  sessionID,
+			"dispatch_id": dispatchID,
+			"step":        step,
+			"fields":      testFieldsForStep(step),
+		})
+		if err != nil {
+			t.Fatalf("submit_step: %v", err)
+		}
+	}
+
+	report, err := callToolE(ctx, session, "get_report", map[string]any{
+		"session_id": sessionID,
+	})
+	if err != nil {
+		t.Fatalf("get_report: %v", err)
+	}
+
+	reportText, _ := report["report"].(string)
+	if reportText == "" {
+		t.Fatal("report text is empty — late worker produced no results")
+	}
+	if !containsCI(reportText, "3 cases") {
+		t.Errorf("report should mention 3 cases, got: %s", reportText)
+	}
+}
+
+// --- Gap 2: MCP routing gap — worker prompt endpoint ---
+
+func TestWorkerPrompt_ContainsEndpointURL(t *testing.T) {
+	endpoint := "http://localhost:9000/mcp"
+	cfg := &mcp.CircuitConfig{
+		Name:            "test-circuit",
+		Version:         "dev",
+		StepSchemas:     testStepSchemas,
+		WorkerPreamble:  "You are a test worker.",
+		GatewayEndpoint: endpoint,
+	}
+
+	ctx := context.Background()
+	runCtx, runCancel := context.WithCancel(ctx)
+	defer runCancel()
+
+	disp := dispatch.NewMuxDispatcher(runCtx)
+	bus := dispatch.NewSignalBus()
+	runFn := stubRunFuncInstant(1)
+
+	sess := mcp.NewCircuitSession(runCtx, "test-endpoint",
+		mcp.SessionMeta{TotalCases: 1, Scenario: "endpoint-test"},
+		1, disp, bus, runFn, runCancel)
+
+	prompt := sess.WorkerPrompt(cfg)
+
+	if !strings.Contains(prompt, endpoint) {
+		t.Errorf("worker prompt does not contain gateway endpoint %q;\n"+
+			"Task subagents cannot inherit MCP config and need explicit URLs.\n"+
+			"Prompt:\n%s", endpoint, prompt)
+	}
+	if !strings.Contains(prompt, "## Connection") {
+		t.Error("worker prompt missing ## Connection section")
+	}
+}
+
+func TestWorkerPrompt_NoEndpoint_OmitsConnectionSection(t *testing.T) {
+	cfg := &mcp.CircuitConfig{
+		Name:        "test-circuit",
+		Version:     "dev",
+		StepSchemas: testStepSchemas,
+	}
+
+	ctx := context.Background()
+	runCtx, runCancel := context.WithCancel(ctx)
+	defer runCancel()
+
+	disp := dispatch.NewMuxDispatcher(runCtx)
+	bus := dispatch.NewSignalBus()
+	runFn := stubRunFuncInstant(1)
+
+	sess := mcp.NewCircuitSession(runCtx, "test-no-endpoint",
+		mcp.SessionMeta{TotalCases: 1, Scenario: "no-endpoint-test"},
+		1, disp, bus, runFn, runCancel)
+
+	prompt := sess.WorkerPrompt(cfg)
+
+	if strings.Contains(prompt, "## Connection") {
+		t.Error("worker prompt should not have Connection section when GatewayEndpoint is empty")
+	}
+}
