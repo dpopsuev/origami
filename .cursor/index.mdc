@@ -1,6 +1,0 @@
-# Index
-
-Post-migration: rules, docs, contracts, notes, and specs have moved to Scribe (governance) and .lexicon/ (domain rules).
-
-## Files
-- `meta.mdc` -- binding structure contract for the knowledge store
