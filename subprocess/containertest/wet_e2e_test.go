@@ -14,7 +14,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/dpopsuev/origami/gateway"
-	skn "github.com/dpopsuev/origami/schematics/knowledge"
+	harvester "github.com/dpopsuev/origami/schematics/harvester"
 	mcpserver "github.com/dpopsuev/origami/schematics/rca/mcpconfig"
 )
 
@@ -62,17 +62,17 @@ func requireGeminiKey(t *testing.T) {
 	}
 }
 
-// wetGateway creates a three-service setup (knowledge + RCA + gateway) using
+// wetGateway creates a three-service setup (harvester + RCA + gateway) using
 // httptest servers and returns the gateway endpoint and cleanup function.
 func wetGateway(t *testing.T) string {
 	t.Helper()
 
-	knRouter := skn.NewRouter()
+	knRouter := harvester.NewRouter()
 	knServer := sdkmcp.NewServer(
-		&sdkmcp.Implementation{Name: "test-knowledge", Version: "v0.1.0"},
+		&sdkmcp.Implementation{Name: "test-harvester", Version: "v0.1.0"},
 		nil,
 	)
-	skn.RegisterTools(knServer, knRouter)
+	harvester.RegisterTools(knServer, knRouter)
 	knHandler := sdkmcp.NewStreamableHTTPHandler(
 		func(_ *http.Request) *sdkmcp.Server { return knServer },
 		&sdkmcp.StreamableHTTPOptions{Stateless: true},
@@ -99,7 +99,7 @@ func wetGateway(t *testing.T) string {
 
 	gw := gateway.New([]gateway.BackendConfig{
 		{Name: "rca", Endpoint: rcaHTTP.URL + "/mcp"},
-		{Name: "knowledge", Endpoint: knSrv.URL + "/mcp"},
+		{Name: "harvester", Endpoint: knSrv.URL + "/mcp"},
 	})
 	ctx := t.Context()
 	if err := gw.Start(ctx); err != nil {
@@ -205,7 +205,7 @@ func TestWetE2E_ToolDiscovery(t *testing.T) {
 		"start_circuit":    false,
 		"get_next_step":    false,
 		"submit_step":     false,
-		"knowledge_search": false,
+		"harvester_search": false,
 	}
 	for _, tool := range tools.Tools {
 		if _, ok := want[tool.Name]; ok {

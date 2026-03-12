@@ -29,6 +29,13 @@ func calibrateBackend() string {
 	return "stub"
 }
 
+func calibrateMode() string {
+	if v := os.Getenv("CALIBRATE_MODE"); v != "" {
+		return v
+	}
+	return "offline"
+}
+
 func loadCalibrationScenario(t *testing.T, domainFS fs.FS) *rca.Scenario {
 	t.Helper()
 	scenarioFS, err := fs.Sub(domainFS, "scenarios")
@@ -55,7 +62,7 @@ func buildCalibrationComponents(t *testing.T, scenario *rca.Scenario) ([]*framew
 	}
 }
 
-func TestCalibrate_PTPMock(t *testing.T) {
+func TestCalibrate(t *testing.T) {
 	domainFS := testDomainFS(t)
 	scenario := loadCalibrationScenario(t, domainFS)
 	comps, idMapper := buildCalibrationComponents(t, scenario)

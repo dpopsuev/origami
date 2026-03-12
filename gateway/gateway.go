@@ -16,6 +16,11 @@ import (
 	"github.com/dpopsuev/origami/subprocess"
 )
 
+type routedTool struct {
+	backendName string
+	tool        sdkmcp.Tool
+}
+
 // BackendConfig describes a named backend MCP service.
 type BackendConfig struct {
 	Name     string
@@ -27,7 +32,7 @@ type Gateway struct {
 	mu         sync.RWMutex
 	backends   map[string]*subprocess.RemoteBackend
 	sessions   map[string]*sdkmcp.ClientSession
-	toolRoutes map[string]string // tool name -> backend name
+	toolRoutes map[string]routedTool // tool name -> backend + full schema
 }
 
 // New creates a Gateway that will connect to the given backends.
@@ -35,7 +40,7 @@ func New(configs []BackendConfig) *Gateway {
 	gw := &Gateway{
 		backends:   make(map[string]*subprocess.RemoteBackend, len(configs)),
 		sessions:   make(map[string]*sdkmcp.ClientSession, len(configs)),
-		toolRoutes: make(map[string]string),
+		toolRoutes: make(map[string]routedTool),
 	}
 	for _, cfg := range configs {
 		gw.backends[cfg.Name] = &subprocess.RemoteBackend{Endpoint: cfg.Endpoint}
@@ -71,7 +76,7 @@ func (gw *Gateway) Start(ctx context.Context) error {
 
 		gw.mu.Lock()
 		for _, tool := range tools.Tools {
-			gw.toolRoutes[tool.Name] = name
+			gw.toolRoutes[tool.Name] = routedTool{backendName: name, tool: *tool}
 		}
 		gw.mu.Unlock()
 	}
@@ -92,7 +97,7 @@ func (gw *Gateway) Stop(ctx context.Context) {
 // CallTool routes a tool call to the backend that registered the tool.
 func (gw *Gateway) CallTool(ctx context.Context, name string, args map[string]any) (*sdkmcp.CallToolResult, error) {
 	gw.mu.RLock()
-	backendName, ok := gw.toolRoutes[name]
+	rt, ok := gw.toolRoutes[name]
 	gw.mu.RUnlock()
 
 	if !ok {
@@ -102,7 +107,7 @@ func (gw *Gateway) CallTool(ctx context.Context, name string, args map[string]an
 		}, nil
 	}
 
-	return gw.backends[backendName].CallTool(ctx, name, args)
+	return gw.backends[rt.backendName].CallTool(ctx, name, args)
 }
 
 // ListTools returns the merged tool list from all backends.
@@ -110,13 +115,9 @@ func (gw *Gateway) ListTools() []sdkmcp.Tool {
 	gw.mu.RLock()
 	defer gw.mu.RUnlock()
 
-	// Re-discover would be better, but for now return from routing table.
 	var tools []sdkmcp.Tool
-	for name := range gw.toolRoutes {
-		tools = append(tools, sdkmcp.Tool{
-			Name:        name,
-			InputSchema: json.RawMessage(`{"type":"object"}`),
-		})
+	for _, rt := range gw.toolRoutes {
+		tools = append(tools, rt.tool)
 	}
 	return tools
 }
@@ -152,19 +153,16 @@ func (gw *Gateway) MCPServer() *sdkmcp.Server {
 	gw.mu.RLock()
 	defer gw.mu.RUnlock()
 
-	for toolName := range gw.toolRoutes {
-		tn := toolName
+	for _, rt := range gw.toolRoutes {
+		t := rt.tool
 		server.AddTool(
-			&sdkmcp.Tool{
-				Name:        tn,
-				InputSchema: json.RawMessage(`{"type":"object"}`),
-			},
+			&t,
 			func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
 				var args map[string]any
 				if req.Params.Arguments != nil {
 					json.Unmarshal(req.Params.Arguments, &args)
 				}
-				return gw.CallTool(ctx, tn, args)
+				return gw.CallTool(ctx, t.Name, args)
 			},
 		)
 	}

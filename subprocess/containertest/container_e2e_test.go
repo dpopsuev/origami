@@ -33,7 +33,7 @@ func TestContainerE2E_BuildImages(t *testing.T) {
 	}{
 		{"deploy/Dockerfile.gateway", "origami-gateway-e2e"},
 		{"deploy/Dockerfile.rca", "origami-rca-e2e"},
-		{"deploy/Dockerfile.knowledge", "origami-knowledge-e2e"},
+		{"deploy/Dockerfile.harvester", "origami-harvester-e2e"},
 		{"deploy/Dockerfile.llm-worker", "origami-llm-worker-e2e"},
 	}
 
@@ -46,21 +46,21 @@ func TestContainerE2E_BuildImages(t *testing.T) {
 	}
 }
 
-// TestContainerE2E_GatewayKnowledge builds and starts the gateway +
-// knowledge containers on host network, then validates tool routing.
+// TestContainerE2E_GatewayHarvester builds and starts the gateway +
+// harvester containers on host network, then validates tool routing.
 // Uses host networking so containers can reach each other via localhost.
 //
 // Requires: podman, not -short.
-func TestContainerE2E_GatewayKnowledge(t *testing.T) {
+func TestContainerE2E_GatewayHarvester(t *testing.T) {
 	env := containertest.NewEnv(t)
 	root := repoRoot()
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
 	defer cancel()
 
-	t.Log("building knowledge image...")
+	t.Log("building harvester image...")
 	env.BuildImageFromDockerfile(ctx,
-		filepath.Join(root, "deploy/Dockerfile.knowledge"),
-		"origami-knowledge-e2e", root)
+		filepath.Join(root, "deploy/Dockerfile.harvester"),
+		"origami-harvester-e2e", root)
 
 	t.Log("building gateway image...")
 	env.BuildImageFromDockerfile(ctx,
@@ -70,10 +70,10 @@ func TestContainerE2E_GatewayKnowledge(t *testing.T) {
 	knPort := 19100
 	gwPort := 19000
 
-	t.Log("starting knowledge engine...")
+	t.Log("starting harvester engine...")
 	env.StartServiceWithConfig(ctx, containertest.ServiceConfig{
-		Name:    "e2e-knowledge",
-		Image:   "origami-knowledge-e2e",
+		Name:    "e2e-harvester",
+		Image:   "origami-harvester-e2e",
 		Port:    knPort,
 		Network: "host",
 		Args:    []string{"--port", fmt.Sprintf("%d", knPort)},
@@ -87,7 +87,7 @@ func TestContainerE2E_GatewayKnowledge(t *testing.T) {
 		Network: "host",
 		Args: []string{
 			"--port", fmt.Sprintf("%d", gwPort),
-			"--backend", fmt.Sprintf("knowledge=http://127.0.0.1:%d/mcp", knPort),
+			"--backend", fmt.Sprintf("harvester=http://127.0.0.1:%d/mcp", knPort),
 		},
 	})
 
@@ -123,14 +123,14 @@ func TestContainerE2E_GatewayKnowledge(t *testing.T) {
 			t.Fatalf("ListTools: %v", err)
 		}
 
-		hasKnowledge := false
+		hasHarvester := false
 		for _, tool := range tools.Tools {
-			if tool.Name == "knowledge_search" || tool.Name == "knowledge_read" {
-				hasKnowledge = true
+			if tool.Name == "harvester_search" || tool.Name == "harvester_read" {
+				hasHarvester = true
 			}
 		}
-		if !hasKnowledge {
-			t.Error("missing knowledge tools through gateway")
+		if !hasHarvester {
+			t.Error("missing harvester tools through gateway")
 		}
 		t.Logf("discovered %d tools through gateway", len(tools.Tools))
 	})

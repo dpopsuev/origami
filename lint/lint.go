@@ -170,6 +170,17 @@ func (c *LintContext) NodeLine(name string) int {
 	return c.fieldLineMap["node:"+name]
 }
 
+// PortLine returns the YAML source line for a port by name.
+func (c *LintContext) PortLine(name string) int {
+	return c.fieldLineMap["port:"+name]
+}
+
+// CalibrationFieldLine returns the YAML source line for a calibration input or output by index.
+// section is "input" or "output", idx is the 0-based index.
+func (c *LintContext) CalibrationFieldLine(section string, idx int) int {
+	return c.fieldLineMap[fmt.Sprintf("calibration:%s:%d", section, idx)]
+}
+
 // EdgeLine returns the YAML source line for an edge by ID.
 func (c *LintContext) EdgeLine(id string) int {
 	return c.fieldLineMap["edge:"+id]
@@ -207,6 +218,10 @@ func buildFieldLineMap(root *yaml.Node) map[string]int {
 			mapSequenceByField(val, "id", "edge:", m)
 		case "walkers":
 			mapSequenceByField(val, "name", "walker:", m)
+		case "ports":
+			mapSequenceByField(val, "name", "port:", m)
+		case "calibration":
+			mapCalibrationFields(val, m)
 		}
 	}
 	return m
@@ -287,6 +302,29 @@ func mapSequenceByField(seq *yaml.Node, identityField, prefix string, m map[stri
 				name := item.Content[j+1].Value
 				m[prefix+name] = item.Line
 				break
+			}
+		}
+	}
+}
+
+// mapCalibrationFields indexes calibration inputs and outputs by sequence index.
+func mapCalibrationFields(calNode *yaml.Node, m map[string]int) {
+	if calNode == nil || calNode.Kind != yaml.MappingNode {
+		return
+	}
+	for i := 0; i+1 < len(calNode.Content); i += 2 {
+		key := calNode.Content[i]
+		val := calNode.Content[i+1]
+		if key.Value != "inputs" && key.Value != "outputs" {
+			continue
+		}
+		prefix := "calibration:" + key.Value + ":"
+		if val == nil || val.Kind != yaml.SequenceNode {
+			continue
+		}
+		for idx, item := range val.Content {
+			if item != nil {
+				m[prefix+fmt.Sprintf("%d", idx)] = item.Line
 			}
 		}
 	}

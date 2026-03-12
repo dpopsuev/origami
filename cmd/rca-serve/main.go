@@ -1,8 +1,8 @@
 // Command rca-serve runs the RCA circuit as a standalone MCP server.
-// It connects to a domain data server via MCPRemoteFS and optionally
-// to a knowledge server for code access during investigation.
+// It connects to a domain data server via MCPRemoteFS for scenario,
+// prompt, and offline bundle access.
 //
-// Usage: rca-serve [--port=9200] --domain-endpoint http://domain:9300/mcp [--knowledge-endpoint http://knowledge:9100/mcp]
+// Usage: rca-serve [--port=9200] --domain-endpoint http://domain:9300/mcp
 package main
 
 import (
@@ -49,7 +49,7 @@ func main() {
 	port := flag.Int("port", 9200, "HTTP port for the RCA MCP server")
 	healthz := flag.Bool("healthz", false, "probe /healthz and exit")
 	domainEndpoint := flag.String("domain-endpoint", envOr("DOMAIN_ENDPOINT", ""), "Domain data MCP endpoint (required)")
-	knowledgeEndpoint := flag.String("knowledge-endpoint", envOr("KNOWLEDGE_ENDPOINT", ""), "Knowledge MCP endpoint (optional)")
+	_ = flag.String("harvester-endpoint", envOr("HARVESTER_ENDPOINT", ""), "Harvester MCP endpoint (deprecated, unused)")
 	productName := flag.String("product", envOr("PRODUCT_NAME", "asterisk"), "Product name for state directory")
 	flag.Parse()
 
@@ -76,12 +76,6 @@ func main() {
 
 	opts := []mcpserver.ServerOption{
 		mcpserver.WithDomainFS(remoteFS),
-	}
-
-	if *knowledgeEndpoint != "" {
-		knSession := connectMCP(ctx, *knowledgeEndpoint, "knowledge")
-		defer knSession.Close()
-		log.Printf("connected to knowledge server at %s", *knowledgeEndpoint)
 	}
 
 	srv := mcpserver.NewServer(*productName, opts...)

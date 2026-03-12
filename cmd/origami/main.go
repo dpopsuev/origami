@@ -66,6 +66,10 @@ func main() {
 		err = serveCmd(os.Args[2:])
 	case "autodoc":
 		err = autodocCmd(os.Args[2:])
+	case "capture":
+		err = captureCmd(os.Args[2:])
+	case "validate-bundle":
+		err = validateBundleCmd(os.Args[2:])
 	case "version":
 		fmt.Println("origami v1.0.0")
 	default:
@@ -98,6 +102,8 @@ Commands:
   fold       Compile a YAML manifest into a standalone binary
   serve      Run the MCP gateway proxy (routes to backend engines)
   autodoc    Generate documentation tree from circuit YAML
+  capture    Capture an offline bundle for a schematic (e.g. harvester)
+  validate-bundle  Validate a captured bundle against its manifest
   version    Print version`)
 }
 

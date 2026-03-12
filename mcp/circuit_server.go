@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -166,10 +167,31 @@ func NoOutputSchema[In, Out any](h func(context.Context, *sdkmcp.CallToolRequest
 }
 
 func (s *CircuitServer) registerTools() {
-	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
-		Name:        "start_circuit",
-		Description: "Start a circuit run. Spawns the runner goroutine and returns a session ID.",
-	}, NoOutputSchema(s.handleStartCircuit))
+	s.MCPServer.AddTool(
+		s.buildStartCircuitTool(),
+		func(ctx context.Context, req *sdkmcp.CallToolRequest) (*sdkmcp.CallToolResult, error) {
+			var input startCircuitInput
+			if req.Params.Arguments != nil {
+				if err := json.Unmarshal(req.Params.Arguments, &input); err != nil {
+					return toolError(fmt.Errorf("invalid start_circuit arguments: %w", err)), nil
+				}
+			}
+			res, out, err := s.handleStartCircuit(ctx, req, input)
+			if err != nil {
+				return toolError(err), nil
+			}
+			if res != nil {
+				return res, nil
+			}
+			data, mErr := json.Marshal(out)
+			if mErr != nil {
+				return toolError(fmt.Errorf("marshal start_circuit output: %w", mErr)), nil
+			}
+			return &sdkmcp.CallToolResult{
+				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: string(data)}},
+			}, nil
+		},
+	)
 
 	sdkmcp.AddTool(s.MCPServer, &sdkmcp.Tool{
 		Name:        "get_next_step",
@@ -202,6 +224,67 @@ func (s *CircuitServer) registerTools() {
 	}, NoOutputSchema(s.handleGetWorkerHealth))
 }
 
+// buildStartCircuitTool constructs the start_circuit Tool with an explicit
+// InputSchema that includes domain-specific extra parameters from CircuitConfig.
+func (s *CircuitServer) buildStartCircuitTool() *sdkmcp.Tool {
+	extraProps := ""
+	if len(s.Config.ExtraParamDefs) > 0 {
+		var props []string
+		for _, p := range s.Config.ExtraParamDefs {
+			prop := fmt.Sprintf("%q:{\"type\":%q,\"description\":%q", p.Name, p.Type, p.Description)
+			if len(p.Enum) > 0 {
+				enumJSON, _ := json.Marshal(p.Enum)
+				prop += fmt.Sprintf(",\"enum\":%s", enumJSON)
+			}
+			prop += "}"
+			props = append(props, prop)
+		}
+		extraProps = strings.Join(props, ",")
+	}
+
+	extraSchema := `"additionalProperties":true,"description":"domain-specific parameters","type":"object"`
+	if extraProps != "" {
+		extraSchema = fmt.Sprintf(`"additionalProperties":true,"description":"domain-specific parameters","type":"object","properties":{%s}`, extraProps)
+		var required []string
+		for _, p := range s.Config.ExtraParamDefs {
+			if p.Required {
+				required = append(required, p.Name)
+			}
+		}
+		if len(required) > 0 {
+			reqJSON, _ := json.Marshal(required)
+			extraSchema += fmt.Sprintf(`,"required":%s`, reqJSON)
+		}
+	}
+
+	schema := json.RawMessage(fmt.Sprintf(
+		`{"type":"object","additionalProperties":false,"properties":{"parallel":{"type":"integer","description":"number of parallel workers (default 1 = serial)"},"force":{"type":"boolean","description":"cancel any existing session and start fresh"},"extra":{%s}}}`,
+		extraSchema,
+	))
+
+	desc := "Start a circuit run. Spawns the runner goroutine and returns a session ID."
+	if len(s.Config.ExtraParamDefs) > 0 {
+		var parts []string
+		for _, p := range s.Config.ExtraParamDefs {
+			entry := fmt.Sprintf("  %s (%s): %s", p.Name, p.Type, p.Description)
+			if len(p.Enum) > 0 {
+				entry += fmt.Sprintf(" [%s]", strings.Join(p.Enum, "|"))
+			}
+			if p.Required {
+				entry += " (required)"
+			}
+			parts = append(parts, entry)
+		}
+		desc += "\n\nDomain parameters (pass in 'extra'):\n" + strings.Join(parts, "\n")
+	}
+
+	return &sdkmcp.Tool{
+		Name:        "start_circuit",
+		Description: desc,
+		InputSchema: schema,
+	}
+}
+
 // --- Tool handlers ---
 
 func (s *CircuitServer) handleStartCircuit(ctx context.Context, _ *sdkmcp.CallToolRequest, input startCircuitInput) (*sdkmcp.CallToolResult, startCircuitOutput, error) {
@@ -218,7 +301,7 @@ func (s *CircuitServer) handleStartCircuit(ctx context.Context, _ *sdkmcp.CallTo
 				s.session.Cancel()
 			} else {
 				s.mu.Unlock()
-				return nil, startCircuitOutput{}, fmt.Errorf("a circuit session is already running (id=%s)", s.session.ID)
+				return nil, startCircuitOutput{}, fmt.Errorf("a circuit session is already running (id=%s); pass force=true to replace it", s.session.ID)
 			}
 		}
 		if s.Config.OnSessionEnd != nil {
@@ -254,10 +337,16 @@ func (s *CircuitServer) handleStartCircuit(ctx context.Context, _ *sdkmcp.CallTo
 	runFn, meta, err := s.Config.CreateSession(ctx, params, disp, bus)
 	if err != nil {
 		runCancel()
+		paramSummary := fmt.Sprintf("parallel=%d, force=%v", parallel, input.Force)
+		if len(input.Extra) > 0 {
+			extraJSON, _ := json.Marshal(input.Extra)
+			paramSummary += fmt.Sprintf(", extra=%s", extraJSON)
+		}
 		logger.Error("circuit session failed",
 			"error", err.Error(),
+			"params", paramSummary,
 			"elapsed_ms", time.Since(startTime).Milliseconds())
-		return nil, startCircuitOutput{}, fmt.Errorf("create session: %w", err)
+		return nil, startCircuitOutput{}, fmt.Errorf("create session (%s): %w", paramSummary, err)
 	}
 
 	s.mu.Lock()
@@ -619,15 +708,23 @@ func (s *CircuitServer) Session() *CircuitSession {
 	return s.session
 }
 
+// toolError wraps a Go error into a CallToolResult with IsError=true,
+// matching how the SDK's typed handler converts errors.
+func toolError(err error) *sdkmcp.CallToolResult {
+	var res sdkmcp.CallToolResult
+	res.SetError(err)
+	return &res
+}
+
 func (s *CircuitServer) getSession(id string) (*CircuitSession, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.session == nil {
-		return nil, fmt.Errorf("no active session (call start_circuit first)")
+		return nil, fmt.Errorf("no active session; call start_circuit first to create one")
 	}
 	if s.session.ID != id {
-		return nil, fmt.Errorf("session_id mismatch: have %s, got %s", s.session.ID, id)
+		return nil, fmt.Errorf("session_id %q does not match active session %q; the session may have been replaced or expired", id, s.session.ID)
 	}
 	return s.session, nil
 }

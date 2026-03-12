@@ -254,6 +254,177 @@ func mustJSON(v any) json.RawMessage {
 	return b
 }
 
+// --- Schema preservation through gateway proxy ---
+
+type typedEchoInput struct {
+	Message string `json:"message" jsonschema:"the message to echo"`
+}
+
+type typedAddInput struct {
+	A int `json:"a" jsonschema:"first operand"`
+	B int `json:"b" jsonschema:"second operand"`
+}
+
+func newTypedBackend(t *testing.T) *httptest.Server {
+	t.Helper()
+	server := sdkmcp.NewServer(
+		&sdkmcp.Implementation{Name: "typed-backend", Version: "v0.1.0"},
+		nil,
+	)
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "echo",
+		Description: "Echoes a message",
+	}, func(_ context.Context, _ *sdkmcp.CallToolRequest, input typedEchoInput) (*sdkmcp.CallToolResult, any, error) {
+		return &sdkmcp.CallToolResult{
+			Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: "echo: " + input.Message}},
+		}, nil, nil
+	})
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "add",
+		Description: "Adds two numbers",
+	}, func(_ context.Context, _ *sdkmcp.CallToolRequest, input typedAddInput) (*sdkmcp.CallToolResult, any, error) {
+		return &sdkmcp.CallToolResult{
+			Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: fmt.Sprintf("%d", input.A+input.B)}},
+		}, nil, nil
+	})
+	h := sdkmcp.NewStreamableHTTPHandler(
+		func(_ *http.Request) *sdkmcp.Server { return server },
+		&sdkmcp.StreamableHTTPOptions{Stateless: true},
+	)
+	ts := httptest.NewServer(h)
+	t.Cleanup(ts.Close)
+	return ts
+}
+
+func TestGateway_PreservesSchemaFromBackend(t *testing.T) {
+	backend := newTypedBackend(t)
+
+	gw := gateway.New([]gateway.BackendConfig{
+		{Name: "svc1", Endpoint: backend.URL + "/mcp"},
+	})
+	ctx := t.Context()
+	if err := gw.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer gw.Stop(context.Background())
+
+	ts := httptest.NewServer(gw.Handler())
+	defer ts.Close()
+
+	session := connectGateway(t, ts)
+
+	tools, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+
+	for _, tool := range tools.Tools {
+		if tool.Name != "echo" && tool.Name != "add" {
+			continue
+		}
+		schema := tool.InputSchema
+		if schema == nil {
+			t.Errorf("tool %q: InputSchema is nil", tool.Name)
+			continue
+		}
+		raw, _ := json.Marshal(schema)
+		var parsed map[string]any
+		json.Unmarshal(raw, &parsed)
+
+		props, ok := parsed["properties"]
+		if !ok {
+			t.Errorf("tool %q: schema has no 'properties' key; got %s", tool.Name, raw)
+			continue
+		}
+		propMap, _ := props.(map[string]any)
+		switch tool.Name {
+		case "echo":
+			if _, ok := propMap["message"]; !ok {
+				t.Errorf("echo schema missing 'message' property; got %s", raw)
+			}
+		case "add":
+			if _, ok := propMap["a"]; !ok {
+				t.Errorf("add schema missing 'a' property; got %s", raw)
+			}
+			if _, ok := propMap["b"]; !ok {
+				t.Errorf("add schema missing 'b' property; got %s", raw)
+			}
+		}
+	}
+}
+
+func TestGateway_PreservesDescriptionFromBackend(t *testing.T) {
+	backend := newTypedBackend(t)
+
+	gw := gateway.New([]gateway.BackendConfig{
+		{Name: "svc1", Endpoint: backend.URL + "/mcp"},
+	})
+	ctx := t.Context()
+	if err := gw.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer gw.Stop(context.Background())
+
+	ts := httptest.NewServer(gw.Handler())
+	defer ts.Close()
+
+	session := connectGateway(t, ts)
+
+	tools, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+
+	for _, tool := range tools.Tools {
+		if tool.Name == "echo" && tool.Description == "" {
+			t.Error("echo tool description not preserved through gateway")
+		}
+		if tool.Name == "add" && tool.Description == "" {
+			t.Error("add tool description not preserved through gateway")
+		}
+	}
+}
+
+func TestGateway_TypedBackendParamsReachBackend(t *testing.T) {
+	backend := newTypedBackend(t)
+
+	gw := gateway.New([]gateway.BackendConfig{
+		{Name: "svc1", Endpoint: backend.URL + "/mcp"},
+	})
+	ctx := t.Context()
+	if err := gw.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer gw.Stop(context.Background())
+
+	ts := httptest.NewServer(gw.Handler())
+	defer ts.Close()
+
+	session := connectGateway(t, ts)
+
+	result, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "echo",
+		Arguments: mustJSON(map[string]any{"message": "schema-test"}),
+	})
+	if err != nil {
+		t.Fatalf("CallTool echo: %v", err)
+	}
+	if got := extractText(t, result); got != "echo: schema-test" {
+		t.Errorf("echo = %q, want %q", got, "echo: schema-test")
+	}
+
+	result, err = session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "add",
+		Arguments: mustJSON(map[string]any{"a": 11, "b": 22}),
+	})
+	if err != nil {
+		t.Fatalf("CallTool add: %v", err)
+	}
+	if got := extractText(t, result); got != "33" {
+		t.Errorf("add = %q, want %q", got, "33")
+	}
+}
+
 // --- Gap 2: MCP routing gap — tools reachable via HTTP ---
 
 func newCircuitBackend(t *testing.T) (*httptest.Server, *mcp.CircuitServer) {

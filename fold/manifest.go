@@ -194,6 +194,10 @@ var domainSubdirs = []struct {
 	{"tuning", "tuning"},
 }
 
+// domainRecursiveDirs are directories inside a domain that are walked
+// recursively and embedded with their full relative path structure.
+var domainRecursiveDirs = []string{"offline"}
+
 // domainFiles maps individual files found inside a domain to AssetMap.Files keys.
 var domainFiles = []string{"heuristics.yaml"}
 
@@ -256,6 +260,26 @@ func (m *Manifest) MergeDiscoveredAssets(manifestDir string) error {
 				a.Files[key] = f
 			}
 		}
+
+		for _, rd := range domainRecursiveDirs {
+			rdPath := filepath.Join(domainDir, rd)
+			if info, err := os.Stat(rdPath); err != nil || !info.IsDir() {
+				continue
+			}
+			filepath.Walk(rdPath, func(path string, info os.FileInfo, err error) error {
+				if err != nil || info.IsDir() {
+					return nil
+				}
+				rel, _ := filepath.Rel(domainDir, path)
+				flatPath := filepath.ToSlash(rel)
+				key := flatPath
+				if a.Files == nil {
+					a.Files = make(map[string]string)
+				}
+				a.Files[key] = flatPath
+				return nil
+			})
+		}
 	}
 	return nil
 }
@@ -291,6 +315,22 @@ func (m *Manifest) domainPathMappings(manifestDir string) map[string]string {
 			if _, err := os.Stat(src); err == nil {
 				mappings[src] = f
 			}
+		}
+
+		for _, rd := range domainRecursiveDirs {
+			rdPath := filepath.Join(domainDir, rd)
+			if info, err := os.Stat(rdPath); err != nil || !info.IsDir() {
+				continue
+			}
+			filepath.Walk(rdPath, func(path string, info os.FileInfo, err error) error {
+				if err != nil || info.IsDir() {
+					return nil
+				}
+				rel, _ := filepath.Rel(domainDir, path)
+				flatPath := filepath.ToSlash(rel)
+				mappings[path] = flatPath
+				return nil
+			})
 		}
 	}
 	return mappings

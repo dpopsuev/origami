@@ -9,20 +9,20 @@
 #
 # Prerequisites:
 #   Build images first:
-#     podman build -t origami-knowledge -f Dockerfile.knowledge .
+#     podman build -t origami-harvester -f Dockerfile.harvester .
 #     podman build -t origami-rca -f Dockerfile.rca .
 #     podman build -t origami-gateway -f Dockerfile.gateway .
 #     podman build -t origami-asterisk-domain -f Dockerfile.asterisk-domain .
 #     podman build -t origami-llm-worker -f Dockerfile.llm-worker .
 
 services:
-  knowledge:
-    image: origami-knowledge
+  harvester:
+    image: origami-harvester
     ports:
       - "9100:9100"
     command: ["--port", "9100", "--drivers", "git,docs"]
     healthcheck:
-      test: ["CMD", "/knowledge-serve", "--healthz"]
+      test: ["CMD", "/harvester-serve", "--healthz"]
       interval: 5s
       timeout: 3s
       retries: 3
@@ -44,16 +44,12 @@ services:
     command:
       - "--port"
       - "9200"
-      - "--knowledge-endpoint"
-      - "http://knowledge:9100/mcp"
       - "--domain-endpoint"
       - "http://asterisk:9300/mcp"
     environment:
       - ASTERISK_RP_BASE_URL=${ASTERISK_RP_BASE_URL:-}
       - ASTERISK_RP_PROJECT=${ASTERISK_RP_PROJECT:-}
     depends_on:
-      knowledge:
-        condition: service_healthy
       asterisk:
         condition: service_healthy
     healthcheck:
@@ -71,16 +67,8 @@ services:
       - "9000"
       - "--backend"
       - "rca=http://rca:9200/mcp"
-      - "--backend"
-      - "knowledge=http://knowledge:9100/mcp"
-      - "--backend"
-      - "asterisk=http://asterisk:9300/mcp"
     depends_on:
       rca:
-        condition: service_healthy
-      knowledge:
-        condition: service_healthy
-      asterisk:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "/gateway", "--healthz"]
@@ -98,7 +86,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - SCENARIO=${SCENARIO:-ptp-mock}
+      - SCENARIO=${SCENARIO:-ptp}
       - BACKEND=${BACKEND:-stub}
     depends_on:
       gateway:

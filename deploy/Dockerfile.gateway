@@ -1,5 +1,5 @@
 # Gateway — MCP routing proxy.
-# Routes tool calls to backend services (RCA, Knowledge, Domain).
+# Routes tool calls to backend services (RCA, Harvester, Domain).
 #
 # Build: docker build -t origami-gateway -f deploy/Dockerfile.gateway .
 # Run:   docker run -p 9000:9000 origami-gateway --backend rca=http://rca:9200/mcp

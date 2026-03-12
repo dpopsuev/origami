@@ -21,7 +21,7 @@ func main() {
 	provider := flag.String("provider", envOr("LLM_PROVIDER", "ollama"), "LLM provider: ollama, claude, gemini, openai")
 	model := flag.String("model", envOr("LLM_MODEL", ""), "Model name")
 	llmEndpoint := flag.String("llm-endpoint", envOr("LLM_ENDPOINT", ""), "LLM endpoint URL (provider-specific)")
-	scenario := flag.String("scenario", envOr("SCENARIO", "ptp-mock"), "Scenario name for start_circuit")
+	scenario := flag.String("scenario", envOr("SCENARIO", "ptp"), "Scenario name for start_circuit")
 	backend := flag.String("backend", envOr("BACKEND", "stub"), "Backend type for start_circuit")
 	flag.Parse()
 

@@ -1,7 +1,7 @@
 // Command gateway runs an MCP routing proxy that dispatches tool calls
 // to backend MCP services based on tool name.
 //
-// Usage: gateway [--port=9000] --backend rca=http://localhost:9200/mcp --backend knowledge=http://localhost:9100/mcp
+// Usage: gateway [--port=9000] --backend rca=http://localhost:9200/mcp --backend harvester=http://localhost:9100/mcp
 package main
 
 import (

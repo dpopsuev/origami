@@ -42,6 +42,17 @@ func (s StepSchema) ValidateFields(fields map[string]any) error {
 	return nil
 }
 
+// ExtraParamDef describes one domain-specific parameter inside the
+// start_circuit "extra" field. Domains register these so the MCP schema
+// tells callers exactly what keys are expected.
+type ExtraParamDef struct {
+	Name        string   // JSON key inside extra (e.g. "scenario")
+	Type        string   // JSON Schema type: "string", "integer", "boolean", "object"
+	Description string   // Human-readable description shown in MCP schema
+	Required    bool     // If true, start_circuit rejects calls missing this key
+	Enum        []string // If non-empty, allowed values (e.g. ["offline","online"])
+}
+
 // CircuitConfig is the domain-injection entry point. Implementations register
 // three hooks (session creation, step schemas, report formatting) and the
 // generic CircuitServer handles all protocol mechanics.
@@ -52,6 +63,11 @@ type CircuitConfig struct {
 	// StepSchemas declares the artifact schema for each circuit step.
 	// The worker prompt auto-generates a step-schema table from these.
 	StepSchemas []StepSchema
+
+	// ExtraParamDefs declares the domain-specific parameters that callers
+	// should pass in start_circuit's "extra" field. These are rendered into
+	// the MCP tool schema so agents know what to provide.
+	ExtraParamDefs []ExtraParamDef
 
 	// WorkerPreamble is domain-specific instruction text prepended to the
 	// auto-generated worker prompt. For example: "You are an Asterisk

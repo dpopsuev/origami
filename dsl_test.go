@@ -100,6 +100,155 @@ done: _done
 	}
 }
 
+func TestLoadCircuit_Ports(t *testing.T) {
+	// Test that ports are parsed from YAML
+	data := []byte(`
+circuit: ports-test
+nodes:
+  - name: a
+    family: a
+  - name: b
+    family: b
+edges:
+  - id: E1
+    from: a
+    to: b
+  - id: E2
+    from: b
+    to: _done
+ports:
+  - name: keywords
+    direction: in
+    type: "[]string"
+    description: "Search keywords from upstream"
+  - name: post-triage
+    direction: out
+    type: "map[string]any"
+wiring:
+  - from: "rca.out:post-triage"
+    to: "harvester.in:keywords"
+    adapter: "keyword-extractor"
+start: a
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	if len(def.Ports) != 2 {
+		t.Fatalf("len(Ports) = %d, want 2", len(def.Ports))
+	}
+	if def.Ports[0].Name != "keywords" || def.Ports[0].Direction != "in" || def.Ports[0].Type != "[]string" {
+		t.Errorf("Ports[0] = %+v, want name=keywords direction=in type=[]string", def.Ports[0])
+	}
+	if def.Ports[1].Name != "post-triage" || def.Ports[1].Direction != "out" {
+		t.Errorf("Ports[1] = %+v, want name=post-triage direction=out", def.Ports[1])
+	}
+	if len(def.Wiring) != 1 {
+		t.Fatalf("len(Wiring) = %d, want 1", len(def.Wiring))
+	}
+	if def.Wiring[0].From != "rca.out:post-triage" || def.Wiring[0].To != "harvester.in:keywords" || def.Wiring[0].Adapter != "keyword-extractor" {
+		t.Errorf("Wiring[0] = %+v, want from=rca.out:post-triage to=harvester.in:keywords adapter=keyword-extractor", def.Wiring[0])
+	}
+
+	// Test that overlay merges ports and wiring correctly
+	base := []byte(`
+circuit: base
+nodes:
+  - name: a
+    family: a
+edges:
+  - id: E1
+    from: a
+    to: _done
+ports:
+  - name: base-port
+    direction: in
+    type: string
+start: a
+done: _done
+`)
+	overlay := []byte(`
+import: base-ports
+circuit: overlay
+ports:
+  - name: overlay-port
+    direction: out
+    type: "[]string"
+wiring:
+  - from: "base.out:result"
+    to: "other.in:input"
+nodes:
+  - name: b
+    family: b
+edges:
+  - id: E2
+    from: a
+    to: b
+  - id: E3
+    from: b
+    to: _done
+start: a
+done: _done
+`)
+	resolver := func(name string) ([]byte, error) {
+		if name == "base-ports" {
+			return base, nil
+		}
+		return nil, os.ErrNotExist
+	}
+	merged, err := LoadCircuitWithOverlay(overlay, resolver)
+	if err != nil {
+		t.Fatalf("LoadCircuitWithOverlay: %v", err)
+	}
+	// Ports: base + overlay (no collision)
+	if len(merged.Ports) != 2 {
+		t.Fatalf("merged len(Ports) = %d, want 2 (base + overlay)", len(merged.Ports))
+	}
+	portNames := make(map[string]bool)
+	for _, p := range merged.Ports {
+		portNames[p.Name] = true
+	}
+	if !portNames["base-port"] || !portNames["overlay-port"] {
+		t.Errorf("merged Ports missing expected names: %v", portNames)
+	}
+	// Wiring: overlay appended
+	if len(merged.Wiring) != 1 {
+		t.Fatalf("merged len(Wiring) = %d, want 1", len(merged.Wiring))
+	}
+	if merged.Wiring[0].From != "base.out:result" || merged.Wiring[0].To != "other.in:input" {
+		t.Errorf("merged Wiring[0] = %+v", merged.Wiring[0])
+	}
+
+	// Test port name collision = error
+	badOverlay := []byte(`
+import: base-ports
+circuit: bad
+ports:
+  - name: base-port
+    direction: out
+nodes:
+  - name: c
+    family: c
+edges:
+  - id: E4
+    from: a
+    to: c
+  - id: E5
+    from: c
+    to: _done
+start: a
+done: _done
+`)
+	_, err = LoadCircuitWithOverlay(badOverlay, resolver)
+	if err == nil {
+		t.Fatal("expected error for port name collision, got nil")
+	}
+	if !contains(err.Error(), "base-port") || !contains(err.Error(), "append-only") {
+		t.Errorf("error should mention port collision: %v", err)
+	}
+}
+
 func TestLoadCircuit_InvalidYAML(t *testing.T) {
 	data := []byte(`{invalid yaml: [`)
 	_, err := LoadCircuit(data)
@@ -1246,6 +1395,512 @@ func TestEffectiveHandler(t *testing.T) {
 			got := tt.nd.EffectiveHandler()
 			if got != tt.want {
 				t.Errorf("EffectiveHandler() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// --- Overlay tests ---
+
+func TestLoadCircuitWithOverlay_NoImport(t *testing.T) {
+	data := []byte(`
+circuit: plain
+nodes:
+  - name: a
+    family: a
+edges:
+  - id: E1
+    from: a
+    to: DONE
+start: a
+done: DONE
+`)
+	def, err := LoadCircuitWithOverlay(data, nil)
+	if err != nil {
+		t.Fatalf("LoadCircuitWithOverlay: %v", err)
+	}
+	if def.Circuit != "plain" {
+		t.Errorf("Circuit = %q, want %q", def.Circuit, "plain")
+	}
+	if def.Import != "" {
+		t.Errorf("Import should be empty, got %q", def.Import)
+	}
+}
+
+func TestLoadCircuitWithOverlay_MergesBaseAndOverlay(t *testing.T) {
+	base := []byte(`
+circuit: base-circuit
+description: base description
+topology: cascade
+handler_type: transformer
+vars:
+  threshold: 0.80
+  max_loops: 3
+nodes:
+  - name: step-a
+    handler: alpha
+    edges:
+      - to: step-b
+        when: "true"
+  - name: step-b
+    handler: beta
+    edges:
+      - id: step-b-done
+        to: DONE
+        when: "true"
+start: step-a
+done: DONE
+`)
+
+	overlay := []byte(`
+circuit: my-circuit
+import: test-base
+description: consumer description
+vars:
+  threshold: 0.95
+  extra_var: hello
+nodes:
+  - name: step-c
+    handler: gamma
+    edges:
+      - to: step-a
+        when: "true"
+edges:
+  - id: step-b-done
+    from: step-b
+    to: step-c
+    when: "output.needs_extra == true"
+start: step-a
+done: DONE
+`)
+
+	resolver := func(name string) ([]byte, error) {
+		if name == "test-base" {
+			return base, nil
+		}
+		return nil, os.ErrNotExist
+	}
+
+	def, err := LoadCircuitWithOverlay(overlay, resolver)
+	if err != nil {
+		t.Fatalf("LoadCircuitWithOverlay: %v", err)
+	}
+
+	if def.Circuit != "my-circuit" {
+		t.Errorf("Circuit = %q, want %q", def.Circuit, "my-circuit")
+	}
+	if def.Description != "consumer description" {
+		t.Errorf("Description = %q, want %q", def.Description, "consumer description")
+	}
+	if def.Import != "" {
+		t.Errorf("Import should be cleared after merge, got %q", def.Import)
+	}
+	if def.Topology != "cascade" {
+		t.Errorf("Topology = %q, want %q (inherited from base)", def.Topology, "cascade")
+	}
+
+	// Vars: overlay wins, base preserved
+	if v, ok := def.Vars["threshold"].(float64); !ok || v != 0.95 {
+		t.Errorf("Vars[threshold] = %v, want 0.95", def.Vars["threshold"])
+	}
+	if v, ok := def.Vars["max_loops"].(int); !ok || v != 3 {
+		t.Errorf("Vars[max_loops] = %v, want 3", def.Vars["max_loops"])
+	}
+	if v, ok := def.Vars["extra_var"].(string); !ok || v != "hello" {
+		t.Errorf("Vars[extra_var] = %v, want %q", def.Vars["extra_var"], "hello")
+	}
+
+	// Nodes: base + overlay appended
+	if len(def.Nodes) != 3 {
+		t.Fatalf("len(Nodes) = %d, want 3", len(def.Nodes))
+	}
+	if def.Nodes[0].Name != "step-a" {
+		t.Errorf("Nodes[0].Name = %q, want %q", def.Nodes[0].Name, "step-a")
+	}
+	if def.Nodes[2].Name != "step-c" {
+		t.Errorf("Nodes[2].Name = %q, want %q", def.Nodes[2].Name, "step-c")
+	}
+
+	// Edges: step-b-done replaced by overlay version
+	found := false
+	for _, e := range def.Edges {
+		if e.ID == "step-b-done" {
+			found = true
+			if e.To != "step-c" {
+				t.Errorf("edge step-b-done.To = %q, want %q (replaced by overlay)", e.To, "step-c")
+			}
+			if e.When != `output.needs_extra == true` {
+				t.Errorf("edge step-b-done.When = %q, want overlay value", e.When)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("edge step-b-done not found in merged edges")
+	}
+}
+
+func TestLoadCircuitWithOverlay_CannotOverrideBaseNode(t *testing.T) {
+	base := []byte(`
+circuit: base
+nodes:
+  - name: alpha
+    handler: a
+    edges:
+      - to: DONE
+start: alpha
+done: DONE
+`)
+	overlay := []byte(`
+import: base
+circuit: overlay
+nodes:
+  - name: alpha
+    handler: b
+start: alpha
+done: DONE
+`)
+
+	resolver := func(name string) ([]byte, error) {
+		return base, nil
+	}
+
+	_, err := LoadCircuitWithOverlay(overlay, resolver)
+	if err == nil {
+		t.Fatal("expected error for overriding base node, got nil")
+	}
+}
+
+func TestLoadCircuitWithOverlay_NilResolverErrors(t *testing.T) {
+	overlay := []byte(`
+import: something
+circuit: overlay
+nodes:
+  - name: a
+    family: a
+edges:
+  - id: E1
+    from: a
+    to: DONE
+start: a
+done: DONE
+`)
+
+	_, err := LoadCircuitWithOverlay(overlay, nil)
+	if err == nil {
+		t.Fatal("expected error when resolver is nil, got nil")
+	}
+}
+
+func TestLoadCircuitWithOverlay_RCASchematic(t *testing.T) {
+	base, err := os.ReadFile("schematics/rca/circuit.yaml")
+	if err != nil {
+		t.Skipf("RCA schematic circuit not found: %v", err)
+	}
+
+	overlay := []byte(`
+import: rca
+circuit: rca
+
+zones:
+  analysis:
+    nodes: [gather-code, resolve, investigate]
+
+nodes:
+  - name: gather-code
+    description: "Gather code context from source repositories via Harvester circuit"
+    handler_type: circuit
+    handler: harvester
+    approach: methodical
+    before: [inject.code-keywords]
+    after: [bridge.code-context]
+    edges:
+      - name: gather-code-resolve
+        to: resolve
+        when: "true"
+
+edges:
+  - id: triage-investigate
+    name: triage-investigate
+    from: triage
+    to: gather-code
+    when: "output.skip_investigation != true"
+
+start: recall
+done: DONE
+`)
+
+	resolver := func(name string) ([]byte, error) {
+		if name == "rca" {
+			return base, nil
+		}
+		return nil, os.ErrNotExist
+	}
+
+	def, err := LoadCircuitWithOverlay(overlay, resolver)
+	if err != nil {
+		t.Fatalf("LoadCircuitWithOverlay: %v", err)
+	}
+
+	if def.Circuit != "rca" {
+		t.Errorf("Circuit = %q, want %q", def.Circuit, "rca")
+	}
+
+	nodeNames := make(map[string]bool)
+	for _, n := range def.Nodes {
+		nodeNames[n.Name] = true
+	}
+
+	for _, want := range []string{"recall", "triage", "resolve", "investigate", "correlate", "review", "report", "gather-code"} {
+		if !nodeNames[want] {
+			t.Errorf("missing expected node %q", want)
+		}
+	}
+
+	// Analysis zone should include gather-code from overlay
+	if z, ok := def.Zones["analysis"]; ok {
+		zoneNodes := make(map[string]bool)
+		for _, n := range z.Nodes {
+			zoneNodes[n] = true
+		}
+		if !zoneNodes["gather-code"] {
+			t.Errorf("analysis zone missing gather-code node")
+		}
+	} else {
+		t.Error("analysis zone not found")
+	}
+
+	// triage-investigate edge should point to gather-code (overlay override)
+	for _, e := range def.Edges {
+		if e.ID == "triage-investigate" {
+			if e.To != "gather-code" {
+				t.Errorf("triage-investigate.To = %q, want %q", e.To, "gather-code")
+			}
+		}
+	}
+}
+
+// --- Vocabulary auto-registration (ORG-TSK-134) ---
+
+func TestLoadCircuit_CodeDisplayName_Parsed(t *testing.T) {
+	data := []byte(`
+circuit: vocab-test
+nodes:
+  - name: recall
+    code: F0
+    display_name: Recall
+  - name: triage
+    code: F1
+    display_name: Triage
+  - name: plain
+    family: plain
+edges:
+  - id: recall-triage
+    name: proceed
+    from: recall
+    to: triage
+    display_name: Proceed to triage
+  - id: triage-done
+    from: triage
+    to: _done
+start: recall
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	if def.Nodes[0].Code != "F0" || def.Nodes[0].DisplayName != "Recall" {
+		t.Errorf("Nodes[0] Code=%q DisplayName=%q, want F0/Recall", def.Nodes[0].Code, def.Nodes[0].DisplayName)
+	}
+	if def.Nodes[1].Code != "F1" || def.Nodes[1].DisplayName != "Triage" {
+		t.Errorf("Nodes[1] Code=%q DisplayName=%q, want F1/Triage", def.Nodes[1].Code, def.Nodes[1].DisplayName)
+	}
+	if def.Nodes[2].Code != "" || def.Nodes[2].DisplayName != "" {
+		t.Errorf("Nodes[2] should have empty Code/DisplayName, got %q/%q", def.Nodes[2].Code, def.Nodes[2].DisplayName)
+	}
+	if def.Edges[0].DisplayName != "Proceed to triage" {
+		t.Errorf("Edges[0].DisplayName = %q, want %q", def.Edges[0].DisplayName, "Proceed to triage")
+	}
+}
+
+func TestLoadCircuit_RegisterVocabulary(t *testing.T) {
+	def := &CircuitDef{
+		Circuit: "vocab",
+		Nodes: []NodeDef{
+			{Name: "recall", Code: "F0", DisplayName: "Recall"},
+			{Name: "triage", Code: "F1", DisplayName: "Triage"},
+			{Name: "plain"},
+		},
+		Edges: []EdgeDef{
+			{ID: "recall-triage", From: "recall", To: "triage", DisplayName: "Proceed to triage"},
+			{ID: "triage-done", From: "triage", To: "_done"},
+		},
+		Start: "recall",
+		Done:  "_done",
+	}
+	v := NewRichMapVocabulary()
+	def.RegisterVocabulary(v)
+
+	// F0 → Recall
+	if name := v.Name("F0"); name != "Recall" {
+		t.Errorf("v.Name(F0) = %q, want Recall", name)
+	}
+	// F0_RECALL alias
+	if name := v.Name("F0_RECALL"); name != "Recall" {
+		t.Errorf("v.Name(F0_RECALL) = %q, want Recall", name)
+	}
+	// recall node name → Recall
+	if name := v.Name("recall"); name != "Recall" {
+		t.Errorf("v.Name(recall) = %q, want Recall", name)
+	}
+	// Edge ID → DisplayName
+	if name := v.Name("recall-triage"); name != "Proceed to triage" {
+		t.Errorf("v.Name(recall-triage) = %q, want Proceed to triage", name)
+	}
+	// triage-done has no DisplayName, should pass through
+	if name := v.Name("triage-done"); name != "triage-done" {
+		t.Errorf("v.Name(triage-done) = %q, want pass-through", name)
+	}
+}
+
+// --- Node output schema (ORG-TSK-135) ---
+
+func TestLoadCircuit_OutputFields_Parsed(t *testing.T) {
+	data := []byte(`
+circuit: output-test
+nodes:
+  - name: extract
+    family: extract
+    output:
+      - name: result
+        type: string
+        required: true
+      - name: score
+        type: float
+      - name: tags
+        type: array
+  - name: plain
+    family: plain
+edges:
+  - id: E1
+    from: extract
+    to: plain
+  - id: E2
+    from: plain
+    to: _done
+start: extract
+done: _done
+`)
+	def, err := LoadCircuit(data)
+	if err != nil {
+		t.Fatalf("LoadCircuit: %v", err)
+	}
+	out := def.Nodes[0].OutputFields()
+	if len(out) != 3 {
+		t.Fatalf("len(OutputFields) = %d, want 3", len(out))
+	}
+	if out[0].Name != "result" || out[0].Type != "string" || !out[0].Required {
+		t.Errorf("Output[0] = %+v, want result/string/required", out[0])
+	}
+	if out[1].Name != "score" || out[1].Type != "float" || out[1].Required {
+		t.Errorf("Output[1] = %+v, want score/float/optional", out[1])
+	}
+	if def.Nodes[1].OutputFields() != nil {
+		t.Errorf("plain node should have nil OutputFields, got %v", def.Nodes[1].OutputFields())
+	}
+}
+
+func TestNodeDef_ValidateOutput(t *testing.T) {
+	tests := []struct {
+		name    string
+		nd      NodeDef
+		output  map[string]any
+		wantErr bool
+	}{
+		{
+			name:    "no schema",
+			nd:      NodeDef{Name: "a"},
+			output:  map[string]any{},
+			wantErr: false,
+		},
+		{
+			name: "valid required",
+			nd: NodeDef{
+				Name: "a",
+				Output: []OutputField{
+					{Name: "x", Type: "string", Required: true},
+				},
+			},
+			output:  map[string]any{"x": "hello"},
+			wantErr: false,
+		},
+		{
+			name: "missing required",
+			nd: NodeDef{
+				Name: "a",
+				Output: []OutputField{
+					{Name: "x", Type: "string", Required: true},
+				},
+			},
+			output:  map[string]any{},
+			wantErr: true,
+		},
+		{
+			name: "wrong type",
+			nd: NodeDef{
+				Name: "a",
+				Output: []OutputField{
+					{Name: "x", Type: "string", Required: true},
+				},
+			},
+			output:  map[string]any{"x": 42},
+			wantErr: true,
+		},
+		{
+			name: "int accepts float64",
+			nd: NodeDef{
+				Name: "a",
+				Output: []OutputField{
+					{Name: "n", Type: "int", Required: true},
+				},
+			},
+			output:  map[string]any{"n": float64(42)},
+			wantErr: false,
+		},
+		{
+			name: "valid array",
+			nd: NodeDef{
+				Name: "a",
+				Output: []OutputField{
+					{Name: "arr", Type: "array", Required: true},
+				},
+			},
+			output:  map[string]any{"arr": []any{"a", "b"}},
+			wantErr: false,
+		},
+		{
+			name: "valid object",
+			nd: NodeDef{
+				Name: "a",
+				Output: []OutputField{
+					{Name: "obj", Type: "object", Required: true},
+				},
+			},
+			output:  map[string]any{"obj": map[string]any{"k": "v"}},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.nd.ValidateOutput(tt.output)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		})
 	}

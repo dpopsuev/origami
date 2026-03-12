@@ -31,7 +31,7 @@ func WithObserver(obs framework.WalkObserver) CircuitOption {
 // Usage:
 //
 //	report, err := calibrate.RunCircuit(ctx, &calibrate.CalibrationInput{
-//	    Scenario:    "ptp-real",
+//	    Scenario:    "ptp",
 //	    Transformer: "cursor",
 //	    Cases:       cases,
 //	    GroundTruth: gt,

@@ -16,6 +16,22 @@ type Metric = cal.Metric
 // MetricSet is an alias for the generic calibrate.MetricSet type.
 type MetricSet = cal.MetricSet
 
+// CalibrationMode controls how data is sourced during calibration.
+type CalibrationMode string
+
+const (
+	ModeOnline  CalibrationMode = "online"
+	ModeOffline CalibrationMode = "offline"
+)
+
+// ParseCalibrationMode converts a string to CalibrationMode, defaulting to online.
+func ParseCalibrationMode(s string) CalibrationMode {
+	if s == "offline" {
+		return ModeOffline
+	}
+	return ModeOnline
+}
+
 // Scenario defines a complete calibration scenario with ground truth data.
 type Scenario struct {
 	Name             string               `json:"name" yaml:"name"`

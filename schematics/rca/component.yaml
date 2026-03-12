@@ -30,8 +30,8 @@ requires:
       option: WithRunDiscoverer
       description: Discovers available CI runs and their failures
       optional: true
-    - name: knowledge
-      type: knowledge.Reader
-      option: WithKnowledgeReader
-      description: Unified knowledge access layer (git repos, web docs)
-      schematic: origami-knowledge
+    - name: harvester
+      type: harvester.Reader
+      option: WithHarvesterReader
+      description: Unified harvester access layer (git repos, web docs)
+      schematic: origami-harvester

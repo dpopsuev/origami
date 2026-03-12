@@ -46,7 +46,7 @@ type RCACalibrationAdapter struct {
 	Thresholds      Thresholds
 	ScoreCard       *cal.ScoreCard
 	TokenTracker    dispatch.TokenTracker
-	KnowledgeReader toolkit.SourceReader
+	HarvesterReader toolkit.SourceReader
 	ReportTemplate  []byte // calibration-report.yaml data
 
 	// Internal state — populated by Load(), consumed by Collect().
@@ -183,7 +183,7 @@ func (a *RCACalibrationAdapter) Load(_ context.Context) ([]framework.BatchCase, 
 				Envelope:        env,
 				Catalog:         catalog,
 				CaseDir:         caseDir,
-				KnowledgeReader: a.KnowledgeReader,
+				HarvesterReader: a.HarvesterReader,
 			}),
 		}
 

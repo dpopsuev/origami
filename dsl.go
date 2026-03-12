@@ -12,16 +12,23 @@ import (
 
 // CircuitDef is the top-level DSL structure for declaring a circuit graph.
 // Layout follows P3 (reading-first): circuit > zones > nodes > edges > start/done.
+//
+// When Import is set, this definition is an overlay on top of a base circuit
+// provided by a schematic. Use LoadCircuitWithOverlay to resolve the import
+// and merge overlay fields on top of the base.
 type CircuitDef struct {
 	Envelope    `yaml:",inline"`
 	Circuit     string             `yaml:"circuit"`
 	Description string             `yaml:"description,omitempty"`
+	Import      string             `yaml:"import,omitempty"`
 	Topology    string             `yaml:"topology,omitempty"`
 	HandlerType string             `yaml:"handler_type,omitempty"`
 	Timeout     string             `yaml:"timeout,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
+	Ports       []PortDef          `yaml:"ports,omitempty"`
+	Wiring      []WiringDef       `yaml:"wiring,omitempty"`
 	Zones       map[string]ZoneDef `yaml:"zones,omitempty"`
 	Nodes       []NodeDef          `yaml:"nodes"`
 	Edges       []EdgeDef          `yaml:"edges"`
@@ -29,6 +36,35 @@ type CircuitDef struct {
 	Start       string             `yaml:"start"`
 	Done        string             `yaml:"done"`
 	Scorecard   string             `yaml:"scorecard,omitempty"`
+	Calibration *CalibrationContractDef `yaml:"calibration,omitempty"`
+}
+
+// CalibrationContractDef declares the calibration contract inline in circuit YAML.
+type CalibrationContractDef struct {
+	Inputs  []CalibrationFieldDef `yaml:"inputs,omitempty"`
+	Outputs []CalibrationFieldDef `yaml:"outputs,omitempty"`
+}
+
+// CalibrationFieldDef maps a circuit output field to a scorer-addressable name.
+type CalibrationFieldDef struct {
+	Field      string `yaml:"field"`
+	ScorerName string `yaml:"scorer_name"`
+	Type       string `yaml:"type,omitempty"`
+}
+
+// PortDef declares a typed cross-circuit connection point.
+type PortDef struct {
+	Name        string `yaml:"name"`
+	Direction   string `yaml:"direction"`             // "in", "out", or "loop"
+	Type        string `yaml:"type,omitempty"`        // Go type for type-checking at wiring
+	Description string `yaml:"description,omitempty"`
+}
+
+// WiringDef declares a consumer-level port connection between circuits.
+type WiringDef struct {
+	From    string `yaml:"from"`              // e.g. "rca.out:post-triage"
+	To      string `yaml:"to"`                // e.g. "harvester.in:keywords"
+	Adapter string `yaml:"adapter,omitempty"` // optional bridge transformer
 }
 
 // ExtractorDef declares a reusable extractor at the circuit level.
@@ -81,6 +117,13 @@ const (
 	HandlerTypeCircuit     = "circuit"
 )
 
+// OutputField holds the structured output declaration for a node.
+type OutputField struct {
+	Name     string `yaml:"name"`
+	Type     string `yaml:"type"`                // string, float, bool, int, array, object
+	Required bool   `yaml:"required,omitempty"`
+}
+
 // NodeDef declares a node in the circuit.
 //
 // New-style resolution uses handler_type + handler (explicit, no cascade).
@@ -111,6 +154,11 @@ type NodeDef struct {
 	Schema      *ArtifactSchema `yaml:"schema,omitempty"`
 	Cache       *CacheDef       `yaml:"cache,omitempty"`
 	Meta        map[string]any  `yaml:"meta,omitempty"`
+
+	// Vocabulary and output schema
+	Code        string        `yaml:"code,omitempty"`         // machine code (e.g. "F0")
+	DisplayName string        `yaml:"display_name,omitempty"` // human name (e.g. "Recall")
+	Output      []OutputField `yaml:"output,omitempty"`
 }
 
 // EffectiveHandlerType returns the handler type for this node, resolving
@@ -165,6 +213,60 @@ func (nd NodeDef) EffectiveHandler() string {
 	return nd.Name
 }
 
+// OutputFields returns the output field declarations, or nil if none declared.
+func (nd NodeDef) OutputFields() []OutputField {
+	return nd.Output
+}
+
+// ValidateOutput checks that a map of output values satisfies the declared schema.
+// Returns nil if no schema declared or all required fields present with correct types.
+func (nd NodeDef) ValidateOutput(output map[string]any) error {
+	if len(nd.Output) == 0 {
+		return nil
+	}
+	for _, f := range nd.Output {
+		val, exists := output[f.Name]
+		if !exists && f.Required {
+			return fmt.Errorf("node %q: required output field %q missing", nd.Name, f.Name)
+		}
+		if exists && !checkOutputType(val, f.Type) {
+			return fmt.Errorf("node %q: output field %q: expected type %s, got %T", nd.Name, f.Name, f.Type, val)
+		}
+	}
+	return nil
+}
+
+func checkOutputType(val any, expected string) bool {
+	switch expected {
+	case "string":
+		_, ok := val.(string)
+		return ok
+	case "float":
+		_, ok := val.(float64)
+		return ok
+	case "bool":
+		_, ok := val.(bool)
+		return ok
+	case "int":
+		switch val.(type) {
+		case int, int64, float64:
+			return true
+		}
+		return false
+	case "array":
+		switch val.(type) {
+		case []any, []string, []float64, []int:
+			return true
+		}
+		return false
+	case "object":
+		_, ok := val.(map[string]any)
+		return ok
+	default:
+		return true
+	}
+}
+
 // EffectiveTimeout returns the timeout for this node, resolving the
 // node-level override against the circuit-level default. Returns 0 if
 // neither is set.
@@ -193,16 +295,17 @@ type CacheDef struct {
 // When is an expression evaluated by expr-lang/expr against {output, state, config}.
 // Condition is a human-readable comment (not evaluated).
 type EdgeDef struct {
-	ID        string `yaml:"id"`
-	Name      string `yaml:"name"`
-	From      string `yaml:"from"`
-	To        string `yaml:"to"`
-	Shortcut  bool   `yaml:"shortcut,omitempty"`
-	Loop      bool   `yaml:"loop,omitempty"`
-	Parallel  bool   `yaml:"parallel,omitempty"`
-	Condition string `yaml:"condition,omitempty"`
-	When      string `yaml:"when,omitempty"`
-	Merge     string `yaml:"merge,omitempty"`
+	ID          string `yaml:"id"`
+	Name        string `yaml:"name"`
+	From        string `yaml:"from"`
+	To          string `yaml:"to"`
+	Shortcut    bool   `yaml:"shortcut,omitempty"`
+	Loop        bool   `yaml:"loop,omitempty"`
+	Parallel    bool   `yaml:"parallel,omitempty"`
+	Condition   string `yaml:"condition,omitempty"`
+	When        string `yaml:"when,omitempty"`
+	Merge       string `yaml:"merge,omitempty"`
+	DisplayName string `yaml:"display_name,omitempty"` // human name for edge conditions
 }
 
 // Merge strategy constants for fan-in edges.
@@ -218,18 +321,22 @@ const (
 type rawCircuitDef struct {
 	Circuit     string             `yaml:"circuit"`
 	Description string             `yaml:"description,omitempty"`
+	Import      string             `yaml:"import,omitempty"`
 	Topology    string             `yaml:"topology,omitempty"`
 	HandlerType string             `yaml:"handler_type,omitempty"`
 	Timeout     string             `yaml:"timeout,omitempty"`
 	Imports     []string           `yaml:"imports,omitempty"`
 	Vars        map[string]any     `yaml:"vars,omitempty"`
 	Extractors  []ExtractorDef     `yaml:"extractors,omitempty"`
+	Ports       []PortDef          `yaml:"ports,omitempty"`
+	Wiring      []WiringDef       `yaml:"wiring,omitempty"`
 	Zones       map[string]ZoneDef `yaml:"zones,omitempty"`
 	Nodes       []rawNodeDef       `yaml:"nodes"`
 	Edges       []EdgeDef          `yaml:"edges,omitempty"`
 	Walkers     []WalkerDef        `yaml:"walkers,omitempty"`
 	Start       string             `yaml:"start"`
 	Done        string             `yaml:"done"`
+	Calibration *CalibrationContractDef `yaml:"calibration,omitempty"`
 }
 
 // rawNodeDef extends NodeDef with optional inline edges.
@@ -241,13 +348,14 @@ type rawNodeDef struct {
 // rawEdgeDef is the compact edge form nested under a node.
 // From is implicit (parent node name) and ID is auto-generated.
 type rawEdgeDef struct {
-	Name     string `yaml:"name,omitempty"`
-	To       string `yaml:"to,omitempty"`
-	Shortcut bool   `yaml:"shortcut,omitempty"`
-	Loop     bool   `yaml:"loop,omitempty"`
-	Parallel bool   `yaml:"parallel,omitempty"`
-	When     string `yaml:"when,omitempty"`
-	Merge    string `yaml:"merge,omitempty"`
+	Name        string `yaml:"name,omitempty"`
+	DisplayName string `yaml:"display_name,omitempty"`
+	To          string `yaml:"to,omitempty"`
+	Shortcut    bool   `yaml:"shortcut,omitempty"`
+	Loop        bool   `yaml:"loop,omitempty"`
+	Parallel    bool   `yaml:"parallel,omitempty"`
+	When        string `yaml:"when,omitempty"`
+	Merge       string `yaml:"merge,omitempty"`
 }
 
 // rawEdgeList handles both flow-style string sequences (edges: [target])
@@ -279,16 +387,20 @@ func (raw *rawCircuitDef) normalize() (*CircuitDef, error) {
 	def := &CircuitDef{
 		Circuit:     raw.Circuit,
 		Description: raw.Description,
+		Import:      raw.Import,
 		Topology:    raw.Topology,
 		HandlerType: raw.HandlerType,
 		Timeout:     raw.Timeout,
 		Imports:     raw.Imports,
 		Vars:        raw.Vars,
 		Extractors:  raw.Extractors,
+		Ports:       raw.Ports,
+		Wiring:      raw.Wiring,
 		Zones:       raw.Zones,
 		Walkers:     raw.Walkers,
 		Start:       raw.Start,
 		Done:        raw.Done,
+		Calibration: raw.Calibration,
 	}
 
 	def.Nodes = make([]NodeDef, 0, len(raw.Nodes))
@@ -314,15 +426,16 @@ func (raw *rawCircuitDef) normalize() (*CircuitDef, error) {
 			}
 			id := generateEdgeID(nodeName, re, edgeIDs)
 			def.Edges = append(def.Edges, EdgeDef{
-				ID:       id,
-				Name:     re.Name,
-				From:     nodeName,
-				To:       re.To,
-				Shortcut: re.Shortcut,
-				Loop:     re.Loop,
-				Parallel: re.Parallel,
-				When:     re.When,
-				Merge:    re.Merge,
+				ID:          id,
+				Name:        re.Name,
+				DisplayName: re.DisplayName,
+				From:        nodeName,
+				To:          re.To,
+				Shortcut:    re.Shortcut,
+				Loop:        re.Loop,
+				Parallel:    re.Parallel,
+				When:        re.When,
+				Merge:       re.Merge,
 			})
 		}
 	}
@@ -444,6 +557,206 @@ func LoadCircuit(data []byte) (*CircuitDef, error) {
 	return raw.normalize()
 }
 
+// AssetResolver resolves a schematic name to its embedded circuit YAML.
+// Implementations may read from an embed.FS, a manifest's asset map, or
+// the local filesystem.
+type AssetResolver func(schematicName string) ([]byte, error)
+
+// LoadCircuitWithOverlay parses a consumer overlay YAML and, if it declares
+// an import: field, loads the base circuit from the resolver and merges the
+// overlay on top.
+//
+// Merge semantics:
+//   - circuit, topology, handler_type, timeout, start, done, scorecard —
+//     inherited from base unless explicitly set in overlay
+//   - description — overlay wins if non-empty
+//   - vars — shallow merge; overlay keys win
+//   - nodes — overlay appends new nodes (by name); cannot override base nodes
+//   - edges — overlay appends; edges whose ID matches a base edge replace it
+//   - zones — shallow merge by zone name; overlay wins
+//   - extractors — overlay appends new extractors; name collision replaces base
+//   - walkers — overlay appends new walkers; name collision replaces base
+//   - imports (component imports) — union, deduplicated
+func LoadCircuitWithOverlay(overlayData []byte, resolver AssetResolver) (*CircuitDef, error) {
+	overlay, err := LoadCircuit(overlayData)
+	if err != nil {
+		return nil, fmt.Errorf("parse overlay: %w", err)
+	}
+
+	if overlay.Import == "" {
+		return overlay, nil
+	}
+
+	if resolver == nil {
+		return nil, fmt.Errorf("overlay imports %q but no asset resolver provided", overlay.Import)
+	}
+
+	baseData, err := resolver(overlay.Import)
+	if err != nil {
+		return nil, fmt.Errorf("resolve import %q: %w", overlay.Import, err)
+	}
+
+	base, err := LoadCircuit(baseData)
+	if err != nil {
+		return nil, fmt.Errorf("parse base circuit %q: %w", overlay.Import, err)
+	}
+
+	merged, err := mergeCircuits(base, overlay)
+	if err != nil {
+		return nil, fmt.Errorf("merge overlay onto %q: %w", overlay.Import, err)
+	}
+	return merged, nil
+}
+
+func mergeCircuits(base, overlay *CircuitDef) (*CircuitDef, error) {
+	merged := *base
+	merged.Import = ""
+
+	if overlay.Circuit != "" {
+		merged.Circuit = overlay.Circuit
+	}
+	if overlay.Description != "" {
+		merged.Description = overlay.Description
+	}
+	if overlay.Topology != "" {
+		merged.Topology = overlay.Topology
+	}
+	if overlay.HandlerType != "" {
+		merged.HandlerType = overlay.HandlerType
+	}
+	if overlay.Timeout != "" {
+		merged.Timeout = overlay.Timeout
+	}
+	if overlay.Start != "" {
+		merged.Start = overlay.Start
+	}
+	if overlay.Done != "" {
+		merged.Done = overlay.Done
+	}
+	if overlay.Scorecard != "" {
+		merged.Scorecard = overlay.Scorecard
+	}
+
+	// Calibration: overlay wins (if overlay has calibration, it replaces base)
+	if overlay.Calibration != nil {
+		merged.Calibration = overlay.Calibration
+	}
+
+	// Vars: shallow merge, overlay wins
+	if len(overlay.Vars) > 0 {
+		if merged.Vars == nil {
+			merged.Vars = make(map[string]any)
+		}
+		for k, v := range overlay.Vars {
+			merged.Vars[k] = v
+		}
+	}
+
+	// Zones: overlay wins per zone name
+	if len(overlay.Zones) > 0 {
+		if merged.Zones == nil {
+			merged.Zones = make(map[string]ZoneDef)
+		}
+		for k, v := range overlay.Zones {
+			merged.Zones[k] = v
+		}
+	}
+
+	// Nodes: overlay appends new nodes by name
+	if len(overlay.Nodes) > 0 {
+		baseNodeSet := make(map[string]bool, len(merged.Nodes))
+		for _, n := range merged.Nodes {
+			baseNodeSet[n.Name] = true
+		}
+		for _, n := range overlay.Nodes {
+			if baseNodeSet[n.Name] {
+				return nil, fmt.Errorf("overlay cannot override base node %q (append-only)", n.Name)
+			}
+			merged.Nodes = append(merged.Nodes, n)
+		}
+	}
+
+	// Edges: overlay appends; matching IDs replace base edges
+	if len(overlay.Edges) > 0 {
+		baseEdgeIdx := make(map[string]int, len(merged.Edges))
+		for i, e := range merged.Edges {
+			baseEdgeIdx[e.ID] = i
+		}
+		for _, oe := range overlay.Edges {
+			if idx, exists := baseEdgeIdx[oe.ID]; exists {
+				merged.Edges[idx] = oe
+			} else {
+				merged.Edges = append(merged.Edges, oe)
+			}
+		}
+	}
+
+	// Extractors: overlay appends; name collision replaces
+	if len(overlay.Extractors) > 0 {
+		baseExtIdx := make(map[string]int, len(merged.Extractors))
+		for i, e := range merged.Extractors {
+			baseExtIdx[e.Name] = i
+		}
+		for _, oe := range overlay.Extractors {
+			if idx, exists := baseExtIdx[oe.Name]; exists {
+				merged.Extractors[idx] = oe
+			} else {
+				merged.Extractors = append(merged.Extractors, oe)
+			}
+		}
+	}
+
+	// Walkers: overlay appends; name collision replaces
+	if len(overlay.Walkers) > 0 {
+		baseWalkerIdx := make(map[string]int, len(merged.Walkers))
+		for i, w := range merged.Walkers {
+			baseWalkerIdx[w.Name] = i
+		}
+		for _, ow := range overlay.Walkers {
+			if idx, exists := baseWalkerIdx[ow.Name]; exists {
+				merged.Walkers[idx] = ow
+			} else {
+				merged.Walkers = append(merged.Walkers, ow)
+			}
+		}
+	}
+
+	// Ports: base ports inherited; overlay appends new ports (name collision = error)
+	if len(overlay.Ports) > 0 {
+		basePortSet := make(map[string]bool, len(merged.Ports))
+		for _, p := range merged.Ports {
+			basePortSet[p.Name] = true
+		}
+		for _, op := range overlay.Ports {
+			if basePortSet[op.Name] {
+				return nil, fmt.Errorf("overlay cannot override base port %q (append-only)", op.Name)
+			}
+			merged.Ports = append(merged.Ports, op)
+		}
+	}
+
+	// Wiring: overlay-only (appended as-is)
+	if len(overlay.Wiring) > 0 {
+		merged.Wiring = append(merged.Wiring, overlay.Wiring...)
+	}
+
+	// Component imports: union, deduplicated
+	if len(overlay.Imports) > 0 {
+		seen := make(map[string]bool, len(merged.Imports))
+		for _, imp := range merged.Imports {
+			seen[imp] = true
+		}
+		for _, imp := range overlay.Imports {
+			if !seen[imp] {
+				merged.Imports = append(merged.Imports, imp)
+				seen[imp] = true
+			}
+		}
+	}
+
+	return &merged, nil
+}
+
 // MarshalYAML serializes a CircuitDef back to YAML (P8: round-trip fidelity).
 func (def *CircuitDef) MarshalYAML() ([]byte, error) {
 	return yaml.Marshal(def)
@@ -514,6 +827,28 @@ func (def *CircuitDef) Validate() error {
 	}
 
 	return nil
+}
+
+// RegisterVocabulary populates the given vocabulary with entries derived
+// from circuit nodes and edges. Nodes with Code/DisplayName register both
+// the code→name and a "code_NAME" alias. Edges with DisplayName register
+// the edge ID→name mapping.
+func (def *CircuitDef) RegisterVocabulary(v *RichMapVocabulary) {
+	for _, n := range def.Nodes {
+		if n.Code != "" && n.DisplayName != "" {
+			v.RegisterEntry(n.Code, VocabEntry{Short: n.Code, Long: n.DisplayName})
+			alias := n.Code + "_" + strings.ToUpper(strings.ReplaceAll(n.DisplayName, " ", "_"))
+			v.RegisterEntry(alias, VocabEntry{Short: n.Code, Long: n.DisplayName})
+		}
+		if n.DisplayName != "" {
+			v.RegisterEntry(n.Name, VocabEntry{Long: n.DisplayName})
+		}
+	}
+	for _, e := range def.Edges {
+		if e.DisplayName != "" {
+			v.RegisterEntry(e.ID, VocabEntry{Long: e.DisplayName})
+		}
+	}
 }
 
 // ComponentLoader resolves an import name (e.g. "core", "vendor.rca-tools")

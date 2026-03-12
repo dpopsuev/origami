@@ -2,7 +2,7 @@ package toolkit
 
 import "context"
 
-// Driver implements knowledge access for a specific SourceKind.
+// Driver implements harvester access for a specific SourceKind.
 // Drivers are registered with the access router.
 type Driver interface {
 	Handles() SourceKind

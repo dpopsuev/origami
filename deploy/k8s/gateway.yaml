@@ -23,7 +23,7 @@ spec:
             - "--backend"
             - "rca=http://rca:9200/mcp"
             - "--backend"
-            - "knowledge=http://knowledge:9100/mcp"
+            - "harvester=http://harvester:9100/mcp"
             - "--backend"
             - "asterisk=http://asterisk:9300/mcp"
           ports:

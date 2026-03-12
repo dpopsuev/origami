@@ -40,10 +40,10 @@ func TestLoadScenario_AllValid(t *testing.T) {
 
 func TestListScenarios(t *testing.T) {
 	names := scenarios.ListScenarios(scenarioTestFS())
-	if len(names) != 4 {
-		t.Fatalf("expected 4 scenarios, got %d: %v", len(names), names)
+	if len(names) != 3 {
+		t.Fatalf("expected 3 scenarios, got %d: %v", len(names), names)
 	}
-	want := []string{"daemon-mock", "ptp-mock", "ptp-real", "ptp-real-ingest"}
+	want := []string{"daemon-mock", "ptp", "ptp-mock"}
 	if diff := cmp.Diff(want, names); diff != "" {
 		t.Errorf("ListScenarios mismatch:\n%s", diff)
 	}

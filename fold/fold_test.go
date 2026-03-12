@@ -267,15 +267,15 @@ func TestValidateCircuitRefs_ValidRef(t *testing.T) {
 nodes:
   - name: gather-code
     handler_type: circuit
-    handler: knowledge
+    handler: harvester
   - name: resolve
     handler_type: transformer
     handler: resolve
 `)
-	writeFile("circuits/knowledge.yaml", `
+	writeFile("circuits/harvester.yaml", `
 nodes:
   - name: tree
-    handler: knowledge.tree
+    handler: harvester.tree
 `)
 
 	m := &Manifest{
@@ -283,7 +283,7 @@ nodes:
 			Assets: &AssetMap{
 				Circuits: map[string]string{
 					"rca":       "circuits/rca.yaml",
-					"knowledge": "circuits/knowledge.yaml",
+					"harvester": "circuits/harvester.yaml",
 				},
 			},
 		},

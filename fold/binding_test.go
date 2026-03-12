@@ -31,11 +31,11 @@ func TestResolve_AsteriskLike(t *testing.T) {
 				Path: "schematics/rca",
 				Bindings: map[string]string{
 					"source":    "reportportal",
-					"knowledge": "knowledge",
+					"harvester": "harvester",
 				},
 			},
-			"knowledge": {
-				Path: "schematics/knowledge",
+			"harvester": {
+				Path: "schematics/harvester",
 				Bindings: map[string]string{
 					"git":  "github",
 					"docs": "docs",
@@ -64,19 +64,19 @@ func TestResolve_AsteriskLike(t *testing.T) {
 	if len(g.Schematics) != 1 {
 		t.Fatalf("sub-schematics = %d, want 1", len(g.Schematics))
 	}
-	if g.Schematics[0].Name != "knowledge" {
-		t.Errorf("sub-schematic = %q, want knowledge", g.Schematics[0].Name)
+	if g.Schematics[0].Name != "harvester" {
+		t.Errorf("sub-schematic = %q, want harvester", g.Schematics[0].Name)
 	}
 	if g.Schematics[0].Factory != "NewRouter" {
-		t.Errorf("knowledge factory = %q, want NewRouter", g.Schematics[0].Factory)
+		t.Errorf("harvester factory = %q, want NewRouter", g.Schematics[0].Factory)
 	}
 
-	// Knowledge should have 2 options: WithGitDriver, WithDocsDriver
+	// Harvester should have 2 options: WithGitDriver, WithDocsDriver
 	if len(g.Schematics[0].Options) != 2 {
-		t.Fatalf("knowledge options = %d, want 2", len(g.Schematics[0].Options))
+		t.Fatalf("harvester options = %d, want 2", len(g.Schematics[0].Options))
 	}
 
-	// Root should have options for source and knowledge (writer/discoverer/store are optional)
+	// Root should have options for source and harvester (writer/discoverer/store are optional)
 	var optNames []string
 	for _, o := range g.Root.Options {
 		optNames = append(optNames, o.OptionFunc)
@@ -84,8 +84,8 @@ func TestResolve_AsteriskLike(t *testing.T) {
 	if !contains(optNames, "WithSourceReader") {
 		t.Errorf("root options %v missing WithSourceReader", optNames)
 	}
-	if !contains(optNames, "WithKnowledgeReader") {
-		t.Errorf("root options %v missing WithKnowledgeReader", optNames)
+	if !contains(optNames, "WithHarvesterReader") {
+		t.Errorf("root options %v missing WithHarvesterReader", optNames)
 	}
 
 	// Source binding should be factory-mode (RP)
@@ -134,7 +134,7 @@ func TestResolve_CycleDetection(t *testing.T) {
 		Name: "test",
 		Schematics: map[string]SchematicRef{
 			"a": {Path: "schematics/rca", Bindings: map[string]string{"source": "b"}},
-			"b": {Path: "schematics/knowledge", Bindings: map[string]string{"git": "a"}},
+			"b": {Path: "schematics/harvester", Bindings: map[string]string{"git": "a"}},
 		},
 		Connectors: map[string]ConnectorRef{},
 	}
@@ -152,8 +152,8 @@ func TestTopoSort_SingleRoot(t *testing.T) {
 	m := &Manifest{
 		Name: "test",
 		Schematics: map[string]SchematicRef{
-			"rca":       {Path: "schematics/rca", Bindings: map[string]string{"knowledge": "knowledge"}},
-			"knowledge": {Path: "schematics/knowledge"},
+			"rca":       {Path: "schematics/rca", Bindings: map[string]string{"harvester": "harvester"}},
+			"harvester": {Path: "schematics/harvester"},
 		},
 	}
 
@@ -164,8 +164,8 @@ func TestTopoSort_SingleRoot(t *testing.T) {
 	if root != "rca" {
 		t.Errorf("root = %q, want rca", root)
 	}
-	if len(order) != 1 || order[0] != "knowledge" {
-		t.Errorf("order = %v, want [knowledge]", order)
+	if len(order) != 1 || order[0] != "harvester" {
+		t.Errorf("order = %v, want [harvester]", order)
 	}
 }
 
@@ -174,7 +174,7 @@ func TestTopoSort_MultipleRoots(t *testing.T) {
 		Name: "test",
 		Schematics: map[string]SchematicRef{
 			"a": {Path: "schematics/rca"},
-			"b": {Path: "schematics/knowledge"},
+			"b": {Path: "schematics/harvester"},
 		},
 	}
 
@@ -194,7 +194,7 @@ func TestImportAlias(t *testing.T) {
 	}{
 		{"github.com/dpopsuev/origami/connectors/rp", "rp"},
 		{"github.com/dpopsuev/origami/connectors/github", "github"},
-		{"github.com/dpopsuev/origami/schematics/knowledge", "knowledge"},
+		{"github.com/dpopsuev/origami/schematics/harvester", "harvester"},
 		{"github.com/dpopsuev/origami/schematics/rca/mcpconfig", "mcpconfig"},
 	}
 	for _, tt := range tests {
@@ -214,9 +214,9 @@ schematics:
     path: schematics/rca
     bindings:
       source: reportportal
-      knowledge: knowledge
-  knowledge:
-    path: schematics/knowledge
+      harvester: harvester
+  harvester:
+    path: schematics/harvester
     bindings:
       git: github
       docs: docs

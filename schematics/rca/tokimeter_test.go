@@ -19,7 +19,7 @@ func TestBuildCostBill_NilTokens(t *testing.T) {
 func TestBuildCostBill_Basic(t *testing.T) {
 	report := &CalibrationReport{
 		CalibrationReport: cal.CalibrationReport{
-			Scenario:    "ptp-real-ingest",
+			Scenario:    "ptp",
 			Transformer: "llm",
 			Tokens: &dispatch.TokenSummary{
 				TotalPromptTokens:   100_000,
@@ -91,7 +91,7 @@ func TestFormatCostBill_Nil(t *testing.T) {
 func TestFormatCostBill_Markdown(t *testing.T) {
 	report := &CalibrationReport{
 		CalibrationReport: cal.CalibrationReport{
-			Scenario:    "ptp-real-ingest",
+			Scenario:    "ptp",
 			Transformer: "llm",
 			Tokens: &dispatch.TokenSummary{
 				TotalPromptTokens:   100_000,
@@ -126,7 +126,7 @@ func TestFormatCostBill_Markdown(t *testing.T) {
 		"| Case |",
 		"| Step |",
 		"| **TOTAL**",
-		"ptp-real-ingest",
+		"ptp",
 		"llm",
 		"C1",
 		"C2",

@@ -22,7 +22,7 @@ type AnalysisConfig struct {
 	Thresholds      Thresholds
 	BasePath        string // root directory for investigation artifacts; defaults to DefaultBasePath
 	CircuitData     []byte // circuit definition YAML; required
-	KnowledgeReader toolkit.SourceReader
+	HarvesterReader toolkit.SourceReader
 }
 
 // AnalysisReport is the output of an analysis run.
@@ -124,7 +124,7 @@ func walkAnalysisCase(
 			Envelope:        cfg.Envelope,
 			Catalog:         cfg.Catalog,
 			CaseDir:         caseDir,
-			KnowledgeReader: cfg.KnowledgeReader,
+			HarvesterReader: cfg.HarvesterReader,
 		}),
 	}
 	comps := append(cfg.Components, hooksComp, injectComp)

@@ -19,13 +19,13 @@ import (
 	"github.com/dpopsuev/origami/domainfs"
 	"github.com/dpopsuev/origami/domainserve"
 	"github.com/dpopsuev/origami/gateway"
-	skn "github.com/dpopsuev/origami/schematics/knowledge"
+	harvester "github.com/dpopsuev/origami/schematics/harvester"
 	mcpserver "github.com/dpopsuev/origami/schematics/rca/mcpconfig"
 	"github.com/dpopsuev/origami/subprocess/containertest"
 )
 
 // These tests use httptest servers to simulate the four-service architecture
-// (Gateway, RCA engine, Knowledge, Asterisk domain) without requiring real
+// (Gateway, RCA engine, Harvester, Asterisk domain) without requiring real
 // container images. They validate Gateway routing, health probes, and
 // concurrency patterns that container E2E tests would exercise.
 //
@@ -73,14 +73,14 @@ func connectDomainFS(t *testing.T, domainSrvURL string) *domainfs.MCPRemoteFS {
 		WithTimeout(5 * time.Second)
 }
 
-func newKnowledgeServer(t *testing.T) *httptest.Server {
+func newHarvesterServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	router := skn.NewRouter()
+	router := harvester.NewRouter()
 	server := sdkmcp.NewServer(
-		&sdkmcp.Implementation{Name: "test-knowledge", Version: "v0.1.0"},
+		&sdkmcp.Implementation{Name: "test-harvester", Version: "v0.1.0"},
 		nil,
 	)
-	skn.RegisterTools(server, router)
+	harvester.RegisterTools(server, router)
 
 	mcpHandler := sdkmcp.NewStreamableHTTPHandler(
 		func(_ *http.Request) *sdkmcp.Server { return server },
@@ -128,14 +128,14 @@ func newRCAServer(t *testing.T, opts ...mcpserver.ServerOption) *httptest.Server
 func newFourServiceGateway(t *testing.T) (domainSrv, knSrv, rcaSrv, gwSrv *httptest.Server, gw *gateway.Gateway) {
 	t.Helper()
 	domainSrv = newDomainServer(t)
-	knSrv = newKnowledgeServer(t)
+	knSrv = newHarvesterServer(t)
 
 	remoteFS := connectDomainFS(t, domainSrv.URL)
 	rcaSrv = newRCAServer(t, mcpserver.WithDomainFS(remoteFS))
 
 	gw = gateway.New([]gateway.BackendConfig{
 		{Name: "rca", Endpoint: rcaSrv.URL + "/mcp"},
-		{Name: "knowledge", Endpoint: knSrv.URL + "/mcp"},
+		{Name: "harvester", Endpoint: knSrv.URL + "/mcp"},
 		{Name: "asterisk", Endpoint: domainSrv.URL + "/mcp"},
 	})
 	ctx := t.Context()
@@ -176,14 +176,14 @@ func TestE2E_FourServices_ToolRouting(t *testing.T) {
 	}
 
 	hasRCA := false
-	hasKnowledge := false
+	hasHarvester := false
 	hasDomain := false
 	for _, tool := range tools.Tools {
 		switch tool.Name {
 		case "start_circuit", "get_next_step", "submit_step":
 			hasRCA = true
-		case "knowledge_search", "knowledge_read":
-			hasKnowledge = true
+		case "harvester_search", "harvester_read":
+			hasHarvester = true
 		case "domain_info", "domain_read", "domain_list":
 			hasDomain = true
 		}
@@ -191,8 +191,8 @@ func TestE2E_FourServices_ToolRouting(t *testing.T) {
 	if !hasRCA {
 		t.Error("gateway missing RCA tools")
 	}
-	if !hasKnowledge {
-		t.Error("gateway missing knowledge tools")
+	if !hasHarvester {
+		t.Error("gateway missing harvester tools")
 	}
 	if !hasDomain {
 		t.Error("gateway missing domain tools (domain_info, domain_read, domain_list)")
@@ -221,7 +221,7 @@ func TestE2E_FourServices_HealthProbes(t *testing.T) {
 	}
 }
 
-func TestE2E_KnowledgeFailure_ReadyzDegrades(t *testing.T) {
+func TestE2E_HarvesterFailure_ReadyzDegrades(t *testing.T) {
 	_, knSrv, _, gwSrv, _ := newFourServiceGateway(t)
 
 	resp, _ := http.Get(gwSrv.URL + "/readyz")
@@ -239,7 +239,7 @@ func TestE2E_KnowledgeFailure_ReadyzDegrades(t *testing.T) {
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusServiceUnavailable {
-		t.Errorf("readyz after knowledge kill = %d, want 503", resp.StatusCode)
+		t.Errorf("readyz after harvester kill = %d, want 503", resp.StatusCode)
 	}
 }
 

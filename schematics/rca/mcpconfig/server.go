@@ -13,6 +13,7 @@ import (
 	cal "github.com/dpopsuev/origami/calibrate"
 	"github.com/dpopsuev/origami/dispatch"
 	fwmcp "github.com/dpopsuev/origami/mcp"
+	"github.com/dpopsuev/origami/schematics/harvester"
 	"github.com/dpopsuev/origami/schematics/toolkit"
 	"github.com/dpopsuev/origami/schematics/rca"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
@@ -34,7 +35,7 @@ type Server struct {
 	StateDir        string // writable root for runtime artifacts (calibrate, investigations)
 	ReaderFactory   rca.SourceReaderFactory
 	StoreFactory    rca.StoreFactory
-	KnowledgeReader toolkit.SourceReader
+	HarvesterReader toolkit.SourceReader
 	StepSchemas     []fwmcp.StepSchema
 	DomainFS        fs.FS
 
@@ -50,10 +51,10 @@ func WithSourceReader(f rca.SourceReaderFactory) ServerOption {
 	return func(s *Server) { s.ReaderFactory = f }
 }
 
-// WithKnowledgeReader injects a SourceReader for code and doc
+// WithHarvesterReader injects a SourceReader for code and doc
 // access during RCA investigation steps.
-func WithKnowledgeReader(r toolkit.SourceReader) ServerOption {
-	return func(s *Server) { s.KnowledgeReader = r }
+func WithHarvesterReader(r toolkit.SourceReader) ServerOption {
+	return func(s *Server) { s.HarvesterReader = r }
 }
 
 // WithStepSchemas overrides the default RCA step schemas.
@@ -169,6 +170,14 @@ func (s *Server) buildConfig() fwmcp.CircuitConfig {
 		WorkerPreamble: fmt.Sprintf("You are a %s calibration worker.", s.ProductName),
 		DefaultGetNextStepTimeout: int(DefaultGetNextStepTimeout / time.Millisecond),
 		DefaultSessionTTL:         int(DefaultSessionTTL / time.Millisecond),
+		ExtraParamDefs: []fwmcp.ExtraParamDef{
+			{Name: "scenario", Type: "string", Description: "Calibration scenario name (e.g. 'ptp')", Required: true},
+			{Name: "mode", Type: "string", Description: "Execution mode", Enum: []string{"offline", "online"}},
+			{Name: "backend", Type: "string", Description: "Transformer backend for LLM processing", Enum: []string{"stub", "basic", "llm"}},
+			{Name: "rp_base_url", Type: "string", Description: "ReportPortal base URL for online mode (e.g. 'https://rp.example.com')"},
+			{Name: "rp_project", Type: "string", Description: "ReportPortal project name (defaults to $ASTERISK_RP_PROJECT)"},
+			{Name: "rp_api_key_path", Type: "string", Description: "Path to RP API key file (defaults to $ASTERISK_RP_API_KEY_PATH or '.rp-api-key')"},
+		},
 		CreateSession: func(ctx context.Context, params fwmcp.StartParams, disp *dispatch.MuxDispatcher, bus *dispatch.SignalBus) (fwmcp.RunFunc, fwmcp.SessionMeta, error) {
 			return s.createSession(ctx, params, disp, bus)
 		},
@@ -226,9 +235,14 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 	extra := params.Extra
 
 	scenarioName, _ := extra["scenario"].(string)
+	if scenarioName == "" {
+		return nil, fwmcp.SessionMeta{}, fmt.Errorf("extra.scenario is required; pass it in start_circuit extra, e.g. extra:{\"scenario\":\"ptp\"}")
+	}
 	transformerName, _ := extra["backend"].(string)
 	rpBaseURL, _ := extra["rp_base_url"].(string)
 	rpProject, _ := extra["rp_project"].(string)
+	modeStr, _ := extra["mode"].(string)
+	mode := rca.ParseCalibrationMode(modeStr)
 
 	var scenarioFS fs.FS
 	if s.DomainFS != nil {
@@ -239,32 +253,52 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		return nil, fwmcp.SessionMeta{}, err
 	}
 
-	var rpFetcher rcatype.EnvelopeFetcher
-	if rpBaseURL != "" {
-		if rpProject == "" {
-			rpProject = os.Getenv("ASTERISK_RP_PROJECT")
+	harvesterReader := s.HarvesterReader
+
+	switch mode {
+	case rca.ModeOffline:
+		if s.DomainFS != nil {
+			offlineFS, fsErr := fs.Sub(s.DomainFS, "offline")
+			if fsErr != nil {
+				return nil, fwmcp.SessionMeta{}, fmt.Errorf("offline bundle not found in domain FS (expected 'offline/' directory with rp/ and harvester/ sub-dirs): %w", fsErr)
+			}
+			if err := scenarios.ResolveOfflineRP(offlineFS, scenario); err != nil {
+				return nil, fwmcp.SessionMeta{}, fmt.Errorf("resolve offline RP data (scenario=%s, mode=offline): %w", scenarioName, err)
+			}
+			harvesterFS, kErr := fs.Sub(offlineFS, "harvester")
+			if kErr == nil {
+				harvesterReader = harvester.NewRouter(harvester.WithOfflineFS(harvesterFS))
+			}
 		}
-		if rpProject == "" {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("rp_project is required when rp_base_url is set")
+	default:
+		var rpFetcher rcatype.EnvelopeFetcher
+		if rpBaseURL != "" {
+			if rpProject == "" {
+				rpProject = os.Getenv("ASTERISK_RP_PROJECT")
+			}
+			if rpProject == "" {
+				return nil, fwmcp.SessionMeta{}, fmt.Errorf("rp_project is required when rp_base_url is set")
+			}
+			rpAPIKeyPath, _ := extra["rp_api_key_path"].(string)
+			if rpAPIKeyPath == "" {
+				rpAPIKeyPath = os.Getenv("ASTERISK_RP_API_KEY_PATH")
+			}
+			if rpAPIKeyPath == "" {
+				rpAPIKeyPath = ".rp-api-key"
+			}
+			if s.ReaderFactory == nil {
+				return nil, fwmcp.SessionMeta{}, fmt.Errorf("no source connector configured (ReaderFactory not set)")
+			}
+			source, err := s.ReaderFactory(rpBaseURL, rpAPIKeyPath, rpProject)
+			if err != nil {
+				return nil, fwmcp.SessionMeta{}, fmt.Errorf("create source reader: %w", err)
+			}
+			rpFetcher = source.EnvelopeFetcher()
+			if err := rca.ResolveRPCases(rpFetcher, scenario); err != nil {
+				return nil, fwmcp.SessionMeta{}, fmt.Errorf("resolve RP-sourced cases: %w", err)
+			}
 		}
-		rpAPIKeyPath, _ := extra["rp_api_key_path"].(string)
-		if rpAPIKeyPath == "" {
-			rpAPIKeyPath = os.Getenv("ASTERISK_RP_API_KEY_PATH")
-		}
-		if rpAPIKeyPath == "" {
-			rpAPIKeyPath = ".rp-api-key"
-		}
-		if s.ReaderFactory == nil {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("no source connector configured (ReaderFactory not set)")
-		}
-		source, err := s.ReaderFactory(rpBaseURL, rpAPIKeyPath, rpProject)
-		if err != nil {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("create source reader: %w", err)
-		}
-		rpFetcher = source.EnvelopeFetcher()
-		if err := rca.ResolveRPCases(rpFetcher, scenario); err != nil {
-			return nil, fwmcp.SessionMeta{}, fmt.Errorf("resolve RP-sourced cases: %w", err)
-		}
+		_ = rpFetcher
 	}
 
 	root := s.ProjectRoot
@@ -348,7 +382,7 @@ func (s *Server) createSession(ctx context.Context, params fwmcp.StartParams, di
 		Thresholds:      rca.DefaultThresholds(),
 		ScoreCard:       sc,
 		TokenTracker:    tokenTracker,
-		KnowledgeReader: s.KnowledgeReader,
+		HarvesterReader: harvesterReader,
 		ReportTemplate:  calReportTemplate,
 	}
 

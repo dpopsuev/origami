@@ -28,21 +28,21 @@ func TestStartCircuit_InvalidScenario(t *testing.T) {
 	}
 }
 
-func TestStartCircuit_RealIngest_VerifiedOnly(t *testing.T) {
+func TestStartCircuit_PTP_VerifiedOnly(t *testing.T) {
 	srv := newTestServer(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	session := connectInMemory(t, ctx, srv)
 	defer session.Close()
 
-	startResult := startCircuit(t, ctx, session, "ptp-real-ingest", "stub", 0)
+	startResult := startCircuit(t, ctx, session, "ptp", "stub", 0)
 	sessionID := startResult["session_id"].(string)
 	totalCases, _ := startResult["total_cases"].(float64)
 
 	if int(totalCases) != 18 {
 		t.Fatalf("expected 18 verified cases, got %v", totalCases)
 	}
-	t.Logf("ptp-real-ingest: %v verified cases", totalCases)
+	t.Logf("ptp: %v verified cases", totalCases)
 
 	time.Sleep(500 * time.Millisecond)
 
@@ -57,5 +57,5 @@ func TestStartCircuit_RealIngest_VerifiedOnly(t *testing.T) {
 	if report == "" {
 		t.Fatal("expected non-empty report")
 	}
-	t.Logf("ptp-real-ingest report: %.200s...", report)
+	t.Logf("ptp report: %.200s...", report)
 }

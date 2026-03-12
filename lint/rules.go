@@ -28,6 +28,9 @@ func structuralRules() []Rule {
 		&DelegateWithoutGenerator{},
 		&InvalidWalkerRole{},
 		&DeprecatedHandlerFields{},
+		&ImportOverlay{},
+		&PortValidation{},
+		&CalibrationContract{},
 	}
 }
 

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	framework "github.com/dpopsuev/origami"
-	"github.com/dpopsuev/origami/schematics/knowledge"
+	"github.com/dpopsuev/origami/schematics/harvester"
 	"github.com/dpopsuev/origami/schematics/rca/rcatype"
 	"github.com/dpopsuev/origami/schematics/rca/store"
 	"github.com/dpopsuev/origami/schematics/toolkit"
@@ -29,7 +29,7 @@ type InjectHookOpts struct {
 	Envelope        *rcatype.Envelope
 	Catalog         toolkit.SourceCatalog
 	CaseDir         string
-	KnowledgeReader toolkit.SourceReader
+	HarvesterReader toolkit.SourceReader
 }
 
 // InjectHooks creates a HookRegistry with the inject.* before-hooks
@@ -46,7 +46,7 @@ func InjectHooks(st store.Store, caseData *store.Case, env *rcatype.Envelope, ca
 }
 
 // InjectHooksWithOpts creates inject hooks using the full options struct,
-// including optional KnowledgeReader for code injection hooks.
+// including optional HarvesterReader for code injection hooks.
 func InjectHooksWithOpts(opts InjectHookOpts) framework.HookRegistry {
 	reg := framework.HookRegistry{}
 
@@ -273,17 +273,17 @@ func extractSearchKeywords(walkerCtx map[string]any) []string {
 
 // newInjectCodeKeywordsHook creates a before-hook that extracts search
 // keywords from the walker context and writes them to
-// "knowledge.search_keywords" so the Knowledge sub-circuit can use them.
+// "harvester.search_keywords" so the Harvester sub-circuit can use them.
 func newInjectCodeKeywordsHook() framework.Hook {
 	return toolkit.NewContextInjector("inject.code-keywords", func(walkerCtx map[string]any) {
 		keywords := extractSearchKeywords(walkerCtx)
 		if len(keywords) > 0 {
-			walkerCtx["knowledge.search_keywords"] = keywords
+			walkerCtx["harvester.search_keywords"] = keywords
 		}
 	})
 }
 
-// newBridgeCodeContextHook creates an after-hook that reads the Knowledge
+// newBridgeCodeContextHook creates an after-hook that reads the Harvester
 // circuit's output from delegate artifacts and converts it to *CodeParams
 // for consumption by downstream RCA nodes.
 func newBridgeCodeContextHook() framework.Hook {
@@ -304,7 +304,7 @@ func newBridgeCodeContextHook() framework.Hook {
 			return nil
 		}
 
-		cc, ok := readArt.Raw().(*knowledge.CodeContext)
+		cc, ok := readArt.Raw().(*harvester.CodeContext)
 		if !ok || cc == nil {
 			return nil
 		}
